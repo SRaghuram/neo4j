@@ -371,7 +371,7 @@ class StoreFilesTest
     private File createFile( File file ) throws IOException
     {
         fs.mkdirs( file.getParentFile() );
-        fs.create( file ).close();
+        fs.write( file ).close();
         assertTrue( fs.fileExists( file ) );
         return file;
     }

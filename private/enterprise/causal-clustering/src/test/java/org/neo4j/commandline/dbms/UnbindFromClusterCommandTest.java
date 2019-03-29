@@ -169,7 +169,7 @@ class UnbindFromClusterCommandTest
     {
         Path graphDb = homeDir.resolve( "data/databases/" + DEFAULT_DATABASE_NAME );
         fs.mkdirs( graphDb.toFile() );
-        fs.create( graphDb.resolve( "neostore" ).toFile() ).close();
+        fs.write( graphDb.resolve( "neostore" ).toFile() ).close();
         return graphDb;
     }
 

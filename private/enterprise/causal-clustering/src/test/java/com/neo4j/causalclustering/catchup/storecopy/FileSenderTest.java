@@ -57,7 +57,7 @@ public class FileSenderTest
     {
         // given
         File emptyFile = testDirectory.file( "emptyFile" );
-        fs.create( emptyFile ).close();
+        fs.write( emptyFile ).close();
         FileSender fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ) );
 
         // when + then
@@ -75,7 +75,7 @@ public class FileSenderTest
         random.nextBytes( bytes );
 
         File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel storeChannel = fs.create( smallFile ) )
+        try ( StoreChannel storeChannel = fs.write( smallFile ) )
         {
             storeChannel.write( ByteBuffer.wrap( bytes ) );
         }
@@ -98,7 +98,7 @@ public class FileSenderTest
         random.nextBytes( bytes );
 
         File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel storeChannel = fs.create( smallFile ) )
+        try ( StoreChannel storeChannel = fs.write( smallFile ) )
         {
             storeChannel.write( ByteBuffer.wrap( bytes ) );
         }
@@ -121,7 +121,7 @@ public class FileSenderTest
         random.nextBytes( bytes );
 
         File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel storeChannel = fs.create( smallFile ) )
+        try ( StoreChannel storeChannel = fs.write( smallFile ) )
         {
             storeChannel.write( ByteBuffer.wrap( bytes ) );
         }
@@ -142,7 +142,7 @@ public class FileSenderTest
     {
         // given
         File file = testDirectory.file( "file" );
-        StoreChannel writer = fs.create( file );
+        StoreChannel writer = fs.write( file );
         FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
 
         // when
@@ -160,7 +160,7 @@ public class FileSenderTest
     {
         // given
         File file = testDirectory.file( "file" );
-        StoreChannel writer = fs.create( file );
+        StoreChannel writer = fs.write( file );
         FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
 
         // when
@@ -185,7 +185,7 @@ public class FileSenderTest
     {
         // given
         File file = testDirectory.file( "file" );
-        StoreChannel writer = fs.create( file );
+        StoreChannel writer = fs.write( file );
         FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
 
         // when
@@ -209,7 +209,7 @@ public class FileSenderTest
     {
         // given
         File file = testDirectory.file( "file" );
-        StoreChannel writer = fs.create( file );
+        StoreChannel writer = fs.write( file );
         FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
 
         // when
@@ -246,7 +246,7 @@ public class FileSenderTest
         random.nextBytes( bytes );
 
         File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel storeChannel = fs.create( smallFile ) )
+        try ( StoreChannel storeChannel = fs.write( smallFile ) )
         {
             storeChannel.write( ByteBuffer.wrap( bytes ) );
         }

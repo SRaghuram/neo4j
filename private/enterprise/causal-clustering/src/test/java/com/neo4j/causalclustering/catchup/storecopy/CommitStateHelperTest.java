@@ -76,7 +76,7 @@ class CommitStateHelperTest
         File txDir = databaseLayout.getTransactionLogsDirectory();
         fsa.mkdirs( txDir );
 
-        fsa.create( new File( txDir, "foo.bar" ) ).close();
+        fsa.write( new File( txDir, "foo.bar" ) ).close();
 
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
@@ -86,7 +86,7 @@ class CommitStateHelperTest
     {
         File txDir = databaseLayout.getTransactionLogsDirectory();
         fsa.mkdirs( txDir );
-        fsa.create( new File( txDir, TransactionLogFilesHelper.DEFAULT_NAME + ".0" ) ).close();
+        fsa.write( new File( txDir, TransactionLogFilesHelper.DEFAULT_NAME + ".0" ) ).close();
 
         assertTrue( commitStateHelper.hasTxLogs( databaseLayout ) );
     }

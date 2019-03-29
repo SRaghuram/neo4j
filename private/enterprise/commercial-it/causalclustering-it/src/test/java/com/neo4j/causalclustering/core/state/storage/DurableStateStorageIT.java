@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Set;
 
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.MethodGuardedAdversary;
@@ -171,7 +170,7 @@ class DurableStateStorageIT
 
         // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 1, true ),
-                FileSystemAbstraction.class.getMethod( "open", File.class, Set.class ) );
+                FileSystemAbstraction.class.getMethod( "read", File.class ) );
         AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
 
         Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );

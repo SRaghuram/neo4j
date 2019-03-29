@@ -16,9 +16,6 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableClosableChannel;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.util.Set.of;
-
 class RelationshipTypeDistributionStorage
 {
     private final FileSystemAbstraction fs;
@@ -34,7 +31,7 @@ class RelationshipTypeDistributionStorage
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.create( file ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ) ) )
         {
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
@@ -49,7 +46,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.open( file, of( READ ) ) ) )
+        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();

@@ -90,7 +90,7 @@ class StoreInfoCommandEnterpriseTest
     {
         fileSystem.mkdir( databaseDirectory.toFile() );
         File neoStoreFile = DatabaseLayout.of( databaseDirectory.toFile() ).metadataStore();
-        fileSystem.create( neoStoreFile ).close();
+        fileSystem.write( neoStoreFile ).close();
         return neoStoreFile;
     }
 }

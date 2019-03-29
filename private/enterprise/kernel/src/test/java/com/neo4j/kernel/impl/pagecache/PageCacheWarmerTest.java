@@ -85,7 +85,7 @@ class PageCacheWarmerTest
         clearTracerCounts();
         cfg = PageCacheConfig.config().withTracer( cacheTracer ).withCursorTracerSupplier( cursorTracer );
         file = new File( testDirectory.databaseDir(), "a" );
-        fs.create( file );
+        fs.write( file );
     }
 
     @AfterEach

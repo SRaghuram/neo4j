@@ -52,10 +52,10 @@ public class StateRecoveryManagerTest
         fsa.mkdir( testDir.directory() );
 
         File fileA = fileA();
-        fsa.create( fileA );
+        fsa.write( fileA );
 
         File fileB = fileB();
-        fsa.create( fileB );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
 
@@ -80,12 +80,12 @@ public class StateRecoveryManagerTest
         fsa.mkdir( testDir.directory() );
 
         File fileA = fileA();
-        StoreChannel channel = fsa.create( fileA );
+        StoreChannel channel = fsa.write( fileA );
 
         fillUpAndForce( channel );
 
         File fileB = fileB();
-        fsa.create( fileB );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
 
@@ -104,14 +104,14 @@ public class StateRecoveryManagerTest
         fsa.mkdir( testDir.directory() );
 
         File fileA = fileA();
-        StoreChannel channel = fsa.create( fileA );
+        StoreChannel channel = fsa.write( fileA );
 
         ByteBuffer buffer = writeLong( 999 );
         channel.writeAll( buffer );
         channel.force( false );
 
         File fileB = fileB();
-        channel = fsa.create( fileB );
+        channel = fsa.write( fileB );
         channel.close();
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
@@ -133,7 +133,7 @@ public class StateRecoveryManagerTest
         fsa.mkdir( testDir.directory() );
 
         File fileA = fileA();
-        StoreChannel channel = fsa.create( fileA );
+        StoreChannel channel = fsa.write( fileA );
 
         ByteBuffer buffer = writeLong( 42 );
         channel.writeAll( buffer );
@@ -146,7 +146,7 @@ public class StateRecoveryManagerTest
         channel.force( false );
 
         File fileB = fileB();
-        fsa.create( fileB );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
 
@@ -191,7 +191,7 @@ public class StateRecoveryManagerTest
 
     private void writeSomeGarbage( EphemeralFileSystemAbstraction fsa, File file ) throws IOException
     {
-        final StoreChannel channel = fsa.create( file );
+        final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffer.allocate( 4 );
         buffer.putInt( 9876 );
         buffer.flip();
@@ -202,7 +202,7 @@ public class StateRecoveryManagerTest
 
     private void writeSomeLongsIn( EphemeralFileSystemAbstraction fsa, File file, long... longs ) throws IOException
     {
-        final StoreChannel channel = fsa.create( file );
+        final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffer.allocate( longs.length * 8 );
 
         for ( long aLong : longs )

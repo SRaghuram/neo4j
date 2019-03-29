@@ -159,13 +159,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
         File logFile = new File( logDirectory, logFilename );
-        StoreChannel lastFile = fs.create( logFile );
+        StoreChannel lastFile = fs.write( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
 
         // When
         // We induce an incomplete entry at the end of the last file
-        lastFile = fs.create( logFile );
+        lastFile = fs.write( logFile );
         lastFile.truncate( currentSize - 1 );
         lastFile.close();
 
@@ -200,13 +200,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private void truncateAndRecover( File logFile, long truncateDownToSize )
             throws IOException, DamagedLogStorageException, DisposedException
     {
-        StoreChannel lastFile = fs.create( logFile );
+        StoreChannel lastFile = fs.write( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
         RecoveryProtocol recovery;
         while ( currentSize-- > truncateDownToSize )
         {
-            lastFile = fs.create( logFile );
+            lastFile = fs.write( logFile );
             lastFile.truncate( currentSize );
             lastFile.close();
             recovery = createRecoveryProtocol();

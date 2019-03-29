@@ -332,7 +332,7 @@ class RecordFormatSelectorTest
     private File createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
     {
         File neoStoreFile = databaseLayout.metadataStore();
-        fs.create( neoStoreFile ).close();
+        fs.write( neoStoreFile ).close();
         return neoStoreFile;
     }
 

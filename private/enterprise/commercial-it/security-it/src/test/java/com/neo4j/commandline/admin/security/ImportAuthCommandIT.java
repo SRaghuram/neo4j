@@ -76,7 +76,7 @@ public class ImportAuthCommandIT
         homeDir = new File( graphDir, "home" );
         fileSystem.mkdirs( confDir );
         fileSystem.mkdirs( homeDir );
-        fileSystem.create( new File( confDir, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
+        fileSystem.write( new File( confDir, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
         out = mock( OutsideWorld.class );
         resetOutsideWorldMock();
         resetSystemDatabaseDirectory();

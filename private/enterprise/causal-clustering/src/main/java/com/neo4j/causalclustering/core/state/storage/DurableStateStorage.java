@@ -65,7 +65,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         if ( !fsa.fileExists( file ) )
         {
             fsa.mkdirs( file.getParentFile() );
-            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.create( file ) ) )
+            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.write( file ) ) )
             {
                 marshal.marshal( marshal.startState(), channel );
             }
@@ -146,7 +146,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel resetStoreFile( File nextStore ) throws IOException
     {
         fsa.truncate( nextStore, 0 );
-        return new PhysicalFlushableChannel( fsa.create( nextStore ) );
+        return new PhysicalFlushableChannel( fsa.write( nextStore ) );
     }
 
 }

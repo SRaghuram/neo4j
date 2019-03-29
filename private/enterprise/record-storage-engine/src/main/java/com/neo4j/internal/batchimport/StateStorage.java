@@ -20,8 +20,6 @@ import org.neo4j.io.fs.ReadableClosableChannel;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.util.Set.of;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 
 public class StateStorage
@@ -42,7 +40,7 @@ public class StateStorage
 
     public Pair<String,byte[]> get() throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.open( stateFile, of( READ ) ) ) )
+        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ) ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];
@@ -64,7 +62,7 @@ public class StateStorage
     public void set( String name, byte[] checkPoint ) throws IOException
     {
         fs.mkdirs( tempFile.getParentFile() );
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.create( tempFile ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ) ) )
         {
             writeString( name, channel );
             channel.putInt( checkPoint.length );

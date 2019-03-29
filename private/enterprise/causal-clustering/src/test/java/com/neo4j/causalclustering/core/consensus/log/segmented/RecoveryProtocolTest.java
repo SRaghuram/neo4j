@@ -273,7 +273,7 @@ public class RecoveryProtocolTest
     private void createLogFile( EphemeralFileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
-        StoreChannel channel = fsa.create( fileNames.getForSegment( fileNameVersion ) );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
         PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel );
         headerMarshal.marshal( new SegmentHeader( prevFileLastIndex, headerVersion, prevIndex, prevTerm ), writer );
         writer.prepareForFlush().flush();
@@ -282,7 +282,7 @@ public class RecoveryProtocolTest
 
     private void createEmptyLogFile( EphemeralFileSystemAbstraction fsa, long fileNameVersion ) throws IOException
     {
-        StoreChannel channel = fsa.create( fileNames.getForSegment( fileNameVersion ) );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
         channel.close();
     }
 }

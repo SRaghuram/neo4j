@@ -110,7 +110,7 @@ public class StoreFileStreamingProtocolTest
 
     private StoreResource createResource( File file, int recordSize ) throws IOException
     {
-        fs.create( file );
+        fs.write( file );
         return new StoreResource( file, file.getPath(), recordSize, fs );
     }
 }

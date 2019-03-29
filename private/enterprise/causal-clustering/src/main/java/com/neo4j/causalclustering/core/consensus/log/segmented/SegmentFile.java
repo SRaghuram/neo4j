@@ -126,7 +126,7 @@ class SegmentFile implements AutoCloseable
                 throw new IOException( "Writer has been closed" );
             }
 
-            StoreChannel channel = fileSystem.create( file );
+            StoreChannel channel = fileSystem.write( file );
             channel.position( channel.size() );
             bufferedWriter = new PhysicalFlushableChannel( channel );
         }

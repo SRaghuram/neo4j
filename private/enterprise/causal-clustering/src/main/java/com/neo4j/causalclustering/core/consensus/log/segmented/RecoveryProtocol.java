@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
 
@@ -28,7 +27,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static java.nio.file.StandardOpenOption.READ;
 import static java.util.Collections.emptyList;
 
 /**
@@ -164,7 +162,7 @@ class RecoveryProtocol
             FileSystemAbstraction fileSystem,
             File file ) throws IOException, EndOfStreamException
     {
-        try ( StoreChannel channel = fileSystem.open( file, Set.of( READ ) ) )
+        try ( StoreChannel channel = fileSystem.read( file ) )
         {
             return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, SegmentHeader.CURRENT_RECORD_OFFSET ) );
         }
@@ -175,7 +173,7 @@ class RecoveryProtocol
             File file,
             SegmentHeader header ) throws IOException
     {
-        try ( StoreChannel channel = fileSystem.create( file ) )
+        try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
             PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, SegmentHeader.CURRENT_RECORD_OFFSET );

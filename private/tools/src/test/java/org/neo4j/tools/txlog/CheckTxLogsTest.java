@@ -964,7 +964,7 @@ public class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
-        try ( StoreChannel channel = fsRule.create( log );
+        try ( StoreChannel channel = fsRule.write( log );
               LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0 );
               PhysicalFlushableChannel writableLogChannel = new PhysicalFlushableChannel( versionedChannel ) )
         {

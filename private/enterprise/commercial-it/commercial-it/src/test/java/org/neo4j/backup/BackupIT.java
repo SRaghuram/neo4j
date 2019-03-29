@@ -495,7 +495,7 @@ class BackupIT
 
         assertTrue( backupDatabaseLayout.databaseDirectory().mkdirs() );
         File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
-        fs.create( incorrectFile ).close();
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
@@ -520,7 +520,7 @@ class BackupIT
         File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
         File incorrectFile = new File( incorrectDir, "jibberishfile" );
         fs.mkdirs( incorrectDir );
-        fs.create( incorrectFile ).close();
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 

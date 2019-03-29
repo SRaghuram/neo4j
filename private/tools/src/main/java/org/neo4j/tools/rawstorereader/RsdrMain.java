@@ -10,7 +10,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +36,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 import org.neo4j.tools.util.TransactionLogUtils;
 
-import static java.nio.file.StandardOpenOption.READ;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -202,7 +200,7 @@ public class RsdrMain
             RecordStore store, long fromId, long toId, Pattern pattern ) throws IOException
     {
         toId = Math.min( toId, store.getHighId() );
-        try ( StoreChannel channel = fileSystem.open( store.getStorageFile(), Set.of( READ ) ) )
+        try ( StoreChannel channel = fileSystem.read( store.getStorageFile() ) )
         {
             int recordSize = store.getRecordSize();
             ByteBuffer buf = ByteBuffer.allocate( recordSize );

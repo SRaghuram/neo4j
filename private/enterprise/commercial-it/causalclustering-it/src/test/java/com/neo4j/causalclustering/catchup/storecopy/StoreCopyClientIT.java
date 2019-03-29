@@ -88,7 +88,7 @@ public class StoreCopyClientIT
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
     {
         byte[] bytes = contents.getBytes();
-        try ( StoreChannel storeChannel = fileSystemAbstraction.create( file ) )
+        try ( StoreChannel storeChannel = fileSystemAbstraction.write( file ) )
         {
             storeChannel.write( ByteBuffer.wrap( bytes ) );
         }
@@ -290,7 +290,7 @@ public class StoreCopyClientIT
             File fileCopy = new File( databaseDir, copyFileName );
 
             ByteBuffer buffer = ByteBuffer.wrap( new byte[finishedContent.length()] );
-            try ( StoreChannel storeChannel = fsa.create( fileCopy ) )
+            try ( StoreChannel storeChannel = fsa.write( fileCopy ) )
             {
                 storeChannel.read( buffer );
             }
