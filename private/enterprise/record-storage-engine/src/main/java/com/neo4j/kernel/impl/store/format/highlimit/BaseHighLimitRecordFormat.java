@@ -8,6 +8,7 @@ package com.neo4j.kernel.impl.store.format.highlimit;
 import java.io.IOException;
 import java.util.function.Function;
 
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.impl.CompositePageCursor;
@@ -17,7 +18,6 @@ import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 
 import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.offsetForId;
 import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdForRecord;
