@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateExpression, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{condition, equal, nullCheck, trueValue}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateExpression, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -19,7 +19,7 @@ import org.neo4j.values.storable.Values
   * Takes an input morsel and compacts all rows to the beginning of it, only keeping the rows that match a predicate
   */
 class FilterOperator(val workIdentity: WorkIdentity,
-                     predicate: Predicate) extends StatelessOperator {
+                     predicate: Expression) extends StatelessOperator {
 
   override def operate(readingRow: MorselExecutionContext,
                        context: QueryContext,

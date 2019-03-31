@@ -5,18 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan}
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.runtime.QueryIndexes
-import org.neo4j.cypher.internal.runtime.zombie.operators._
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.{QueryIndexes, slotted}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
-import org.neo4j.cypher.internal.runtime.slotted
+import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 
 class OperatorFactory(physicalPlan: PhysicalPlan,
@@ -83,6 +82,8 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
         val ordering = argumentOrdering +: sortItems.map(translateColumnOrder(slots, _))
         Some(new SortPreOperator(WorkIdentity.fromPlan(plan),
                                  ordering))
+      case plans.Selection(predicate, _) =>
+        Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
       case plans.Limit(_, count, ties) =>
         Some(new LimitOperator(plan.id, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))

@@ -140,7 +140,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           new ProduceResultOperator(WorkIdentity.fromPlan(plan), slots, runtimeColumns)
 
         case plans.Selection(predicate, _) =>
-          new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandPredicate(id, predicate))
+          new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate))
 
         case plans.Expand(lhs, fromName, dir, types, to, relName, ExpandAll) =>
           val fromOffset = slots.getLongOffsetFor(fromName)
