@@ -64,9 +64,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
-          SlottedIndexedProperty(column, properties.head, slots),
-          //TODO what should be done with morsel? right now just takes head to compile
-          //  seek does: properties.map(SlottedIndexedProperty(column, _, slots)).toArray
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
           queryIndexes.registerQueryIndex(labelToken, properties),
           asKernelIndexOrder(indexOrder),
           argumentSize)

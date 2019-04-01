@@ -51,7 +51,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
         AllNodesScanSlottedPipe(column, slots, argumentSize)(id)
 
       case NodeIndexScan(column, label, properties, _, indexOrder) =>
-        NodeIndexScanSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)), queryIndexes.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
+        NodeIndexScanSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)),
+          queryIndexes.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
 
       case NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)

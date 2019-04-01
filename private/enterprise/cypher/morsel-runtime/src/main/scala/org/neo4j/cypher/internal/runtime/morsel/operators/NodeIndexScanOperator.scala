@@ -16,11 +16,12 @@ import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueInd
 class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                             nodeOffset: Int,
                             label: Int,
-                            property: SlottedIndexedProperty,
+                            properties: Array[SlottedIndexedProperty],
                             queryIndexId: Int,
                             indexOrder: IndexOrder,
                             argumentSize: SlotConfiguration.Size)
-  extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
+  extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, properties) {
+  private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
   override def init(context: QueryContext,
                     state: QueryState,
@@ -37,7 +38,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources): Boolean = {
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead
-      read.nodeIndexScan(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined)
+      read.nodeIndexScan(index, cursor, indexOrder, needsValues)
       true
     }
 

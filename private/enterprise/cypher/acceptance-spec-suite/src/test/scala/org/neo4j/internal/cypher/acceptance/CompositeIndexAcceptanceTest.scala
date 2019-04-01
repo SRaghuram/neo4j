@@ -704,6 +704,25 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toComparableResult should equal(Seq(Map("n" -> n)))
   }
 
+  test("should use composite index for index scan") {
+    // Given
+    graph.createIndex("X", "p1", "p2")
+    createLabeledNode(Map("p1" -> 1, "p2" -> 2), "X")
+    createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
+    createLabeledNode(Map("p1" -> 1, "p2" -> 3), "X")
+
+    // When
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:X) WHERE exists(n.p1) AND n.p2 > 1 RETURN n.p1 AS p1, n.p2 AS p2",
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":X(p1,p2)")
+      }))
+
+    // Then
+    result.toComparableResult should equal(Seq(Map("p1" -> 1, "p2" -> 2), Map("p1" -> 1, "p2" -> 3)))
+  }
+
   test("should use composite index for ranges") {
     // Given
     graph.createIndex("User", "name", "age")
