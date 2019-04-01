@@ -323,6 +323,13 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-Xmx6g</argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
