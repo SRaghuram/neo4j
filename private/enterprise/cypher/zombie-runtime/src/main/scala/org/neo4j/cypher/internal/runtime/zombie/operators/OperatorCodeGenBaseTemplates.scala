@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepres
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
 import org.neo4j.cypher.internal.runtime.zombie.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
@@ -83,7 +84,6 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
   // TODO: Use methods of actual interface to generate declaration?
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
     val fields = genFields
-    val localVariables = genLocalVariables
 
     ClassDeclaration(packageName, className,
       extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
@@ -104,7 +104,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
           ),
           body = genOperate,
-          localVariables = localVariables,
+          localVariables = genLocalVariables, // NOTE: This have to be called after genOperate!
           parameterizedWith = Some(("E", extending[Exception])),
           throws = Some(typeParam("E"))
         ),
@@ -134,11 +134,31 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
 }
 
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
-class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null) extends OperatorTaskTemplate {
+class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
+                                   var shouldWriteToContext: Boolean = true)
+                                  (codeGen: OperatorIntermediateCodeGeneration) extends OperatorTaskTemplate {
   override def genOperate: IntermediateRepresentation = {
-    delegate.genOperate
+    if (shouldWriteToContext) {
+      block(
+        codeGen.writeLocalsToSlots(),
+        delegate.genOperate
+      )
+    } else {
+      delegate.genOperate
+    }
   }
 
   override def genFields: Seq[Field] = delegate.genFields
-  override def genLocalVariables: Seq[LocalVariable] = delegate.genLocalVariables
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    codeGen.locals.getAllLocalsForLongSlots.map {
+      case (_, name) =>
+        variable[Long](name, constant(-1L))
+    } ++
+    codeGen.locals.getAllLocalsForRefSlots.map {
+      case (_, name) =>
+        variable[AnyValue](name, noValue)
+    } ++
+    delegate.genLocalVariables
+  }
 }

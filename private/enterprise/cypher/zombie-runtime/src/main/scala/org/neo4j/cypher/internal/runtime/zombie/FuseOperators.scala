@@ -41,7 +41,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
   private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(id)
-    val expressionCompiler = new IntermediateCodeGeneration(slots) // NOTE: We assume slots is the same within an entire pipeline
+    val expressionCompiler = new OperatorIntermediateCodeGeneration(slots) // NOTE: We assume slots is the same within an entire pipeline
     generateSlotAccessorFunctions(slots)
 
     // Fold plans in reverse to build-up code generation templates with inner templates
@@ -53,9 +53,13 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // MiddlePlan2 -> Template1(innermostTemplate)
     // MiddlePlan1 -> Template2(inner=Template1)
     // HeadPlan    -> Template3(inner=Template2)
-    val innermostTemplate = new DelegateOperatorTaskTemplate
+    val innermostTemplate = new DelegateOperatorTaskTemplate()(expressionCompiler)
 
-    val innerTemplate = produceResult.map(p => new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)).getOrElse(innermostTemplate)
+    val innerTemplate = produceResult.map(p => {
+      innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
+      new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
+    }).getOrElse(innermostTemplate)
+
     val reversePlans = middlePlans.foldLeft(List(headPlan))((acc, p) => p :: acc)
 
     //noinspection VariablePatternShadow
@@ -69,7 +73,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
-            (new SingleThreadedAllNodeScanTaskTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize),
+            (new SingleThreadedAllNodeScanTaskTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize)(expressionCompiler),
               p :: fusedPlans, unhandledPlans, unhandledProduceResult)
 
           case plans.Selection(predicate, _) =>

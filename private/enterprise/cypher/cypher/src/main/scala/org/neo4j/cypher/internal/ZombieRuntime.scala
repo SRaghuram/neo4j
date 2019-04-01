@@ -30,7 +30,7 @@ import org.neo4j.values.virtual.MapValue
 object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "zombie"
 
-  val ENABLED = false
+  val ENABLED = true
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,

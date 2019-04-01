@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
@@ -105,7 +106,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration) extends ContinuableOperatorTaskTemplate {
+class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
+                                       (codeGen: OperatorIntermediateCodeGeneration) extends ContinuableOperatorTaskTemplate {
   import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
 
   override def toString: String = "ProduceResultTaskTemplate"
@@ -126,10 +128,9 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
 
   // This operates on a single row only
   override def genOperate: IntermediateRepresentation = {
-    val getLongAt = (offset: Int) =>
-      invoke(OUTPUT_ROW, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
-    val getRefAt = (offset: Int) =>
-      invoke(OUTPUT_ROW, method[ExecutionContext, AnyValue, Int]("getRefAt"), constant(offset))
+    def getLongAt(offset: Int) = codeGen.getLongAt(offset)
+    def getRefAt(offset: Int) = codeGen.getRefAt(offset)
+
     val nodeFromSlot = (offset: Int) =>
       invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
     val relFromSlot = (offset: Int) =>

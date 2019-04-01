@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepres
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
 
@@ -144,7 +145,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                             val innermost: DelegateOperatorTaskTemplate,
                                             val nodeVarName: String,
                                             val offset: Int,
-                                            val argumentSize: SlotConfiguration.Size) extends InputLoopTaskTemplate {
+                                            val argumentSize: SlotConfiguration.Size)
+                                           (codeGen: OperatorIntermediateCodeGeneration) extends InputLoopTaskTemplate {
   import OperatorCodeGenHelperTemplates._
 
   // Setup the innermost output template
@@ -188,10 +190,23 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //}
     loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(CURSOR), method[NodeCursor, Boolean]("next"))))(
       block(
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-          loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences)),
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, Int, Long]("setLongAt"),
-          constant(offset), invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
+        // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
+        //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
+        //       that needs to be array-copied because a pipeline of an outer nesting may need them later on,
+        //       and an suffix range of n+1 to m arguments that are being used in this pipeline, and thus declared as locals.
+        //       The suffix range will be written from locals to the context by the innermost template,
+        //       (unless this pipeline ends with a ProduceResult, in which case it is written directly to the result),
+        //       so we do not need to include it in this copy.
+        // If the pipeline ends with a ProduceResult, the prefix range array copy could be skipped entirely
+        // since it means nobody is interested in those arguments.
+        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+            loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+        } else {
+          noop()
+        },
+
+        codeGen.setLongAt(offset, invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperate
       )
     )
