@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.state.CoreBootstrapper;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -22,6 +23,7 @@ import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.function.ThrowingAction;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.monitoring.Monitors;
 
 import static java.lang.String.format;
@@ -43,6 +45,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
     private final SimpleStorage<DatabaseName> dbNameStorage;
     private final CoreTopologyService topologyService;
     private final CoreBootstrapper coreBootstrapper;
+    private final AvailabilityGuard availabilityGuard;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -54,8 +57,10 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
     public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> dbNameStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, CoreBootstrapper coreBootstrapper, String dbName, int minCoreHosts, Monitors monitors )
+            Duration timeout, CoreBootstrapper coreBootstrapper, String dbName, AvailabilityGuard availabilityGuard,
+            int minCoreHosts, Monitors monitors )
     {
+        this.availabilityGuard = availabilityGuard;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.clusterIdStorage = clusterIdStorage;
         this.dbNameStorage = dbNameStorage;
@@ -150,17 +155,22 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
                 monitor.bootstrapped( snapshot, clusterId );
                 shouldRetryPublish = publishClusterId( clusterId );
             }
-
-            retryWaiter.apply();
-
-        } while ( ( clusterId == null || shouldRetryPublish ) && clock.millis() < endTime );
-
-        if ( clusterId == null || shouldRetryPublish )
-        {
-            throw new TimeoutException( format(
+            else if ( clock.millis() >= endTime )
+            {
+                throw new TimeoutException( format(
                     "Failed to join a cluster with members %s. Another member should have published " +
                     "a clusterId but none was detected. Please restart the cluster.", topology ) );
-        }
+            }
+            else if ( availabilityGuard.isShutdown() )
+            {
+                throw new DatabaseShutdownException( "Database has been shut down before cluster binding completed." );
+            }
+            else
+            {
+                retryWaiter.apply();
+            }
+
+        } while ( clusterId == null || shouldRetryPublish );
 
         clusterIdStorage.writeState( clusterId );
         return new BoundState( clusterId, snapshot );

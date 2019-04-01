@@ -25,6 +25,7 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -42,8 +43,8 @@ public class ClusteringModule
     private final CoreTopologyService topologyService;
     private final ClusterBinder clusterBinder;
 
-    public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself,
-            PlatformModule platformModule, File clusterStateDirectory, DatabaseLayout databaseLayout )
+    public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, PlatformModule platformModule, File clusterStateDirectory,
+            DatabaseLayout databaseLayout, AvailabilityGuard availabilityGuard )
     {
         LifeSupport life = platformModule.life;
         Config config = platformModule.config;
@@ -76,7 +77,7 @@ public class ClusteringModule
 
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         clusterBinder = new ClusterBinder( clusterIdStorage, dbNameStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, coreBootstrapper, dbName, minimumCoreHosts, platformModule.monitors );
+                clusterBindingTimeout, coreBootstrapper, dbName, availabilityGuard, minimumCoreHosts, platformModule.monitors );
     }
 
     private static TopologyServiceRetryStrategy resolveStrategy( Config config, LogProvider logProvider )
