@@ -82,8 +82,9 @@ public class EnterpriseBuiltInDbmsProcedures
     public void setTXMetaData( @Name( value = "data" ) Map<String,Object> data )
     {
         securityContext.assertCredentialsNotExpired();
-        int totalCharSize = data.entrySet().stream()
-                .mapToInt( e -> e.getKey().length() + e.getValue().toString().length() )
+        int totalCharSize = data.entrySet()
+                .stream()
+                .mapToInt( e -> e.getKey().length() + ((e.getValue() != null) ? e.getValue().toString().length() : 0) )
                 .sum();
 
         if ( totalCharSize >= HARD_CHAR_LIMIT )
