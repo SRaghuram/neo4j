@@ -252,7 +252,6 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
         assertSuccess( adminSubject, "MATCH (n:Node) WHERE n.number = 3 return labels(n)",
                 r -> assertKeyIs( r, "labels(n)", listOf( "A", "Node" ) ) );
-        // TODO no filtering implemented here yet
         assertSuccess( subject, "MATCH (n:Node) WHERE n.number = 3 return labels(n)",
                 r -> assertKeyIs( r, "labels(n)", listOf( "Node" ) ) );
     }
