@@ -27,7 +27,7 @@ import org.neo4j.internal.collector.RingRecentBuffer;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
-@BenchmarkEnabled( true )
+@BenchmarkEnabled( false )
 @OutputTimeUnit( MICROSECONDS )
 public class RecentBufferBenchmark extends BaseRegularBenchmark
 {
@@ -45,7 +45,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
 
     @ParamValues(
             allowed = {"concurrentLinkedQueue", "ringBuffer"},
-            base = {} )
+            base = {"concurrentLinkedQueue", "ringBuffer"} )
     @Param( {} )
     public String RecentBufferBenchmark_impl;
 
