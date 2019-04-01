@@ -92,7 +92,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     logicalPlan.rhs.foreach(solve)
   }
 
-  def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = false): ExecutablePlan = {
+  def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = true): ExecutablePlan = {
     def cypherRuntimeOption(cypherRuntime: CypherRuntime): CypherRuntimeOption =
       cypherRuntime match {
         case Interpreted => CypherRuntimeOption.interpreted
