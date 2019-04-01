@@ -45,7 +45,7 @@ public class StoreDownloader
         DatabaseCatchupComponents components = getCatchupComponents( database.databaseName() );
         Optional<StoreId> validStoreId = validateStoreId( database, components.remoteStore(), primaryAddress );
 
-        if ( !validStoreId.isPresent() )
+        if ( validStoreId.isEmpty() )
         {
             return false;
         }
@@ -70,8 +70,7 @@ public class StoreDownloader
      * is valid either because it matches between the local and the upstream or because the local database
      * is empty anyway so it should be overridden by the remote store ID when the remote database is copied.
      */
-    private Optional<StoreId> validateStoreId( ClusteredDatabaseContext clusteredDatabaseContext, RemoteStore remoteStore,
-            AdvertisedSocketAddress address ) throws IOException
+    private Optional<StoreId> validateStoreId( ClusteredDatabaseContext clusteredDatabaseContext, RemoteStore remoteStore, AdvertisedSocketAddress address )
     {
         StoreId remoteStoreId;
         try

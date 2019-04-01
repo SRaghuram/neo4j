@@ -9,8 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -63,14 +61,14 @@ public class CoreDownloader
             throws IOException, DatabaseShutdownException
     {
         Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( addressProvider );
-        if ( !primaryOpt.isPresent() )
+        if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
         }
         AdvertisedSocketAddress primaryAddress = primaryOpt.get();
 
         Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseName(), primaryAddress );
-        if ( !coreSnapshot.isPresent() )
+        if ( coreSnapshot.isEmpty() )
         {
             return Optional.empty();
         }
