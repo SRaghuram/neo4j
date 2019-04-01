@@ -294,9 +294,15 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     }
 
     @Override
-    public void installSnapshot( String databaseName, CoreSnapshot coreSnapshot )
+    public void installSnapshotForDatabase( String databaseName, CoreSnapshot coreSnapshot )
     {
         dbStateMap.get( databaseName ).stateMachines().installSnapshot( coreSnapshot );
+        // sessionTracker.installSnapshot( coreSnapshot.get( CoreStateFiles.SESSION_TRACKER ) ); // Temporary until we have separate raft groups per database
+    }
+
+    @Override
+    public void installSnapshotForRaftGroup( CoreSnapshot coreSnapshot )
+    {
         sessionTracker.installSnapshot( coreSnapshot.get( CoreStateFiles.SESSION_TRACKER ) );
     }
 

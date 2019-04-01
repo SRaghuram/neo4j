@@ -15,7 +15,9 @@ public interface CoreStateRepository
 {
     void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot );
 
-    void installSnapshot( String databaseName, CoreSnapshot coreSnapshot );
+    void installSnapshotForDatabase( String databaseName, CoreSnapshot coreSnapshot );
+
+    void installSnapshotForRaftGroup( CoreSnapshot coreSnapshot );
 
     void flush( long lastApplied ) throws IOException;
 

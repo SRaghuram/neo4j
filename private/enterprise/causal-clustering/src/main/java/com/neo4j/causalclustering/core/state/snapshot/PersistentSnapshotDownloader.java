@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -17,10 +16,13 @@ import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Optional;
 
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
+
+import static java.lang.String.format;
 
 public class PersistentSnapshotDownloader implements Runnable
 {
@@ -88,20 +90,37 @@ public class PersistentSnapshotDownloader implements Runnable
 
             // iteration over all databases should go away once we have separate database lifecycles
             // each database will then download its snapshot and store independently from others
-            for ( ClusteredDatabaseContext db : databaseManager.registeredDatabases().values() )
+
+            var databases = new HashMap<>( databaseManager.registeredDatabases() );
+            var snapshots = new HashMap<String,CoreSnapshot>();
+
+            boolean incomplete = false;
+            for ( ClusteredDatabaseContext db : databases.values() )
             {
                 Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( db );
+                String databaseName = db.databaseName();
 
                 if ( snapshot.isPresent() )
                 {
-                    String databaseName = db.databaseName();
-                    snapshotService.installSnapshot( databaseName, snapshot.get() );
-                    log.info( "Core snapshot for database '" + databaseName + "' installed: " + snapshot );
+                    snapshots.put( databaseName, snapshot.get() );
+                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseName, snapshot ) );
+                }
+                else
+                {
+                    log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseName ) );
+                    incomplete = true;
                 }
             }
 
-            if ( !stopped )
+            if ( incomplete || stopped )
             {
+                log.warn( "Not starting databases after store copy." );
+            }
+            else
+            {
+                /* Temporary until raft groups are separated. */
+                snapshotService.installSnapshots( snapshots );
+
                 /* Starting the databases will invoke the commit process factory in the CoreEditionModule, which has important side-effects. */
                 log.info( "Starting local databases" );
                 databaseManager.start();
