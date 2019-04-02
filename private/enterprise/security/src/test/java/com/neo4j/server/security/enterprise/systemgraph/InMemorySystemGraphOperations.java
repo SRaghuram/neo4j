@@ -24,7 +24,9 @@ import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 
 public class InMemorySystemGraphOperations extends SystemGraphOperations
 {
@@ -39,7 +41,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void addUser( User user ) throws InvalidArgumentsException
+    public void addUser( User user ) throws InvalidArgumentsException
     {
         String username = user.name();
         assertValidUsername( username );
@@ -51,7 +53,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    Set<String> getAllUsernames()
+    public Set<String> getAllUsernames()
     {
         return users.keySet();
     }
@@ -228,7 +230,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    boolean deleteUser( String username ) throws InvalidArgumentsException
+    public boolean deleteUser( String username ) throws InvalidArgumentsException
     {
         User removed = users.remove( username );
         if ( removed == null )
@@ -255,7 +257,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    User getUser( String username, boolean silent ) throws InvalidArgumentsException
+    public User getUser( String username, boolean silent ) throws InvalidArgumentsException
     {
         User user = users.get( username );
         if ( !silent && user == null )
@@ -266,7 +268,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void setUserCredentials( String username, String newCredentials, boolean requirePasswordChange ) throws InvalidArgumentsException
+   protected void setUserCredentials( String username, String newCredentials, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
         User user = users.get( username );
         if ( user == null )

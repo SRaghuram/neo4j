@@ -18,52 +18,26 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import org.neo4j.cypher.result.QueryResult;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.security.Credential;
-import org.neo4j.kernel.impl.security.User;
-import org.neo4j.server.security.auth.exception.FormatException;
+import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
-import org.neo4j.server.security.systemgraph.SystemGraphCredential;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
-public class SystemGraphOperations
+public class SystemGraphOperations extends BasicSystemGraphOperations
 {
-    private final QueryExecutor queryExecutor;
-    private final SecureHasher secureHasher;
-
     public SystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
     {
-        this.queryExecutor = queryExecutor;
-        this.secureHasher = secureHasher;
-    }
-
-    void addUser( User user ) throws InvalidArgumentsException
-    {
-        // NOTE: If username already exists we will violate a constraint
-        String query = "CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})";
-        Map<String,Object> params =
-                MapUtil.map( "name", user.name(),
-                        "credentials", user.credentials().serialize(),
-                        "passwordChangeRequired", user.passwordChangeRequired(),
-                        "suspended", user.hasFlag( SystemGraphRealm.IS_SUSPENDED ) );
-        queryExecutor.executeQueryWithConstraint( query, params,
-                "The specified user '" + user.name() + "' already exists." );
-    }
-
-    Set<String> getAllUsernames()
-    {
-        String query = "MATCH (u:User) RETURN u.name";
-        return queryExecutor.executeQueryWithResultSet( query );
+        super( queryExecutor, secureHasher );
     }
 
     AuthorizationInfo doGetAuthorizationInfo( String username )
@@ -315,15 +289,6 @@ public class SystemGraphOperations
         return queryExecutor.executeQueryWithResultSetAndParamCheck( query, params, errorMsg );
     }
 
-    boolean deleteUser( String username ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (u:User {name: $name}) DETACH DELETE u RETURN 0";
-        Map<String,Object> params = map("name", username );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        return queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
     Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException
     {
         String query = "MATCH (r:Role {name: $role}) OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r) RETURN u.name";
@@ -333,65 +298,6 @@ public class SystemGraphOperations
         return queryExecutor.executeQueryWithResultSetAndParamCheck( query, params, errorMsg );
     }
 
-    User getUser( String username, boolean silent ) throws InvalidArgumentsException
-    {
-        User[] user = new User[1];
-
-        String query = "MATCH (u:User {name: $name}) RETURN u.credentials, u.passwordChangeRequired, u.suspended";
-        Map<String,Object> params = map( "name", username );
-
-        final QueryResult.QueryResultVisitor<FormatException> resultVisitor = row ->
-        {
-            AnyValue[] fields = row.fields();
-            Credential credential = SystemGraphCredential.deserialize( ((TextValue) fields[0]).stringValue(), secureHasher );
-            boolean requirePasswordChange = ((BooleanValue) fields[1]).booleanValue();
-            boolean suspended = ((BooleanValue) fields[2]).booleanValue();
-
-            if ( suspended )
-            {
-                user[0] = new User.Builder()
-                        .withName( username )
-                        .withCredentials( credential )
-                        .withRequiredPasswordChange( requirePasswordChange )
-                        .withFlag( SystemGraphRealm.IS_SUSPENDED )
-                        .build();
-            }
-            else
-            {
-                user[0] = new User.Builder()
-                        .withName( username )
-                        .withCredentials( credential )
-                        .withRequiredPasswordChange( requirePasswordChange )
-                        .withoutFlag( SystemGraphRealm.IS_SUSPENDED )
-                        .build();
-            }
-
-            return false;
-        };
-
-        queryExecutor.executeQuery( query, params, resultVisitor );
-
-        if ( user[0] == null && !silent )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-
-        return user[0];
-    }
-
-    void setUserCredentials( String username, String newCredentials, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (u:User {name: $name}) SET u.credentials = $credentials, " +
-                "u.passwordChangeRequired = $passwordChangeRequired RETURN u.name";
-        Map<String,Object> params =
-                map( "name", username,
-                        "credentials", newCredentials,
-                        "passwordChangeRequired", requirePasswordChange );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
     private void assertDbExists( String dbName ) throws InvalidArgumentsException
     {
         String query = "MATCH (db:Database {name: $name}) RETURN db.name";
@@ -399,36 +305,6 @@ public class SystemGraphOperations
         String errorMsg = "Database '" + dbName + "' does not exist.";
 
         queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
-    // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
-    private static final Pattern usernamePattern = Pattern.compile( "^[\\x21-\\x2B\\x2D-\\x39\\x3B-\\x7E]+$" );
-
-    static void assertValidUsername( String username ) throws InvalidArgumentsException
-    {
-        if ( username == null || username.isEmpty() )
-        {
-            throw new InvalidArgumentsException( "The provided username is empty." );
-        }
-        if ( !usernamePattern.matcher( username ).matches() )
-        {
-            throw new InvalidArgumentsException(
-                    "Username '" + username + "' contains illegal characters. Use ascii characters that are not ',', ':' or whitespaces." );
-        }
-    }
-
-    private static final Pattern roleNamePattern = Pattern.compile( "^[a-zA-Z0-9_]+$" );
-
-    static void assertValidRoleName( String name ) throws InvalidArgumentsException
-    {
-        if ( name == null || name.isEmpty() )
-        {
-            throw new InvalidArgumentsException( "The provided role name is empty." );
-        }
-        if ( !roleNamePattern.matcher( name ).matches() )
-        {
-            throw new InvalidArgumentsException( "Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers." );
-        }
     }
 
     static void assertValidDbName( String name ) throws InvalidArgumentsException
