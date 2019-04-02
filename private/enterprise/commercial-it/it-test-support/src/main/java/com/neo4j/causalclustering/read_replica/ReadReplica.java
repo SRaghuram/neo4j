@@ -124,11 +124,6 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         return boltAdvertisedSocketAddress;
     }
 
-    public String routingURI()
-    {
-        return String.format( "bolt+routing://%s", boltAdvertisedSocketAddress );
-    }
-
     @Override
     public void start()
     {
