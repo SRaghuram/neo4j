@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -31,7 +32,7 @@ public class ClusterRuleIT
     @Rule
     public final ClusterRule clusterRule = new ClusterRule();
 
-    @Test
+    @Ignore
     public void shouldAssignPortsToMembersAutomatically() throws Exception
     {
         Cluster cluster = clusterRule.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 5 ).startCluster();
