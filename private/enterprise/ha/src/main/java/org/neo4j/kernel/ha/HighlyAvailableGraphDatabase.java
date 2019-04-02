@@ -9,6 +9,8 @@ import java.io.File;
 import java.util.Map;
 
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
+import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.AvailabilityGuardInstaller;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberState;
 import org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher;
@@ -28,21 +30,29 @@ public class HighlyAvailableGraphDatabase extends GraphDatabaseFacade
     public HighlyAvailableGraphDatabase( File storeDir, Map<String,String> params,
             GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        newHighlyAvailableFacadeFactory().initFacade( storeDir, params, dependencies, this );
+        newHighlyAvailableFacadeFactory( availabilityGuard -> {} ).initFacade( storeDir, params, dependencies, this );
     }
 
     public HighlyAvailableGraphDatabase( File storeDir, Config config,
             GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        newHighlyAvailableFacadeFactory().initFacade( storeDir, config, dependencies, this );
+        newHighlyAvailableFacadeFactory( availabilityGuard -> {} ).initFacade( storeDir, config, dependencies, this );
+    }
+
+    public HighlyAvailableGraphDatabase( File storeDir, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies,
+            AvailabilityGuardInstaller guardInstaller )
+    {
+        newHighlyAvailableFacadeFactory( guardInstaller ).initFacade( storeDir, config, dependencies, this );
     }
 
     // used for testing in a different project, please do not remove
-    protected GraphDatabaseFacadeFactory newHighlyAvailableFacadeFactory()
+    protected GraphDatabaseFacadeFactory newHighlyAvailableFacadeFactory( AvailabilityGuardInstaller guardInstaller )
     {
         return new GraphDatabaseFacadeFactory( DatabaseInfo.HA, platformModule ->
         {
             module = new HighlyAvailableEditionModule( platformModule );
+            AvailabilityGuard guard = module.getGlobalAvailabilityGuard( platformModule.clock, platformModule.logging, platformModule.config );
+            guardInstaller.install( guard );
             return module;
         } );
     }

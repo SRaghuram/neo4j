@@ -155,20 +155,19 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
                 monitor.bootstrapped( snapshot, clusterId );
                 shouldRetryPublish = publishClusterId( clusterId );
             }
-            else if ( clock.millis() >= endTime )
-            {
-                throw new TimeoutException( format(
-                    "Failed to join a cluster with members %s. Another member should have published " +
-                    "a clusterId but none was detected. Please restart the cluster.", topology ) );
-            }
-            else if ( availabilityGuard.isShutdown() )
+
+            if ( availabilityGuard.isShutdown() )
             {
                 throw new DatabaseShutdownException( "Database has been shut down before cluster binding completed." );
             }
-            else
+            else if ( clock.millis() >= endTime )
             {
-                retryWaiter.apply();
+                throw new TimeoutException( format(
+                        "Failed to join a cluster with members %s. Another member should have published " +
+                                "a clusterId but none was detected. Please restart the cluster.", topology ) );
             }
+
+            retryWaiter.apply();
 
         } while ( clusterId == null || shouldRetryPublish );
 
