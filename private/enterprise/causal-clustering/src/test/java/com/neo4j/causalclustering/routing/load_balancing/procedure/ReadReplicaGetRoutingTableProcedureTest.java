@@ -20,9 +20,9 @@ import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.
 class ReadReplicaGetRoutingTableProcedureTest extends SingleInstanceGetRoutingTableProcedureTest
 {
     @Override
-    protected SingleInstanceGetRoutingTableProcedure newProcedure( DatabaseManager databaseManager, ConnectorPortRegister portRegister, Config config )
+    protected SingleInstanceGetRoutingTableProcedure newProcedure( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config )
     {
-        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, () -> databaseManager, portRegister, config );
+        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, databaseManager, portRegister, config );
     }
 
     @Override

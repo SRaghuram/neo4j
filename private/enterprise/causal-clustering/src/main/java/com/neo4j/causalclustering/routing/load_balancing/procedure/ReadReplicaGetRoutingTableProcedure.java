@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -20,10 +19,10 @@ import static java.util.Collections.singletonList;
 
 public class ReadReplicaGetRoutingTableProcedure extends SingleInstanceGetRoutingTableProcedure
 {
-    public ReadReplicaGetRoutingTableProcedure( List<String> namespace, Supplier<DatabaseManager> databaseManagerSupplier,
+    public ReadReplicaGetRoutingTableProcedure( List<String> namespace, DatabaseManager<?> databaseManager,
             ConnectorPortRegister portRegister, Config config )
     {
-        super( namespace, databaseManagerSupplier, portRegister, config );
+        super( namespace, databaseManager, portRegister, config );
     }
 
     @Override

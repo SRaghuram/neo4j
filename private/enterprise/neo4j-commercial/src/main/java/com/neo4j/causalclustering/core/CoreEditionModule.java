@@ -228,8 +228,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
-        routingProcedureInstaller = createRoutingProcedureInstaller( globalModule, consensusModule, topologyService );
-
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }
 
@@ -257,6 +255,16 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
         globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
+    }
+
+    @Override
+    protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    {
+        RaftMachine raftMachine = consensusModule.raftMachine();
+        LeaderService leaderService = new DefaultLeaderService( raftMachine, topologyService );
+        Config config = globalModule.getGlobalConfig();
+        LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
+        return new CoreRoutingProcedureInstaller( topologyService, leaderService, config, logProvider );
     }
 
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
@@ -502,15 +510,5 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
-    }
-
-    private static BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, ConsensusModule consensusModule,
-            TopologyService topologyService )
-    {
-        RaftMachine raftMachine = consensusModule.raftMachine();
-        LeaderService leaderService = new DefaultLeaderService( raftMachine, topologyService );
-        Config config = globalModule.getGlobalConfig();
-        LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new CoreRoutingProcedureInstaller( topologyService, leaderService, config, logProvider );
     }
 }

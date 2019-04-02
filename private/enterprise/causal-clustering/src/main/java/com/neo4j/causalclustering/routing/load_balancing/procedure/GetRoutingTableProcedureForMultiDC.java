@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
@@ -41,8 +42,8 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
     }
 
     @Override
-    protected RoutingResult invoke( String databaseName, MapValue routingContext ) throws ProcedureException
+    protected RoutingResult invoke( DatabaseId databaseId, MapValue routingContext ) throws ProcedureException
     {
-        return loadBalancingProcessor.run( databaseName, routingContext );
+        return loadBalancingProcessor.run( databaseId.name(), routingContext );
     }
 }

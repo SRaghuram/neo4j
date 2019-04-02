@@ -42,7 +42,6 @@ import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -140,8 +139,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
-        routingProcedureInstaller = createRoutingProcedureInstaller( globalModule );
-
         editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
     }
 
@@ -152,6 +149,14 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure() );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
+    }
+
+    @Override
+    protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    {
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
+        Config config = globalModule.getGlobalConfig();
+        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config );
     }
 
     private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Health allHealths, Server catchupServer,
@@ -327,13 +332,5 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     public boolean handlesDatabaseManagerLifecycle()
     {
         return true;
-    }
-
-    private static BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule )
-    {
-        Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
-        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
-        Config config = globalModule.getGlobalConfig();
-        return new ReadReplicaRoutingProcedureInstaller( databaseManagerSupplier, portRegister, config );
     }
 }

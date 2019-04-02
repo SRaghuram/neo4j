@@ -32,9 +32,9 @@ class ReadReplicaRoutingProcedureInstallerTest
     @Test
     void shouldRegisterRoutingProcedures() throws Exception
     {
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = mock( DatabaseManager.class );
         ConnectorPortRegister portRegister = mock( ConnectorPortRegister.class );
-        ReadReplicaRoutingProcedureInstaller installer = new ReadReplicaRoutingProcedureInstaller( () -> databaseManager, portRegister, Config.defaults() );
+        ReadReplicaRoutingProcedureInstaller installer = new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, Config.defaults() );
         GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
 
         installer.install( procedures );

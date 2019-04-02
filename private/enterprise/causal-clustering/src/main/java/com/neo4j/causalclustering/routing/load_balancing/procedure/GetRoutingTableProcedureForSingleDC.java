@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
@@ -58,20 +59,20 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
     }
 
     @Override
-    protected RoutingResult invoke( String databaseName, MapValue routingContext )
+    protected RoutingResult invoke( DatabaseId databaseId, MapValue routingContext )
     {
-        var routeEndpoints = routeEndpoints( databaseName );
-        var writeEndpoints = writeEndpoints( databaseName );
-        var readEndpoints = readEndpoints( databaseName );
+        var routeEndpoints = routeEndpoints( databaseId );
+        var writeEndpoints = writeEndpoints( databaseId );
+        var readEndpoints = readEndpoints( databaseId );
 
         var timeToLiveMillis = config.get( routing_ttl ).toMillis();
 
         return new RoutingResult( routeEndpoints, writeEndpoints, readEndpoints, timeToLiveMillis );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( String databaseName )
+    private List<AdvertisedSocketAddress> routeEndpoints( DatabaseId databaseId )
     {
-        var routers = coreTopologyFor( databaseName )
+        var routers = coreTopologyFor( databaseId )
                 .allMemberInfo()
                 .map( ClientConnector::boltAddress )
                 .collect( toList() );
@@ -80,9 +81,9 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return routers;
     }
 
-    private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
+    private List<AdvertisedSocketAddress> writeEndpoints( DatabaseId databaseId )
     {
-        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseName );
+        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseId.name() );
         if ( optionalLeaderAddress.isEmpty() )
         {
             log.debug( "No leader server found. This can happen during a leader switch. No write end points available" );
@@ -90,24 +91,24 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return optionalLeaderAddress.stream().collect( toList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( String databaseName )
+    private List<AdvertisedSocketAddress> readEndpoints( DatabaseId databaseId )
     {
-        var readReplicas = readReplicaTopology( databaseName )
+        var readReplicas = readReplicaTopology( databaseId )
                 .allMemberInfo()
                 .map( ClientConnector::boltAddress )
                 .collect( toList() );
 
         var allowReadsOnFollowers = readReplicas.isEmpty() || config.get( cluster_allow_reads_on_followers );
-        var coreReadEndPoints = allowReadsOnFollowers ? coreReadEndPoints( databaseName ) : Stream.<AdvertisedSocketAddress>empty();
+        var coreReadEndPoints = allowReadsOnFollowers ? coreReadEndPoints( databaseId ) : Stream.<AdvertisedSocketAddress>empty();
         var readEndPoints = Stream.concat( readReplicas.stream(), coreReadEndPoints ).collect( toList() );
         Collections.shuffle( readEndPoints );
         return readEndPoints;
     }
 
-    private Stream<AdvertisedSocketAddress> coreReadEndPoints( String databaseName )
+    private Stream<AdvertisedSocketAddress> coreReadEndPoints( DatabaseId databaseId )
     {
-        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseName );
-        var coreServerInfos = coreTopologyFor( databaseName ).members().values();
+        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseId.name() );
+        var coreServerInfos = coreTopologyFor( databaseId ).members().values();
         var coreAddresses = coreServerInfos.stream().map( ClientConnector::boltAddress );
 
         // if the leader is present and it is not alone filter it out from the read end points
@@ -122,18 +123,18 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return coreAddresses;
     }
 
-    private CoreTopology coreTopologyFor( String databaseName )
+    private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
         // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
         //  also an exception needs to be thrown when topology for the specified database is empty
-        // return topologyService.allCoreServers().filterTopologyByDb( databaseName );
+        // return topologyService.allCoreServers().filterTopologyByDb( databaseId );
         return topologyService.allCoreServers();
     }
 
-    private ReadReplicaTopology readReplicaTopology( String databaseName )
+    private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
         // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
-        // return topologyService.allReadReplicas().filterTopologyByDb( databaseName );
+        // return topologyService.allReadReplicas().filterTopologyByDb( databaseId );
         return topologyService.allReadReplicas();
     }
 }
