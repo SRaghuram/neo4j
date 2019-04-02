@@ -24,8 +24,6 @@ import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.AvailabilityGuardInstaller;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.factory.HighlyAvailableEditionModule;
 import org.neo4j.kernel.impl.context.TransactionVersionContextSupplier;
@@ -117,22 +115,19 @@ public class UpdatePullerTriggersPageTransactionTrackingIT
         }
 
         @Override
-        protected GraphDatabaseFacadeFactory newHighlyAvailableFacadeFactory( AvailabilityGuardInstaller guardInstaller )
+        protected GraphDatabaseFacadeFactory newHighlyAvailableFacadeFactory()
         {
-            return new CustomFacadeFactory( this, guardInstaller );
+            return new CustomFacadeFactory( this );
         }
     }
 
     private class CustomFacadeFactory extends GraphDatabaseFacadeFactory
     {
-        CustomFacadeFactory( CustomHighlyAvailableGraphDatabase customHighlyAvailableGraphDatabase, AvailabilityGuardInstaller guardInstaller )
+        CustomFacadeFactory( CustomHighlyAvailableGraphDatabase customHighlyAvailableGraphDatabase )
         {
             super( DatabaseInfo.HA, platformModule ->
             {
                 customHighlyAvailableGraphDatabase.module = new HighlyAvailableEditionModule( platformModule );
-                AvailabilityGuard guard = customHighlyAvailableGraphDatabase.module
-                        .getGlobalAvailabilityGuard( platformModule.clock, platformModule.logging, platformModule.config );
-                guardInstaller.install( guard );
                 return customHighlyAvailableGraphDatabase.module;
             } );
         }

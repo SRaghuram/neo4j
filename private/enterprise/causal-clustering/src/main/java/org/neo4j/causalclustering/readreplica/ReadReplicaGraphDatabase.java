@@ -15,8 +15,6 @@ import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.AvailabilityGuardInstaller;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -32,28 +30,12 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
         this( storeDir, config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ) );
     }
 
-    public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
-            AvailabilityGuardInstaller guardInstaller )
-    {
-        this( storeDir, config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ), guardInstaller );
-    }
-
     public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
-        this( storeDir, config, dependencies, discoveryServiceFactory, memberId, availabilityGuard -> {} );
-    }
-
-    public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
-            MemberId memberId, AvailabilityGuardInstaller guardInstaller )
-    {
-        Function<PlatformModule,AbstractEditionModule> factory = platformModule ->
-        {
-            EnterpriseReadReplicaEditionModule edition = new EnterpriseReadReplicaEditionModule( platformModule, discoveryServiceFactory, memberId );
-            AvailabilityGuard guard = edition.getGlobalAvailabilityGuard( platformModule.clock, platformModule.logging, platformModule.config );
-            guardInstaller.install( guard );
-            return edition;
-        };
+        Function<PlatformModule,AbstractEditionModule> factory =
+                platformModule -> new EnterpriseReadReplicaEditionModule( platformModule,
+                        discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );
     }

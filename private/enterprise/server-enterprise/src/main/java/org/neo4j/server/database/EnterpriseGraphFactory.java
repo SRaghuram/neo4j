@@ -12,7 +12,6 @@ import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.EnterpriseDiscoveryServiceFactorySelector;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.availability.AvailabilityGuardInstaller;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.EnterpriseGraphDatabase;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
@@ -26,12 +25,6 @@ public class EnterpriseGraphFactory implements GraphFactory
     @Override
     public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies )
     {
-        return newGraphDatabase( config, dependencies, availabilityGuard -> {} );
-    }
-
-    @Override
-    public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies, AvailabilityGuardInstaller guardInstaller )
-    {
         EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         DiscoveryServiceFactory discoveryServiceFactory = new EnterpriseDiscoveryServiceFactorySelector().select( config );
@@ -39,16 +32,17 @@ public class EnterpriseGraphFactory implements GraphFactory
         switch ( mode )
         {
         case HA:
-            return new HighlyAvailableGraphDatabase( storeDir, config, dependencies, guardInstaller );
+            return new HighlyAvailableGraphDatabase( storeDir, config, dependencies );
         case ARBITER:
             // Should never reach here because this mode is handled separately by the scripts.
             throw new IllegalArgumentException( "The server cannot be started in ARBITER mode." );
         case CORE:
-            return new CoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, guardInstaller );
+            return new CoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         case READ_REPLICA:
-            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, guardInstaller );
+            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         default:
-            return new EnterpriseGraphDatabase( storeDir, config, dependencies, guardInstaller );
+            return new EnterpriseGraphDatabase( storeDir, config, dependencies );
         }
     }
+
 }

@@ -14,7 +14,6 @@ import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import java.io.File;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.availability.AvailabilityGuardInstaller;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -27,12 +26,6 @@ public class CommercialGraphFactory extends EnterpriseGraphFactory
     @Override
     public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies )
     {
-        return newGraphDatabase( config, dependencies, availabilityGuard -> {} );
-    }
-
-    @Override
-    public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies, AvailabilityGuardInstaller guardInstaller )
-    {
         EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         SslDiscoveryServiceFactory discoveryServiceFactory = new CommercialDiscoveryServiceFactorySelector().select( config );
@@ -40,13 +33,13 @@ public class CommercialGraphFactory extends EnterpriseGraphFactory
         switch ( mode )
         {
         case CORE:
-            return new CommercialCoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, guardInstaller );
+            return new CommercialCoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         case READ_REPLICA:
-            return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, guardInstaller );
+            return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         case SINGLE:
-            return new CommercialGraphDatabase( storeDir, config, dependencies, guardInstaller );
+            return new CommercialGraphDatabase( storeDir, config, dependencies );
         default:
-            return super.newGraphDatabase( config, dependencies, guardInstaller );
+            return super.newGraphDatabase( config, dependencies );
         }
     }
 }
