@@ -410,21 +410,22 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     val var2 = varFor("n.prop2")
 
     Seq(
-      ("n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
-      ("n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
-      ("n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
-      ("n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
-      ("n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
-      ("n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(var1).desc(var2), expectedDescDesc)
+      (Configs.InterpretedAndSlotted, "n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
+      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
+      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
+      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
+      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
+      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(var1).desc(var2), expectedDescDesc)
     ).foreach {
-      case (orderByString, sortOrder, expected) =>
+      case (configs, orderByString, sortOrder, expected) =>
         // When
         val query =
           s"""MATCH (n:Label)
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false) // TODO morsel (get different order on result)
+        // For 'n.prop1 ASC' do morsel give different order on n.prop2
+        val result = executeWith(configs, query, executeExpectedFailures = false)
 
         // Then
         result.executionPlanDescription() should includeSomewhere
@@ -815,8 +816,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           )
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40), // min
-        Map(s"$functionName(n.prop1)" -> 44) // max
+        Map("min(n.prop1)" -> 40),
+        Map("max(n.prop1)" -> 44)
       )).head
       result.toList should equal(List(expected))
     }
@@ -837,8 +838,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           )
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 35.5), // min
-        Map(s"$functionName(n.prop1)" -> 44) // max
+        Map("min(n.prop1)" -> 35.5),
+        Map("max(n.prop1)" -> 44)
       )).head
       result.toList should equal(List(expected))
     }
@@ -939,8 +940,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           )
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40), // min
-        Map(s"$functionName(n.prop1)" -> 44) // max
+        Map("min(n.prop1)" -> 40),
+        Map("max(n.prop1)" -> 44)
       )).head
       result.toList should equal(List(expected))
     }
@@ -954,8 +955,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       plan should includeSomewhere.aPlan("EagerAggregation")
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(prop2)" -> 1), // min
-        Map(s"$functionName(prop2)" -> 5) // max
+        Map("min(prop2)" -> 1),
+        Map("max(prop2)" -> 5)
       )).head
       result.toList should equal(List(expected))
     }
@@ -1014,16 +1015,31 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     // The planer doesn't yet support composite range scans, so we can't avoid the aggregation
-    test(s"$cypherToken-$functionName: cannot use provided index order from composite index") {
+    // TODO fix so we can avoid the aggregation now that range scans are handled
+    test(s"$cypherToken-$functionName: cannot use provided index order from composite index without filter") {
       val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-        s"MATCH (n:Awesome) WHERE n.prop1 > 0 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)",
-        executeBefore = createSomeNodes)
+        s"MATCH (n:Awesome) WHERE n.prop1 = 40 AND n.prop2 < 4 RETURN $functionName(n.prop1), $functionName(n.prop2)",
+        executeBefore = createMoreNodes)
 
       result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation")
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40, s"$functionName(n.prop2)" -> 1), // min
-        Map(s"$functionName(n.prop1)" -> 44, s"$functionName(n.prop2)" -> 5) // max
+        Map("min(n.prop1)" -> 40, "min(n.prop2)" -> 0),
+        Map("max(n.prop1)" -> 40, "max(n.prop2)" -> 3)
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: cannot use provided index order from composite index with filter") {
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 40 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)",
+        executeBefore = createMoreNodes)
+
+      result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation")
+
+      val expected = expectedOrder(List(
+        Map("min(n.prop1)" -> 41, "min(n.prop2)" -> 1),
+        Map("max(n.prop1)" -> 44, "max(n.prop2)" -> 4)
       )).head
       result.toList should equal(List(expected))
     }
@@ -1036,8 +1052,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       plan should includeSomewhere.aPlan("EagerAggregation")
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40, "count(n.prop1)" -> 10), // min
-        Map(s"$functionName(n.prop1)" -> 44, "count(n.prop1)" -> 10) // max
+        Map("min(n.prop1)" -> 40, "count(n.prop1)" -> 10),
+        Map("max(n.prop1)" -> 44, "count(n.prop1)" -> 10)
       )).head
       result.toList should equal(List(expected))
     }
@@ -1052,17 +1068,17 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       val expected = functionName match {
         case "min" =>
           Set(
-            Map(s"$functionName(n.prop1)" -> 43, "n.prop2" -> 1),
-            Map(s"$functionName(n.prop1)" -> 41, "n.prop2" -> 2),
-            Map(s"$functionName(n.prop1)" -> 42, "n.prop2" -> 3),
-            Map(s"$functionName(n.prop1)" -> 40, "n.prop2" -> 5)
+            Map("min(n.prop1)" -> 43, "n.prop2" -> 1),
+            Map("min(n.prop1)" -> 41, "n.prop2" -> 2),
+            Map("min(n.prop1)" -> 42, "n.prop2" -> 3),
+            Map("min(n.prop1)" -> 40, "n.prop2" -> 5)
           )
         case "max" =>
           Set(
-            Map(s"$functionName(n.prop1)" -> 43, "n.prop2" -> 1),
-            Map(s"$functionName(n.prop1)" -> 41, "n.prop2" -> 2),
-            Map(s"$functionName(n.prop1)" -> 44, "n.prop2" -> 3),
-            Map(s"$functionName(n.prop1)" -> 40, "n.prop2" -> 5)
+            Map("max(n.prop1)" -> 43, "n.prop2" -> 1),
+            Map("max(n.prop1)" -> 41, "n.prop2" -> 2),
+            Map("max(n.prop1)" -> 44, "n.prop2" -> 3),
+            Map("max(n.prop1)" -> 40, "n.prop2" -> 5)
           )
       }
 
@@ -1079,8 +1095,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           .onTopOf(aPlan("NodeIndexScan").withExactVariables("cached[n.prop1]", "n"))
 
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40), // min
-        Map(s"$functionName(n.prop1)" -> 44) // max
+        Map("min(n.prop1)" -> 40),
+        Map("max(n.prop1)" -> 44)
       )).head
       result.toList should equal(List(expected))
     }
@@ -1097,8 +1113,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       plan should includeSomewhere.aPlan("EagerAggregation")
 
       val expected = functionName match {
-        case "min" => Set(Map(s"$functionName(n.foo)" -> 1))
-        case "max" => Set(Map(s"$functionName(n.foo)" -> 2))
+        case "min" => Set(Map("min(n.foo)" -> 1))
+        case "max" => Set(Map("max(n.foo)" -> 2))
       }
       result.toSet should equal(expected)
     }
@@ -1148,9 +1164,22 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |CREATE (:Awesome {prop3: 'tree-cat-bog'})
         |""".stripMargin)
 
+  private def createMoreNodes() = {
+    createSomeNodes()
+    graph.execute(
+      """
+        |CREATE (:Awesome {prop1: 40, prop2: 3, prop5: 'a'})
+        |CREATE (:Awesome {prop1: 40, prop2: 1, prop5: 'b'})
+        |CREATE (:Awesome {prop1: 40, prop2: 0, prop5: 'c'})
+        |CREATE (:Awesome {prop1: 44, prop2: 4, prop5: 'd'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'e'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'f'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'g'})
+      """.stripMargin)
+  }
 
   // Nodes for composite index independent of already existing indexes
-  private def createNodesForComposite() = {
+  private def createNodesForComposite() =
     graph.execute(
       """
         |CREATE (:Label {prop1: 40, prop2: 5, prop3: 'a', prop4: true, prop5: 3.14})
@@ -1184,5 +1213,4 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |CREATE (:Label {prop3: 'h'})
         |CREATE (:Label {prop3: 'g'})
       """.stripMargin)
-  }
 }

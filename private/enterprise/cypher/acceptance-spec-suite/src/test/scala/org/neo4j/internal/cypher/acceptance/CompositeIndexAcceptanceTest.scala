@@ -1040,6 +1040,339 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resultIndex.toComparableResult should equal(resultNoIndex.toComparableResult)
   }
 
+  // Test when having nodes in txState
+  test("should use composite index and get correct value for only equality") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 = 40 AND n.prop2 = 3 RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    result.toList should equal(List(Map("n.prop1" -> 40, "n.prop2" -> 3)))
+  }
+
+  test("should use composite index and get correct value for equality followed by range") {
+    graph.createIndex("Awesome", "prop1", "prop2", "prop5")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      s"MATCH (n:Awesome) WHERE n.prop1 = 44 AND n.prop2 = 1 AND n.prop5 > 'e' RETURN n.prop1, n.prop2, n.prop5",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality,range)")
+          .containingArgument(":Awesome(prop1,prop2,prop5)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]", "cached[n.prop5]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 44, "n.prop2" -> 1, "n.prop5" -> "f"),
+      Map("n.prop1" -> 44, "n.prop2" -> 1, "n.prop5" -> "g")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for equality followed by STARTS WITH") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 = 'futhark' AND n.prop2 STARTS WITH 'o' RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> "futhark", "n.prop2" -> "otter"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "owl")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for equality followed by exists") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 = 40 AND exists(n.prop2) RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,exists)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 0),
+      Map("n.prop1" -> 40, "n.prop2" -> 1),
+      Map("n.prop1" -> 40, "n.prop2" -> 3),
+      Map("n.prop1" -> 40, "n.prop2" -> 5)
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for range followed by equality") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 >= 40 AND n.prop2 = 1 RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("Filter")
+          .containingArgumentRegex(".*cached\\[n.prop2\\] = .*".r)
+          .onTopOf(aPlan("NodeIndexSeek(range,exists)")
+            .containingArgument(":Awesome(prop1,prop2)")
+            .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 1),
+      Map("n.prop1" -> 43, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1)
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for only ranges") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 > 40 AND n.prop2 > 1 RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("Filter")
+          .containingArgumentRegex(".*cached\\[n.prop2\\] > .*".r)
+          .onTopOf(aPlan("NodeIndexSeek(range,exists)")
+            .containingArgument(":Awesome(prop1,prop2)")
+            .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 41, "n.prop2" -> 2),
+      Map("n.prop1" -> 42, "n.prop2" -> 3),
+      Map("n.prop1" -> 44, "n.prop2" -> 4),
+      Map("n.prop1" -> 44, "n.prop2" -> 3)
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for range followed by exists") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 < 44 AND exists(n.prop2) RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 0),
+      Map("n.prop1" -> 40, "n.prop2" -> 1),
+      Map("n.prop1" -> 40, "n.prop2" -> 3),
+      Map("n.prop1" -> 40, "n.prop2" -> 5),
+      Map("n.prop1" -> 41, "n.prop2" -> 2),
+      Map("n.prop1" -> 42, "n.prop2" -> 3),
+      Map("n.prop1" -> 43, "n.prop2" -> 1)
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for only exists") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      s"MATCH (n:Awesome) WHERE exists(n.prop1) AND exists(n.prop2) RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexScan")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 0),
+      Map("n.prop1" -> 40, "n.prop2" -> 1),
+      Map("n.prop1" -> 40, "n.prop2" -> 3),
+      Map("n.prop1" -> 40, "n.prop2" -> 5),
+      Map("n.prop1" -> 41, "n.prop2" -> 2),
+      Map("n.prop1" -> 42, "n.prop2" -> 3),
+      Map("n.prop1" -> 43, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 1),
+      Map("n.prop1" -> 44, "n.prop2" -> 3),
+      Map("n.prop1" -> 44, "n.prop2" -> 4),
+
+      Map("n.prop1" -> "aismfama", "n.prop2" -> "rab"),
+      Map("n.prop1" -> "alpha", "n.prop2" -> "ant"),
+      Map("n.prop1" -> "fehu", "n.prop2" -> "whale"),
+      Map("n.prop1" -> "foo", "n.prop2" -> "alligator"),
+      Map("n.prop1" -> "fooism", "n.prop2" -> "rab"),
+      Map("n.prop1" -> "footurama", "n.prop2" -> "bar"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "dragonfly"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "otter"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "owl")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for STARTS WITH") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'fo' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("Filter")
+          .containingArgumentRegex(".*cached\\[n.prop2\\] >= .*".r)
+          .onTopOf(aPlan("NodeIndexSeek(range,exists)")
+            .containingArgument(":Awesome(prop1,prop2)")
+            .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> "foo", "n.prop2" -> "alligator"),
+      Map("n.prop1" -> "fooism", "n.prop2" -> "rab"),
+      Map("n.prop1" -> "footurama", "n.prop2" -> "bar")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("cannot use composite index for ENDS WITH") {
+    // TODO update when composite can handle ENDS WITH
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      s"MATCH (n:Awesome) WHERE n.prop1 ENDS WITH 'a' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
+          .containingArgument(":Awesome(prop1,prop2)"))
+        plan should not(includeSomewhere.aPlan("NodeIndexScan")
+          .containingArgument(":Awesome(prop1,prop2)"))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> "aismfama", "n.prop2" -> "rab"),
+      Map("n.prop1" -> "alpha", "n.prop2" -> "ant"),
+      Map("n.prop1" -> "footurama", "n.prop2" -> "bar")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for range on spatial - first property") {
+    // Given
+    graph.createIndex("User", "city", "name")
+    val point1 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.6).asObjectCopy()
+    val point2 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 4.5).asObjectCopy()
+
+    createLabeledNode(Map("name" -> "Joe", "city" -> point1), "User")
+    createLabeledNode(Map("name" -> "Jake", "city" -> point2), "User")
+
+    def createMe(): Unit = {
+      createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
+    }
+
+    // When
+    val query =
+      """MATCH (n:User)
+        |WHERE exists(n.name) AND distance(n.city, point({x: 180, y: 5.58, crs: 'WGS-84'})) <= 5000
+        |RETURN n.name, n.city
+        |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createMe,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
+          .containingArgument(":User(city,name)")
+          .withExactVariables("n", "cached[n.city]", "cached[n.name]")
+      }))
+
+    // Then
+    val expected = Set(
+      Map("n.name" -> "Jake", "n.city" -> point1),
+      Map("n.name" -> "Joe", "n.city" -> point1)
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct value for range on spatial - later property") {
+    // Given
+    graph.createIndex("User", "name", "city")
+    val point1 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.6).asObjectCopy()
+    val point2 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 4.5).asObjectCopy()
+    val point3 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.55).asObjectCopy()
+
+    createLabeledNode(Map("name" -> "Joe", "city" -> point1), "User")
+    createLabeledNode(Map("name" -> "Jake", "city" -> point2), "User")
+
+    def createMe(): Unit = {
+      createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> point3), "User")
+    }
+
+    // When
+    val query =
+      """MATCH (n:User)
+        |WHERE n.name = 'Joe' AND distance(n.city, point({x: 180, y: 5.58, crs: 'WGS-84'})) <= 5000
+        |RETURN n.name, n.city
+        |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createMe,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
+          .containingArgument(":User(name,city)")
+          .withExactVariables("n", "cached[n.city]", "cached[n.name]")
+      }))
+
+    // Then
+    val expected = Set(
+      Map("n.name" -> "Joe", "n.city" -> point1),
+      Map("n.name" -> "Joe", "n.city" -> point3)
+    )
+    result.toSet should equal(expected)
+  }
+
   case class haveIndexes(expectedIndexes: String*) extends Matcher[GraphDatabaseQueryService] {
     def apply(graph: GraphDatabaseQueryService): MatchResult = {
       graph.inTx {
@@ -1054,4 +1387,39 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
   }
 
+  private def createNodes(): Unit =
+    graph.execute(
+      """
+        |CREATE (:Awesome {prop1: 40, prop2: 5})
+        |CREATE (:Awesome {prop1: 41, prop2: 2})
+        |CREATE (:Awesome {prop1: 42, prop2: 3})
+        |CREATE (:Awesome {prop1: 43, prop2: 1})
+        |CREATE (:Awesome {prop1: 44, prop2: 3})
+        |
+        |CREATE (:Awesome {prop1: 'footurama', prop2: 'bar'})
+        |CREATE (:Awesome {prop1: 'fooism', prop2: 'rab'})
+        |CREATE (:Awesome {prop1: 'aismfama', prop2: 'rab'})
+      """.stripMargin
+    )
+
+  private def createNodesInTxState(): Unit =
+    graph.execute(
+      """
+        |CREATE (:Awesome {prop1: 40, prop2: 3, prop5: 'a'})
+        |CREATE (:Awesome {prop1: 40, prop2: 1, prop5: 'b'})
+        |CREATE (:Awesome {prop1: 40, prop2: 0, prop5: 'c'})
+        |CREATE (:Awesome {prop1: 44, prop2: 4, prop5: 'd'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'e'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'f'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 'g'})
+        |CREATE (:Awesome {prop1: 44, prop2: 1, prop5: 0})
+        |
+        |CREATE (:Awesome {prop1: 'alpha', prop2: 'ant'})
+        |CREATE (:Awesome {prop1: 'foo', prop2: 'alligator'})
+        |CREATE (:Awesome {prop1: 'futhark', prop2: 'owl'})
+        |CREATE (:Awesome {prop1: 'futhark', prop2: 'otter'})
+        |CREATE (:Awesome {prop1: 'futhark', prop2: 'dragonfly'})
+        |CREATE (:Awesome {prop1: 'fehu', prop2: 'whale'})
+      """.stripMargin
+    )
 }
