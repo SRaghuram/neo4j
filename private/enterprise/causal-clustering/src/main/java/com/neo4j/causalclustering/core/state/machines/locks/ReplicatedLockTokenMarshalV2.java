@@ -7,12 +7,13 @@ package com.neo4j.causalclustering.core.state.machines.locks;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReplicatedLockTokenMarshalV2
 {
@@ -22,16 +23,16 @@ public class ReplicatedLockTokenMarshalV2
 
     public static void marshal( ReplicatedLockTokenRequest tokenRequest, WritableChannel channel ) throws IOException
     {
-        StringMarshal.marshal( channel, tokenRequest.databaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( tokenRequest.databaseId(), channel );
         channel.putInt( tokenRequest.id() );
         new MemberId.Marshal().marshal( tokenRequest.owner(), channel );
     }
 
     public static ReplicatedLockTokenRequest unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         int candidateId = channel.getInt();
         MemberId owner = new MemberId.Marshal().unmarshal( channel );
-        return new ReplicatedLockTokenRequest( owner, candidateId, databaseName );
+        return new ReplicatedLockTokenRequest( owner, candidateId, databaseId );
     }
 }

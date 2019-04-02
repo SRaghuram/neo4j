@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings( "unchecked" )
 public class LeaderOnlyLockManagerTest
 {
-    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
     @Test
     public void shouldIssueLocksOnLeader() throws Exception
@@ -45,7 +46,7 @@ public class LeaderOnlyLockManagerTest
         when( locks.newClient() ).thenReturn( client );
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseName );
+                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseId );
 
         // when
         lockManager.newClient().acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
@@ -71,7 +72,7 @@ public class LeaderOnlyLockManagerTest
         when( locks.newClient() ).thenReturn( client );
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseName );
+                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseId );
 
         // when
         Locks.Client lockClient = lockManager.newClient();

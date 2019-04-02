@@ -14,8 +14,10 @@ import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 /**
+ * TODO Is this needed given {@link DatabaseId}?
  * Simple wrapper class for database name strings. These values are provided using the
  * {@link CausalClusteringSettings#database } setting.
  */
@@ -23,7 +25,12 @@ public class DatabaseName
 {
     private final String name;
 
-    public DatabaseName( String name )
+    public DatabaseName( DatabaseId databaseId )
+    {
+        this.name = databaseId.name();
+    }
+
+    private DatabaseName( String name )
     {
         this.name = name;
     }

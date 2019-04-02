@@ -67,7 +67,7 @@ public class CoreDownloader
         }
         AdvertisedSocketAddress primaryAddress = primaryOpt.get();
 
-        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseName(), primaryAddress );
+        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseId(), primaryAddress );
         if ( coreSnapshot.isEmpty() )
         {
             return Optional.empty();

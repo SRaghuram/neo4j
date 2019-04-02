@@ -142,7 +142,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     {
         Database db = mock( Database.class );
         when( db.getDatabaseId() ).thenReturn( config.databaseId );
-        when( db.getDatabaseName() ).thenReturn( config.databaseId.name() );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,

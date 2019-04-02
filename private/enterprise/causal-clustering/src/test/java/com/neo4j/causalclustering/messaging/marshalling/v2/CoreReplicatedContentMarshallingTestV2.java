@@ -31,6 +31,8 @@ import org.junit.runners.Parameterized;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -46,12 +48,12 @@ public class CoreReplicatedContentMarshallingTestV2
     @Parameterized.Parameters( name = "{0}" )
     public static ReplicatedContent[] data()
     {
-        String databaseName = DEFAULT_DATABASE_NAME;
-        return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseName ),
+        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
                 new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
-                new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
-                new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 2, databaseName ), new DistributedOperation(
-                new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseName ),
+                new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
+                new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 2, databaseId ), new DistributedOperation(
+                new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
                         new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 1, 2 ) ),
                 new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 4, 5 ) )};
     }

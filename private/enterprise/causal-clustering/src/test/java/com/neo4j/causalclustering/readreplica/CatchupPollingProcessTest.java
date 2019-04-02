@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
@@ -60,11 +59,10 @@ public class CatchupPollingProcessTest
     private final Executor executor = new FakeExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
-    private final TopologyService topologyService = mock( TopologyService.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
-    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
@@ -79,7 +77,7 @@ public class CatchupPollingProcessTest
     @Before
     public void before() throws Throwable
     {
-        databaseService.registerDatabase( new DatabaseId( databaseName ), clusteredDatabaseContext );
+        databaseService.registerDatabase( databaseId, clusteredDatabaseContext );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );
@@ -87,7 +85,7 @@ public class CatchupPollingProcessTest
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
+        txPuller = new CatchupPollingProcess( executor, databaseId, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
                 storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
     }
 
@@ -104,7 +102,7 @@ public class CatchupPollingProcessTest
         txPuller.tick().get();
 
         // then
-        verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, databaseName );
+        verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, databaseId );
         verify( catchupAddressProvider, times( 2 ) ).primary();
     }
 

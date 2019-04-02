@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.FormattedLogProvider;
 
@@ -69,24 +70,24 @@ class RaftMessageEncoderDecoderTest
 
     private static Stream<Arguments> data()
     {
-        String databaseName = DEFAULT_DATABASE_NAME;
+        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         return setUpParams( new RaftMessage[]{new RaftMessages.Heartbeat( MEMBER_ID, 1, 2, 3 ),
                 new RaftMessages.HeartbeatResponse( MEMBER_ID ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, new DummyRequest( new byte[]{1, 2, 3, 4, 5, 6, 7, 8} ) ),
-                new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6, 7, 8}, databaseName ) ),
+                new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6, 7, 8}, databaseId ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID,
-                        ReplicatedTransaction.from( new PhysicalTransactionRepresentation( Collections.emptyList() ), databaseName ) ),
+                        ReplicatedTransaction.from( new PhysicalTransactionRepresentation( Collections.emptyList() ), databaseId ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID,
                         new DistributedOperation(
                                 new DistributedOperation(
-                                        ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5}, databaseName ),
+                                        ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5}, databaseId ),
                                         new GlobalSession( UUID.randomUUID(), MEMBER_ID ),
                                         new LocalOperationId( 1, 2 ) ),
                                 new GlobalSession( UUID.randomUUID(), MEMBER_ID ), new LocalOperationId( 3, 4 ) ) ),
                 new RaftMessages.AppendEntries.Request( MEMBER_ID, 1, 2, 3,
                         new RaftLogEntry[]{
-                                new RaftLogEntry( 0, new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "name", new byte[]{2, 3, 4} ) ),
-                                new RaftLogEntry( 1, new ReplicatedLockTokenRequest( MEMBER_ID, 2, databaseName ) )
+                                new RaftLogEntry( 0, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "name", new byte[]{2, 3, 4} ) ),
+                                new RaftLogEntry( 1, new ReplicatedLockTokenRequest( MEMBER_ID, 2, databaseId ) )
                         }, 5 ),
                 new RaftMessages.AppendEntries.Response( MEMBER_ID, 1, true, 2, 3 ),
                 new RaftMessages.Vote.Request( MEMBER_ID, Long.MAX_VALUE, MEMBER_ID, Long.MIN_VALUE, 1 ),

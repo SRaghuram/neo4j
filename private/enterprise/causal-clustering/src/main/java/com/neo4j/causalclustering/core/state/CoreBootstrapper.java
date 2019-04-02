@@ -20,6 +20,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
@@ -27,7 +28,7 @@ public class CoreBootstrapper
 {
     private final ClusteredDatabaseManager<?> databaseManager;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
-    private final Function<String,DatabaseInitializer> databaseInitializers;
+    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final LogProvider logProvider;
@@ -35,8 +36,8 @@ public class CoreBootstrapper
     private final Config config;
 
     CoreBootstrapper( ClusteredDatabaseManager<?> databaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
-            Function<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache,
-            StorageEngineFactory storageEngineFactory )
+            Function<DatabaseId,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider,
+            PageCache pageCache, StorageEngineFactory storageEngineFactory )
     {
         this.databaseManager = databaseManager;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -54,15 +55,15 @@ public class CoreBootstrapper
      * @param members the members to bootstrap with (this comes from the discovery service).
      * @return a snapshot which represents the initial state.
      */
-    public Map<String,CoreSnapshot> bootstrap( Set<MemberId> members )
+    public Map<DatabaseId,CoreSnapshot> bootstrap( Set<MemberId> members )
     {
         DatabaseBootstrapper dbBootstrapper = new DatabaseBootstrapper( members, tempDatabaseFactory, databaseInitializers,
                 pageCache, fs, logProvider, storageEngineFactory, config );
 
-        Map<String,CoreSnapshot> coreSnapshots = new HashMap<>();
+        Map<DatabaseId,CoreSnapshot> coreSnapshots = new HashMap<>();
         for ( ClusteredDatabaseContext dbContext : databaseManager.registeredDatabases().values() )
         {
-            coreSnapshots.put( dbContext.databaseName(), dbBootstrapper.bootstrap( dbContext ) );
+            coreSnapshots.put( dbContext.databaseId(), dbBootstrapper.bootstrap( dbContext ) );
         }
 
         return coreSnapshots;

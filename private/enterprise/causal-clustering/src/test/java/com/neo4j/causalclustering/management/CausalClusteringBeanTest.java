@@ -25,6 +25,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.ManagementSupport;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.management.CausalClustering;
@@ -37,6 +38,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class CausalClusteringBeanTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
     private final File dataDir = new File( "dataDir" );
     private final ClusterStateLayout clusterStateLayout = ClusterStateLayout.of( dataDir );
@@ -51,7 +53,7 @@ public class CausalClusteringBeanTest
     {
         Dependencies dependencies = new Dependencies();
         Database database = mock( Database.class );
-        when( database.getDatabaseName() ).thenReturn( DEFAULT_DATABASE_NAME );
+        when( database.getDatabaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults() );
@@ -78,7 +80,7 @@ public class CausalClusteringBeanTest
     @Test
     public void returnSumOfRaftLogDirectory() throws Exception
     {
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DEFAULT_DATABASE_NAME );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DATABASE_ID );
         fs.mkdirs( raftLogDirectory );
 
         createFileOfSize( new File( raftLogDirectory, "raftLog1" ), 5 );
@@ -91,15 +93,15 @@ public class CausalClusteringBeanTest
     public void excludeRaftLogFromReplicatedStateSize() throws Exception
     {
         // Raft log
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DEFAULT_DATABASE_NAME );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DATABASE_ID );
         fs.mkdirs( raftLogDirectory );
         createFileOfSize( new File( raftLogDirectory, "raftLog1" ), 5 );
 
         // Other state
-        File idAllocationDir = clusterStateLayout.idAllocationStateDirectory( DEFAULT_DATABASE_NAME );
+        File idAllocationDir = clusterStateLayout.idAllocationStateDirectory( DATABASE_ID );
         fs.mkdirs( idAllocationDir );
         createFileOfSize( new File( idAllocationDir, "state" ), 10 );
-        File lockTokenDir = clusterStateLayout.lockTokenStateDirectory( DEFAULT_DATABASE_NAME );
+        File lockTokenDir = clusterStateLayout.lockTokenStateDirectory( DATABASE_ID );
         fs.mkdirs( lockTokenDir );
         createFileOfSize( new File( lockTokenDir, "state" ), 20 );
 

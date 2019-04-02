@@ -27,6 +27,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
@@ -69,18 +70,19 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
     public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
         String dbName = ((TextValue) input[0]).stringValue();
-        List<AdvertisedSocketAddress> routers = routeEndpoints( dbName );
+        DatabaseId databaseId = new DatabaseId( dbName );
 
-        Map<String,List<AdvertisedSocketAddress>> routerMap = new HashMap<>();
-        routerMap.put( dbName, routers );
+        List<AdvertisedSocketAddress> routers = routeEndpoints( databaseId );
+        Map<DatabaseId,List<AdvertisedSocketAddress>> routerMap = new HashMap<>();
+        routerMap.put( databaseId, routers );
 
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routerMap, timeToLiveMillis );
         return RawIterator.<AnyValue[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( String dbName )
+    private List<AdvertisedSocketAddress> routeEndpoints( DatabaseId databaseId )
     {
-        CoreTopology filtered = topologyService.allCoreServers().filterTopologyByDb( dbName );
+        CoreTopology filtered = topologyService.allCoreServers().filterTopologyByDb( databaseId );
         Stream<CoreServerInfo> filteredCoreMemberInfo = filtered.members().values().stream();
 
         return filteredCoreMemberInfo.map( ClientConnector::boltAddress ).collect( Collectors.toList() );

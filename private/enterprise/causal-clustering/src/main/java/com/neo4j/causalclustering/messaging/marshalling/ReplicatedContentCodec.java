@@ -28,6 +28,8 @@ import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.util.List;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class ReplicatedContentCodec implements Codec<ReplicatedContent>
 {
     @Override
@@ -130,12 +132,12 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
      * @see ChunkedTransaction
      * @see ByteArrayTransactionChunker
      */
-    private static ReplicatedTransaction decodeTx( ByteBuf byteBuf )
+    private static ReplicatedTransaction decodeTx( ByteBuf byteBuf ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( byteBuf );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( byteBuf ) );
         int length = byteBuf.readableBytes();
         byte[] bytes = new byte[length];
         byteBuf.readBytes( bytes );
-        return ReplicatedTransaction.from( bytes, databaseName );
+        return ReplicatedTransaction.from( bytes, databaseId );
     }
 }

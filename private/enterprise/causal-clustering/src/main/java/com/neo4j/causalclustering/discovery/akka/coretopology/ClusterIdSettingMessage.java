@@ -7,18 +7,20 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.identity.ClusterId;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Sent from this Neo4J instance into discovery service
  */
 public class ClusterIdSettingMessage
 {
     private final ClusterId clusterId;
-    private final String database;
+    private final DatabaseId database;
 
-    public ClusterIdSettingMessage( ClusterId clusterId, String database )
+    public ClusterIdSettingMessage( ClusterId clusterId, DatabaseId databaseId )
     {
         this.clusterId = clusterId;
-        this.database = database;
+        this.database = databaseId;
     }
 
     public ClusterId clusterId()
@@ -26,7 +28,7 @@ public class ClusterIdSettingMessage
         return clusterId;
     }
 
-    public String database()
+    public DatabaseId database()
     {
         return database;
     }

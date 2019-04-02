@@ -18,6 +18,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -62,7 +63,7 @@ public class ClassicNeo4jDatabase
         private final File baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
-        private String databaseName = DEFAULT_DATABASE_NAME;
+        private DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         private boolean needRecover;
         private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;
@@ -88,9 +89,9 @@ public class ClassicNeo4jDatabase
             }
         }
 
-        public Neo4jDatabaseBuilder databaseName( String databaseName )
+        public Neo4jDatabaseBuilder databaseId( DatabaseId databaseId )
         {
-            this.databaseName = databaseName;
+            this.databaseId = databaseId;
             return this;
         }
 
@@ -127,7 +128,7 @@ public class ClassicNeo4jDatabase
 
         public ClassicNeo4jDatabase build() throws IOException
         {
-            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseName );
+            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
             GraphDatabaseService db = new TestGraphDatabaseFactory()
                     .setFileSystem( fileSystem )
                     .newEmbeddedDatabaseBuilder( databaseDirectory )

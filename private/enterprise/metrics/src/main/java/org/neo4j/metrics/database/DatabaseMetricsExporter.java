@@ -77,6 +77,6 @@ public class DatabaseMetricsExporter
 
     private String databaseMetricsPrefix()
     {
-        return config.get( MetricsSettings.metricsPrefix ) + "." + dependencies.database().getDatabaseName();
+        return config.get( MetricsSettings.metricsPrefix ) + "." + dependencies.database().getDatabaseId().name();
     }
 }

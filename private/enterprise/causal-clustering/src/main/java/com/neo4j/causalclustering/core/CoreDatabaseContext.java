@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.core.state.DatabaseCoreStateComponents;
 import java.util.function.BooleanSupplier;
 
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -31,7 +30,7 @@ public final class CoreDatabaseContext extends AbstractClusteredDatabaseContext
     {
         super( database, facade, txLogs, storeFiles, logProvider, isAvailable, catchupComponentsFactory );
         this.coreStateService = coreStateService;
-        this.databaseState = coreStateService.getDatabaseState( new DatabaseId( databaseName() ) ).orElseThrow( IllegalStateException::new );
+        this.databaseState = coreStateService.getDatabaseState( databaseId() ).orElseThrow( IllegalStateException::new );
     }
 
     void setCommitProcess( TransactionRepresentationCommitProcess commitProcess )
@@ -52,6 +51,6 @@ public final class CoreDatabaseContext extends AbstractClusteredDatabaseContext
     @Override
     public void stop0()
     {
-        coreStateService.remove( databaseName() );
+        coreStateService.remove( databaseId() );
     }
 }

@@ -34,6 +34,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -115,17 +116,17 @@ public final class CausalClusteringTestHelpers
                 .toString();
     }
 
-    public static Map<Integer, String> distributeDatabaseNamesToHostNums( int nHosts, Set<String> databaseNames )
+    public static Map<Integer, DatabaseId> distributeDatabaseNamesToHostNums( int nHosts, Set<DatabaseId> databaseIds )
     {
         //Max number of hosts per database is (nHosts / nDatabases) or (nHosts / nDatabases) + 1
-        int nDatabases = databaseNames.size();
+        int nDatabases = databaseIds.size();
         int maxCapacity = (nHosts % nDatabases == 0) ? (nHosts / nDatabases) : (nHosts / nDatabases) + 1;
 
-        List<String> repeated = databaseNames.stream()
+        List<DatabaseId> repeated = databaseIds.stream()
                 .flatMap( db -> IntStream.range( 0, maxCapacity ).mapToObj( ignored -> db ) )
                 .collect( Collectors.toList() );
 
-        Map<Integer,String> mapping = new HashMap<>( nHosts );
+        Map<Integer,DatabaseId> mapping = new HashMap<>( nHosts );
 
         for ( int hostId = 0; hostId < nHosts; hostId++ )
         {

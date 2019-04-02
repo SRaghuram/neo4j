@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @ExtendWith( DefaultFileSystemExtension.class )
 abstract class CommercialCatchupTest
 {
-    private static final String DEFAULT_DB = "db-one";
+    private static final DatabaseId DEFAULT_DB_ID = new DatabaseId( "db-one" );
     private final Protocol.ApplicationProtocols applicationProtocols;
     private StubClusteredDatabaseManager databaseManager;
 
@@ -73,7 +73,7 @@ abstract class CommercialCatchupTest
         pipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
         databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DB )
+                .withDatabaseId( DEFAULT_DB_ID )
                 .withStoreId( StoreId.DEFAULT )
                 .register();
         serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fsa );
@@ -107,13 +107,13 @@ abstract class CommercialCatchupTest
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB_ID ), new ResponseAdaptor()
                 {
                     @Override
                     public void onGetStoreIdResponse( GetStoreIdResponse response )
                     {
                         responseHandled = true;
-                        assertEquals( databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DB ) )
+                        assertEquals( databaseManager.getDatabaseContext( DEFAULT_DB_ID )
                                 .map( DatabaseContext::database )
                                 .map( Database::getStoreId )
                                 .orElseThrow( IllegalStateException::new ), response.storeId() );
@@ -137,7 +137,7 @@ abstract class CommercialCatchupTest
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( "WRONG_DB_NAME" ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( new DatabaseId( "WRONG_DB_NAME" ) ), new ResponseAdaptor()
                 {
                     @Override
                     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )

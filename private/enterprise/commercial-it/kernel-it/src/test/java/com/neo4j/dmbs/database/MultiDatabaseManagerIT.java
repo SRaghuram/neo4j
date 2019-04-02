@@ -255,15 +255,15 @@ class MultiDatabaseManagerIT
     @Test
     void createAndStopDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseName = new DatabaseId( "databaseToShutdown" );
-        DatabaseContext context = databaseManager.createDatabase( databaseName );
+        DatabaseId databaseId = new DatabaseId( "databaseToShutdown" );
+        DatabaseContext context = databaseManager.createDatabase( databaseId );
 
-        var databaseLookup = databaseManager.getDatabaseContext( databaseName );
+        var databaseLookup = databaseManager.getDatabaseContext( databaseId );
         assertTrue( databaseLookup.isPresent() );
         assertEquals( context, databaseLookup.get() );
 
-        databaseManager.stopDatabase( databaseName );
-        assertTrue( databaseManager.getDatabaseContext( databaseName ).isPresent() );
+        databaseManager.stopDatabase( databaseId );
+        assertTrue( databaseManager.getDatabaseContext( databaseId ).isPresent() );
     }
 
     @Test

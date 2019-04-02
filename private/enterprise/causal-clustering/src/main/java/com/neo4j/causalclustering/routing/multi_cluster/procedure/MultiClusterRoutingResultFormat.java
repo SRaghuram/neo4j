@@ -14,6 +14,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
@@ -50,13 +51,13 @@ public class MultiClusterRoutingResultFormat
 
         List<AnyValue> response = result.routers().entrySet().stream().map( entry ->
         {
-            String dbName = entry.getKey();
+            DatabaseId databaseId = entry.getKey();
             AnyValue[] addresses = stringifyAddresses.apply( entry.getValue() );
 
             MapValueBuilder responseRow = new MapValueBuilder();
 
-            responseRow.add( DB_NAME_KEY, stringValue(dbName) );
-            responseRow.add( ADDRESSES_KEY, VirtualValues.list(addresses) );
+            responseRow.add( DB_NAME_KEY, stringValue( databaseId.name() ) );
+            responseRow.add( ADDRESSES_KEY, VirtualValues.list( addresses ) );
 
             return responseRow.build();
         } ).collect( Collectors.toList() );
@@ -77,18 +78,18 @@ public class MultiClusterRoutingResultFormat
     {
         long ttlSeconds = ((LongValue) record[0]).longValue();
         ListValue rows = (ListValue) record[1];
-        Map<String,List<AdvertisedSocketAddress>> routers = parseRouters( rows );
+        Map<DatabaseId,List<AdvertisedSocketAddress>> routers = parseRouters( rows );
 
         return new MultiClusterRoutingResult( routers, ttlSeconds * 1000 );
     }
 
-    private static Map<String,List<AdvertisedSocketAddress>> parseRouters( ListValue responseRows )
+    private static Map<DatabaseId,List<AdvertisedSocketAddress>> parseRouters( ListValue responseRows )
     {
-        Map<String,List<AdvertisedSocketAddress>> routers = new HashMap<>();
+        Map<DatabaseId,List<AdvertisedSocketAddress>> routers = new HashMap<>();
         for ( AnyValue row : responseRows )
         {
             MapValue map = (MapValue) row;
-            routers.put( ((TextValue) map.get( DB_NAME_KEY )).stringValue(),
+            routers.put( new DatabaseId( ((TextValue) map.get( DB_NAME_KEY )).stringValue() ),
                     parseEndpoints( (ListValue) map.get( ADDRESSES_KEY ) ) );
         }
         return routers;

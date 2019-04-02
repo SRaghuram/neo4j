@@ -20,26 +20,27 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.configuration.IdTypeConfiguration;
 import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
 {
-    private final Map<Pair<String,IdType>,ReplicatedIdGenerator> generators = new HashMap<>();
+    private final Map<Pair<DatabaseId,IdType>,ReplicatedIdGenerator> generators = new HashMap<>();
     private final FileSystemAbstraction fs;
-    private final Function<String,ReplicatedIdRangeAcquirer> idRangeAcquirer;
+    private final Function<DatabaseId,ReplicatedIdRangeAcquirer> idRangeAcquirer;
     private final LogProvider logProvider;
     private final Panicker panicker;
     private IdTypeConfigurationProvider idTypeConfigurationProvider;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public ReplicatedIdGeneratorFactory( FileSystemAbstraction fs, Function<String,ReplicatedIdRangeAcquirer> idRangeAcquirer,
-            LogProvider logProvider, IdTypeConfigurationProvider idTypeConfigurationProvider, String databaseName, Panicker panicker )
+    public ReplicatedIdGeneratorFactory( FileSystemAbstraction fs, Function<DatabaseId,ReplicatedIdRangeAcquirer> idRangeAcquirer,
+            LogProvider logProvider, IdTypeConfigurationProvider idTypeConfigurationProvider, DatabaseId databaseId, Panicker panicker )
     {
         this.fs = fs;
         this.idRangeAcquirer = idRangeAcquirer;
         this.logProvider = logProvider;
         this.idTypeConfigurationProvider = idTypeConfigurationProvider;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.panicker = panicker;
     }
 
@@ -59,27 +60,27 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
 
     private IdGenerator openGenerator( File file, int grabSize, IdType idType, LongSupplier highId, long maxId, boolean aggressiveReuse )
     {
-        ReplicatedIdGenerator other = generators.get( Pair.of( databaseName, idType ) );
+        ReplicatedIdGenerator other = generators.get( Pair.of( databaseId, idType ) );
         if ( other != null )
         {
             other.close();
         }
         ReplicatedIdGenerator replicatedIdGenerator = new ReplicatedIdGenerator( fs, file, idType, highId,
-                idRangeAcquirer.apply( databaseName ), logProvider, grabSize, aggressiveReuse, panicker );
+                idRangeAcquirer.apply( databaseId ), logProvider, grabSize, aggressiveReuse, panicker );
 
-        generators.put( Pair.of( databaseName, idType ), replicatedIdGenerator);
+        generators.put( Pair.of( databaseId, idType ), replicatedIdGenerator);
         return replicatedIdGenerator;
     }
 
     @Override
     public IdGenerator get( IdType idType )
     {
-        return get( databaseName, idType );
+        return get( databaseId, idType );
     }
 
-    public IdGenerator get( String databaseName, IdType idType )
+    public IdGenerator get( DatabaseId databaseId, IdType idType )
     {
-        return generators.get( Pair.of( databaseName, idType ) );
+        return generators.get( Pair.of( databaseId, idType ) );
     }
 
     @Override

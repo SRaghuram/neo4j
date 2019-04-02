@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.Set;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfoMarshal extends SafeChannelMarshal<ReadReplicaInfo>
 {
@@ -36,8 +38,8 @@ public class ReadReplicaInfoMarshal extends SafeChannelMarshal<ReadReplicaInfo>
         {
             groups.add( StringMarshal.unmarshal( channel ) );
         }
-        String databaseName = StringMarshal.unmarshal( channel );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseName );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseId );
     }
 
     @Override
@@ -50,6 +52,6 @@ public class ReadReplicaInfoMarshal extends SafeChannelMarshal<ReadReplicaInfo>
         {
             StringMarshal.marshal( channel, group );
         }
-        StringMarshal.marshal( channel, readReplicaInfo.getDatabaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( readReplicaInfo.getDatabaseId(), channel );
     }
 }

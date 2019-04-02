@@ -10,6 +10,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +31,7 @@ class PrepareStoreCopyRequestEncoderDecoderTest
     {
         // given store id requests transmit store id
         StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
-        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, DEFAULT_DATABASE_NAME );
+        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, new DatabaseId( DEFAULT_DATABASE_NAME ) );
 
         // when transmitted
         sendToChannel( prepareStoreCopyRequest, embeddedChannel );

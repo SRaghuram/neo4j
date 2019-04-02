@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptySet;
 
@@ -22,26 +23,26 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     private final AdvertisedSocketAddress catchupServerAddress;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
-    private final String dbName;
+    private final DatabaseId databaseId;
 
-    public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses, AdvertisedSocketAddress catchupServerAddress, String dbName )
+    public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses, AdvertisedSocketAddress catchupServerAddress, DatabaseId databaseId )
     {
-        this( clientConnectorAddresses, catchupServerAddress, emptySet(), dbName );
+        this( clientConnectorAddresses, catchupServerAddress, emptySet(), databaseId );
     }
 
     public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
-            AdvertisedSocketAddress catchupServerAddress, Set<String> groups, String dbName )
+            AdvertisedSocketAddress catchupServerAddress, Set<String> groups, DatabaseId databaseId )
     {
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.catchupServerAddress = catchupServerAddress;
         this.groups = groups;
-        this.dbName = dbName;
+        this.databaseId = databaseId;
     }
 
     @Override
-    public String getDatabaseName()
+    public DatabaseId getDatabaseId()
     {
-        return dbName;
+        return databaseId;
     }
 
     @Override
@@ -76,11 +77,11 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     {
         AdvertisedSocketAddress transactionSource = config.get( CausalClusteringSettings.transaction_advertised_address );
         ClientConnectorAddresses clientConnectorAddresses = ClientConnectorAddresses.extractFromConfig( config );
-        String dbName = config.get( CausalClusteringSettings.database );
+        DatabaseId databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         List<String> groupList = config.get( CausalClusteringSettings.server_groups );
         Set<String> groups = new HashSet<>( groupList );
 
-        return new ReadReplicaInfo( clientConnectorAddresses, transactionSource, groups, dbName );
+        return new ReadReplicaInfo( clientConnectorAddresses, transactionSource, groups, databaseId );
     }
 
     @Override
@@ -96,13 +97,13 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
         }
         ReadReplicaInfo that = (ReadReplicaInfo) o;
         return Objects.equals( catchupServerAddress, that.catchupServerAddress ) && Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
-                Objects.equals( groups, that.groups ) && Objects.equals( dbName, that.dbName );
+                Objects.equals( groups, that.groups ) && Objects.equals( databaseId, that.databaseId );
     }
 
     @Override
     public int hashCode()
     {
 
-        return Objects.hash( catchupServerAddress, clientConnectorAddresses, groups, dbName );
+        return Objects.hash( catchupServerAddress, clientConnectorAddresses, groups, databaseId );
     }
 }

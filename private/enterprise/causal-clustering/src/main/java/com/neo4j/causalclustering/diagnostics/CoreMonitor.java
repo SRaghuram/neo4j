@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -70,7 +71,7 @@ public class CoreMonitor implements ClusterBinder.Monitor, PersistentSnapshotDow
     }
 
     @Override
-    public void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId )
+    public void bootstrapped( Map<DatabaseId,CoreSnapshot> snapshots, ClusterId clusterId )
     {
         user.info( "This instance bootstrapped the cluster." );
         debug.info( format( "Bootstrapped with snapshots: %s and clusterId: %s", snapshots, clusterId ) );

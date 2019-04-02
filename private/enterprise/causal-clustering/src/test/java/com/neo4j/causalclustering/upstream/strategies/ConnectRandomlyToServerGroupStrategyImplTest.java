@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
@@ -119,7 +120,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
             readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( wanted ), "default" ) );
+                    new HashSet<>( wanted ), new DatabaseId( "default" ) ) );
 
             offset++;
         }
@@ -129,7 +130,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
             readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( unwanted ), "default" ) );
+                    new HashSet<>( unwanted ), new DatabaseId( "default" ) ) );
 
             offset++;
         }

@@ -12,15 +12,16 @@ import java.util.function.Supplier;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.token.TokenRegistry;
 
 public class ReplicatedLabelTokenHolder extends ReplicatedTokenHolder
 {
-    public ReplicatedLabelTokenHolder( String databaseName, TokenRegistry registry, Replicator replicator,
+    public ReplicatedLabelTokenHolder( DatabaseId databaseId, TokenRegistry registry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier )
     {
-        super( databaseName, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
+        super( databaseId, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
                 TokenType.LABEL, TransactionState::labelDoCreateForName );
     }
 }

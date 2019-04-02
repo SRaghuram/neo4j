@@ -27,7 +27,6 @@ import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
@@ -147,7 +146,6 @@ class BackupSchemaIT
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
-                .withDatabaseId( new DatabaseId( DB_NAME ) )
                 .withBackupDirectory( backupsDir )
                 .build();
 

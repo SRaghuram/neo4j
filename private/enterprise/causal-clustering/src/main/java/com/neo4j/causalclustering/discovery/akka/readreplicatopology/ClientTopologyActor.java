@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -31,8 +32,8 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private static final String REFRESH = "topology refresh";
 
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink,
-            SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient,
-            Config config, LogProvider logProvider )
+            SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
+            ActorRef clusterClient, Config config, LogProvider logProvider )
     {
         return Props.create( ClientTopologyActor.class,
                 () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider ) );
@@ -45,12 +46,12 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final ReadReplicaInfo readReplicaInfo;
     private final SourceQueueWithComplete<CoreTopology> coreTopologySink;
     private final SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink;
-    private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink;
+    private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink;
     private final ActorRef clusterClient;
     private final Log log;
 
     ClientTopologyActor( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink, SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink,
-            SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient, Config config, LogProvider logProvider )
+            SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink, ActorRef clusterClient, Config config, LogProvider logProvider )
     {
         this.myself = myself;
         this.coreTopologySink = coreTopologySink;

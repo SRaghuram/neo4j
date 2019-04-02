@@ -17,6 +17,7 @@ import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.management.CausalClustering;
@@ -62,7 +63,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
 
     private static class CausalClusteringBeanImpl extends Neo4jMBean implements CausalClustering
     {
-        private final String databaseName;
+        private final DatabaseId databaseId;
         private final ClusterStateLayout clusterStateLayout;
         private final RaftMachine raftMachine;
         private final FileSystemAbstraction fs;
@@ -70,7 +71,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
         CausalClusteringBeanImpl( ManagementData management, boolean isMXBean )
         {
             super( management, isMXBean );
-            databaseName = management.getDatabase().getDatabaseName();
+            databaseId = management.getDatabase().getDatabaseId();
             clusterStateLayout = management.resolveDependency( ClusterStateLayout.class );
             raftMachine = management.resolveDependency( RaftMachine.class );
             fs = management.getKernelData().getFilesystemAbstraction();
@@ -85,14 +86,14 @@ public class CausalClusteringBean extends ManagementBeanProvider
         @Override
         public long getRaftLogSize()
         {
-            File raftLogDirectory = clusterStateLayout.raftLogDirectory( databaseName );
+            File raftLogDirectory = clusterStateLayout.raftLogDirectory( databaseId );
             return FileSystemUtils.size( fs, raftLogDirectory );
         }
 
         @Override
         public long getReplicatedStateSize()
         {
-            return clusterStateLayout.listGlobalAndDatabaseDirectories( databaseName, type -> type != RAFT_LOG )
+            return clusterStateLayout.listGlobalAndDatabaseDirectories( databaseId, type -> type != RAFT_LOG )
                     .stream()
                     .mapToLong( dir -> FileSystemUtils.size( fs, dir ) )
                     .sum();

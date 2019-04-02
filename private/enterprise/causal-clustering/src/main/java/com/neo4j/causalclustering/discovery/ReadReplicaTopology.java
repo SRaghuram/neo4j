@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static java.util.Collections.emptyMap;
 
 public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
@@ -36,9 +38,9 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
     }
 
     @Override
-    public ReadReplicaTopology filterTopologyByDb( String dbName )
+    public ReadReplicaTopology filterTopologyByDb( DatabaseId databaseId )
     {
-        Map<MemberId, ReadReplicaInfo> filteredMembers = filterHostsByDb( members(), dbName );
+        Map<MemberId, ReadReplicaInfo> filteredMembers = filterHostsByDb( members(), databaseId );
 
         return new ReadReplicaTopology( filteredMembers );
     }

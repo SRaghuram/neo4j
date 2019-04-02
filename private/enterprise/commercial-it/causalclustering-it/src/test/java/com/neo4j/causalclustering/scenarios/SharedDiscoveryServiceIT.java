@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -118,7 +119,7 @@ public class SharedDiscoveryServiceIT
                 RaftMachine raftMock = mock( RaftMachine.class );
                 RaftMembershipManager membershipMock = mock( RaftMembershipManager.class );
                 RaftCoreTopologyConnector tc = new RaftCoreTopologyConnector( topologyService,
-                        raftMock, CausalClusteringSettings.database.getDefaultValue() );
+                        raftMock, new DatabaseId( CausalClusteringSettings.database.getDefaultValue() ) );
                 topologyService.init();
                 topologyService.start();
                 tc.start();

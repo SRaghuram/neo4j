@@ -65,13 +65,14 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class TxPullRequestHandlerTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private Database database = mock( Database.class );
     private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
-            new DatabaseId( DEFAULT_DATABASE_NAME ),
+            DATABASE_ID,
             new FakeClock(),
             NullLog.getInstance(),
             mock( CompositeDatabaseAvailabilityGuard.class ) );
@@ -103,7 +104,7 @@ class TxPullRequestHandlerTest
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -120,7 +121,7 @@ class TxPullRequestHandlerTest
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
 
         // then
         verify( context ).writeAndFlush( isA( ChunkedTransactionStream.class ) );
@@ -133,7 +134,7 @@ class TxPullRequestHandlerTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 14L );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 14, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 14, storeId, DATABASE_ID ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -148,7 +149,7 @@ class TxPullRequestHandlerTest
         when( logicalTransactionStore.getTransactions( 14L ) ).thenThrow( new NoSuchTransactionException( 14 ) );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
 
         // then
         verify( context, never() ).write( isA( ChunkedTransactionStream.class ) );
@@ -172,7 +173,7 @@ class TxPullRequestHandlerTest
         TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -192,7 +193,7 @@ class TxPullRequestHandlerTest
         TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -234,7 +235,7 @@ class TxPullRequestHandlerTest
 
         TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DEFAULT_DATABASE_NAME ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 
         ArgumentCaptor<ChunkedTransactionStream> txStreamCaptor = ArgumentCaptor.forClass( ChunkedTransactionStream.class );
         verify( context ).writeAndFlush( txStreamCaptor.capture() );

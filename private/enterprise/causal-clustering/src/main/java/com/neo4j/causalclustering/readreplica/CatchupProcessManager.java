@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
@@ -82,7 +83,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final CatchupProcessFactory catchupProcessFactory;
     private final Health databaseHealth;
 
-    private Map<String,CatchupPollingProcess> catchupProcesses;
+    private Map<DatabaseId,CatchupPollingProcess> catchupProcesses;
     private volatile boolean isPanicked;
     private Timer timer;
 
@@ -131,7 +132,7 @@ public class CatchupProcessManager extends SafeLifecycle
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
         catchupProcesses = clusteredDatabaseManager.registeredDatabases().entrySet().stream()
-                .collect( Collectors.toMap( e -> e.getKey().name(), e -> catchupProcessFactory.create( e.getValue() ) ) );
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );
         txPulling.start();
         initTimer();
 
@@ -175,9 +176,9 @@ public class CatchupProcessManager extends SafeLifecycle
 
     private CatchupPollingProcess createCatchupProcess( ClusteredDatabaseContext databaseContext )
     {
-        DatabaseCatchupComponents dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseName() )
+        DatabaseCatchupComponents dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() )
                 .orElseThrow( () -> new IllegalArgumentException(
-                        String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseName() ) ) );
+                        String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
 
         //TODO: We can do better than this. Core already exposes its commit process. Why not RR.
         Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
@@ -189,7 +190,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 maxBatchSize, () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
                 writableCommitProcess, databaseContext.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext.databaseName(), clusteredDatabaseManager,
+        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext.databaseId(), clusteredDatabaseManager,
                 servicesToStopOnStoreCopy, catchupClient, batchingTxApplier, databaseContext.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider,
                 this::panic, new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
@@ -214,7 +215,7 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     @VisibleForTesting
-    void setCatchupProcesses( Map<String, CatchupPollingProcess> catchupProcesses )
+    void setCatchupProcesses( Map<DatabaseId,CatchupPollingProcess> catchupProcesses )
     {
         this.catchupProcesses = catchupProcesses;
     }

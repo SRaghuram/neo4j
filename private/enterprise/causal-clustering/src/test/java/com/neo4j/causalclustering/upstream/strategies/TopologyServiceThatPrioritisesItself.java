@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
@@ -41,7 +42,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
         throw new RuntimeException( "Unimplemented" );
     }
@@ -101,7 +102,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         AdvertisedSocketAddress anyCatchupServer = new AdvertisedSocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
         Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, "dbName", false );
+        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, new DatabaseId( "dbName" ), false );
     }
 
     private static ReadReplicaInfo readReplicaInfo( String... groupNames )
@@ -109,7 +110,6 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 2468 );
         Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        ReadReplicaInfo readReplicaInfo = new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, "dbName" );
-        return readReplicaInfo;
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, new DatabaseId( "dbName" ) );
     }
 }

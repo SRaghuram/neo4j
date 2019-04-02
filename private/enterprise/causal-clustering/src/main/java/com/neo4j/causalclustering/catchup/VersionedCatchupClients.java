@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 /**
@@ -63,15 +64,15 @@ public interface VersionedCatchupClients extends AutoCloseable
 
     interface CatchupClientV3
     {
-        PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName );
+        PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId );
 
-        PreparedRequest<StoreId> getStoreId( String databaseName );
+        PreparedRequest<StoreId> getStoreId( DatabaseId databaseId );
 
-        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId );
 
-        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId );
 
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId );
     }
 
     @FunctionalInterface

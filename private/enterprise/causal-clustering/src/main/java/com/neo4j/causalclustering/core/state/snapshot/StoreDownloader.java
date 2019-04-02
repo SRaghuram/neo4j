@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -42,7 +43,7 @@ public class StoreDownloader
     boolean bringUpToDate( ClusteredDatabaseContext database, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        DatabaseCatchupComponents components = getCatchupComponents( database.databaseName() );
+        DatabaseCatchupComponents components = getCatchupComponents( database.databaseId() );
         Optional<StoreId> validStoreId = validateStoreId( database, components.remoteStore(), primaryAddress );
 
         if ( validStoreId.isEmpty() )
@@ -123,9 +124,9 @@ public class StoreDownloader
         return true;
     }
 
-    private DatabaseCatchupComponents getCatchupComponents( String databaseName )
+    private DatabaseCatchupComponents getCatchupComponents( DatabaseId databaseId )
     {
-        return componentsRepo.componentsFor( databaseName ).orElseThrow(
-                () -> new IllegalStateException( String.format( "There are no catchup components for the database %s.", databaseName ) ) );
+        return componentsRepo.componentsFor( databaseId ).orElseThrow(
+                () -> new IllegalStateException( String.format( "There are no catchup components for the database %s.", databaseId ) ) );
     }
 }

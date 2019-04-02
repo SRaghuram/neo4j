@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 
@@ -27,6 +26,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 
@@ -66,19 +66,18 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
     @Override
     public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        Map<String,List<AdvertisedSocketAddress>> routersPerDb = routeEndpoints();
+        Map<DatabaseId,List<AdvertisedSocketAddress>> routersPerDb = routeEndpoints();
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routersPerDb, timeToLiveMillis );
         return RawIterator.<AnyValue[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
     }
 
-    private Map<String,List<AdvertisedSocketAddress>> routeEndpoints()
+    private Map<DatabaseId,List<AdvertisedSocketAddress>> routeEndpoints()
     {
-        CoreTopology core =  topologyService.allCoreServers();
         Stream<CoreServerInfo> allCoreMemberInfo = topologyService.allCoreServers().members().values().stream();
 
-        Map<String, List<CoreServerInfo>> coresByDb = allCoreMemberInfo.collect( Collectors.groupingBy( CoreServerInfo::getDatabaseName ) );
+        Map<DatabaseId, List<CoreServerInfo>> coresByDb = allCoreMemberInfo.collect( Collectors.groupingBy( CoreServerInfo::getDatabaseId ) );
 
-        Function<Map.Entry<String,List<CoreServerInfo>>,List<AdvertisedSocketAddress>> extractQualifiedBoltAddresses = entry ->
+        Function<Map.Entry<DatabaseId,List<CoreServerInfo>>,List<AdvertisedSocketAddress>> extractQualifiedBoltAddresses = entry ->
         {
             List<CoreServerInfo> cores = entry.getValue();
             return cores.stream().map( ClientConnector::boltAddress ).collect( Collectors.toList() );

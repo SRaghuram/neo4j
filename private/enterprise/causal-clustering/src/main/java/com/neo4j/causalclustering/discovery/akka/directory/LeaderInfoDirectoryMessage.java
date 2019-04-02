@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Sent from discovery service to this Neo4J instance
  */
@@ -18,14 +20,14 @@ public class LeaderInfoDirectoryMessage
 {
     public static LeaderInfoDirectoryMessage EMPTY = new LeaderInfoDirectoryMessage( Collections.emptyMap() );
 
-    private final Map<String,LeaderInfo> leaders;
+    private final Map<DatabaseId,LeaderInfo> leaders;
 
-    public LeaderInfoDirectoryMessage( Map<String,LeaderInfo> leaders )
+    public LeaderInfoDirectoryMessage( Map<DatabaseId,LeaderInfo> leaders )
     {
         this.leaders = Collections.unmodifiableMap( leaders );
     }
 
-    public Map<String,LeaderInfo> leaders()
+    public Map<DatabaseId,LeaderInfo> leaders()
     {
         return leaders;
     }

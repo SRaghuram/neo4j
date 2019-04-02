@@ -56,7 +56,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager<CoreDatab
     {
         DatabaseCoreStateComponents.LifecycleDependencies lifecycleDeps = new DatabaseCoreStateComponents.LifecycleDependencies();
         CommitProcessInstaller commitProcessInstaller = new CommitProcessInstaller();
-        coreStateService.get().create( databaseId.name(), lifecycleDeps, commitProcessInstaller );
+        coreStateService.get().create( databaseId, lifecycleDeps, commitProcessInstaller );
         //The database requires several cluster specific versions of kernel machines, created by the CoreStateService. However, some of those components need
         // a reference to the database at runtime, after it has started. Hence this circular pattern.
         CoreDatabaseContext ctx = super.createNewDatabaseContext( databaseId );

@@ -9,18 +9,22 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class RaftCoreTopologyConnectorTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+
     @Test
     void shouldRegisterAsListenerWhenStarted()
     {
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         RaftMachine raftMachine = mock( RaftMachine.class );
-        RaftCoreTopologyConnector connector = new RaftCoreTopologyConnector( topologyService, raftMachine, DEFAULT_DATABASE_NAME );
+        RaftCoreTopologyConnector connector = new RaftCoreTopologyConnector( topologyService, raftMachine, DATABASE_ID );
 
         connector.start();
 
@@ -34,7 +38,7 @@ class RaftCoreTopologyConnectorTest
     {
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         RaftMachine raftMachine = mock( RaftMachine.class );
-        RaftCoreTopologyConnector connector = new RaftCoreTopologyConnector( topologyService, raftMachine, DEFAULT_DATABASE_NAME );
+        RaftCoreTopologyConnector connector = new RaftCoreTopologyConnector( topologyService, raftMachine, DATABASE_ID );
 
         connector.stop();
 

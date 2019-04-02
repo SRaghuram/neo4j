@@ -28,6 +28,7 @@ import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -94,7 +95,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 try
                 {
                     TransactionRepresentationReplicatedTransaction txRepresentation = ReplicatedTransaction.from( batch.transactionRepresentation(),
-                                                                                                                  "db-name" );
+                                                                                                                  new DatabaseId( "db-name" ) );
 
                     ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
 

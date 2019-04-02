@@ -41,6 +41,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
@@ -115,7 +116,7 @@ public class StoreCopyClientIT
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        subject = new StoreCopyClient( catchUpClient, DEFAULT_DATABASE_NAME, Monitors::new, logProvider, storeCopyBackoffStrategy );
+        subject = new StoreCopyClient( catchUpClient, new DatabaseId( DEFAULT_DATABASE_NAME ), Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @After

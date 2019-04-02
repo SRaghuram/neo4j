@@ -15,9 +15,9 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public interface CoreStateRepository
 {
-    void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot );
+    void augmentSnapshot( DatabaseId databaseId, CoreSnapshot coreSnapshot );
 
-    void installSnapshotForDatabase( String databaseName, CoreSnapshot coreSnapshot );
+    void installSnapshotForDatabase( DatabaseId databaseId, CoreSnapshot coreSnapshot );
 
     void installSnapshotForRaftGroup( CoreSnapshot coreSnapshot );
 
@@ -29,7 +29,7 @@ public interface CoreStateRepository
 
     long getLastFlushed();
 
-    Map<String,DatabaseCoreStateComponents> getAllDatabaseStates();
+    Map<DatabaseId,DatabaseCoreStateComponents> getAllDatabaseStates();
 
     Optional<DatabaseCoreStateComponents> getDatabaseState( DatabaseId databaseId );
 }

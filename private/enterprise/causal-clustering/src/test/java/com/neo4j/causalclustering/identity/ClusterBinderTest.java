@@ -26,6 +26,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
@@ -51,13 +52,14 @@ public class ClusterBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final String dbName = config.get( CausalClusteringSettings.database );
+    private final DatabaseId databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
+    private final DatabaseId testDatabaseId = new DatabaseId( "default" );
 
     private ClusterBinder clusterBinder( SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService )
     {
         return new ClusterBinder( clusterIdStorage, new StubSimpleStorage<>(), topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), coreBootstrapper, dbName, minCoreHosts, new Monitors() );
+                Duration.of( 3_000, MILLIS ), coreBootstrapper, databaseId, minCoreHosts, new Monitors() );
     }
 
     @Test
@@ -115,7 +117,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, "default" ) ).thenReturn( true );
+        when( topologyService.setClusterId( previouslyBoundClusterId, testDatabaseId ) ).thenReturn( true );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -126,7 +128,7 @@ public class ClusterBinderTest
         binder.bindToCluster();
 
         // then
-        verify( topologyService ).setClusterId( previouslyBoundClusterId, "default" );
+        verify( topologyService ).setClusterId( previouslyBoundClusterId, testDatabaseId );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         assertEquals( previouslyBoundClusterId, clusterId.get() );
@@ -139,7 +141,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, "default" ) ).thenReturn( false );
+        when( topologyService.setClusterId( previouslyBoundClusterId, testDatabaseId ) ).thenReturn( false );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -162,7 +164,7 @@ public class ClusterBinderTest
     public void shouldBootstrapWhenBootstrappable() throws Throwable
     {
         // given
-        String databaseName = DEFAULT_DATABASE_NAME;
+        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
@@ -171,9 +173,9 @@ public class ClusterBinderTest
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-        when( topologyService.setClusterId( any(), eq("default" ) ) ).thenReturn( true );
+        when( topologyService.setClusterId( any(), eq(testDatabaseId ) ) ).thenReturn( true );
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
-        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseName, snapshot ) );
+        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseId, snapshot ) );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -184,8 +186,8 @@ public class ClusterBinderTest
         verify( coreBootstrapper ).bootstrap( any() );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
-        verify( topologyService ).setClusterId( clusterId.get(), "default" );
-        assertEquals( singletonMap( databaseName, snapshot ), boundState.snapshots() );
+        verify( topologyService ).setClusterId( clusterId.get(), testDatabaseId );
+        assertEquals( singletonMap( databaseId, snapshot ), boundState.snapshots() );
     }
 
     private class StubSimpleStorage<T> implements SimpleStorage<T>

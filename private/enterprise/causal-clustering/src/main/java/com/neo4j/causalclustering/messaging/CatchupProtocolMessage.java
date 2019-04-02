@@ -9,15 +9,17 @@ import com.neo4j.causalclustering.catchup.RequestMessageType;
 
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public abstract class CatchupProtocolMessage implements Message
 {
     private final RequestMessageType type;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    protected CatchupProtocolMessage( RequestMessageType type, String databaseName )
+    protected CatchupProtocolMessage( RequestMessageType type, DatabaseId databaseId )
     {
         this.type = type;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     public final RequestMessageType messageType()
@@ -25,9 +27,9 @@ public abstract class CatchupProtocolMessage implements Message
         return type;
     }
 
-    public final String databaseName()
+    public final DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     @Override
@@ -43,18 +45,18 @@ public abstract class CatchupProtocolMessage implements Message
         }
         CatchupProtocolMessage that = (CatchupProtocolMessage) o;
         return type == that.type &&
-               Objects.equals( databaseName, that.databaseName );
+               Objects.equals( databaseId, that.databaseId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( type, databaseName );
+        return Objects.hash( type, databaseId );
     }
 
     @Override
     public String toString()
     {
-        return getClass().getSimpleName() + "{type=" + type + ", databaseName='" + databaseName + "'}";
+        return getClass().getSimpleName() + "{type=" + type + ", databaseId='" + databaseId + "'}";
     }
 }

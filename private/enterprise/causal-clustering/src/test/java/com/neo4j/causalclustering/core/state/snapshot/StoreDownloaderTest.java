@@ -127,7 +127,7 @@ public class StoreDownloaderTest
     {
         // given
         ClusteredDatabaseContext wrongDb = mock( ClusteredDatabaseContext.class );
-        when( wrongDb.databaseName() ).thenReturn( "wrong" );
+        when( wrongDb.databaseId() ).thenReturn( new DatabaseId( "wrong" ) );
 
         // when
         try

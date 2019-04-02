@@ -203,9 +203,9 @@ class ReadReplicaStartupProcess implements Lifecycle
     private void syncStoreWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext, MemberId source ) throws IOException,
             StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
-        DatabaseCatchupComponents catchup = catchupComponents.componentsFor( clusteredDatabaseContext.databaseName() )
+        DatabaseCatchupComponents catchup = catchupComponents.componentsFor( clusteredDatabaseContext.databaseId() )
                 .orElseThrow( () -> new IllegalStateException(
-                        String.format( "No per database catchup components exist for database %s.", clusteredDatabaseContext.databaseName() ) ) );
+                        String.format( "No per database catchup components exist for database %s.", clusteredDatabaseContext.databaseId().name() ) ) );
 
         if ( clusteredDatabaseContext.isEmpty() )
         {
@@ -237,7 +237,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             throw new IllegalStateException( format( "This read replica cannot join the cluster. " +
                     "The local version of database %s is not empty and has a mismatching storeId: " +
-                    "expected %s actual %s.", clusteredDatabaseContext.databaseName(), remoteStoreId, localStoreId ) );
+                    "expected %s actual %s.", clusteredDatabaseContext.databaseId().name(), remoteStoreId, localStoreId ) );
         }
     }
 

@@ -35,6 +35,7 @@ import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -66,7 +67,7 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
-    private static final String UNKNOWN_DB_NAME = "unknown.db";
+    private static final DatabaseId UNKNOWN_DB_ID = new DatabaseId( "unknown.db" );
     private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 1122, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
@@ -157,7 +158,8 @@ class CatchupServerIT
         SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when the list of files are requested from the server with the wrong storeId
-        PrepareStoreCopyResponse prepareStoreCopyResponse = simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, DEFAULT_DATABASE_NAME );
+        PrepareStoreCopyResponse prepareStoreCopyResponse =
+                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, new DatabaseId( DEFAULT_DATABASE_NAME  ) );
         simpleCatchupClient.close();
 
         // then the response is not a list of files but an error
@@ -202,7 +204,7 @@ class CatchupServerIT
 
         // when we copy that file using a different storeId
         StoreCopyFinishedResponse storeCopyFinishedResponse =
-                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, DEFAULT_DATABASE_NAME );
+                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, new DatabaseId( DEFAULT_DATABASE_NAME ) );
         simpleCatchupClient.close();
 
         // then the response from the server should be an error message that describes a store ID mismatch
@@ -212,17 +214,17 @@ class CatchupServerIT
     @Test
     void shouldFailWithGoodErrorWhenListingFilesForDatabaseThatDoesNotExist() throws Exception
     {
-        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_ID ) )
         {
             Exception error = assertThrows( Exception.class, simpleCatchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_NAME + " does not exist" ) );
+            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_ID + " does not exist" ) );
         }
     }
 
     @Test
     void shouldReturnCorrectStatusWhenRequestingFileForDatabaseThatDoesNotExist() throws Exception
     {
-        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_ID ) )
         {
             // individual file request does not throw when error response is received, it returns a status instead
             StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( new File( EXISTING_FILE_NAME ) );
@@ -300,12 +302,12 @@ class CatchupServerIT
 
     private SimpleCatchupClient newSimpleCatchupClient()
     {
-        return newSimpleCatchupClient( DEFAULT_DATABASE_NAME );
+        return newSimpleCatchupClient( new DatabaseId( DEFAULT_DATABASE_NAME ) );
     }
 
-    private SimpleCatchupClient newSimpleCatchupClient( String databaseName )
+    private SimpleCatchupClient newSimpleCatchupClient( DatabaseId databaseId )
     {
-        return new SimpleCatchupClient( db, databaseName, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
+        return new SimpleCatchupClient( db, databaseId, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
     }
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )

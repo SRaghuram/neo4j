@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.RequestMessageType;
 
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 public abstract class StoreCopyRequest extends CatchupProtocolMessage
@@ -16,9 +17,9 @@ public abstract class StoreCopyRequest extends CatchupProtocolMessage
     private final StoreId expectedStoreId;
     private final long requiredTransactionId;
 
-    protected StoreCopyRequest( RequestMessageType type, String databaseName, StoreId expectedStoreId, long requiredTransactionId )
+    protected StoreCopyRequest( RequestMessageType type, DatabaseId databaseId, StoreId expectedStoreId, long requiredTransactionId )
     {
-        super( type, databaseName );
+        super( type, databaseId );
         this.expectedStoreId = expectedStoreId;
         this.requiredTransactionId = requiredTransactionId;
     }

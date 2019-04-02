@@ -54,7 +54,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         CANCELLED
     }
 
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final ClusteredDatabaseContext clusteredDatabaseContext;
     //TODO: It makes no sense to take both clusteredDatabaseContext and clusteredDatabaseManager here.
     // When clusteredDatabaseContext objects can stop and start it won't be needed
@@ -73,15 +73,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    public CatchupPollingProcess( Executor executor, String databaseName, ClusteredDatabaseManager<?> clusteredDatabaseManager,
+    public CatchupPollingProcess( Executor executor, DatabaseId databaseId, ClusteredDatabaseManager<?> clusteredDatabaseManager,
             Suspendable enableDisableOnSoreCopy, CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
             StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.catchupAddressProvider = catchupAddressProvider;
-        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( new DatabaseId( databaseName ) ).orElseThrow( IllegalStateException::new );
+        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new );
         this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
         this.applier = applier;
@@ -247,7 +247,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             result = catchUpClient.getClient( address, log )
-                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
+                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }
@@ -330,11 +330,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
         {
-            return format( "%s is %s (%d of %d)", databaseName, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+            return format( "%s is %s (%d of %d)", databaseId, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
         }
         else
         {
-            return String.format( "%s is %s", databaseName, state.name() );
+            return String.format( "%s is %s", databaseId, state.name() );
         }
     }
 }

@@ -9,7 +9,9 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 
 import java.util.Map;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface DirectoryUpdateSink
 {
-    void onDbLeaderUpdate( Map<String, LeaderInfo> leaderPerDb );
+    void onDbLeaderUpdate( Map<DatabaseId, LeaderInfo> leaderPerDb );
 }

@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptySet;
 
@@ -23,30 +24,30 @@ public class CoreServerInfo implements DiscoveryServerInfo
     private final AdvertisedSocketAddress catchupServer;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
-    private final String dbName;
+    private final DatabaseId databaseId;
     private final boolean refuseToBeLeader;
 
     public CoreServerInfo( AdvertisedSocketAddress raftServer, AdvertisedSocketAddress catchupServer,
-            ClientConnectorAddresses clientConnectors, String dbName, boolean refuseToBeLeader )
+            ClientConnectorAddresses clientConnectors, DatabaseId databaseId, boolean refuseToBeLeader )
     {
-        this( raftServer, catchupServer, clientConnectors, emptySet(), dbName, refuseToBeLeader );
+        this( raftServer, catchupServer, clientConnectors, emptySet(), databaseId, refuseToBeLeader );
     }
 
     public CoreServerInfo( AdvertisedSocketAddress raftServer, AdvertisedSocketAddress catchupServer,
-            ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, String dbName, boolean refuseToBeLeader )
+            ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, DatabaseId databaseId, boolean refuseToBeLeader )
     {
         this.raftServer = raftServer;
         this.catchupServer = catchupServer;
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.groups = groups;
-        this.dbName = dbName;
+        this.databaseId = databaseId;
         this.refuseToBeLeader = refuseToBeLeader;
     }
 
     @Override
-    public String getDatabaseName()
+    public DatabaseId getDatabaseId()
     {
-        return dbName;
+        return databaseId;
     }
 
     public AdvertisedSocketAddress getRaftServer()
@@ -85,7 +86,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
                ", catchupServer=" + catchupServer +
                ", clientConnectorAddresses=" + clientConnectorAddresses +
                ", groups=" + groups +
-               ", database=" + dbName +
+               ", database=" + databaseId +
                ", refuseToBeLeader=" + refuseToBeLeader +
                '}';
     }
@@ -95,12 +96,12 @@ public class CoreServerInfo implements DiscoveryServerInfo
         AdvertisedSocketAddress raftAddress = config.get( CausalClusteringSettings.raft_advertised_address );
         AdvertisedSocketAddress transactionSource = config.get( CausalClusteringSettings.transaction_advertised_address );
         ClientConnectorAddresses clientConnectorAddresses = ClientConnectorAddresses.extractFromConfig( config );
-        String dbName = config.get( CausalClusteringSettings.database );
+        DatabaseId databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         List<String> groupList = config.get( CausalClusteringSettings.server_groups );
         Set<String> groups = new HashSet<>( groupList );
         boolean refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
 
-        return new CoreServerInfo( raftAddress, transactionSource, clientConnectorAddresses, groups, dbName, refuseToBeLeader );
+        return new CoreServerInfo( raftAddress, transactionSource, clientConnectorAddresses, groups, databaseId, refuseToBeLeader );
     }
 
     @Override
@@ -117,13 +118,13 @@ public class CoreServerInfo implements DiscoveryServerInfo
         CoreServerInfo that = (CoreServerInfo) o;
         return refuseToBeLeader == that.refuseToBeLeader && Objects.equals( raftServer, that.raftServer ) &&
                 Objects.equals( catchupServer, that.catchupServer ) && Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
-                Objects.equals( groups, that.groups ) && Objects.equals( dbName, that.dbName );
+                Objects.equals( groups, that.groups ) && Objects.equals( databaseId, that.databaseId );
     }
 
     @Override
     public int hashCode()
     {
 
-        return Objects.hash( raftServer, catchupServer, clientConnectorAddresses, groups, dbName, refuseToBeLeader );
+        return Objects.hash( raftServer, catchupServer, clientConnectorAddresses, groups, databaseId, refuseToBeLeader );
     }
 }

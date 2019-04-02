@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.error_handling.Panicker;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
@@ -20,13 +21,13 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 public class ReplicatedTransactionCommitProcess implements TransactionCommitProcess
 {
     private final Replicator replicator;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final Panicker panicker;
 
-    public ReplicatedTransactionCommitProcess( Replicator replicator, String databaseName, Panicker panicker )
+    public ReplicatedTransactionCommitProcess( Replicator replicator, DatabaseId databaseId, Panicker panicker )
     {
         this.replicator = replicator;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.panicker = panicker;
     }
 
@@ -35,7 +36,7 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
                         final CommitEvent commitEvent,
                         TransactionApplicationMode mode ) throws TransactionFailureException
     {
-        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( tx.transactionRepresentation(), databaseName );
+        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( tx.transactionRepresentation(), databaseId );
 
         try
         {

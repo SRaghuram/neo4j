@@ -15,6 +15,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
@@ -28,7 +29,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class ReplicatedLockTokenStateMachineTest
 {
-    private final String databaseName = DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Rule
     public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
@@ -56,7 +57,7 @@ public class ReplicatedLockTokenStateMachineTest
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 0, r -> {} );
 
         // then
         assertEquals( firstCandidateId + 1, LockToken.nextCandidateId( stateMachine.snapshot().candidateId() ) );
@@ -71,13 +72,13 @@ public class ReplicatedLockTokenStateMachineTest
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
 
         // then
         assertEquals( firstCandidateId, stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseName ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
 
         // then
         assertEquals( firstCandidateId + 1, stateMachine.snapshot().candidateId() );
@@ -92,13 +93,13 @@ public class ReplicatedLockTokenStateMachineTest
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
 
         // then
         assertEquals( member( 0 ), stateMachine.snapshot().owner() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId + 1, databaseName ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
 
         // then
         assertEquals( member( 1 ), stateMachine.snapshot().owner() );
@@ -113,16 +114,16 @@ public class ReplicatedLockTokenStateMachineTest
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 1, r -> {} );
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId, databaseName ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId, databaseId ), 2, r -> {} );
 
         // then
         assertEquals( 0, stateMachine.snapshot().candidateId() );
         assertEquals( member( 0 ), stateMachine.snapshot().owner() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId + 1, databaseName ), 3, r -> {} );
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseName ), 4, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 1 ), firstCandidateId + 1, databaseId ), 3, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseId ), 4, r -> {} );
 
         // then
         assertEquals( 1, stateMachine.snapshot().candidateId() );
@@ -138,31 +139,31 @@ public class ReplicatedLockTokenStateMachineTest
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseName ), 1, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseId ), 1, r -> {} ); // not accepted
 
         // then
         assertEquals( stateMachine.snapshot().candidateId(), LockToken.INVALID_LOCK_TOKEN_ID );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 2, r -> {} ); // accepted
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 2, r -> {} ); // accepted
 
         // then
         assertEquals( stateMachine.snapshot().candidateId(), firstCandidateId );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseName ), 3, r -> {} ); // accepted
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 1, databaseId ), 3, r -> {} ); // accepted
 
         // then
         assertEquals( stateMachine.snapshot().candidateId(), firstCandidateId + 1 );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseName ), 4, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId, databaseId ), 4, r -> {} ); // not accepted
 
         // then
         assertEquals( stateMachine.snapshot().candidateId(), firstCandidateId + 1 );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 3, databaseName ), 5, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLockTokenRequest( member( 0 ), firstCandidateId + 3, databaseId ), 5, r -> {} ); // not accepted
 
         // then
         assertEquals( stateMachine.snapshot().candidateId(), firstCandidateId + 1 );
@@ -192,9 +193,9 @@ public class ReplicatedLockTokenStateMachineTest
 
             // when
             candidateId = 0;
-            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberA, candidateId, databaseName ), 0, r -> {} );
+            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberA, candidateId, databaseId ), 0, r -> {} );
             candidateId = 1;
-            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberB, candidateId, databaseName ), 1, r -> {} );
+            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberB, candidateId, databaseId ), 1, r -> {} );
 
             stateMachine.flush();
             fsa.crash();
@@ -206,7 +207,7 @@ public class ReplicatedLockTokenStateMachineTest
         try ( Lifespan ignored = new Lifespan( storage2 ) )
         {
             ReplicatedLockTokenState initialState = storage2.getInitialState();
-            ReplicatedLockTokenRequest request = new ReplicatedLockTokenRequest( initialState, databaseName );
+            ReplicatedLockTokenRequest request = new ReplicatedLockTokenRequest( initialState, databaseId );
             assertEquals( memberB, request.owner() );
             assertEquals( candidateId, request.id() );
         }
@@ -231,12 +232,12 @@ public class ReplicatedLockTokenStateMachineTest
             MemberId memberA = member( 0 );
             MemberId memberB = member( 1 );
 
-            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberA, 0, databaseName ), 3, r ->
+            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberA, 0, databaseId ), 3, r ->
             {
             } );
 
             // when
-            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberB, 1, databaseName ), 2, r ->
+            stateMachine.applyCommand( new ReplicatedLockTokenRequest( memberB, 1, databaseId ), 2, r ->
             {
             } );
 
@@ -253,15 +254,15 @@ public class ReplicatedLockTokenStateMachineTest
         StateStorage<ReplicatedLockTokenState> storage = mock( StateStorage.class );
         MemberId initialHoldingCoreMember = member( 0 );
         ReplicatedLockTokenState initialState = new ReplicatedLockTokenState( 123,
-                new ReplicatedLockTokenRequest( initialHoldingCoreMember, 3, databaseName ) );
+                new ReplicatedLockTokenRequest( initialHoldingCoreMember, 3, databaseId ) );
         when( storage.getInitialState() ).thenReturn( initialState );
-        ReplicatedLockTokenRequest initialRequest = new ReplicatedLockTokenRequest( initialState, databaseName );
+        ReplicatedLockTokenRequest initialRequest = new ReplicatedLockTokenRequest( initialState, databaseId );
         // When
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine( storage );
 
         // Then
         ReplicatedLockTokenState state = stateMachine.snapshot();
-        LockToken token = new ReplicatedLockTokenRequest( state, databaseName );
+        LockToken token = new ReplicatedLockTokenRequest( state, databaseId );
         assertEquals( initialRequest.owner(), token.owner() );
         assertEquals( initialRequest.id(), token.id() );
     }

@@ -16,13 +16,14 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
 class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements Comparable<SharedDiscoveryCoreClient>
 {
     private final SharedDiscoveryService sharedDiscoveryService;
     private final CoreServerInfo coreServerInfo;
-    private final String localDBName;
+    private final DatabaseId localDatabaseId;
     private final boolean refusesToBeLeader;
 
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
@@ -34,7 +35,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
             MemberId member, LogProvider logProvider, Config config )
     {
         super( config, member, logProvider, logProvider );
-        this.localDBName = config.get( CausalClusteringSettings.database );
+        this.localDatabaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) ) ;
         this.sharedDiscoveryService = sharedDiscoveryService;
         this.coreServerInfo = CoreServerInfo.from( config );
         this.refusesToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
@@ -47,9 +48,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName )
+    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
     {
-        return sharedDiscoveryService.casClusterId( clusterId, dbName );
+        return sharedDiscoveryService.casClusterId( clusterId, databaseId );
     }
 
     @Override
@@ -59,9 +60,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void setLeader0( LeaderInfo newLeader, String dbName )
+    public void setLeader0( LeaderInfo newLeader, DatabaseId databaseId )
     {
-        sharedDiscoveryService.casLeaders( newLeader, dbName );
+        sharedDiscoveryService.casLeaders( newLeader, databaseId );
     }
 
     @Override
@@ -74,9 +75,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public void start0() throws InterruptedException
     {
         coreTopology = sharedDiscoveryService.getCoreTopology( this );
-        localCoreTopology = coreTopology.filterTopologyByDb( localDBName );
+        localCoreTopology = coreTopology.filterTopologyByDb( localDatabaseId );
         readReplicaTopology = sharedDiscoveryService.getReadReplicaTopology();
-        localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDBName );
+        localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDatabaseId );
 
         sharedDiscoveryService.registerCoreMember( this );
         log.info( "Registered core server %s", myself );
@@ -99,9 +100,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return localDBName;
+        return localDatabaseId;
     }
 
     @Override
@@ -143,9 +144,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown, String dbName )
+    public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
-        sharedDiscoveryService.casLeaders( steppingDown, dbName );
+        sharedDiscoveryService.casLeaders( steppingDown, databaseId );
     }
 
     public MemberId getMemberId()
@@ -162,7 +163,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     {
         log.info( "Notified of core topology change " + coreTopology );
         this.coreTopology = coreTopology;
-        this.localCoreTopology = coreTopology.filterTopologyByDb( localDBName );
+        this.localCoreTopology = coreTopology.filterTopologyByDb( localDatabaseId );
         listenerService.notifyListeners( coreTopology );
     }
 
@@ -170,7 +171,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     {
         log.info( "Notified of read replica topology change " + readReplicaTopology );
         this.readReplicaTopology = readReplicaTopology;
-        this.localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDBName );
+        this.localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDatabaseId );
     }
 
     public boolean refusesToBeLeader()
@@ -182,6 +183,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public String toString()
     {
         return "SharedDiscoveryCoreClient{" + "myself=" + myself + ", coreServerInfo=" + coreServerInfo + ", refusesToBeLeader=" + refusesToBeLeader +
-               ", localDBName='" + localDBName + '\'' + ", coreTopology=" + coreTopology + '}';
+               ", localDBName='" + localDatabaseId + '\'' + ", coreTopology=" + coreTopology + '}';
     }
 }

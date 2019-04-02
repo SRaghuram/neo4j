@@ -10,15 +10,16 @@ import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 public class PrepareStoreCopyRequest extends CatchupProtocolMessage
 {
     private final StoreId storeId;
 
-    public PrepareStoreCopyRequest( StoreId expectedStoreId, String databaseName )
+    public PrepareStoreCopyRequest( StoreId expectedStoreId, DatabaseId databaseId )
     {
-        super( RequestMessageType.PREPARE_STORE_COPY, databaseName );
+        super( RequestMessageType.PREPARE_STORE_COPY, databaseId );
         this.storeId = expectedStoreId;
     }
 
@@ -55,6 +56,6 @@ public class PrepareStoreCopyRequest extends CatchupProtocolMessage
     @Override
     public String toString()
     {
-        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseName() + "}";
+        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseId() + "}";
     }
 }

@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -58,17 +59,17 @@ public class LeaderOnlyLockManager implements Locks
     private final LeaderLocator leaderLocator;
     private final Locks localLocks;
     private final ReplicatedLockTokenStateMachine lockTokenStateMachine;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     public LeaderOnlyLockManager( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, Locks localLocks,
-            ReplicatedLockTokenStateMachine lockTokenStateMachine, String databaseName )
+            ReplicatedLockTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
     {
         this.myself = myself;
         this.replicator = replicator;
         this.leaderLocator = leaderLocator;
         this.localLocks = localLocks;
         this.lockTokenStateMachine = lockTokenStateMachine;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -93,7 +94,7 @@ public class LeaderOnlyLockManager implements Locks
         ensureLeader();
 
         ReplicatedLockTokenRequest lockTokenRequest =
-                new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ), databaseName );
+                new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ), databaseId );
 
         Result result;
         try
@@ -127,7 +128,7 @@ public class LeaderOnlyLockManager implements Locks
     private LockToken currentToken()
     {
         ReplicatedLockTokenState state = lockTokenStateMachine.snapshot();
-        return new ReplicatedLockTokenRequest( state, databaseName );
+        return new ReplicatedLockTokenRequest( state, databaseId );
     }
 
     private void ensureLeader()

@@ -32,6 +32,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -91,7 +92,7 @@ public class DatabaseBootstrapper
     private final RaftCoreState raftCoreState;
     private final GlobalSessionTrackerState sessionTrackerState;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
-    private final Function<String,DatabaseInitializer> databaseInitializers;
+    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Log log;
@@ -99,7 +100,7 @@ public class DatabaseBootstrapper
     private final Config config;
 
     public DatabaseBootstrapper( Set<MemberId> members, TemporaryDatabaseFactory tempDatabaseFactory,
-            Function<String,DatabaseInitializer> databaseInitializers,
+            Function<DatabaseId,DatabaseInitializer> databaseInitializers,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider,
             StorageEngineFactory storageEngineFactory, Config config )
     {
@@ -131,17 +132,17 @@ public class DatabaseBootstrapper
     {
         try
         {
-            log.info( "Bootstrapping database " + dbContext.databaseName() + " for members " + members );
+            log.info( "Bootstrapping database " + dbContext.databaseId().name() + " for members " + members );
             ensureRecoveredOrThrow( dbContext, config );
             initializeStoreIfNeeded( dbContext );
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( dbContext );
             CoreSnapshot snapshot = buildCoreSnapshot( dbContext );
-            log.info( "Bootstrapping of the database " + dbContext.databaseName() + " completed " + snapshot );
+            log.info( "Bootstrapping of the database " + dbContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
         }
         catch ( Exception e )
         {
-            throw new BootstrapException( dbContext.databaseName(), e );
+            throw new BootstrapException( dbContext.databaseId().name(), e );
         }
     }
 
@@ -153,7 +154,7 @@ public class DatabaseBootstrapper
             fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
             try
             {
-                log.info( "Initializing the store for database " + dbContext.databaseName() + " using a temporary database in " + bootstrapRootDir );
+                log.info( "Initializing the store for database " + dbContext.databaseId().name() + " using a temporary database in " + bootstrapRootDir );
                 File bootstrapDbDir = initializeStoreUsingTempDatabase( dbContext, bootstrapRootDir );
 
                 log.info( "Moving created store files from " + bootstrapDbDir + " to " + dbContext.databaseLayout() );
@@ -170,7 +171,7 @@ public class DatabaseBootstrapper
     {
         try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config ) )
         {
-            DatabaseInitializer initializer = databaseInitializers.apply( dbContext.databaseName() );
+            DatabaseInitializer initializer = databaseInitializers.apply( dbContext.databaseId() );
             initializer.initialize( tempDatabase.graphDatabaseService() );
             return tempDatabase.defaultDatabaseDirectory();
         }
@@ -185,7 +186,7 @@ public class DatabaseBootstrapper
     {
         if ( Recovery.isRecoveryRequired( fs, dbContext.databaseLayout(), config ) )
         {
-            String message = "Cannot bootstrap database " + dbContext.databaseName() + ". " +
+            String message = "Cannot bootstrap database " + dbContext.databaseId().name() + ". " +
                              "Recovery is required. " +
                              "Please ensure that the store being seeded comes from a cleanly shutdown instance of Neo4j or a Neo4j backup";
             log.error( message );

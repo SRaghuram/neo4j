@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.catchup.v3.storecopy;
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class GetStoreIdRequest extends CatchupProtocolMessage
 {
-    public GetStoreIdRequest( String databaseName )
+    public GetStoreIdRequest( DatabaseId databaseId )
     {
-        super( RequestMessageType.STORE_ID, databaseName );
+        super( RequestMessageType.STORE_ID, databaseId );
     }
 }

@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -27,7 +28,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     protected final Log log;
     protected final Log userLog;
 
-    private final Map<String,LeaderInfo> localLeadersByDatabaseName = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseName = new ConcurrentHashMap<>();
 
     protected AbstractCoreTopologyService( Config config, MemberId myself, LogProvider logProvider, LogProvider userLogProvider )
     {
@@ -51,24 +52,24 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     }
 
     @Override
-    public final void setLeader( LeaderInfo newLeader, String dbName )
+    public final void setLeader( LeaderInfo newLeader, DatabaseId databaseId )
     {
-        LeaderInfo currentLeaderInfo = getLeader( dbName );
+        LeaderInfo currentLeaderInfo = getLeader( databaseId );
 
         if ( currentLeaderInfo.term() < newLeader.term() )
         {
-            log.info( "Leader %s updating leader info for database %s and term %s", myself, dbName, newLeader.term() );
-            localLeadersByDatabaseName.put( dbName, newLeader );
-            setLeader0( newLeader, dbName );
+            log.info( "Leader %s updating leader info for database %s and term %s", myself, databaseId.name(), newLeader.term() );
+            localLeadersByDatabaseName.put( databaseId, newLeader );
+            setLeader0( newLeader, databaseId );
         }
     }
 
-    protected abstract void setLeader0( LeaderInfo newLeader, String dbName );
+    protected abstract void setLeader0( LeaderInfo newLeader, DatabaseId databaseId );
 
     @Override
-    public final void handleStepDown( long term, String dbName )
+    public final void handleStepDown( long term, DatabaseId databaseId )
     {
-        LeaderInfo currentLeaderInfo = getLeader( dbName );
+        LeaderInfo currentLeaderInfo = getLeader( databaseId );
 
         boolean wasLeaderForTerm =
                 Objects.equals( myself, currentLeaderInfo.memberId() ) &&
@@ -77,13 +78,13 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         if ( wasLeaderForTerm )
         {
             log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
-                      "to follower.", myself, dbName, currentLeaderInfo.term() );
-            localLeadersByDatabaseName.put( dbName, currentLeaderInfo.stepDown() );
-            handleStepDown0( currentLeaderInfo.stepDown(), dbName );
+                      "to follower.", myself, databaseId.name(), currentLeaderInfo.term() );
+            localLeadersByDatabaseName.put( databaseId, currentLeaderInfo.stepDown() );
+            handleStepDown0( currentLeaderInfo.stepDown(), databaseId );
         }
     }
 
-    protected abstract void handleStepDown0( LeaderInfo steppingDown, String dbName );
+    protected abstract void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId );
 
     @Override
     public MemberId myself()
@@ -91,13 +92,13 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         return myself;
     }
 
-    final Map<String,LeaderInfo> getLocalLeadersByDatabaseName()
+    final Map<DatabaseId,LeaderInfo> getLocalLeadersByDatabaseName()
     {
         return unmodifiableMap( localLeadersByDatabaseName );
     }
 
-    private LeaderInfo getLeader( String dbName )
+    private LeaderInfo getLeader( DatabaseId databaseId )
     {
-        return localLeadersByDatabaseName.getOrDefault( dbName, LeaderInfo.INITIAL );
+        return localLeadersByDatabaseName.getOrDefault( databaseId, LeaderInfo.INITIAL );
     }
 }

@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
@@ -88,7 +90,8 @@ public class BaseAkkaSerializerTest
                     new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem)system )},
             new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
             new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
-            new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()}
+            new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
+            new Object[]{new DatabaseId( "db name" ), new DatabaseIdSerializer()}
         );
     }
 

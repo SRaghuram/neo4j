@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -29,12 +30,12 @@ import static java.util.Collections.emptyMap;
 
 public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
 {
-    private final String localDBName;
+    private final DatabaseId localDatabaseId;
     private final Log log;
     private final Consumer<CoreTopology> callback;
     private volatile Map<MemberId,AdvertisedSocketAddress> coreCatchupAddressMap;
     private volatile Map<MemberId,AdvertisedSocketAddress> rrCatchupAddressMap;
-    private volatile Map<String, LeaderInfo> remoteDbLeaderMap;
+    private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
     private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
     private volatile CoreTopology localCoreTopology = CoreTopology.EMPTY;
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
@@ -42,7 +43,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
 
     public TopologyState( Config config, LogProvider logProvider, Consumer<CoreTopology> listener )
     {
-        this.localDBName = config.get( CausalClusteringSettings.database );
+        this.localDatabaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.log = logProvider.getLog( getClass() );
         this.coreCatchupAddressMap = emptyMap();
         this.rrCatchupAddressMap = emptyMap();
@@ -55,7 +56,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     {
         TopologyDifference diff = this.coreTopology.difference( newCoreTopology );
         this.coreTopology = newCoreTopology;
-        this.localCoreTopology = newCoreTopology.filterTopologyByDb( localDBName );
+        this.localCoreTopology = newCoreTopology.filterTopologyByDb( localDatabaseId );
         this.coreCatchupAddressMap = extractCatchupAddressesMap( newCoreTopology );
         if ( diff.hasChanges() )
         {
@@ -69,7 +70,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     {
         TopologyDifference diff = this.readReplicaTopology.difference( newReadReplicaTopology );
         this.readReplicaTopology = newReadReplicaTopology;
-        this.localReadReplicaTopology = newReadReplicaTopology.filterTopologyByDb( localDBName );
+        this.localReadReplicaTopology = newReadReplicaTopology.filterTopologyByDb( localDatabaseId );
         this.rrCatchupAddressMap = extractCatchupAddressesMap( newReadReplicaTopology );
         if ( diff.hasChanges() )
         {
@@ -78,7 +79,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     }
 
     @Override
-    public void onDbLeaderUpdate( Map<String, LeaderInfo> leaderInfoMap )
+    public void onDbLeaderUpdate( Map<DatabaseId, LeaderInfo> leaderInfoMap )
     {
         if ( !leaderInfoMap.equals( remoteDbLeaderMap ) )
         {
@@ -96,9 +97,9 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
         return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return localDBName;
+        return localDatabaseId;
     }
 
     public CoreTopology coreTopology()

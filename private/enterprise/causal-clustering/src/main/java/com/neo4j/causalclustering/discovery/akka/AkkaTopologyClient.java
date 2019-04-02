@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -61,7 +62,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 
         SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
         SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
 
         Props clientTopologyProps = ClientTopologyActor.props(
                 myself,
@@ -81,9 +82,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return topologyState.localDBName();
+        return topologyState.localDatabaseId();
     }
 
     @Override

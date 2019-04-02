@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.function.ThrowingAction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
@@ -35,7 +36,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         void waitingForBootstrap();
 
-        void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId );
+        void bootstrapped( Map<DatabaseId,CoreSnapshot> snapshots, ClusterId clusterId );
 
         void boundToCluster( ClusterId clusterId );
     }
@@ -48,14 +49,14 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
-    private final String dbName;
+    private final DatabaseId databaseId;
     private final int minCoreHosts;
 
     private ClusterId clusterId;
 
     public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> dbNameStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, CoreBootstrapper coreBootstrapper, String dbName, int minCoreHosts, Monitors monitors )
+            Duration timeout, CoreBootstrapper coreBootstrapper, DatabaseId databaseId, int minCoreHosts, Monitors monitors )
     {
         this.monitor = monitors.newMonitor( Monitor.class );
         this.clusterIdStorage = clusterIdStorage;
@@ -65,7 +66,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         this.clock = clock;
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
-        this.dbName = dbName;
+        this.databaseId = databaseId;
         this.minCoreHosts = minCoreHosts;
     }
 
@@ -108,13 +109,13 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
      */
     public BoundState bindToCluster() throws Exception
     {
-        DatabaseName newName = new DatabaseName( dbName );
+        DatabaseName newName = new DatabaseName( databaseId );
 
         dbNameStorage.writeOrVerify( newName, existing -> {
             if ( !newName.equals( existing ) )
             {
                 throw new IllegalStateException( format( "Your configured database name has changed. Found %s but expected %s in %s.",
-                        dbName, existing.name(), CausalClusteringSettings.database.name() ) );
+                        databaseId.name(), existing.name(), CausalClusteringSettings.database.name() ) );
             }
         } );
 
@@ -126,7 +127,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             return new BoundState( clusterId );
         }
 
-        Map<String,CoreSnapshot> snapshots = Collections.emptyMap();
+        Map<DatabaseId,CoreSnapshot> snapshots = Collections.emptyMap();
         CoreTopology topology;
         long endTime = clock.millis() + timeout.toMillis();
 
@@ -171,7 +172,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
     private void publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
     {
-        boolean success = topologyService.setClusterId( localClusterId, dbName );
+        boolean success = topologyService.setClusterId( localClusterId, databaseId );
         if ( !success )
         {
             throw new BindingException( "Failed to publish: " + localClusterId );

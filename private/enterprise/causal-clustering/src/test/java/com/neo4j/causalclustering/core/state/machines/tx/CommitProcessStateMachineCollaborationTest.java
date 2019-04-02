@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -30,7 +31,7 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 public class CommitProcessStateMachineCollaborationTest
 {
-    private final String databaseName = DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Test
     public void shouldFailTransactionIfLockSessionChanges()
@@ -48,7 +49,7 @@ public class CommitProcessStateMachineCollaborationTest
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseName, mock( Panicker.class ) );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId, mock( Panicker.class ) );
 
         // when
         try
@@ -71,7 +72,7 @@ public class CommitProcessStateMachineCollaborationTest
 
     private ReplicatedLockTokenStateMachine lockState( int lockSessionId )
     {
-        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, databaseName );
+        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, databaseId );
         ReplicatedLockTokenStateMachine lockState = mock( ReplicatedLockTokenStateMachine.class );
         when( lockState.snapshot() ).thenReturn( new ReplicatedLockTokenState( -1, lockTokenRequest ) );
         return lockState;

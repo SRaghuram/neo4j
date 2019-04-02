@@ -22,6 +22,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.configuration.Config
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -33,7 +34,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       "update topology" when {
         "cluster id updated" in new Fixture {
           Given("updated cluster ID data")
-          val clusterIdData = Map(databaseName -> clusterId).asJava
+          val clusterIdData = Map(databaseId -> clusterId).asJava
           val event = new ClusterIdDirectoryMessage(clusterIdData)
 
           When("data received")
@@ -91,7 +92,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           awaitExpectedCoreTopology(nullClusterIdTopology)
 
           When("update cluster ID")
-          val clusterIdData = Map(databaseName -> clusterId).asJava
+          val clusterIdData = Map(databaseId -> clusterId).asJava
           val event = new ClusterIdDirectoryMessage(clusterIdData)
           Mockito.when(topologyBuilder.buildCoreTopology(any(), any(), any()))
             .thenReturn(expectedCoreTopology)
@@ -145,7 +146,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     }
 
     val clusterId = new ClusterId(UUID.randomUUID())
-    val databaseName = "default"
+    val databaseId = new DatabaseId("default")
 
     val replicatorProbe = TestProbe("replicator")
 

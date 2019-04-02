@@ -19,6 +19,7 @@ import org.junit.runners.Parameterized;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -57,7 +58,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( "database_name", remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( new DatabaseId( "database_name" ), remoteAddress );
 
         // then
         assertTrue( downloadedSnapshot.isPresent() );
@@ -72,7 +73,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader downloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( "database_name", remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( new DatabaseId( "database_name" ), remoteAddress );
 
         // then
         assertFalse( downloadedSnapshot.isPresent() );

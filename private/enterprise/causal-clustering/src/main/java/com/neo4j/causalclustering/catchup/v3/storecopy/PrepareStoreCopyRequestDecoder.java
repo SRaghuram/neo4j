@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,15 +14,14 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import org.neo4j.storageengine.api.StoreId;
-
 public class PrepareStoreCopyRequestDecoder extends ByteToMessageDecoder
 {
     @Override
     protected void decode( ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list ) throws Exception
     {
-        String databaseName = StringMarshal.unmarshal( byteBuf );
-        StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( byteBuf ) );
-        list.add( new PrepareStoreCopyRequest( storeId, databaseName ) );
+        NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( byteBuf );
+        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        var storeId = StoreIdMarshal.INSTANCE.unmarshal( channel );
+        list.add( new PrepareStoreCopyRequest( storeId, databaseId ) );
     }
 }

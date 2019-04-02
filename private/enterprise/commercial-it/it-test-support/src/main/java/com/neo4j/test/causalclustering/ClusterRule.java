@@ -25,6 +25,7 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.VerboseTimeout;
@@ -52,7 +53,7 @@ public class ClusterRule extends ExternalResource
     private IpFamily ipFamily = IpFamily.IPV4;
     private boolean useWildcard;
     private VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
-    private Set<String> dbNames = Collections.singleton( CausalClusteringSettings.database.getDefaultValue() );
+    private Set<DatabaseId> databaseIds = Collections.singleton( new DatabaseId( CausalClusteringSettings.database.getDefaultValue() ) );
 
     public ClusterRule()
     {
@@ -107,9 +108,9 @@ public class ClusterRule extends ExternalResource
     {
         createCluster();
         cluster.start();
-        for ( String dbName : dbNames )
+        for ( DatabaseId databaseId : databaseIds )
         {
-            cluster.awaitLeader( dbName );
+            cluster.awaitLeader( databaseId );
         }
         return cluster;
     }
@@ -119,7 +120,7 @@ public class ClusterRule extends ExternalResource
         if ( cluster == null )
         {
             cluster = new Cluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
-                    instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
+                    instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, databaseIds );
         }
 
         return cluster;
@@ -135,26 +136,26 @@ public class ClusterRule extends ExternalResource
         return clusterDirectory;
     }
 
-    public ClusterRule withDatabaseNames( Set<String> dbNames )
+    public ClusterRule withDatabaseNames( Set<DatabaseId> dbNames )
     {
-        this.dbNames = dbNames;
-        Map<Integer, String> coreDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noCoreMembers, dbNames );
-        Map<Integer, String> rrDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noReadReplicas, dbNames );
+        this.databaseIds = dbNames;
+        Map<Integer,DatabaseId> coreDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noCoreMembers, dbNames );
+        Map<Integer,DatabaseId> rrDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noReadReplicas, dbNames );
 
-        Map<String,Long> minCoresPerDb = coreDBMap.entrySet().stream()
+        Map<DatabaseId,Long> minCoresPerDb = coreDBMap.entrySet().stream()
                 .collect( Collectors.groupingBy( Map.Entry::getValue, Collectors.counting() ) );
 
         Map<Integer,String> minCoresSettingsMap = new HashMap<>();
 
-        for ( Map.Entry<Integer,String> entry: coreDBMap.entrySet() )
+        for ( var entry: coreDBMap.entrySet() )
         {
             Optional<Long> minNumCores = Optional.ofNullable( minCoresPerDb.get( entry.getValue() ) );
             minNumCores.ifPresent( n -> minCoresSettingsMap.put( entry.getKey(), n.toString() ) );
         }
 
-        withInstanceCoreParam( CausalClusteringSettings.database, coreDBMap::get );
+        withInstanceCoreParam( CausalClusteringSettings.database, idx -> coreDBMap.get( idx ).name() );
         withInstanceCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, minCoresSettingsMap::get );
-        withInstanceReadReplicaParam( CausalClusteringSettings.database, rrDBMap::get );
+        withInstanceReadReplicaParam( CausalClusteringSettings.database, idx -> rrDBMap.get( idx ).name() );
         return this;
     }
 

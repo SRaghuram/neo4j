@@ -87,10 +87,10 @@ public class BackupSupportingClassesFactory
         DatabaseId databaseId = onlineBackupContext.getDatabaseId();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext );
 
-        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseId.name(), () -> monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
                 new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseId.name(), () -> monitors, logProvider, backOffStrategy );
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
                 txPullClient, transactionLogCatchUpFactory, config, monitors, storageEngineFactory );

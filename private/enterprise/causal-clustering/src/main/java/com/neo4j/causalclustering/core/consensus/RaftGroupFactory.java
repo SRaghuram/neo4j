@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.messaging.Outbound;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.monitoring.Monitors;
 
@@ -36,10 +37,10 @@ public class RaftGroupFactory
         this.storageFactory = storageFactory;
     }
 
-    public RaftGroup create( String databaseName, LifeSupport life, Monitors monitors, Dependencies dependencies )
+    public RaftGroup create( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), globalModule.getLogService(), globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState, topologyService, storageFactory, databaseName );
+                globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState, topologyService, storageFactory, databaseId );
     }
 }

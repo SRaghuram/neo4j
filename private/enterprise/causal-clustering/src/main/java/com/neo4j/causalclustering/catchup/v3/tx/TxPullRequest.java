@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -19,9 +20,9 @@ public class TxPullRequest extends CatchupProtocolMessage
     private final long previousTxId;
     private final StoreId expectedStoreId;
 
-    public TxPullRequest( long previousTxId, StoreId expectedStoreId, String databaseName )
+    public TxPullRequest( long previousTxId, StoreId expectedStoreId, DatabaseId databaseId )
     {
-        super( RequestMessageType.TX_PULL_REQUEST, databaseName );
+        super( RequestMessageType.TX_PULL_REQUEST, databaseId );
         if ( previousTxId < BASE_TX_ID )
         {
             throw new IllegalArgumentException( "Cannot request transaction from " + previousTxId );
@@ -72,6 +73,6 @@ public class TxPullRequest extends CatchupProtocolMessage
     @Override
     public String toString()
     {
-        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseName() + "'}";
+        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseId() + "'}";
     }
 }

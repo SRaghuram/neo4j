@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.error_handling.Panicker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
@@ -28,6 +29,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 class ReplicatedTransactionCommitProcessTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private Replicator replicator = mock( Replicator.class );
     private TransactionRepresentation tx = mock( TransactionRepresentation.class );
 
@@ -44,7 +46,7 @@ class ReplicatedTransactionCommitProcessTest
         long resultTxId = 5L;
 
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultTxId ) );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DEFAULT_DATABASE_NAME, mock( Panicker.class ) );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, mock( Panicker.class ) );
 
         // when
         long txId = commitProcess.commit( new TransactionToApply( tx ), CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
@@ -61,7 +63,7 @@ class ReplicatedTransactionCommitProcessTest
         Panicker panicker = mock( Panicker.class );
 
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultError ) );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DEFAULT_DATABASE_NAME, panicker );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, panicker );
 
         // when
         RuntimeException commitException = assertThrows( RuntimeException.class,

@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -37,16 +38,16 @@ public class StoreCopyClient
 {
     private final CatchupClientFactory catchUpClientFactory;
     private final Supplier<Monitors> monitors;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final Log log;
     private final TimeoutStrategy backOffStrategy;
 
-    public StoreCopyClient( CatchupClientFactory catchUpClientFactory, String databaseName, Supplier<Monitors> monitors, LogProvider logProvider,
+    public StoreCopyClient( CatchupClientFactory catchUpClientFactory, DatabaseId databaseId, Supplier<Monitors> monitors, LogProvider logProvider,
             TimeoutStrategy backOffStrategy )
     {
         this.catchUpClientFactory = catchUpClientFactory;
         this.monitors = monitors;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.backOffStrategy = backOffStrategy;
         this.log = logProvider.getLog( getClass() );
     }
@@ -87,7 +88,7 @@ public class StoreCopyClient
             storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseId ),
                     storeFileStream, terminationConditions.get(), txIdHandler );
 
             storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
@@ -159,7 +160,7 @@ public class StoreCopyClient
         {
             log.info( "Requesting store listing from: " + from );
             prepareStoreCopyResponse = catchUpClientFactory.getClient( from, log )
-                    .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
+                    .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseId ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
                     .request();
         }
@@ -188,7 +189,7 @@ public class StoreCopyClient
                 }
             };
             return catchUpClientFactory.getClient( fromAddress, log )
-                    .v3( c -> c.getStoreId( databaseName ) )
+                    .v3( c -> c.getStoreId( databaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

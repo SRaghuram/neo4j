@@ -17,6 +17,7 @@ import java.util.function.Function;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final String EXISTING_DB_NAME = "existing.neo4j";
-    private static final String NON_EXISTING_DB_NAME = "non.existing.neo4j";
+    private static final DatabaseId EXISTING_DB_NAME = new DatabaseId( "existing.neo4j" );
+    private static final DatabaseId NON_EXISTING_DB_NAME = new DatabaseId( "non.existing.neo4j" );
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();
@@ -77,7 +78,7 @@ class MultiplexingCatchupRequestHandlerTest
     {
         StubClusteredDatabaseManager dbManager = new StubClusteredDatabaseManager();
         dbManager.givenDatabaseWithConfig()
-                .withDatabaseName( EXISTING_DB_NAME )
+                .withDatabaseId( EXISTING_DB_NAME )
                 .register();
         return dbManager;
     }
@@ -96,13 +97,13 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static SimpleChannelInboundHandler<CatchupProtocolMessage> newHandlerFactory( Database db )
     {
-        assertEquals( EXISTING_DB_NAME, db.getDatabaseName() );
+        assertEquals( EXISTING_DB_NAME, db.getDatabaseId() );
         return new CatchupProtocolMessageHandler();
     }
 
-    private static CatchupProtocolMessage newCatchupRequest( String dbName )
+    private static CatchupProtocolMessage newCatchupRequest( DatabaseId databaseId )
     {
-        return new DummyMessage( dbName );
+        return new DummyMessage( databaseId );
     }
 
     private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage>
@@ -116,9 +117,9 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static class DummyMessage extends CatchupProtocolMessage
     {
-        DummyMessage( String databaseName )
+        DummyMessage( DatabaseId databaseId )
         {
-            super( RequestMessageType.STORE_FILE, databaseName );
+            super( RequestMessageType.STORE_FILE, databaseId );
         }
     }
 }

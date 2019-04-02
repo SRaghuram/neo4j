@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -48,7 +50,7 @@ public class ClusterIdAwareMessageComposerTest
         try
         {
             RaftMessageComposer raftMessageComposer = new RaftMessageComposer( Clock.systemUTC() );
-            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], DEFAULT_DATABASE_NAME );
+            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], new DatabaseId( DEFAULT_DATABASE_NAME ) );
             raftMessageComposer.decode( null, replicatedTransaction, null );
             List<Object> out = new ArrayList<>();
             raftMessageComposer.decode( null, messageCreator( ( a, b ) -> Optional.of( dummyRequest() ) ), out );

@@ -11,15 +11,16 @@ import com.neo4j.causalclustering.messaging.StoreCopyRequest;
 import java.io.File;
 import java.util.Objects;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 public class GetStoreFileRequest extends StoreCopyRequest
 {
     private final File file;
 
-    public GetStoreFileRequest( StoreId expectedStoreId, File file, long requiredTransactionId, String databaseName )
+    public GetStoreFileRequest( StoreId expectedStoreId, File file, long requiredTransactionId, DatabaseId databaseId )
     {
-        super( RequestMessageType.STORE_FILE, databaseName, expectedStoreId, requiredTransactionId );
+        super( RequestMessageType.STORE_FILE, databaseId, expectedStoreId, requiredTransactionId );
         this.file = file;
     }
 
@@ -60,7 +61,7 @@ public class GetStoreFileRequest extends StoreCopyRequest
                "expectedStoreId=" + expectedStoreId() +
                ", file=" + file.getName() +
                ", requiredTransactionId=" + requiredTransactionId() +
-               ", databaseName=" + databaseName() +
+               ", databaseName=" + databaseId() +
                "}";
     }
 }

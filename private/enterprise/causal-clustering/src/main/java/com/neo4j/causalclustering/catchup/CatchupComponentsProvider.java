@@ -159,10 +159,10 @@ public final class CatchupComponentsProvider
     public CatchupComponentsRepository.DatabaseCatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext )
     {
         //TODO: Use per Db Monitors here shortly
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, clusteredDatabaseContext.databaseName(), () -> monitors,
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, clusteredDatabaseContext.databaseId(), () -> monitors,
                 logProvider, storeCopyBackoffStrategy );
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
-        TxPullClient txPullClient = new TxPullClient( catchupClient, clusteredDatabaseContext.databaseName(), () -> monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchupClient, clusteredDatabaseContext.databaseId(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
                 storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory );

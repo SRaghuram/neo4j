@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.values.AnyValue;
@@ -83,7 +84,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
                 CoreServerInfo info = coreServerInfo.get();
                 RoleInfo role = roleMap.getOrDefault( memberId, RoleInfo.UNKNOWN );
                 endpoints.add( new ReadWriteEndPoint( info.connectors(), role, memberId.getUuid(),
-                        asList( info.groups() ), info.getDatabaseName() ) );
+                        asList( info.groups() ), info.getDatabaseId() ) );
             }
             else
             {
@@ -95,7 +96,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         {
             ReadReplicaInfo readReplicaInfo = readReplica.getValue();
             endpoints.add( new ReadWriteEndPoint( readReplicaInfo.connectors(), RoleInfo.READ_REPLICA,
-                    readReplica.getKey().getUuid(), asList( readReplicaInfo.groups() ), readReplicaInfo.getDatabaseName() ) );
+                    readReplica.getKey().getUuid(), asList( readReplicaInfo.groups() ), readReplicaInfo.getDatabaseId() ) );
         }
 
         endpoints.sort( comparing( o -> o.addresses().toString() ) );
@@ -108,7 +109,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
                                 stringValue( endpoint.role().name() ),
                                 fromList(
                                         endpoint.groups().stream().map( Values::stringValue ).collect( Collectors.toList() ) ),
-                                stringValue( endpoint.dbName() )
+                                stringValue( endpoint.databaseId().name() )
                         },
                 asRawIterator( endpoints.iterator() ) );
     }
@@ -119,7 +120,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         private final RoleInfo role;
         private final UUID memberId;
         private final List<String> groups;
-        private final String dbName;
+        private final DatabaseId databaseId;
 
         public ClientConnectorAddresses addresses()
         {
@@ -141,18 +142,18 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
             return groups;
         }
 
-        String dbName()
+        DatabaseId databaseId()
         {
-            return dbName;
+            return databaseId;
         }
 
-        ReadWriteEndPoint( ClientConnectorAddresses clientConnectorAddresses, RoleInfo role, UUID memberId, List<String> groups, String dbName )
+        ReadWriteEndPoint( ClientConnectorAddresses clientConnectorAddresses, RoleInfo role, UUID memberId, List<String> groups, DatabaseId databaseId )
         {
             this.clientConnectorAddresses = clientConnectorAddresses;
             this.role = role;
             this.memberId = memberId;
             this.groups = groups;
-            this.dbName = dbName;
+            this.databaseId = databaseId;
         }
     }
 }

@@ -17,6 +17,7 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -29,7 +30,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "update replicated data on receipt of leader info message" in new Fixture {
       Given("leader info update")
-      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, "dbName")
+      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, new DatabaseId("dbName"))
 
       When("message received")
       replicatedDataActorRef ! event
@@ -40,10 +41,10 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "send incoming data to read replica actor and outside world" in new Fixture {
       Given("an incoming update")
-      val update1 = ORMap.empty[String,ReplicatedLeaderInfo].put(cluster, "db1", newReplicatedLeaderInfo)
+      val update1 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, new DatabaseId("db1"), newReplicatedLeaderInfo)
 
       And("another incoming update")
-      val update2 = ORMap.empty[String,ReplicatedLeaderInfo].put(cluster, "db2", newReplicatedLeaderInfo)
+      val update2 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, new DatabaseId("db2"), newReplicatedLeaderInfo)
 
       When("first update received")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update1)
@@ -63,19 +64,19 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
     }
   }
 
-  class Fixture extends ReplicatedDataActorFixture[ORMap[String,ReplicatedLeaderInfo]] {
+  class Fixture extends ReplicatedDataActorFixture[ORMap[DatabaseId,ReplicatedLeaderInfo]] {
     private val random = new Random()
     def newReplicatedLeaderInfo = {
       new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID()), random.nextLong()))
     }
 
-    var actualLeaderPerDb = Collections.emptyMap[String, LeaderInfo]
+    var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
 
     val updateSink = new DirectoryUpdateSink {
-      override def onDbLeaderUpdate(leaderPerDb: util.Map[String, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
+      override def onDbLeaderUpdate(leaderPerDb: util.Map[DatabaseId, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
     }
 
-    val discoverySink = Source.queue[java.util.Map[String,LeaderInfo]](1, OverflowStrategy.dropHead)
+    val discoverySink = Source.queue[java.util.Map[DatabaseId,LeaderInfo]](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onDbLeaderUpdate))
       .run(ActorMaterializer())
 
@@ -83,6 +84,6 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, NullLogProvider.getInstance())
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
-    override val dataKey: Key[ORMap[String,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
+    override val dataKey: Key[ORMap[DatabaseId,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
   }
 }

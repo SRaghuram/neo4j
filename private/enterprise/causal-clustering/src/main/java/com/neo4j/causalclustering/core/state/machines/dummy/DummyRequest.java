@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class DummyRequest implements CoreReplicatedContent
 {
@@ -55,7 +56,7 @@ public class DummyRequest implements CoreReplicatedContent
     }
 
     @Override
-    public String databaseName()
+    public DatabaseId databaseId()
     {
         return null;
     }

@@ -39,6 +39,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
@@ -75,7 +76,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
         SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
         SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
@@ -104,7 +105,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
-    private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink,
+    private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
         Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, logProvider );
@@ -142,12 +143,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName )
+    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
     {
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), noSender() );
+            actor.tell( new ClusterIdSettingMessage( clusterId, databaseId ), noSender() );
             return true;
         }
         else
@@ -181,24 +182,24 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo, String dbName )
+    public void setLeader0( LeaderInfo leaderInfo, DatabaseId databaseId )
     {
         if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
         {
-            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, dbName ), noSender() ) );
+            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, databaseId ), noSender() ) );
         }
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown, String dbName )
+    public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
-        setLeader0( steppingDown, dbName );
+        setLeader0( steppingDown, databaseId );
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return topologyState.localDBName();
+        return topologyState.localDatabaseId();
     }
 
     @Override

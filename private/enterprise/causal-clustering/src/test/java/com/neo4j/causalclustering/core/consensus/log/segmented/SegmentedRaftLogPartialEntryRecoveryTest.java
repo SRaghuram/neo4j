@@ -22,10 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -37,6 +37,7 @@ import org.neo4j.time.Clocks;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 /**
@@ -53,6 +54,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private TestDirectory testDirectory;
 
     private File logDirectory;
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
@@ -83,16 +85,15 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
         // Add a bunch of entries, preferably one of each available kind.
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
         raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1, 1024, databaseName ) ) );
+                IdType.RELATIONSHIP, 1, 1024, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1025, 1024, databaseName ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 1, databaseName ) ) );
+                IdType.RELATIONSHIP, 1025, 1024, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
+        raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
         raftLog.append( new RaftLogEntry( 5,
-                ReplicatedTransaction.from( new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9 , 10 }, databaseName ) ) );
+                ReplicatedTransaction.from( new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9 , 10 }, databaseId ) ) );
 
         raftLog.stop();
 

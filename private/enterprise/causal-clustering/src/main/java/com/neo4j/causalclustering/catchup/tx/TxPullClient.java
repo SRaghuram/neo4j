@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -20,16 +21,16 @@ import org.neo4j.storageengine.api.StoreId;
 public class TxPullClient
 {
     private final CatchupClientFactory catchUpClient;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final Supplier<Monitors> monitors;
     private final LogProvider logProvider;
 
     private PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
 
-    public TxPullClient( CatchupClientFactory catchUpClient, String databaseName, Supplier<Monitors> monitors, LogProvider logProvider )
+    public TxPullClient( CatchupClientFactory catchUpClient, DatabaseId databaseId, Supplier<Monitors> monitors, LogProvider logProvider )
     {
         this.catchUpClient = catchUpClient;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.monitors = monitors;
         this.logProvider = logProvider;
     }
@@ -37,7 +38,7 @@ public class TxPullClient
     public TxStreamFinishedResponse pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
                                                  TxPullResponseListener txPullResponseListener ) throws Exception
     {
-        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
+        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()
         {
             @Override
             public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
@@ -56,7 +57,7 @@ public class TxPullClient
 
         Log log = logProvider.getLog( getClass() );
         return catchUpClient.getClient( fromAddress, log )
-                .v3( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
+                .v3( c -> c.pullTransactions( storeId, previousTxId, databaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

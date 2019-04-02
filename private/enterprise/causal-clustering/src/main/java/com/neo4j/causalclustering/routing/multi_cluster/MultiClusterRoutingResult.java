@@ -10,22 +10,23 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 /**
  * Simple struct containing the the result of multi-cluster routing procedure execution.
  */
 public class MultiClusterRoutingResult
 {
-    private final Map<String,List<AdvertisedSocketAddress>> routers;
+    private final Map<DatabaseId,List<AdvertisedSocketAddress>> routers;
     private final long timeToLiveMillis;
 
-    public MultiClusterRoutingResult( Map<String,List<AdvertisedSocketAddress>> routers, long timeToLiveMillis )
+    public MultiClusterRoutingResult( Map<DatabaseId,List<AdvertisedSocketAddress>> routers, long timeToLiveMillis )
     {
         this.routers = routers;
         this.timeToLiveMillis = timeToLiveMillis;
     }
 
-    public Map<String,List<AdvertisedSocketAddress>> routers()
+    public Map<DatabaseId,List<AdvertisedSocketAddress>> routers()
     {
         return routers;
     }

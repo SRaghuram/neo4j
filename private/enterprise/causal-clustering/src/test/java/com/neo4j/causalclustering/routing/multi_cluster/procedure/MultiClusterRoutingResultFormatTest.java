@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.AnyValue;
 
 import static java.util.Arrays.asList;
@@ -36,9 +37,9 @@ public class MultiClusterRoutingResultFormatTest
                 new AdvertisedSocketAddress( "host6", 1 )
         );
 
-        Map<String,List<AdvertisedSocketAddress>> routers = new HashMap<>();
-        routers.put( "foo", fooRouters );
-        routers.put( "bar", barRouters );
+        Map<DatabaseId,List<AdvertisedSocketAddress>> routers = new HashMap<>();
+        routers.put( new DatabaseId( "foo" ), fooRouters );
+        routers.put( new DatabaseId( "bar" ), barRouters );
 
         long ttlSeconds = 5;
         MultiClusterRoutingResult original = new MultiClusterRoutingResult( routers, ttlSeconds * 1000 );

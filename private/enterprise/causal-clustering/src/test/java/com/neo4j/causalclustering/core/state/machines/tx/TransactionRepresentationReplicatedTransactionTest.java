@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 
@@ -36,7 +37,7 @@ public class TransactionRepresentationReplicatedTransactionTest
                 new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
         expectedTx.setHeader( new byte[0], 1, 2, 3, 4, 5, 6 );
-        TransactionRepresentationReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( expectedTx, DEFAULT_DATABASE_NAME );
+        var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new DatabaseId( DEFAULT_DATABASE_NAME ) );
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         ByteBuf buffer = buffers.buffer();

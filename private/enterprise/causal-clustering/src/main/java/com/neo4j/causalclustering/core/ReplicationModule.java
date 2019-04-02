@@ -27,6 +27,7 @@ import java.util.UUID;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicationModule
@@ -38,9 +39,9 @@ public class ReplicationModule
     ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
             Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageFactory storageFactory, LogProvider logProvider,
             CompositeDatabaseAvailabilityGuard globalAvailabilityGuard, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager,
-            String defaultDatabaseName )
+            DatabaseId defaultDatabaseId )
     {
-        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( defaultDatabaseName,
+        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( defaultDatabaseId,
                 globalModule.getGlobalLife() );
 
         sessionTracker = new SessionTracker( sessionTrackerStorage );

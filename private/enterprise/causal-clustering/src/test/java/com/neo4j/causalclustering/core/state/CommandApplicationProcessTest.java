@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
@@ -63,7 +64,7 @@ public class CommandApplicationProcessTest
     private final int flushEvery = 10;
     private final int batchSize = 16;
 
-    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
     private InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
     private final Monitors monitors = new Monitors();
@@ -73,7 +74,7 @@ public class CommandApplicationProcessTest
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
                     sessionTracker, CoreStateRepository, inFlightCache, monitors, panicker );
 
-    private ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseName );
+    private ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
     private final CommandDispatcher commandDispatcher = mock( CommandDispatcher.class );
 
@@ -87,7 +88,7 @@ public class CommandApplicationProcessTest
     {
         byte[] dataArray = new byte[30];
         Arrays.fill( dataArray, dataValue );
-        return ReplicatedTransaction.from( dataArray, databaseName );
+        return ReplicatedTransaction.from( dataArray, databaseId );
     }
 
     private int sequenceNumber;

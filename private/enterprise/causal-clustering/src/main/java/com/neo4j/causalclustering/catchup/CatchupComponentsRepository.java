@@ -31,9 +31,9 @@ public class CatchupComponentsRepository
         this.clusteredDatabaseManager = clusteredDatabaseManager;
     }
 
-    public Optional<DatabaseCatchupComponents> componentsFor( String databaseName )
+    public Optional<DatabaseCatchupComponents> componentsFor( DatabaseId databaseId )
     {
-        return clusteredDatabaseManager.getDatabaseContext( new DatabaseId( databaseName ) ).map( ClusteredDatabaseContext::catchupComponents );
+        return clusteredDatabaseManager.getDatabaseContext( databaseId ).map( ClusteredDatabaseContext::catchupComponents );
     }
 
     /** Simple struct to make working with various per database catchup components a bit easier */

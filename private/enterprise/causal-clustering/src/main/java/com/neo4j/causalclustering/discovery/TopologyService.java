@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
@@ -18,7 +19,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  */
 public interface TopologyService extends Lifecycle
 {
-    String localDBName();
+    DatabaseId localDatabaseId();
 
     // It is perhaps confusing (Or even error inducing) that this core Topology will always contain the cluster id
     // for the database local to the host upon which this method is called.

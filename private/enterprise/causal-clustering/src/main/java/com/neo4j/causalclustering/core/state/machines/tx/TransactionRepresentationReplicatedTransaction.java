@@ -11,6 +11,7 @@ import io.netty.handler.stream.ChunkedInput;
 
 import java.io.IOException;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
 /**
@@ -19,19 +20,19 @@ import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 public class TransactionRepresentationReplicatedTransaction extends ReplicatedTransaction
 {
     private final TransactionRepresentation tx;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx, String databaseName )
+    public TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx, DatabaseId databaseId )
     {
-        super( databaseName );
+        super( databaseId );
         this.tx = tx;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     @Override
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     @Override

@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static java.util.stream.Collectors.toSet;
 
 public interface Topology<T extends DiscoveryServerInfo>
@@ -43,11 +45,11 @@ public interface Topology<T extends DiscoveryServerInfo>
         return Optional.ofNullable( members().get( memberId ) );
     }
 
-    default Map<MemberId, T> filterHostsByDb( Map<MemberId, T> s, String dbName )
+    default Map<MemberId, T> filterHostsByDb( Map<MemberId,T> s, DatabaseId databaseId )
     {
-        return s.entrySet().stream().filter(e -> e.getValue().getDatabaseName().equals( dbName ) )
+        return s.entrySet().stream().filter(e -> e.getValue().getDatabaseId().equals( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
     }
 
-    Topology<T> filterTopologyByDb( String dbName );
+    Topology<T> filterTopologyByDb( DatabaseId databaseId );
 }

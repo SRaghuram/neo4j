@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Optional;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 
@@ -92,22 +93,22 @@ public class PersistentSnapshotDownloader implements Runnable
             // each database will then download its snapshot and store independently from others
 
             var databases = new HashMap<>( databaseManager.registeredDatabases() );
-            var snapshots = new HashMap<String,CoreSnapshot>();
+            var snapshots = new HashMap<DatabaseId,CoreSnapshot>();
 
             boolean incomplete = false;
             for ( ClusteredDatabaseContext db : databases.values() )
             {
                 Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( db );
-                String databaseName = db.databaseName();
+                var databaseId = db.databaseId();
 
                 if ( snapshot.isPresent() )
                 {
-                    snapshots.put( databaseName, snapshot.get() );
-                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseName, snapshot.get() ) );
+                    snapshots.put( databaseId, snapshot.get() );
+                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() ) );
                 }
                 else
                 {
-                    log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseName ) );
+                    log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseId.name() ) );
                     incomplete = true;
                 }
             }

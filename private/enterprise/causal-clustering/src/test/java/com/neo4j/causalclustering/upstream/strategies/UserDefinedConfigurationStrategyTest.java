@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -183,7 +184,7 @@ public class UserDefinedConfigurationStrategyTest
         return new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
                 new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                         new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) ),
-                new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ), groupGenerator.apply( memberId ), "default" );
+                new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ), groupGenerator.apply( memberId ), new DatabaseId( "default" ) );
     }
 
     private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( CoreTopology coreTopology, ReadReplicaTopology rrTopology )
@@ -208,6 +209,8 @@ public class UserDefinedConfigurationStrategyTest
     {
         return new TopologyService()
         {
+            private final DatabaseId DATABASE_ID = new DatabaseId( "default" );
+
             private Map<MemberId,AdvertisedSocketAddress> catchupAddresses = extractCatchupAddressesMap( coreTopology, readReplicaTopology );
 
             @Override
@@ -258,9 +261,9 @@ public class UserDefinedConfigurationStrategyTest
             }
 
             @Override
-            public String localDBName()
+            public DatabaseId localDatabaseId()
             {
-                return "default";
+                return DATABASE_ID;
             }
 
             @Override

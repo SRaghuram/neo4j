@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
@@ -17,8 +18,9 @@ public class GetStoreFileRequestEncoder extends MessageToByteEncoder<GetStoreFil
     @Override
     protected void encode( ChannelHandlerContext ctx, GetStoreFileRequest msg, ByteBuf out ) throws Exception
     {
-        StringMarshal.marshal( out, msg.databaseName() );
-        StoreIdMarshal.INSTANCE.marshal( msg.expectedStoreId(), new NetworkWritableChannel( out ) );
+        NetworkWritableChannel channel = new NetworkWritableChannel( out );
+        DatabaseIdMarshal.INSTANCE.marshal( msg.databaseId(), channel );
+        StoreIdMarshal.INSTANCE.marshal( msg.expectedStoreId(), channel );
         out.writeLong( msg.requiredTransactionId() );
         String name = msg.file().getName();
         StringMarshal.marshal( out, name );

@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -43,6 +44,7 @@ import static org.neo4j.helpers.collection.Iterators.asSet;
 class CoreReplicatedContentMarshalV2Test
 {
     private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshalV2();
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Test
     void shouldMarshalTransactionReference() throws Exception
@@ -52,7 +54,7 @@ class CoreReplicatedContentMarshalV2Test
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
         representation.setHeader( new byte[]{0}, 1, 1, 1, 1, 1, 1 );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DEFAULT_DATABASE_NAME );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -64,7 +66,7 @@ class CoreReplicatedContentMarshalV2Test
         PhysicalTransactionRepresentation representation =
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DEFAULT_DATABASE_NAME );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -86,7 +88,7 @@ class CoreReplicatedContentMarshalV2Test
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new ReplicatedIdAllocationRequest(
-                new MemberId( UUID.randomUUID() ), IdType.PROPERTY, 100, 200, DEFAULT_DATABASE_NAME );
+                new MemberId( UUID.randomUUID() ), IdType.PROPERTY, 100, 200, DATABASE_ID );
 
         assertMarshalingEquality( buffer, message );
     }
@@ -103,7 +105,7 @@ class CoreReplicatedContentMarshalV2Test
         after.setCreated();
         after.setNameId( 3232 );
         commands.add( new Command.LabelTokenCommand( before, after ) );
-        ReplicatedContent message = new ReplicatedTokenRequest( "some.graph",
+        ReplicatedContent message = new ReplicatedTokenRequest( new DatabaseId( "some.graph" ),
                 TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands ) );
         assertMarshalingEquality( buffer, message );
     }

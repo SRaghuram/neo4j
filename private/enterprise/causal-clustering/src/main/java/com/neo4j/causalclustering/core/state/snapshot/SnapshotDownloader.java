@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -27,7 +28,7 @@ public class SnapshotDownloader
         this.catchupClientFactory = catchupClientFactory;
     }
 
-    Optional<CoreSnapshot> getCoreSnapshot( String databaseName, AdvertisedSocketAddress address )
+    Optional<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId, AdvertisedSocketAddress address )
     {
         log.info( "Downloading snapshot from core server at %s", address );
 
@@ -35,7 +36,7 @@ public class SnapshotDownloader
         try
         {
             VersionedCatchupClients client = catchupClientFactory.getClient( address, log );
-            CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<CoreSnapshot>()
+            CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<>()
             {
                 @Override
                 public void onCoreSnapshot( CompletableFuture<CoreSnapshot> signal, CoreSnapshot response )
@@ -45,7 +46,7 @@ public class SnapshotDownloader
             };
 
             coreSnapshot = client
-                    .v3( c -> c.getCoreSnapshot( databaseName ) )
+                    .v3( c -> c.getCoreSnapshot( databaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

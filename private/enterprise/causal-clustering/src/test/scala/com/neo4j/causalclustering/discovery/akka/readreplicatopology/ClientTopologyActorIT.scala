@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSin
 import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestTopology}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.configuration.Config
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -87,12 +88,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming leaders" in new Fixture {
         Given("new leaders")
-        val newLeaders = new LeaderInfoDirectoryMessage(
-          Map(
-            "db1" -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
-            "db2" -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
-          ).asJava
-        )
+        val newLeaders = new LeaderInfoDirectoryMessage(Map(
+                    new DatabaseId("db1") -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
+                    new DatabaseId("db2") -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
+                  ).asJava)
 
         When("incoming topology")
         topologyActorRef ! newLeaders
@@ -107,7 +106,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "periodically send read replica info" in new Fixture {
         Given("Info to send")
         val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
-        val send = new ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
+        val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
         When("Waiting for a multiple of refresh time")
         val repeatSends = 3
@@ -122,18 +121,18 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   trait Fixture {
     var actualCoreTopology = CoreTopology.EMPTY
     var actualReadReplicaTopology = ReadReplicaTopology.EMPTY
-    var actualLeaderPerDb = Collections.emptyMap[String, LeaderInfo]
+    var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
 
     val updateSink = new TopologyUpdateSink with DirectoryUpdateSink {
       override def onTopologyUpdate(topology: CoreTopology) = actualCoreTopology = topology
 
       override def onTopologyUpdate(topology: ReadReplicaTopology) = actualReadReplicaTopology = topology
 
-      override def onDbLeaderUpdate(leaderPerDb: java.util.Map[String, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
+      override def onDbLeaderUpdate(leaderPerDb: java.util.Map[DatabaseId, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
     }
 
     val materializer = ActorMaterializer()
-    val discoverySink = Source.queue[java.util.Map[String,LeaderInfo]](1, OverflowStrategy.dropHead)
+    val discoverySink = Source.queue[java.util.Map[DatabaseId,LeaderInfo]](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onDbLeaderUpdate))
       .run(materializer)
     val coreTopologySink = Source.queue[CoreTopology](1, OverflowStrategy.dropHead)
@@ -171,7 +170,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     val topologyActorRef = system.actorOf(props)
 
     def expectMsg(msg: Any) = {
-      val send = new ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
+      val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
       clusterClientProbe.fishForSpecificMessage(){ case `send` => }
     }
   }

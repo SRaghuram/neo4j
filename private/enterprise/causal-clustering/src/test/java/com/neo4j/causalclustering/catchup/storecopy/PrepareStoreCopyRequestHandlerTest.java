@@ -21,6 +21,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.logging.AssertableLogProvider;
@@ -40,6 +41,7 @@ public class PrepareStoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 6000, 7000, 8000, 9000, 10000 );
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     private final ChannelHandlerContext channelHandlerContext = mock( ChannelHandlerContext.class );
     private final CheckPointer checkPointer = mock( CheckPointer.class );
@@ -61,6 +63,7 @@ public class PrepareStoreCopyRequestHandlerTest
         when( db.getDependencyResolver() ).thenReturn( dependencies );
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
+        when( db.getDatabaseId() ).thenReturn( DATABASE_ID );
         embeddedChannel = new EmbeddedChannel( createHandler() );
     }
 
@@ -70,7 +73,7 @@ public class PrepareStoreCopyRequestHandlerTest
         // given store id doesn't match
 
         // when PrepareStoreCopyRequest is written to channel
-        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MISMATCHING, DEFAULT_DATABASE_NAME  ) );
+        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MISMATCHING, DATABASE_ID  ) );
 
         // then there is a store id mismatch message
         assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );
@@ -91,7 +94,7 @@ public class PrepareStoreCopyRequestHandlerTest
         configureProvidedStoreCopyFiles( new StoreResource[0], files, lastCheckpoint );
 
         // when store listing is requested
-        embeddedChannel.writeInbound( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
+        embeddedChannel.writeInbound( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DATABASE_ID ) );
 
         // and the contents of the store listing response is sent
         assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );
@@ -120,7 +123,7 @@ public class PrepareStoreCopyRequestHandlerTest
         configureProvidedStoreCopyFiles( new StoreResource[0], files, lastCheckpoint );
 
         // when
-        subjectHandler.channelRead0( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
+        subjectHandler.channelRead0( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DATABASE_ID ) );
 
         // then
         assertEquals( 1, lock.getReadLockCount() );
@@ -139,7 +142,7 @@ public class PrepareStoreCopyRequestHandlerTest
         when( availabilityGuard.isAvailable() ).thenReturn( false );
 
         // prepare store copy request is sent
-        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
+        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MATCHING, DATABASE_ID ) );
 
         // error response should be returned
         assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );

@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -37,7 +38,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final TopologyBuilder topologyBuilder;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     private final Address myAddress;
 
@@ -67,7 +68,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
-        this.databaseName = config.get( CausalClusteringSettings.database );
+        this.databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
         this.coreTopology = CoreTopology.EMPTY;
@@ -116,7 +117,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopology()
     {
-        CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( clusterIdPerDb.get( databaseName ), clusterView, memberData );
+        CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( clusterIdPerDb.get( databaseId ), clusterView, memberData );
         if ( !this.coreTopology.equals( newCoreTopology ) || !Objects.equals( this.coreTopology.clusterId(),  newCoreTopology.clusterId() ) )
         {
             this.coreTopology = newCoreTopology;

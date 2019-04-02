@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
@@ -33,7 +34,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
-    private final String dbName = "dbName";
+    private final DatabaseId databaseId = new DatabaseId( "dbName" );
     private final MemberId myself;
 
     FakeTopologyService( Collection<MemberId> cores, Collection<MemberId> replicas, MemberId myself, RoleInfo myselfRole )
@@ -45,7 +46,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
 
         for ( MemberId coreMemberId : cores )
         {
-            CoreServerInfo coreServerInfo = coreServerInfo( dbName );
+            CoreServerInfo coreServerInfo = coreServerInfo( databaseId );
             coreMembers.put( coreMemberId, coreServerInfo );
             roles.put( coreMemberId, RoleInfo.FOLLOWER );
         }
@@ -53,44 +54,44 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
         replicaMembers = new HashMap<>();
         for ( MemberId replicaMemberId : replicas )
         {
-            ReadReplicaInfo readReplicaInfo = readReplicaInfo( dbName );
+            ReadReplicaInfo readReplicaInfo = readReplicaInfo( databaseId );
             replicaMembers.put( replicaMemberId, readReplicaInfo );
             roles.put( replicaMemberId, RoleInfo.READ_REPLICA );
         }
 
         if ( RoleInfo.READ_REPLICA.equals( myselfRole ) )
         {
-            replicaMembers.put( myself, readReplicaInfo( dbName ) );
+            replicaMembers.put( myself, readReplicaInfo( databaseId ) );
             roles.put( myself, RoleInfo.READ_REPLICA );
         }
         else
         {
-            coreMembers.put( myself, coreServerInfo( dbName ) );
+            coreMembers.put( myself, coreServerInfo( databaseId ) );
             roles.put( myself, RoleInfo.FOLLOWER );
         }
         roles.put( myself, myselfRole );
     }
 
-    private CoreServerInfo coreServerInfo( String dbName )
+    private CoreServerInfo coreServerInfo( DatabaseId databaseId )
     {
         AdvertisedSocketAddress raftServer = new AdvertisedSocketAddress( "hostname", 1234 );
         AdvertisedSocketAddress catchupServer = new AdvertisedSocketAddress( "hostname", 1234 );
         ClientConnectorAddresses clientConnectors = new ClientConnectorAddresses( Collections.emptyList() );
         boolean refuseToBeLeader = false;
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, dbName, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, databaseId, refuseToBeLeader );
     }
 
-    private ReadReplicaInfo readReplicaInfo( String dbName )
+    private ReadReplicaInfo readReplicaInfo( DatabaseId databaseId )
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 1234 );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, dbName );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, databaseId );
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return dbName;
+        return databaseId;
     }
 
     @Override

@@ -103,8 +103,8 @@ public class RaftReplicator implements Replicator, LeaderListener
                 replicationMonitor.replicationAttempt();
                 if ( command instanceof CoreReplicatedContent )
                 {
-                    String databaseName = ((CoreReplicatedContent) command).databaseName();
-                    assertDatabaseAvailable( databaseName );
+                    DatabaseId databaseId = ((CoreReplicatedContent) command).databaseId();
+                    assertDatabaseAvailable( databaseId );
                 }
                 else
                 {
@@ -164,9 +164,8 @@ public class RaftReplicator implements Replicator, LeaderListener
         leaderProvider.setLeader( newLeader );
     }
 
-    private void assertDatabaseAvailable( String databaseName ) throws UnavailableException
+    private void assertDatabaseAvailable( DatabaseId databaseId ) throws UnavailableException
     {
-        var databaseId = new DatabaseId( databaseName );
         Optional<DatabaseAvailabilityGuard> databaseAvailabilityGuard = databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
                 .map( Database::getDatabaseAvailabilityGuard );

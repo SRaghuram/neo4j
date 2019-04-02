@@ -12,6 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
@@ -66,9 +67,9 @@ public interface ClusteredDatabaseContext extends Lifecycle, DatabaseContext
     void replaceWith( File sourceDir ) throws IOException;
 
     /**
-     * @return the name of this database
+     * @return the identifier for this database
      */
-    String databaseName();
+    DatabaseId databaseId();
 
     /**
      * @return the {@link CatchupComponentsRepository.DatabaseCatchupComponents} for this clustered database

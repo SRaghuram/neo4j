@@ -80,9 +80,10 @@ class CoreBootstrapperIT
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
 
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
-    private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
+    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
@@ -115,7 +116,7 @@ class CoreBootstrapperIT
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( databaseLayout )
                 .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
                 .withLogFiles( buildLogFiles( databaseLayout ) )
@@ -125,8 +126,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
+        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( new DatabaseId( DEFAULT_DATABASE_NAME ) );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -140,7 +141,7 @@ class CoreBootstrapperIT
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
 
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( databaseLayout )
                 .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
                 .withLogFiles( buildLogFiles( databaseLayout ) )
@@ -150,8 +151,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
+        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -164,12 +165,12 @@ class CoreBootstrapperIT
         int nodeCount = 100;
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
-                .databaseName( DEFAULT_DATABASE_NAME )
+                .databaseId( DATABASE_ID )
                 .amountOfNodes( nodeCount )
                 .build();
 
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
@@ -177,8 +178,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
+        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
@@ -192,7 +193,7 @@ class CoreBootstrapperIT
         File customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
-                .databaseName( DEFAULT_DATABASE_NAME )
+                .databaseId( DATABASE_ID )
                 .amountOfNodes( nodeCount )
                 .transactionLogsRootDirectory( customTransactionLogsRootDirectory )
                 .build();
@@ -202,7 +203,7 @@ class CoreBootstrapperIT
                               .build();
 
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
@@ -210,8 +211,8 @@ class CoreBootstrapperIT
                 fileSystem, config, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
+        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
 
         // then
         verifySnapshot( snapshot, membership, config, nodeCount );
@@ -224,14 +225,14 @@ class CoreBootstrapperIT
         int nodeCount = 100;
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
-                .databaseName( DEFAULT_DATABASE_NAME )
+                .databaseId( DATABASE_ID )
                 .amountOfNodes( nodeCount )
                 .build();
 
         IdFilesDeleter.deleteIdFiles( database.layout(), fileSystem );
 
         databaseManager.givenDatabaseWithConfig()
-                       .withDatabaseName( DEFAULT_DATABASE_NAME )
+                       .withDatabaseId( DATABASE_ID )
                        .withDatabaseLayout( database.layout() )
                        .register();
 
@@ -253,13 +254,13 @@ class CoreBootstrapperIT
         int nodeCount = 100;
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
-                .databaseName( DEFAULT_DATABASE_NAME )
+                .databaseId( DATABASE_ID )
                 .amountOfNodes( nodeCount )
                 .needToRecover()
                 .build();
 
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
@@ -282,14 +283,14 @@ class CoreBootstrapperIT
         File customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
-                .databaseName( DEFAULT_DATABASE_NAME )
+                .databaseId( DATABASE_ID )
                 .amountOfNodes( nodeCount )
                 .transactionLogsRootDirectory( customTransactionLogsRootDirectory )
                 .needToRecover()
                 .build();
 
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( DATABASE_ID )
                 .withDatabaseLayout( database.layout() )
                 .register();
 

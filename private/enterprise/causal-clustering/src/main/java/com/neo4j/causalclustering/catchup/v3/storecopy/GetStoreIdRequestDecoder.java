@@ -5,19 +5,24 @@
  */
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
+import java.io.IOException;
 import java.util.List;
+
+import org.neo4j.kernel.database.DatabaseId;
 
 public class GetStoreIdRequestDecoder extends ByteToMessageDecoder
 {
     @Override
-    protected void decode( ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out ) throws Exception
+    protected void decode( ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( byteBuf );
-        out.add( new GetStoreIdRequest( databaseName ) );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( byteBuf ) );
+        out.add( new GetStoreIdRequest( databaseId ) );
     }
 }

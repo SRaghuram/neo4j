@@ -30,6 +30,7 @@ import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -47,7 +48,7 @@ public class ClusteringModule
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
             CoreStateStorageFactory storageFactory, ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager,
-            TemporaryDatabaseFactory temporaryDatabaseFactory, SslPolicyLoader sslPolicyLoader, Function<String,DatabaseInitializer> databaseInitializers )
+            TemporaryDatabaseFactory temporaryDatabaseFactory, SslPolicyLoader sslPolicyLoader, Function<DatabaseId,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         Config globalConfig = globalModule.getGlobalConfig();
@@ -74,12 +75,12 @@ public class ClusteringModule
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
         SimpleStorage<DatabaseName> dbNameStorage = storageFactory.createMultiClusteringDbNameStorage();
 
-        String dbName = globalConfig.get( CausalClusteringSettings.database );
+        DatabaseId databaseId = new DatabaseId( globalConfig.get( CausalClusteringSettings.database ) );
         int minimumCoreHosts = globalConfig.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
 
         Duration clusterBindingTimeout = globalConfig.get( CausalClusteringSettings.cluster_binding_timeout );
         clusterBinder = new ClusterBinder( clusterIdStorage, dbNameStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, coreBootstrapper, dbName, minimumCoreHosts, globalMonitors );
+                clusterBindingTimeout, coreBootstrapper, databaseId, minimumCoreHosts, globalMonitors );
     }
 
     private static RetryStrategy resolveStrategy( Config config )

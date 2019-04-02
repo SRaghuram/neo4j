@@ -85,7 +85,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 {
     private final TopologyService topologyService;
     protected final LogProvider logProvider;
-    private final String defaultDatabaseName;
+    private final DatabaseId defaultDatabaseId;
     private final Config globaConfig;
     private final CompositeDatabaseHealth globalHealth;
     private final GlobalModule globalModule;
@@ -104,9 +104,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         this.myself = myself;
         LogService logService = globalModule.getLogService();
         this.globaConfig = globalModule.getGlobalConfig();
-        this.defaultDatabaseName = globaConfig.get( GraphDatabaseSettings.default_database );
+        this.defaultDatabaseId = new DatabaseId( globaConfig.get( GraphDatabaseSettings.default_database ) );
         logProvider = logService.getInternalLogProvider();
-        LogProvider userLogProvider = logService.getUserLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
 
         jobScheduler = globalModule.getJobScheduler();

@@ -14,6 +14,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 
@@ -64,9 +66,9 @@ public class CoreTopology implements Topology<CoreServerInfo>
     }
 
     @Override
-    public CoreTopology filterTopologyByDb( String dbName )
+    public CoreTopology filterTopologyByDb( DatabaseId databaseId )
     {
-        Map<MemberId, CoreServerInfo> filteredMembers = filterHostsByDb( members(), dbName );
+        Map<MemberId, CoreServerInfo> filteredMembers = filterHostsByDb( members(), databaseId );
 
         return new CoreTopology( clusterId(), canBeBootstrapped(), filteredMembers );
     }

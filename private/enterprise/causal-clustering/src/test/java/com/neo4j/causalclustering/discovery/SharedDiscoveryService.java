@@ -22,6 +22,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public final class SharedDiscoveryService
 {
     private static final int MIN_DISCOVERY_MEMBERS = 2;
@@ -29,8 +31,8 @@ public final class SharedDiscoveryService
     private final ConcurrentMap<MemberId,CoreServerInfo> coreMembers;
     private final ConcurrentMap<MemberId,ReadReplicaInfo> readReplicas;
     private final List<SharedDiscoveryCoreClient> listeningClients;
-    private final ConcurrentMap<String,ClusterId> clusterIdDbNames;
-    private final ConcurrentMap<String,LeaderInfo> leaderMap;
+    private final ConcurrentMap<DatabaseId,ClusterId> clusterIdDbNames;
+    private final ConcurrentMap<DatabaseId,LeaderInfo> leaderMap;
     private final CountDownLatch enoughMembers;
 
     SharedDiscoveryService()
@@ -51,7 +53,7 @@ public final class SharedDiscoveryService
     private boolean canBeBootstrapped( SharedDiscoveryCoreClient client )
     {
         Stream<SharedDiscoveryCoreClient> clientsWhoCanLeadForMyDb = listeningClients.stream()
-                .filter( c -> !c.refusesToBeLeader() && c.localDBName().equals( client.localDBName() ) );
+                .filter( c -> !c.refusesToBeLeader() && c.localDatabaseId().equals( client.localDatabaseId() ) );
 
         Optional<SharedDiscoveryCoreClient> firstAppropriateClient = clientsWhoCanLeadForMyDb.findFirst();
 
@@ -61,14 +63,14 @@ public final class SharedDiscoveryService
     CoreTopology getCoreTopology( SharedDiscoveryCoreClient client )
     {
         //Extract config from client
-        String dbName = client.localDBName();
+        DatabaseId databseId = client.localDatabaseId();
         boolean canBeBootstrapped = canBeBootstrapped( client );
-        return getCoreTopology( dbName, canBeBootstrapped );
+        return getCoreTopology( databseId, canBeBootstrapped );
     }
 
-    CoreTopology getCoreTopology( String dbName, boolean canBeBootstrapped  )
+    CoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped  )
     {
-        return new CoreTopology( clusterIdDbNames.get( dbName ),
+        return new CoreTopology( clusterIdDbNames.get( databaseId ),
                 canBeBootstrapped, Collections.unmodifiableMap( coreMembers )  );
     }
 
@@ -114,11 +116,11 @@ public final class SharedDiscoveryService
         notifyCoreClients();
     }
 
-    void casLeaders( LeaderInfo leaderInfo, String dbName )
+    void casLeaders( LeaderInfo leaderInfo, DatabaseId databaseId )
     {
         synchronized ( leaderMap )
         {
-            Optional<LeaderInfo> current = Optional.ofNullable( leaderMap.get( dbName ) );
+            Optional<LeaderInfo> current = Optional.ofNullable( leaderMap.get( databaseId ) );
 
             boolean sameLeader = current.map( LeaderInfo::memberId ).equals( Optional.ofNullable( leaderInfo.memberId() ) );
 
@@ -130,14 +132,14 @@ public final class SharedDiscoveryService
 
             if ( !( greaterTermExists || sameTermButNoStepDown || sameLeader ) )
             {
-                leaderMap.put( dbName, leaderInfo );
+                leaderMap.put( databaseId, leaderInfo );
             }
         }
     }
 
-    boolean casClusterId( ClusterId clusterId, String dbName )
+    boolean casClusterId( ClusterId clusterId, DatabaseId databaseId )
     {
-        ClusterId previousId = clusterIdDbNames.putIfAbsent( dbName, clusterId );
+        ClusterId previousId = clusterIdDbNames.putIfAbsent( databaseId, clusterId );
 
         boolean success = previousId == null || previousId.equals( clusterId );
 
@@ -150,7 +152,7 @@ public final class SharedDiscoveryService
 
     Map<MemberId,RoleInfo> getCoreRoles()
     {
-        Set<String> dbNames = clusterIdDbNames.keySet();
+        Set<DatabaseId> dbNames = clusterIdDbNames.keySet();
         Set<MemberId> allLeaders = dbNames.stream()
                 .map( dbName -> Optional.ofNullable( leaderMap.get( dbName ) ) )
                 .filter( Optional::isPresent )

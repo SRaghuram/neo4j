@@ -152,13 +152,13 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
 
-    private final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
+    private final Map<DatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     private final CompositeDatabaseAvailabilityGuard globalGuard;
     private final CompositeDatabaseHealth globalHealth;
     private final LogProvider logProvider;
     private final Config globalConfig;
     //TODO: remove as soon as independent lifecycle is in place
-    private final String defaultDatabaseName;
+    private final DatabaseId defaultDatabaseId;
     private final GlobalModule globalModule;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
@@ -176,7 +176,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         CoreMonitor.register( logProvider, logService.getUserLogProvider(), globalModule.getGlobalMonitors() );
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
-        this.defaultDatabaseName = globalConfig.get( GraphDatabaseSettings.default_database );
+        this.defaultDatabaseId = new DatabaseId( globalConfig.get( GraphDatabaseSettings.default_database ) );
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
         clusterStateLayout = ClusterStateLayout.of( dataDir );
@@ -364,7 +364,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     {
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseManager, temporaryDatabaseFactory,
-                sslPolicyLoader, dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
+                sslPolicyLoader, databaseId -> databaseInitializerMap.getOrDefault( databaseId, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 
     private void createDatabaseManagerDependentModules( final ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager )
@@ -393,12 +393,12 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 new RaftGroupFactory( identityModule.myself(), globalModule, loggingOutbound, clusterStateLayout, topologyService, storageFactory );
 
         // TODO: Life, monitors and dependencies should be per group/database.
-        raftGroup = raftGroupFactory.create( defaultDatabaseName, globalLife, globalModule.getGlobalMonitors(), globalModule.getGlobalDependencies() );
+        raftGroup = raftGroupFactory.create( defaultDatabaseId, globalLife, globalModule.getGlobalMonitors(), globalModule.getGlobalDependencies() );
 
         replicationModule = new ReplicationModule( raftGroup.raftMachine(), identityModule.myself(), globalModule, globalConfig,
-                loggingOutbound, storageFactory, logProvider, globalGuard, databaseManager, defaultDatabaseName );
+                loggingOutbound, storageFactory, logProvider, globalGuard, databaseManager, defaultDatabaseId );
 
-        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName, globalLife );
+        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( defaultDatabaseId, globalLife );
 
         coreStateService = new CoreStateService( identityModule.myself(), globalModule, storageFactory, globalConfig,
                 raftGroup.raftMachine(), databaseManager, replicationModule, lastFlushedStateStorage, panicService );
@@ -490,7 +490,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( globalModule, this,
                     globalModule.getLogService().getUserLog( CoreEditionModule.class ), globalProcedures, "commercial-security-module" );
-            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_NAME, dbInit ) );
+            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( new DatabaseId( SYSTEM_DATABASE_NAME ), dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }

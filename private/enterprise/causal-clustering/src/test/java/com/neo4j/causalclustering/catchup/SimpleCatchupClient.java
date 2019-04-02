@@ -17,6 +17,7 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
@@ -35,7 +36,7 @@ class SimpleCatchupClient implements AutoCloseable
     private final FileSystemAbstraction fsa;
     private final CatchupClientFactory catchUpClientFactory;
     private final TestCatchupServer catchupServer;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     private final AdvertisedSocketAddress from;
     private final StoreId correctStoreId;
@@ -45,14 +46,14 @@ class SimpleCatchupClient implements AutoCloseable
     private final Log log;
     private final LogProvider logProvider;
 
-    SimpleCatchupClient( GraphDatabaseAPI graphDb, String databaseName, FileSystemAbstraction fileSystemAbstraction,
+    SimpleCatchupClient( GraphDatabaseAPI graphDb, DatabaseId databaseId, FileSystemAbstraction fileSystemAbstraction,
             CatchupClientFactory catchUpClientFactory, TestCatchupServer catchupServer, File temporaryDirectory, LogProvider logProvider )
     {
         this.graphDb = graphDb;
         this.fsa = fileSystemAbstraction;
         this.catchUpClientFactory = catchUpClientFactory;
         this.catchupServer = catchupServer;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
 
         from = getCatchupServerAddress();
         correctStoreId = graphDb.storeId();
@@ -65,30 +66,30 @@ class SimpleCatchupClient implements AutoCloseable
 
     public PrepareStoreCopyResponse requestListOfFilesFromServer() throws Exception
     {
-        return requestListOfFilesFromServer( correctStoreId, databaseName );
+        return requestListOfFilesFromServer( correctStoreId, databaseId );
     }
 
-    public PrepareStoreCopyResponse requestListOfFilesFromServer( StoreId expectedStoreId, String expectedDatabaseName ) throws Exception
+    public PrepareStoreCopyResponse requestListOfFilesFromServer( StoreId expectedStoreId, DatabaseId expectedDatabaseId ) throws Exception
     {
         CatchupResponseAdaptor<PrepareStoreCopyResponse> responseHandler =
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
         return catchUpClientFactory.getClient( from, log )
-                .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
+                .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }
 
     public StoreCopyFinishedResponse requestIndividualFile( File file ) throws Exception
     {
-        return requestIndividualFile( file, correctStoreId, databaseName );
+        return requestIndividualFile( file, correctStoreId, databaseId );
     }
 
-    public StoreCopyFinishedResponse requestIndividualFile( File file, StoreId expectedStoreId, String expectedDatabaseName ) throws Exception
+    public StoreCopyFinishedResponse requestIndividualFile( File file, StoreId expectedStoreId, DatabaseId expectedDatabaseId ) throws Exception
     {
         long lastTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
         return catchUpClientFactory.getClient( from, log )
-                .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
+                .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

@@ -12,6 +12,8 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import java.io.IOException;
 import java.util.Map;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static java.util.Comparator.comparingLong;
 
 public class CoreSnapshotService
@@ -32,7 +34,7 @@ public class CoreSnapshotService
         this.raftMachine = raftMachine;
     }
 
-    public synchronized CoreSnapshot snapshot( String databaseName ) throws Exception
+    public synchronized CoreSnapshot snapshot( DatabaseId databaseId ) throws Exception
     {
         applicationProcess.pauseApplier( OPERATION_NAME );
         try
@@ -42,7 +44,7 @@ public class CoreSnapshotService
             long prevTerm = raftLog.readEntryTerm( lastApplied );
             CoreSnapshot coreSnapshot = new CoreSnapshot( lastApplied, prevTerm );
 
-            coreStateRepository.augmentSnapshot( databaseName, coreSnapshot );
+            coreStateRepository.augmentSnapshot( databaseId, coreSnapshot );
             coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftMachine.coreState() );
 
             return coreSnapshot;
@@ -53,7 +55,7 @@ public class CoreSnapshotService
         }
     }
 
-    public synchronized void installSnapshots( Map<String,CoreSnapshot> coreSnapshots ) throws IOException
+    public synchronized void installSnapshots( Map<DatabaseId,CoreSnapshot> coreSnapshots ) throws IOException
     {
         CoreSnapshot earliestSnapshot = coreSnapshots.values().stream().min( comparingLong( CoreSnapshot::prevIndex ) ).orElseThrow();
 

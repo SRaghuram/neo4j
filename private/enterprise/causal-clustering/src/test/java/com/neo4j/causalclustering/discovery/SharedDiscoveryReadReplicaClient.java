@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -26,16 +27,16 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     private final ReadReplicaInfo addresses;
     private final MemberId memberId;
     private final Log log;
-    private final String dbName;
+    private final DatabaseId databaseId;
 
     SharedDiscoveryReadReplicaClient( SharedDiscoveryService sharedDiscoveryService, Config config, MemberId memberId,
             LogProvider logProvider )
     {
         this.sharedDiscoveryService = sharedDiscoveryService;
-        this.dbName = config.get( CausalClusteringSettings.database );
+        this.databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.addresses = new ReadReplicaInfo( ClientConnectorAddresses.extractFromConfig( config ),
                 socketAddress( config.get( CausalClusteringSettings.transaction_advertised_address ).toString(),
-                        AdvertisedSocketAddress::new ), dbName );
+                        AdvertisedSocketAddress::new ), databaseId );
         this.memberId = memberId;
         this.log = logProvider.getLog( getClass() );
     }
@@ -68,13 +69,13 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     @Override
     public CoreTopology allCoreServers()
     {
-        return sharedDiscoveryService.getCoreTopology( dbName, false );
+        return sharedDiscoveryService.getCoreTopology( databaseId, false );
     }
 
     @Override
     public CoreTopology localCoreServers()
     {
-        return allCoreServers().filterTopologyByDb( dbName );
+        return allCoreServers().filterTopologyByDb( databaseId );
     }
 
     @Override
@@ -86,14 +87,14 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     @Override
     public ReadReplicaTopology localReadReplicas()
     {
-        return allReadReplicas().filterTopologyByDb( dbName );
+        return allReadReplicas().filterTopologyByDb( databaseId );
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         Optional<AdvertisedSocketAddress> coreAdvertisedAddress =
-                sharedDiscoveryService.getCoreTopology( dbName, false ).find( upstream ).map( CoreServerInfo::getCatchupServer );
+                sharedDiscoveryService.getCoreTopology( databaseId, false ).find( upstream ).map( CoreServerInfo::getCatchupServer );
         if ( coreAdvertisedAddress.isPresent() )
         {
             return coreAdvertisedAddress.get();
@@ -103,9 +104,9 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public String localDBName()
+    public DatabaseId localDatabaseId()
     {
-        return dbName;
+        return databaseId;
     }
 
     @Override

@@ -25,6 +25,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
 import org.neo4j.logging.LogProvider;
@@ -46,6 +47,7 @@ class GetStoreFileRequestHandlerTest
 {
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1, 1 );
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
+    private static final DatabaseId DEFAULT_DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final DefaultFileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction();
 
     private final Database database = mock( Database.class );
@@ -75,7 +77,7 @@ class GetStoreFileRequestHandlerTest
     void shouldGiveProperErrorOnStoreIdMismatch()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MISMATCHING,
-                new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
+                new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -89,7 +91,7 @@ class GetStoreFileRequestHandlerTest
     void shouldGiveProperErrorOnTxBehind()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
-                new File( "some-file" ), 2, DEFAULT_DATABASE_NAME ) );
+                new File( "some-file" ), 2, DEFAULT_DATABASE_ID ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -105,7 +107,7 @@ class GetStoreFileRequestHandlerTest
         when( database.getStoreId() ).thenThrow( new IllegalStateException() );
 
         assertThrows( IllegalStateException.class,
-                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -123,7 +125,7 @@ class GetStoreFileRequestHandlerTest
                         fileSystemAbstraction, NullLogProvider.getInstance() ) );
 
         assertThrows( IllegalStateException.class,
-                () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
+                () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, alternativeChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -141,7 +143,7 @@ class GetStoreFileRequestHandlerTest
 
         // when
         RuntimeException error = assertThrows( RuntimeException.class,
-                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 123, DEFAULT_DATABASE_NAME ) ) );
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 123, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( "FakeCheckPointer", error.getMessage() );
 

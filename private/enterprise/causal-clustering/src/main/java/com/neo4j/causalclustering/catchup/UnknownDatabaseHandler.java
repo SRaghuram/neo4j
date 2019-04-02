@@ -37,6 +37,6 @@ class UnknownDatabaseHandler<T extends CatchupProtocolMessage> extends SimpleCha
     private CatchupErrorResponse newErrorResponse( T request )
     {
         return new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN,
-                String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", request, request.databaseName() ) );
+                String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", request, request.databaseId().name() ) );
     }
 }

@@ -43,7 +43,7 @@ import org.neo4j.test.FakeClockJobScheduler;
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -63,7 +63,7 @@ public class CatchupProcessManagerTest
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
-    private final List<String> databaseNames = asList( "db1", "db2" );
+    private final List<DatabaseId> databaseIds = asList( new DatabaseId( "db1" ), new DatabaseId( "db2" ) );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );
 
@@ -73,11 +73,11 @@ public class CatchupProcessManagerTest
     public void before()
     {
         //Mock the components of CatchupComponentsRepository
-        databaseNames.forEach( name -> databaseService.registerDatabase( new DatabaseId( name ), getMockDatabase( name ) ) );
+        databaseIds.forEach( name -> databaseService.registerDatabase( name, getMockDatabase( name ) ) );
         DatabaseCatchupComponents components = new DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
 
         //Wire these mocked components to the ServerModule mock
-        when( catchupComponents.componentsFor( anyString() ) ).thenReturn( Optional.of( components ) );
+        when( catchupComponents.componentsFor( any( DatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
@@ -85,10 +85,10 @@ public class CatchupProcessManagerTest
                 NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() ) );
     }
 
-    private ClusteredDatabaseContext getMockDatabase( String databaseName )
+    private ClusteredDatabaseContext getMockDatabase( DatabaseId databaseId )
     {
         return databaseService.givenDatabaseWithConfig()
-                .withDatabaseName( databaseName )
+                .withDatabaseId( databaseId )
                 .withDependencies( mock( Dependencies.class ) )
                 .register();
     }
@@ -97,7 +97,7 @@ public class CatchupProcessManagerTest
     public void shouldTickAllCatchupProcessesOnTimeout()
     {
         // given
-        Map<String,CatchupPollingProcess> catchupProcesses = databaseNames.stream()
+        Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()
                 .collect( Collectors.toMap( Function.identity(), ignored -> mock( CatchupPollingProcess.class ) ) );
         catchupProcessManager.setCatchupProcesses( catchupProcesses );
         catchupProcessManager.initTimer();
@@ -113,10 +113,10 @@ public class CatchupProcessManagerTest
     public void shouldCreateCatchupProcessComponentsForEachDatabaseOnStart() throws Throwable
     {
         // given
-        List<String> startedCatchupProcs = new ArrayList<>();
+        List<DatabaseId> startedCatchupProcs = new ArrayList<>();
         CatchupProcessManager.CatchupProcessFactory factory = db ->
         {
-            startedCatchupProcs.add( db.databaseName() );
+            startedCatchupProcs.add( db.databaseId() );
             CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
             when( catchupProcess.upToDateFuture() ).thenReturn( CompletableFuture.completedFuture( true ) );
             return catchupProcess;
@@ -129,14 +129,14 @@ public class CatchupProcessManagerTest
         catchupProcessManager.start();
 
         // then
-        assertEquals( startedCatchupProcs, databaseNames );
+        assertEquals( startedCatchupProcs, databaseIds );
     }
 
     @Test
     public void shouldNotRenewTheTimeoutOnPanic()
     {
         // given
-        Map<String,CatchupPollingProcess> catchupProcesses = databaseNames.stream()
+        Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()
                 .collect( Collectors.toMap( Function.identity(), ignored -> mock( CatchupPollingProcess.class ) ) );
 
         catchupProcessManager.initTimer();

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.Set;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -23,7 +24,7 @@ import static org.neo4j.io.fs.FileUtils.path;
 @ExtendWith( TestDirectoryExtension.class )
 class ClusterStateLayoutTest
 {
-    private static final String DATABASE_NAME = "my_database";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "my_database" );
 
     @Inject
     private TestDirectory testDirectory;
@@ -59,50 +60,50 @@ class ClusterStateLayoutTest
     @Test
     void shouldExposeIdAllocationStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "id-allocation-state" ), layout.idAllocationStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "id-allocation-state" ), layout.idAllocationStateDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeLockTokenStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "lock-token-state" ), layout.lockTokenStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "lock-token-state" ), layout.lockTokenStateDirectory( DATABASE_ID ) );
 
     }
 
     @Test
     void shouldExposeLastFlushedStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "last-flushed-state" ), layout.lastFlushedStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "last-flushed-state" ), layout.lastFlushedStateDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeRaftMembershipStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "membership-state" ), layout.raftMembershipStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "membership-state" ), layout.raftMembershipStateDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeRaftLogDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "raft-log" ), layout.raftLogDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "raft-log" ), layout.raftLogDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeSessionTrackerDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ), layout.sessionTrackerDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "session-tracker-state" ), layout.sessionTrackerDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeRaftTermStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "term-state" ), layout.raftTermStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "term-state" ), layout.raftTermStateDirectory( DATABASE_ID ) );
     }
 
     @Test
     void shouldExposeRaftVoteStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "vote-state" ), layout.raftVoteStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "vote-state" ), layout.raftVoteStateDirectory( DATABASE_ID ) );
     }
 
     @Test
@@ -118,13 +119,13 @@ class ClusterStateLayoutTest
         Set<File> expected = set(
                 path( dataDir, "cluster-state", "cluster-id-state" ),
                 path( dataDir, "cluster-state", "core-member-id-state" ),
-                path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ),
-                path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ),
-                path( dataDir, "cluster-state", "db", DATABASE_NAME, "term-state" ),
-                path( dataDir, "cluster-state", "db", DATABASE_NAME, "raft-log" )
+                path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "session-tracker-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "session-tracker-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "term-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "raft-log" )
         );
 
-        Set<File> actual = layout.listGlobalAndDatabaseDirectories( DATABASE_NAME, types::contains );
+        Set<File> actual = layout.listGlobalAndDatabaseDirectories( DATABASE_ID, types::contains );
 
         assertEquals( expected, actual );
     }

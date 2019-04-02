@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -163,33 +164,33 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName )
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreId> getStoreId( String databaseName )
+        public PreparedRequest<StoreId> getStoreId( DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName )
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName )
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseId ), handler, channel );
         }
 
     }

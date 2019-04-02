@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import java.util.Set;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreServerInfoMarshal extends SafeChannelMarshal<CoreServerInfo>
 {
@@ -38,9 +40,9 @@ public class CoreServerInfoMarshal extends SafeChannelMarshal<CoreServerInfo>
         {
             groups.add( StringMarshal.unmarshal( channel ) );
         }
-        String databaseName = StringMarshal.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         boolean refuseToBeLeader = BooleanMarshal.unmarshal( channel );
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectorAddresses, groups, databaseName, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, clientConnectorAddresses, groups, databaseId, refuseToBeLeader );
     }
 
     @Override
@@ -54,7 +56,7 @@ public class CoreServerInfoMarshal extends SafeChannelMarshal<CoreServerInfo>
         {
             StringMarshal.marshal( channel, group );
         }
-        StringMarshal.marshal( channel, coreServerInfo.getDatabaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( coreServerInfo.getDatabaseId(), channel );
         BooleanMarshal.marshal( channel, coreServerInfo.refusesToBeLeader() );
     }
 }
