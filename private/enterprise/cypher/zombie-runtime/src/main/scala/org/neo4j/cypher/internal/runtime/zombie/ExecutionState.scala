@@ -106,7 +106,7 @@ trait ExecutionState extends ArgumentStateCreator {
   def unlock(pipeline: ExecutablePipeline): Unit
 
   /**
-    * Check if the pipeline can execution either a continuation or a new task.
+    * Check if the pipeline can execute either a continuation or a new task.
     *
     * @return `true` if the pipeline can be executed
     */
@@ -128,7 +128,7 @@ trait ExecutionState extends ArgumentStateCreator {
   def isCompleted: Boolean
 
   /**
-    * Return a string representation of the state related to the given pipeline. Meant for debuging.
+    * Return a string representation of the state related to the given pipeline. Meant for debugging.
     */
-  def prettyState(pipeline: ExecutablePipeline): String
+  def prettyString(pipeline: ExecutablePipeline): String
 }

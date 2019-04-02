@@ -138,7 +138,7 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
 
   override def isCompleted: Boolean = tracker.isCompleted
 
-  override def prettyState(pipeline: ExecutablePipeline): String = {
+  override def prettyString(pipeline: ExecutablePipeline): String = {
     s"""continuations: ${continuations(pipeline.id.x)}
        |  inputBuffer: ${buffers.sink(pipeline.inputBuffer.id)}
        |""".stripMargin

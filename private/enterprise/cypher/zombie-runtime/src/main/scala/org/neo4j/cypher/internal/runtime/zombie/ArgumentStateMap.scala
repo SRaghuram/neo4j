@@ -51,7 +51,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * Filter the input morsel using the [[ArgumentState]] related to `argument`.
     *
     * @param onArgument is called once per argumentRowId, to generate a filter state.
-    * @param onRow      is called one each row, and given the filter state of the current argumentRowId
+    * @param onRow      is called once per row, and given the filter state of the current argumentRowId
     */
   def filter[FILTER_STATE](morsel: MorselExecutionContext,
                            onArgument: (S, Long) => FILTER_STATE,
@@ -61,7 +61,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * Filter away cancelled argument rows using the [[ArgumentState]] related to `argument`.
     *
     * @param isCancelled is called once per argumentRowId.
-    *                    If true, rows for the argumentRowId will be retained, otherwise they will be discarded.
+    *                    If true, rows for the argumentRowId will be discarded, otherwise they will be retained.
     */
   def filterCancelledArguments(morsel: MorselExecutionContext,
                                isCancelled: S => Boolean): Seq[Long]

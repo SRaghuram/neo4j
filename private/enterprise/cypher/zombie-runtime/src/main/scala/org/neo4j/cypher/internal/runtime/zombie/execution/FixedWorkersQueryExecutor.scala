@@ -73,7 +73,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
     // instead of creating new resources here only for initializing the query, we could
     //    a) delegate initialization so some special init-pipeline/operator and use the regular worked resources
     //    b) attempt some lazy resource creation here, because they will usually not be needed
-    val initResources = new QueryResources(queryContext.transactionalContext.cursors)
+    val initResources = queryResourceFactory()
     val pipelineExecutions = new PipelineExecutions(executablePipelines,
                                                     executionState,
                                                     queryContext,
