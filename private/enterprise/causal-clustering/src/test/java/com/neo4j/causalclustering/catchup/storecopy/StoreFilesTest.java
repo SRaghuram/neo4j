@@ -351,15 +351,37 @@ class StoreFilesTest
     }
 
     @Test
-    void shouldNotDeleteTempCopyDirectory()
+    void shouldNotDeleteTempCopyDirectory() throws Exception
     {
+        StoreFiles storeFiles = newStoreFiles();
 
+        File tempCopyDir = createDirectory( databaseDir, "temp-copy" );
+        File notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertTrue( fs.isDirectory( notTempCopyDir ) );
+
+        storeFiles.delete( databaseLayout, logFiles );
+
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertFalse( fs.isDirectory( notTempCopyDir ) );
     }
 
     @Test
-    void shouldNotMoveTempCopyDirectory()
+    void shouldNotMoveTempCopyDirectory() throws Exception
     {
+        StoreFiles storeFiles = newStoreFiles();
 
+        File tempCopyDir = createDirectory( databaseDir, "temp-copy" );
+        File notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertTrue( fs.isDirectory( notTempCopyDir ) );
+
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "temp-copy" ) ) );
+        assertFalse( fs.isDirectory( notTempCopyDir ) );
+        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "not-temp-copy" ) ) );
     }
 
     private File createFile( File parentDir, String name ) throws IOException
