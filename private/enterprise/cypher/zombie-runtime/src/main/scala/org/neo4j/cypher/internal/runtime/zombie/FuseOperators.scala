@@ -12,7 +12,9 @@ import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, Pipeline}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 
 class FuseOperators(operatorFactory: OperatorFactory,
@@ -89,12 +91,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
       }
 
     // Did we find any sequence of operators that we can fuse with the headPlan?
-    if (fusedPlans.length < 1 /* TODO: This should be 2, but we allow 1 for debugging */) {
+    if (fusedPlans.length < FUSE_LIMIT) {
       (None, middlePlans, produceResult)
     }
     else {
       // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
-      println(s"@@@ Fused plans ${fusedPlans.map(_.getClass.getSimpleName)}") // TODO: Disable debug print
+      dprintln(() => s"@@@ Fused plans ${fusedPlans.map(_.getClass.getSimpleName)}")
 
       val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
       val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
@@ -103,4 +105,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
       (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans, unhandledProduceResult)
     }
   }
+}
+
+object FuseOperators {
+  private val FUSE_LIMIT = 2
 }
