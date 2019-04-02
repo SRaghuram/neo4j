@@ -10,7 +10,9 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
-import com.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
+
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;

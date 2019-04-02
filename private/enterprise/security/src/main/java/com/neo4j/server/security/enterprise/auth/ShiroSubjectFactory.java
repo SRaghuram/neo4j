@@ -12,6 +12,8 @@ import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.subject.SubjectContext;
 
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
+
 public class ShiroSubjectFactory implements SubjectFactory
 {
     @Override

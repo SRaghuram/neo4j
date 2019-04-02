@@ -8,7 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
@@ -21,6 +21,7 @@ import java.util.Set;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.LegacyCredential;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static org.mockito.Mockito.mock;

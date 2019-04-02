@@ -8,12 +8,12 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
-import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
+import org.neo4j.server.security.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
-import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authc.AuthenticationException;
@@ -44,6 +44,8 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
+import org.neo4j.server.security.systemgraph.SystemGraphCredential;
+import org.neo4j.server.security.systemgraph.SystemGraphShiroAuthenticationInfo;
 
 import static java.lang.String.format;
 

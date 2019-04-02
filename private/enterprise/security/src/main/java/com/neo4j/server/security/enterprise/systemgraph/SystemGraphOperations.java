@@ -7,7 +7,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -26,6 +26,8 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.exception.FormatException;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.SystemGraphCredential;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;

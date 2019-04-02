@@ -13,6 +13,8 @@ import org.apache.shiro.realm.Realm;
 
 import java.util.Collection;
 
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
+
 public class ShiroAuthenticationStrategy extends AbstractAuthenticationStrategy
 {
     @Override

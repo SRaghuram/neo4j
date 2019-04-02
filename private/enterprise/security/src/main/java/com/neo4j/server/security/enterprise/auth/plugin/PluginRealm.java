@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
-import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
+import org.neo4j.server.security.auth.RealmLifecycle;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;

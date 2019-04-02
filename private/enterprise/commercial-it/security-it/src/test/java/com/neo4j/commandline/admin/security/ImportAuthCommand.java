@@ -7,7 +7,7 @@ package com.neo4j.commandline.admin.security;
 
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
-import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
+import org.neo4j.server.security.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -28,7 +28,6 @@ import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;

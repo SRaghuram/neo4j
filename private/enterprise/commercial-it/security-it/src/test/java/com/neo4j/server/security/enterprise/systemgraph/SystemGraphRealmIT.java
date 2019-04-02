@@ -9,7 +9,7 @@ import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
-import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;

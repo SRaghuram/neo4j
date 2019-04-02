@@ -12,10 +12,8 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
-import com.neo4j.server.security.enterprise.auth.StandardCommercialLoginContext;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.authz.SimpleRole;
-import org.apache.shiro.authz.permission.WildcardPermission;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -38,6 +36,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.SystemGraphCredential;
 import org.neo4j.string.UTF8;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

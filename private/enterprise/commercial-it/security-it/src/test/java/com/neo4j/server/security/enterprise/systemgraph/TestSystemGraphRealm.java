@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.time.Clock;
@@ -17,6 +17,8 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 

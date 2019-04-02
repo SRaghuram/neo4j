@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
-import com.neo4j.server.security.enterprise.auth.ShiroAuthenticationInfo;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.crypto.hash.SimpleHash;
