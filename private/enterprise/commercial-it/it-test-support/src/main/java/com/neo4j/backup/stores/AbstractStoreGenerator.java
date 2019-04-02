@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
 import static com.neo4j.backup.BackupTestUtil.createBackupFromCore;
@@ -31,8 +32,10 @@ public abstract class AbstractStoreGenerator implements BackupStore
     public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
-        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
+        DatabaseId defaultDatabaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, defaultDatabaseId.name() ), defaultDatabaseId );
+        DatabaseId systemDatabaseId = new DatabaseId( SYSTEM_DATABASE_NAME );
+        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, systemDatabaseId.name() ), systemDatabaseId );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );

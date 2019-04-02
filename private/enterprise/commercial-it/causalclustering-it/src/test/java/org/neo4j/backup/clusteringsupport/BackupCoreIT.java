@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -63,8 +64,9 @@ class BackupCoreIT
             // Run backup
             DbRepresentation beforeChange = DbRepresentation.of( createSomeData( cluster ) );
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
-            File coreDefaultDbBackupDir = new File( coreBackupDir, DEFAULT_DATABASE_NAME );
-            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, DEFAULT_DATABASE_NAME );
+            DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+            File coreDefaultDbBackupDir = new File( coreBackupDir, databaseId.name() );
+            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, databaseId );
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );
 
             // Add some new data

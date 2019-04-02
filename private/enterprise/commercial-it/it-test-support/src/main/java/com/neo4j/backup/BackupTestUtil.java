@@ -40,11 +40,11 @@ import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
 public class BackupTestUtil
 {
-    public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, String databaseName ) throws Exception
+    public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, DatabaseId databaseId ) throws Exception
     {
-        String[] args = backupArguments( backupAddress( core.database() ), baseBackupDir, databaseName );
+        String[] args = backupArguments( backupAddress( core.database() ), baseBackupDir, databaseId );
         assertThat( runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ), equalTo( 0 ) );
-        return new File( baseBackupDir, databaseName );
+        return new File( baseBackupDir, databaseId.name() );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember<?> clusterMember ) throws IOException, CommandFailed
@@ -73,13 +73,13 @@ public class BackupTestUtil
         } ).database();
     }
 
-    public static String[] backupArguments( String from, File backupsDir, String databaseName )
+    public static String[] backupArguments( String from, File backupsDir, DatabaseId databaseId )
     {
         return new String[]{
                 "--from=" + from,
                 "--cc-report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
-                "--database=" + databaseName
+                "--database=" + databaseId.name()
         };
     }
 
