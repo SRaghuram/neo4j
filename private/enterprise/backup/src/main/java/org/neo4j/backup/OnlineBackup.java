@@ -162,7 +162,7 @@ public class OnlineBackup
      */
     public Result backup( DatabaseId databaseId, Path targetDirectory )
     {
-        requireNonNull( databaseId, "databaseName" );
+        requireNonNull( databaseId, "databaseId" );
         requireNonNull( targetDirectory, "targetDirectory" );
 
         LogProvider logProvider = FormattedLogProvider.toOutputStream( outputStream );
