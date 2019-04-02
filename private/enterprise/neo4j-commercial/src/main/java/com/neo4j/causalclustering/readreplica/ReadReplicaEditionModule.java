@@ -316,4 +316,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         long delayInMillis = refreshPeriodMillis / pollingFrequencyWithinRefreshWindow;
         return new RetryStrategy( delayInMillis, (long) numberOfRetries );
     }
+
+    /**
+     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link ClusteredDatabaseManager} via {@link ReadReplicaStartupProcess}.
+     * So {@link DatabaseManager} does not need to be included in the global lifecycle.
+     *
+     * @return always {@code true}.
+     */
+    @Override
+    public boolean handlesDatabaseManagerLifecycle()
+    {
+        return true;
+    }
 }
