@@ -12,6 +12,7 @@ import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
@@ -29,12 +30,12 @@ public class RestoreDatabaseCommand
     private final DatabaseLayout targetDatabaseLayout;
     private boolean forceOverwrite;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite )
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, DatabaseId databaseId, boolean forceOverwrite )
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
-        this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).getAbsoluteFile(), of( config ), databaseName );
+        this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).getAbsoluteFile(), of( config ), databaseId.name() );
     }
 
     public void execute() throws IOException, CommandFailed

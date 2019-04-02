@@ -31,6 +31,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -228,7 +229,7 @@ class FulltextIndexBackupIT
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( backupAddress.getHost(), backupAddress.getPort() )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( new DatabaseId( DEFAULT_DATABASE_NAME ) )
                 .withBackupDirectory( backupDir )
                 .withReportsDirectory( backupDir )
                 .withConsistencyCheck( true )

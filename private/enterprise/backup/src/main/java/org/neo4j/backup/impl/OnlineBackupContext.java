@@ -16,11 +16,12 @@ import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class OnlineBackupContext
 {
     private final AdvertisedSocketAddress address;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final Path databaseBackupDir;
     private final Path reportDir;
     private final boolean fallbackToFullBackup;
@@ -28,11 +29,11 @@ public class OnlineBackupContext
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
 
-    private OnlineBackupContext( AdvertisedSocketAddress address, String databaseName, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
+    private OnlineBackupContext( AdvertisedSocketAddress address, DatabaseId databaseId, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
             boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config )
     {
         this.address = address;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.databaseBackupDir = databaseBackupDir;
         this.reportDir = reportDir;
         this.fallbackToFullBackup = fallbackToFullBackup;
@@ -51,9 +52,9 @@ public class OnlineBackupContext
         return address;
     }
 
-    public String getDatabaseName()
+    public DatabaseId getDatabaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     public Path getDatabaseBackupDir()
@@ -89,7 +90,7 @@ public class OnlineBackupContext
     public static final class Builder
     {
         private AdvertisedSocketAddress address;
-        private String databaseName;
+        private DatabaseId databaseId;
         private Path backupDirectory;
         private Path reportsDirectory;
         private boolean fallbackToFullBackup = true;
@@ -115,9 +116,9 @@ public class OnlineBackupContext
             return this;
         }
 
-        public Builder withDatabaseName( String databaseName )
+        public Builder withDatabaseId( DatabaseId databaseId )
         {
-            this.databaseName = databaseName;
+            this.databaseId = databaseId;
             return this;
         }
 
@@ -181,9 +182,9 @@ public class OnlineBackupContext
             {
                 config = Config.defaults();
             }
-            if ( databaseName == null )
+            if ( databaseId == null )
             {
-                databaseName = config.get( GraphDatabaseSettings.default_database );
+                databaseId = new DatabaseId( config.get( GraphDatabaseSettings.default_database ) );
             }
             if ( backupDirectory == null )
             {
@@ -195,10 +196,10 @@ public class OnlineBackupContext
             }
 
             AdvertisedSocketAddress address = buildAddress();
-            Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
+            Path databaseBackupDirectory = backupDirectory.resolve( databaseId.name() );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
 
-            return new OnlineBackupContext( address, databaseName, databaseBackupDirectory, reportsDirectory,
+            return new OnlineBackupContext( address, databaseId, databaseBackupDirectory, reportsDirectory,
                     fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
         }
 

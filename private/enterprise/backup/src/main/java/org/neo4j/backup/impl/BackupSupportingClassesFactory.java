@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
@@ -83,13 +84,13 @@ public class BackupSupportingClassesFactory
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext )
     {
         Config config = onlineBackupContext.getConfig();
-        String databaseName = onlineBackupContext.getDatabaseName();
+        DatabaseId databaseId = onlineBackupContext.getDatabaseId();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext );
 
-        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseId.name(), () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
                 new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseName, () -> monitors, logProvider, backOffStrategy );
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseId.name(), () -> monitors, logProvider, backOffStrategy );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
                 txPullClient, transactionLogCatchUpFactory, config, monitors, storageEngineFactory );

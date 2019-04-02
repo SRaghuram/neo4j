@@ -49,6 +49,7 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
@@ -81,7 +82,7 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 @ExtendWith( {SuppressOutputExtension.class, RandomExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class BackupRetriesIT
 {
-    private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private static final DatabaseId DB_ID = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
     @Inject
     private static RandomRule random;
@@ -127,7 +128,7 @@ class BackupRetriesIT
         executor.executeBackup( context );
 
         // backup produced a correct store
-        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.of( backupsDir.resolve( DB_NAME ).toFile() ) ) );
+        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.of( backupsDir.resolve( DB_ID.name() ).toFile() ) ) );
 
         // all used channels should be closed after backup is done
         assertAll( "All channels should be closed after backup " + channels,
@@ -254,7 +255,7 @@ class BackupRetriesIT
 
         return OnlineBackupContext.builder()
                 .withAddress( backupAddress( db ) )
-                .withDatabaseName( DB_NAME )
+                .withDatabaseId( DB_ID )
                 .withBackupDirectory( backupsDir )
                 .withConfig( config )
                 .build();

@@ -26,6 +26,7 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -56,7 +57,7 @@ import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
 @ExtendWith( {TestDirectoryExtension.class, RandomExtension.class, SuppressOutputExtension.class} )
 class OnlineBackupIT
 {
-    private static final String DB_NAME = DEFAULT_DATABASE_NAME;
+    private static final DatabaseId DB_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Inject
     private TestDirectory testDirectory;
@@ -72,7 +73,7 @@ class OnlineBackupIT
     void setUp()
     {
         backupsDir = testDirectory.directory( "backups" ).toPath();
-        defaultDbBackupDir = backupsDir.resolve( DB_NAME );
+        defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
         db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
@@ -132,7 +133,7 @@ class OnlineBackupIT
     {
         RuntimeException error = assertThrows( RuntimeException.class, () ->
                 OnlineBackup.from( backupAddress.getHost(), backupAddress.getPort() )
-                        .backup( "unknown", backupsDir ) );
+                        .backup( new DatabaseId( "unknown" ), backupsDir ) );
 
         assertThat( error.getCause(), instanceOf( BackupExecutionException.class ) );
     }
@@ -142,7 +143,7 @@ class OnlineBackupIT
     {
         RuntimeException error = assertThrows( RuntimeException.class, () ->
                 OnlineBackup.from( backupAddress.getHost(), backupAddress.getPort() )
-                        .backup( DB_NAME, backupsDir.resolve( "unknownDir" ) ) );
+                        .backup( DB_ID, backupsDir.resolve( "unknownDir" ) ) );
 
         assertThat( error.getCause(), instanceOf( BackupExecutionException.class ) );
     }
@@ -183,7 +184,7 @@ class OnlineBackupIT
 
     private void corruptStoreIdInBackup() throws IOException
     {
-        Path backupDir = backupsDir.resolve( DB_NAME );
+        Path backupDir = backupsDir.resolve( DB_ID.name() );
         PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
         File metadataStore = DatabaseLayout.of( backupDir.toFile() ).metadataStore();
 
@@ -198,7 +199,7 @@ class OnlineBackupIT
                 .withFallbackToFullBackup( true )
                 .withConsistencyCheck( true )
                 .withOutputStream( System.out )
-                .backup( DB_NAME, backupsDir );
+                .backup( DB_ID, backupsDir );
     }
 
     private OnlineBackup.Result executeBackupWithoutFallbackToFull()
@@ -207,7 +208,7 @@ class OnlineBackupIT
                 .withFallbackToFullBackup( false )
                 .withConsistencyCheck( true )
                 .withOutputStream( System.out )
-                .backup( DB_NAME, backupsDir );
+                .backup( DB_ID, backupsDir );
     }
 
     private DbRepresentation backupDbRepresentation()
