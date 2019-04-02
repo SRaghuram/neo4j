@@ -52,6 +52,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     private final File neo4jHome;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
+    private final MemberId memberId;
     private final String boltAdvertisedSocketAddress;
     private final Config memberConfig;
     private ReadReplicaGraphDatabase database;
@@ -68,6 +69,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
             String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
     {
         this.serverId = serverId;
+        this.memberId = new MemberId( UUID.randomUUID() );
 
         String initialHosts = coreMemberDiscoveryAddresses.stream().map( AdvertisedSocketAddress::toString )
                 .collect( joining( "," ) );
@@ -227,9 +229,9 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         updateConfig( CausalClusteringSettings.upstream_selection_strategy, key );
     }
 
-    public MemberId memberId()
+    MemberId memberId()
     {
-        return new MemberId( new UUID( ((long) serverId) << 32, 0 ) );
+        return memberId;
     }
 
     @Override
