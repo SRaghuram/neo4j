@@ -71,14 +71,10 @@ public class DefaultLeaderService implements LeaderService
                 // .filterTopologyByDb( databaseName )
                 .members();
 
-        for ( var memberId : coreServerInfos.keySet() )
-        {
-            if ( coreRoles.get( memberId ) == RoleInfo.LEADER )
-            {
-                return Optional.of( memberId );
-            }
-        }
-        return Optional.empty();
+        return coreServerInfos.keySet()
+                .stream()
+                .filter( memberId -> coreRoles.get( memberId ) == RoleInfo.LEADER )
+                .findFirst();
     }
 
     private Optional<AdvertisedSocketAddress> resolveBoltAddress( MemberId memberId )
