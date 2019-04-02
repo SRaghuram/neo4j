@@ -33,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
@@ -42,6 +41,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toSet;
 
 class ReadReplicaStartupProcess implements Lifecycle
 {
@@ -99,7 +99,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         var dbsToSync =  new HashMap<>( clusteredDatabaseManager.registeredDatabases() );
         int attempt = 0;
-        Set<String> syncedDbs = new HashSet<>();
+        Set<DatabaseId> syncedDbs = new HashSet<>();
         while ( !syncedDbs.equals( dbsToSync.keySet() ) )
         {
             try
@@ -111,8 +111,8 @@ class ReadReplicaStartupProcess implements Lifecycle
                 {
                     debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
                     source = selectionStrategy.bestUpstreamDatabase();
-                    Map<String,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
-                    Set<String> successful = results.entrySet().stream().filter( this::isSuccessful ).map( this::getDbName ).collect( Collectors.toSet() );
+                    Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
+                    Set<DatabaseId> successful = findSuccessfullySyncedDatabaseIds( results );
                     debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
                     syncedDbs.addAll( successful );
                 }
@@ -144,31 +144,31 @@ class ReadReplicaStartupProcess implements Lifecycle
         catchupProcessManager.start();
     }
 
-    private String getDbName( Map.Entry<String,AsyncResult> resultEntry )
+    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( MemberId source,
+            Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
     {
-        return resultEntry.getKey();
-    }
-
-    private boolean isSuccessful( Map.Entry<String,AsyncResult> resultEntry )
-    {
-        return resultEntry.getValue() == AsyncResult.SUCCESS;
-    }
-
-    private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
-    {
-        CompletableFuture<Map<String,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
+        CompletableFuture<Map<DatabaseId,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
         for ( var nameDbEntry : dbsToSync.entrySet() )
         {
-            String dbName = nameDbEntry.getKey().name();
+            DatabaseId databaseId = nameDbEntry.getKey();
             CompletableFuture<AsyncResult> stage =
                     CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue(), source ), executor );
-            combinedFuture = combinedFuture.thenCombineAsync( stage, ( stringAsyncResultMap, asyncResult ) ->
+            combinedFuture = combinedFuture.thenCombineAsync( stage, ( resultsMap, currentResult ) ->
             {
-                stringAsyncResultMap.put( dbName, asyncResult );
-                return stringAsyncResultMap;
+                resultsMap.put( databaseId, currentResult );
+                return resultsMap;
             }, executor );
         }
         return combinedFuture;
+    }
+
+    private static Set<DatabaseId> findSuccessfullySyncedDatabaseIds( Map<DatabaseId,AsyncResult> results )
+    {
+        return results.entrySet()
+                .stream()
+                .filter( entry -> entry.getValue() == AsyncResult.SUCCESS )
+                .map( Map.Entry::getKey )
+                .collect( toSet() );
     }
 
     private AsyncResult doSyncStoreCopyWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext, MemberId source )
