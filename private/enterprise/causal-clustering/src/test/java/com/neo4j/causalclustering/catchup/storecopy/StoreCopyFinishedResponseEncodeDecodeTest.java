@@ -6,16 +6,15 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status;
+import com.neo4j.causalclustering.catchup.v3.storecopy.StoreCopyFinishedResponseDecoderV3;
+import com.neo4j.causalclustering.catchup.v3.storecopy.StoreCopyFinishedResponseEncoderV3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import com.neo4j.causalclustering.catchup.v3.storecopy.StoreCopyFinishedResponseDecoderV3;
-import com.neo4j.causalclustering.catchup.v3.storecopy.StoreCopyFinishedResponseEncoderV3;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 class StoreCopyFinishedResponseEncodeDecodeTest
 {
