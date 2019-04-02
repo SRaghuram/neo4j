@@ -11,7 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, IntermediateCodeGeneration, _}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
@@ -36,7 +37,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
     case e => try {
-      val ir = new IntermediateCodeGeneration(physicalPlan.slotConfigurations(id)).compileExpression(e)
+      val ir = defaultGenerator(physicalPlan.slotConfigurations(id)).compileExpression(e)
       if (ir.nonEmpty) {
         log.debug(s"Compiling expression: $e")
       }
@@ -58,7 +59,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     try {
 
       val slots = physicalPlan.slotConfigurations(id)
-      val compiler = new IntermediateCodeGeneration(slots)
+      val compiler = defaultGenerator(slots)
       val compiled = for {(k, v) <- projections
                           c <- compiler.compileExpression(v)} yield slots.get(k).get.offset -> c
       if (compiled.size < projections.size) None
@@ -89,7 +90,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         None
       } else {
         val slots = physicalPlan.slotConfigurations(id)
-        val compiler = new IntermediateCodeGeneration(slots)
+        val compiler = defaultGenerator(slots)
         val compiled = for {(k, v) <- projections
                             c <- compiler.compileExpression(v)} yield slots(k) -> c
         if (compiled.size < projections.size) None

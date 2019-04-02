@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -30,7 +31,6 @@ import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
-import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
@@ -3390,10 +3390,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   private def nodeValue(properties: MapValue = EMPTY_MAP): NodeValue = {
     graph.inTx {
       val node = createNode()
-      properties.foreach(new ThrowingBiConsumer[String, AnyValue, RuntimeException] {
-        override def accept(t: String, u: AnyValue): Unit = {
-           node.setProperty(t, u.asInstanceOf[Value].asObject())
-        }
+      properties.foreach((t: String, u: AnyValue) => {
+        node.setProperty(t, u.asInstanceOf[Value].asObject())
       })
 
       ValueUtils.fromNodeProxy(node)
@@ -3407,10 +3405,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
     graph.inTx {
       val r: Relationship = relate(graphOps.getNodeById(from.id()), graphOps.getNodeById(to.id()))
-      properties.foreach(new ThrowingBiConsumer[String, AnyValue, RuntimeException] {
-        override def accept(t: String, u: AnyValue): Unit = {
-          r.setProperty(t, u.asInstanceOf[Value].asObject())
-        }
+      properties.foreach((t: String, u: AnyValue) => {
+        r.setProperty(t, u.asInstanceOf[Value].asObject())
       })
       ValueUtils.fromRelationshipProxy(r)
     }
@@ -3572,16 +3568,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
 class CompiledExpressionsIT extends ExpressionsIT {
      override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-      CodeGeneration.compileExpression(new IntermediateCodeGeneration(slots).compileExpression(e).getOrElse(fail()))
+      CodeGeneration.compileExpression(defaultGenerator(slots).compileExpression(e).getOrElse(fail()))
 
      override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection = {
-      val compiler = new IntermediateCodeGeneration(slots)
+      val compiler = defaultGenerator(slots)
       val compiled = for ((s,e) <- projections) yield slots(s).offset -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
       CodeGeneration.compileProjection(compiler.compileProjection(compiled))
     }
 
      override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression = {
-      val compiler = new IntermediateCodeGeneration(slots)
+      val compiler = defaultGenerator(slots)
       val compiled = for ((s,e) <- projections) yield slots(s) -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
       CodeGeneration.compileGroupingExpression(compiler.compileGroupingExpression(compiled))
     }
@@ -3590,27 +3586,16 @@ class CompiledExpressionsIT extends ExpressionsIT {
 class InterpretedExpressionIT extends ExpressionsIT {
   override  def compile(e: Expression, slots: SlotConfiguration): CompiledExpression = {
     val expression = converter(slots, (converter, id) => converter.toCommandExpression(id, e))
-    new CompiledExpression() {
-      override def evaluate(context: ExecutionContext,
-                            dbAccess: DbAccess,
-                            params: Array[AnyValue],
-                            cursors: ExpressionCursors,
-                            expressionVariables: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors, expressionVariables))
-
-    }
+    (context: ExecutionContext, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+     expressionVariables: Array[AnyValue]) => expression(context, state(dbAccess, params, cursors, expressionVariables))
   }
 
   override  def compileProjection(projections: Map[String, Expression],
                                           slots: SlotConfiguration): CompiledProjection = {
     val projector = converter(slots, (converter, id) => converter.toCommandProjection(id, projections))
-    new CompiledProjection {
-      override def project(context: ExecutionContext,
-                           dbAccess: DbAccess,
-                           params: Array[AnyValue],
-                           cursors: ExpressionCursors,
-                           expressionVariables: Array[AnyValue]): Unit = projector.project(context, state(dbAccess, params, cursors, expressionVariables))
-
-    }
+    (context: ExecutionContext, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+     expressionVariables: Array[AnyValue]) => projector
+      .project(context, state(dbAccess, params, cursors, expressionVariables))
   }
 
   override  def compileGroupingExpression(projections: Map[String, Expression],

@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.morsel._
 
 /**
@@ -96,7 +96,7 @@ abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTe
   }
 
   //def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
-  override def genOperate(): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
     //  if (!innerLoop) {

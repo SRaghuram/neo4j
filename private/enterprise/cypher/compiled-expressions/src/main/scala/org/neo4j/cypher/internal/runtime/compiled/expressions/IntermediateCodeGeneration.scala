@@ -38,7 +38,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Produces IntermediateRepresentation from a Cypher Expression
   */
-class IntermediateCodeGeneration(slots: SlotConfiguration) {
+abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
   private val namer = new VariableNamer
 
@@ -1841,21 +1841,27 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       None
   }
 
-  //==================================================================================================
-  // ExecutionContext accessors. Can be overridden to use a different kind of
-  protected def getLongAt(offset: Int): IntermediateRepresentation =
-    invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
-    //load(variableThatMapsToLongSlot(offset))
+  //Extension points
+  protected def getLongAt(offset: Int): IntermediateRepresentation
 
-  protected def getRefAt(offset: Int): IntermediateRepresentation =
+  protected def getRefAt(offset: Int): IntermediateRepresentation
+
+  protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
+
+  protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
+
+  protected final def getLongFromExecutionContext(offset: Int): IntermediateRepresentation =
+    invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
+
+  protected final def getRefFromExecutionContext(offset: Int): IntermediateRepresentation =
     invoke(LOAD_CONTEXT, method[ExecutionContext, AnyValue, Int]("getRefAt"),
            constant(offset))
 
-  protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  protected final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
-  protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  protected final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
   //==================================================================================================
@@ -2527,41 +2533,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
     arrayLoad(load("expressionVariables"), ev.offset)
   }
-
-//  /**
-//    * Generate the code to assign local variables with the following names
-//    * so as to emulate this interface method call:
-//    * This could be replaced by injecting these into the constructor of IntermediateCodeGeneration instead
-//    *
-//    * AnyValue evaluate( ExecutionContext context,
-//    *                    DbAccess dbAccess,
-//    *                    AnyValue[] params,
-//    *                    ExpressionCursors cursors,
-//    *                    AnyValue[] expressionVariables );
-//    */
-//  def prepareCompiledExpressionExecution(//loadContext: IntermediateRepresentation,
-//                                         dbAccess: IntermediateRepresentation,
-//                                         params: IntermediateRepresentation,
-//                                         cursors: IntermediateRepresentation,
-//                                         expressionVariable: IntermediateRepresentation): Unit = {
-//    block(
-//      //declareAndAssignVariable("context", loadContext),
-//      declareAndAssignVariable("dbAccess", dbAccess),
-//      declareAndAssignVariable("params", params),
-//      declareAndAssignVariable("cursors", cursors),
-//      declareAndAssignVariable("expressionVariable", expressionVariable)
-//    )
-//  }
-//
-//  private def declareAndAssignVariable[TYPE](name: String, valueExpression: IntermediateRepresentation): IntermediateRepresentation = {
-//    block(
-//      declare[TYPE](name),
-//      assign(name, valueExpression)
-//    )
-//  }
 }
 
 object IntermediateCodeGeneration {
+  def defaultGenerator(slots: SlotConfiguration): IntermediateCodeGeneration = new DefaultIntermediateCodeGeneration(slots)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
   private val DB_ACCESS = load("dbAccess")
   private val CURSORS = load("cursors")
@@ -2581,4 +2556,19 @@ object IntermediateCodeGeneration {
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
+}
+
+private class DefaultIntermediateCodeGeneration(slots: SlotConfiguration) extends IntermediateCodeGeneration(slots) {
+
+  override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
+
+  override protected def getRefAt(offset: Int): IntermediateRepresentation = getRefFromExecutionContext(offset)
+
+  override protected def setRefAt(offset: Int,
+                                  value: IntermediateRepresentation): IntermediateRepresentation =
+    setRefInExecutionContext(offset, value)
+
+  override protected def setLongAt(offset: Int,
+                                   value: IntermediateRepresentation): IntermediateRepresentation =
+    setLongInExecutionContext(offset, value)
 }

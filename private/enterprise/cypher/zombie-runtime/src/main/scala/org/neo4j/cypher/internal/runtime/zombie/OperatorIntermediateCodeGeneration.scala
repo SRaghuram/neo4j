@@ -65,7 +65,7 @@ class OperatorIntermediateCodeGeneration(slots: SlotConfiguration)
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
-      assign(local, super.getLongAt(offset))
+      assign(local, getLongFromExecutionContext(offset))
     }
     load(local)
   }
@@ -74,7 +74,7 @@ class OperatorIntermediateCodeGeneration(slots: SlotConfiguration)
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
-      assign(local, super.getRefAt(offset))
+      assign(local, getRefFromExecutionContext(offset))
     }
     load(local)
   }
@@ -97,10 +97,10 @@ class OperatorIntermediateCodeGeneration(slots: SlotConfiguration)
 
   def writeLocalsToSlots(): IntermediateRepresentation = {
     val writeLongs = locals.getAllLocalsForLongSlots.map { case (offset, local) =>
-      super.setLongAt(offset, load(local))
+      setLongInExecutionContext(offset, load(local))
     }
     val writeRefs = locals.getAllLocalsForRefSlots.map { case (offset, local) =>
-      super.setRefAt(offset, load(local))
+      setRefInExecutionContext(offset, load(local))
     }
     block(writeLongs ++ writeRefs: _*)
   }
