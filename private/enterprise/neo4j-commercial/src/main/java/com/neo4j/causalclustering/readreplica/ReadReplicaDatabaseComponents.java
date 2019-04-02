@@ -43,7 +43,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     private final DatabaseTransactionStats transactionMonitor;
     private final ReadReplicaEditionModule editionModule;
 
-    public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, String databaseName )
+    public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, DatabaseId databaseId )
     {
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
@@ -55,7 +55,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
                 .withFileSystem( globalModule.getFileSystem() )
                 .build();
 
-        this.idContext = idContextFactory.createIdContext( new DatabaseId( databaseName ) );
+        this.idContext = idContextFactory.createIdContext( databaseId );
         this.tokenHolders = new TokenHolders(
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_LABEL ),

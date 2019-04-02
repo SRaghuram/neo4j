@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface CoreStateRepository
 {
     void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot );
@@ -29,5 +31,5 @@ public interface CoreStateRepository
 
     Map<String,DatabaseCoreStateComponents> getAllDatabaseStates();
 
-    Optional<DatabaseCoreStateComponents> getDatabaseState( String databaseName );
+    Optional<DatabaseCoreStateComponents> getDatabaseState( DatabaseId databaseId );
 }

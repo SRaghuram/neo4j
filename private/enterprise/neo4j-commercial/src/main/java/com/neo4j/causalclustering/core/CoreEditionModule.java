@@ -316,7 +316,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     @Override
     public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
     {
-        return new CoreDatabaseComponents( globalModule, this, databaseId.name() );
+        return new CoreDatabaseComponents( globalModule, this, databaseId );
     }
 
     private static MessageLogger<MemberId> createMessageLogger( Config config, LifeSupport life, MemberId myself )

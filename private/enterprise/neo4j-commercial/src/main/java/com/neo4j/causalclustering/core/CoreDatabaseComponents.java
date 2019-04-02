@@ -16,6 +16,7 @@ import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.AccessCapability;
@@ -24,9 +25,6 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.logging.Log;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.token.TokenHolders;
 
 public class CoreDatabaseComponents implements EditionDatabaseComponents
@@ -36,12 +34,12 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseTransactionStats transactionMonitor;
 
-    CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, String databaseName )
+    CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, DatabaseId databaseId )
     {
         this.editionModule = editionModule;
         CoreStateService coreStateService = editionModule.coreStateComponents();
-        databaseState = coreStateService.getDatabaseState( databaseName )
-                .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
+        databaseState = coreStateService.getDatabaseState( databaseId )
+                .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId.name() ) ) );
         statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), globalModule.getGlobalConfig(),
                 globalModule.getLogService() ).select();
         transactionMonitor = editionModule.createTransactionMonitor();

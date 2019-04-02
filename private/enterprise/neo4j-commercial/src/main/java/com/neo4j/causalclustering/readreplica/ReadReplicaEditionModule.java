@@ -179,7 +179,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     @Override
     public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
     {
-        return new ReadReplicaDatabaseComponents( globalModule, this, databaseId.name() );
+        return new ReadReplicaDatabaseComponents( globalModule, this, databaseId );
     }
 
     @Override

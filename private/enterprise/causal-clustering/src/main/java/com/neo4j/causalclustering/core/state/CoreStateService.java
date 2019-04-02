@@ -261,9 +261,9 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
             IdTypeConfigurationProvider idTypeConfigurationProvider, DatabaseId databaseId )
     {
         Function<String,ReplicatedIdRangeAcquirer> rangeAcquirerFn =
-                dbName -> getDatabaseState( dbName )
+                dbName -> getDatabaseState( new DatabaseId( dbName ) )
                         .map( DatabaseCoreStateComponents::rangeAcquirer )
-                        .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId ) ) );
+                        .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId.name() ) ) );
 
         return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseId.name(), panicker );
     }
@@ -340,9 +340,9 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     }
 
     @Override
-    public Optional<DatabaseCoreStateComponents> getDatabaseState( String databaseName )
+    public Optional<DatabaseCoreStateComponents> getDatabaseState( DatabaseId databaseId )
     {
-        return Optional.ofNullable( dbStateMap.get( databaseName ) );
+        return Optional.ofNullable( dbStateMap.get( databaseId.name() ) );
     }
 
     @Override
