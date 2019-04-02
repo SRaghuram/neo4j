@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -221,7 +221,7 @@ class TxPullerTest
 
     private static TxPullRequestContext getContext( RequiredTransactions requiredRange )
     {
-        StoreId storeId = new StoreId( 1, 2, 3, 4 );
+        StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
         return TxPullRequestContext.createContextFromStoreCopy( requiredRange, storeId );
     }
 

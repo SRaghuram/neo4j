@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
@@ -20,6 +19,7 @@ import org.neo4j.kernel.impl.transaction.log.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.storageengine.api.StoreId;
 
 public class TxPullResponseDecoder extends ByteToMessageDecoder
 {

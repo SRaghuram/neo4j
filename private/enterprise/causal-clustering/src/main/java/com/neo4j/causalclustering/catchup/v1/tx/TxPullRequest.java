@@ -6,10 +6,11 @@
 package com.neo4j.causalclustering.catchup.v1.tx;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.util.Objects;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 

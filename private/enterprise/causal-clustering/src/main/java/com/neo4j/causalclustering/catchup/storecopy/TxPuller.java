@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.net.ConnectException;
 import java.time.Clock;
@@ -23,6 +22,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;

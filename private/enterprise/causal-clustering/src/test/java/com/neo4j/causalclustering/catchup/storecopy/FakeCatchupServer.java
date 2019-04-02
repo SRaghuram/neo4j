@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.rule.TestDirectory;
 
 class FakeCatchupServer implements CatchupServerHandler
@@ -211,6 +211,6 @@ class FakeCatchupServer implements CatchupServerHandler
 
     public StoreId getStoreId()
     {
-        return new StoreId( 1, 2, 3, 4 );
+        return new StoreId( 1, 2, 3, 4, 5 );
     }
 }

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.tx;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -42,6 +41,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.time.FakeClock;
 
@@ -68,7 +68,7 @@ class TxPullRequestHandlerTest
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
-    private StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private Database database = mock( Database.class );
     private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
             new DatabaseId( DEFAULT_DATABASE_NAME ),
@@ -90,7 +90,7 @@ class TxPullRequestHandlerTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
-        when( database.getStoreId() ).thenReturn( toKernelStoreId( storeId ) );
+        when( database.getStoreId() ).thenReturn( storeId );
         txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
     }
 
@@ -164,10 +164,10 @@ class TxPullRequestHandlerTest
     void shouldNotStreamTxEntriesIfStoreIdMismatches() throws Exception
     {
         // given
-        StoreId serverStoreId = new StoreId( 1, 2, 3, 4 );
-        StoreId clientStoreId = new StoreId( 5, 6, 7, 8 );
+        StoreId serverStoreId = new StoreId( 1, 2, 3, 4, 5 );
+        StoreId clientStoreId = new StoreId( 6, 7, 8, 9, 10 );
 
-        when( database.getStoreId() ).thenReturn( toKernelStoreId( serverStoreId ) );
+        when( database.getStoreId() ).thenReturn( serverStoreId );
 
         TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
@@ -262,12 +262,6 @@ class TxPullRequestHandlerTest
         return new CommittedTransactionRepresentation(
                 new LogEntryStart( toIntExact( id ), toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
                 tx, new LogEntryCommit( id, id ) );
-    }
-
-    private static org.neo4j.storageengine.api.StoreId toKernelStoreId( StoreId storeId )
-    {
-        return new org.neo4j.storageengine.api.StoreId( storeId.getCreationTime(), storeId.getRandomId(), -1, storeId.getUpgradeTime(),
-                storeId.getUpgradeId() );
     }
 
     private static TransactionCursor txCursor( CommittedTransactionRepresentation... transactions )

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -31,7 +30,7 @@ public class GetStoreIdRequestHandler extends SimpleChannelInboundHandler<GetSto
     protected void channelRead0( ChannelHandlerContext ctx, GetStoreIdRequest msg )
     {
         ctx.writeAndFlush( ResponseMessageType.STORE_ID );
-        ctx.writeAndFlush( new StoreId( db.getStoreId() ) );
+        ctx.writeAndFlush( db.getStoreId() );
         protocol.expect( State.MESSAGE_TYPE );
     }
 }

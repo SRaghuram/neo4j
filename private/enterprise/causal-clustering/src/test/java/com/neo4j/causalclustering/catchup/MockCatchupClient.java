@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 
@@ -27,6 +26,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.concurrent.Futures;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;

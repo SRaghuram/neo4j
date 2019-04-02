@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
@@ -48,6 +47,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
@@ -95,7 +95,7 @@ class StoreCopyClientTest
     // params
     private final AdvertisedSocketAddress expectedAdvertisedAddress = new AdvertisedSocketAddress( "host", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( expectedAdvertisedAddress );
-    private final StoreId expectedStoreId = new StoreId( 1, 2, 3, 4 );
+    private final StoreId expectedStoreId = new StoreId( 1, 2, 3, 4, 5 );
     private final StoreFileStreamProvider expectedStoreFileStream = mock( StoreFileStreamProvider.class );
 
     // helpers
@@ -157,8 +157,8 @@ class StoreCopyClientTest
         // given
         mockClient( protocol );
         String altDbName = "alternative";
-        StoreId defaultDbStoreId = new StoreId( 6, 3, 2, 6 );
-        StoreId altDbStoreId = new StoreId( 4, 6,1,9 );
+        StoreId defaultDbStoreId = new StoreId( 6, 3, 1, 2, 6 );
+        StoreId altDbStoreId = new StoreId( 4, 6, 3, 1, 9 );
         Map<GetStoreIdRequest,StoreId> storeIdMap = new HashMap<>();
         storeIdMap.put( new GetStoreIdRequest( DEFAULT_DATABASE_NAME ), defaultDbStoreId );
         storeIdMap.put( new GetStoreIdRequest( altDbName ), altDbStoreId );

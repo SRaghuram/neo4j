@@ -9,12 +9,13 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import org.neo4j.storageengine.api.StoreId;
 
 /**
  * This class defines a client which "speaks" the various versions of the Catchup protocol. Basically wraps a builder for {@link CatchupProtocolMessage}s.

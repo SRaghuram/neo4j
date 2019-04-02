@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup.v2.storecopy;
 
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
@@ -23,6 +22,7 @@ import java.util.List;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.storageengine.api.StoreId;
 
 public class GetIndexFilesRequestMarshalV2 extends SafeChannelMarshal<GetIndexFilesRequest>
 {

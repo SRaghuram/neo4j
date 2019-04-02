@@ -21,7 +21,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.junit.jupiter.api.Assertions;
@@ -45,6 +44,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -72,7 +72,7 @@ public class ReadReplicaStartupProcessTest
     private Map<String,DatabaseCatchupComponents> dbCatchupComponents = new HashMap<>();
     private MemberId memberId = new MemberId( UUID.randomUUID() );
     private AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "127.0.0.1", 123 );
-    private StoreId otherStoreId = new StoreId( 5, 6, 7, 8 );
+    private StoreId otherStoreId = new StoreId( 5, 6, 7, 8, 9 );
 
     @BeforeEach
     void commonMocking() throws CatchupAddressResolutionException
@@ -122,12 +122,11 @@ public class ReadReplicaStartupProcessTest
     {
         Random rng = new Random( databaseName.hashCode() );
 
-        org.neo4j.storageengine.api.StoreId kernelStoreId = new org.neo4j.storageengine.api.StoreId( rng.nextLong(), rng.nextLong(),
-                rng.nextLong(), rng.nextLong(), rng.nextLong() );
+        StoreId storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( databaseName + "-store-dir" ) );
         return clusteredDatabaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( databaseName )
-                .withKernelStoreId( kernelStoreId )
+                .withStoreId( storeId )
                 .withDatabaseLayout( databaseLayout )
                 .register();
     }

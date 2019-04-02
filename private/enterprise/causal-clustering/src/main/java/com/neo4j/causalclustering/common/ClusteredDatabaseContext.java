@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +14,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 /**
  * Instances implementing this interface represent individual clustered databases in Neo4j.

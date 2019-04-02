@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.eclipse.collections.api.iterator.LongIterator;
 
 import java.io.File;
@@ -28,6 +27,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;

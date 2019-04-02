@@ -14,6 +14,7 @@ import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.graphdb.Resource;
 import org.neo4j.kernel.database.Database;
@@ -51,7 +52,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
                 return;
             }
 
-            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.storeId(), db ) )
+            if ( !Objects.equals( prepareStoreCopyRequest.storeId(), db.getStoreId() ) )
             {
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }

@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +32,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;

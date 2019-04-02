@@ -5,12 +5,13 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+
+import org.neo4j.storageengine.api.StoreId;
 
 public class GetStoreIdResponseEncoder extends MessageToByteEncoder<StoreId>
 {

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
@@ -27,7 +26,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -44,6 +42,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreFileMetadata;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -70,7 +69,7 @@ class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
     private static final String UNKNOWN_DB_NAME = "unknown.db";
-    private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 3131, 45678 );
+    private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 1122, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
     private static final String PROP_NAME = "name";

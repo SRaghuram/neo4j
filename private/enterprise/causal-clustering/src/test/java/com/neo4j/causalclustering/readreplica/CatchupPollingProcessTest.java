@@ -22,7 +22,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,6 +37,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
@@ -70,7 +70,7 @@ public class CatchupPollingProcessTest
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
     private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-    private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
     private final MockClientResponses clientResponses = responses();

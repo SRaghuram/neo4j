@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
 
@@ -16,6 +15,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 public class StoreCopyProcess
 {

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -27,6 +26,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -40,8 +40,8 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 //TODO: Update with some test cases for issues related to databaseName
 public class PrepareStoreCopyRequestHandlerTest
 {
-    private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
-    private static final StoreId STORE_ID_MISMATCHING = new StoreId( 5000, 6000, 7000, 8000 );
+    private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
+    private static final StoreId STORE_ID_MISMATCHING = new StoreId( 6000, 7000, 8000, 9000, 10000 );
 
     private final ChannelHandlerContext channelHandlerContext = mock( ChannelHandlerContext.class );
     private final CheckPointer checkPointer = mock( CheckPointer.class );
@@ -161,7 +161,7 @@ public class PrepareStoreCopyRequestHandlerTest
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.PREPARE_STORE_COPY );
-        when( db.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
+        when( db.getStoreId() ).thenReturn( STORE_ID_MATCHING );
 
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );

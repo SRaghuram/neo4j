@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +21,7 @@ import java.io.IOException;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +54,7 @@ public class BackupDelegatorTest
     {
         // given
         AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4j.com", 5432 );
-        StoreId expectedStoreId = new StoreId( 7, 2, 5, 98 );
+        StoreId expectedStoreId = new StoreId( 7, 2, 3, 5, 98 );
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "." ) );
 
         // when
@@ -92,7 +92,7 @@ public class BackupDelegatorTest
         AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4.com", 935 );
 
         // and
-        StoreId expectedStoreId = new StoreId( 6, 2, 9, 3 );
+        StoreId expectedStoreId = new StoreId( 6, 2, 7, 9, 3 );
         when( storeCopyClient.fetchStoreId( fromAddress ) ).thenReturn( expectedStoreId );
 
         // when
@@ -107,7 +107,7 @@ public class BackupDelegatorTest
             throws StoreCopyFailedException, CatchupAddressResolutionException
     {
         // given
-        StoreId storeId = new StoreId( 92, 5, 7, 32 );
+        StoreId storeId = new StoreId( 92, 5, 12, 7, 32 );
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "." ) );
 
         // when

@@ -6,9 +6,10 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.util.Objects;
+
+import org.neo4j.storageengine.api.StoreId;
 
 public abstract class StoreCopyRequest extends CatchupProtocolMessage
 {

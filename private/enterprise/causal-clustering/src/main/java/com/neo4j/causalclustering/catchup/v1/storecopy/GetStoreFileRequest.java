@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup.v1.storecopy;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.StoreCopyRequest;
@@ -18,6 +17,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import java.io.File;
 import java.util.List;
 import java.util.Objects;
+
+import org.neo4j.storageengine.api.StoreId;
 
 public class GetStoreFileRequest extends StoreCopyRequest
 {

@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
@@ -39,6 +38,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;

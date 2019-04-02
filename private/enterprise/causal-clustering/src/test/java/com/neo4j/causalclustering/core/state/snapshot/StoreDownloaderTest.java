@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -22,6 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.junit.Assert.assertFalse;
@@ -41,7 +41,7 @@ public class StoreDownloaderTest
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
     private final DatabaseId databaseId = new DatabaseId( "target" );
-    private final org.neo4j.storageengine.api.StoreId storeId = randomKernelStoreId();
+    private final StoreId storeId = randomStoreId();
 
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
     private final CatchupComponentsRepository components = new CatchupComponentsRepository( databaseManager );
@@ -54,7 +54,7 @@ public class StoreDownloaderTest
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, true, storeId );
 
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
-        StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
+        StoreId mismatchedStoreId = randomStoreId();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
@@ -74,7 +74,7 @@ public class StoreDownloaderTest
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
 
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
-        StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
+        StoreId mismatchedStoreId = randomStoreId();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
@@ -141,13 +141,13 @@ public class StoreDownloaderTest
         }
     }
 
-    private ClusteredDatabaseContext mockLocalDatabase( DatabaseId databaseId, boolean isEmpty, org.neo4j.storageengine.api.StoreId storeId )
+    private ClusteredDatabaseContext mockLocalDatabase( DatabaseId databaseId, boolean isEmpty, StoreId storeId )
     {
         StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig()
                 .withDatabaseId( databaseId )
                 .withCatchupComponentsFactory( ignored ->
                         new CatchupComponentsRepository.DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) )
-                .withKernelStoreId( storeId )
+                .withStoreId( storeId )
                 .register();
 
         db.setEmpty( isEmpty );
@@ -159,7 +159,7 @@ public class StoreDownloaderTest
             throws StoreIdDownloadFailedException
     {
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
-        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( new StoreId( storeId ) );
+        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
         return remoteStore;
     }
 
@@ -167,15 +167,15 @@ public class StoreDownloaderTest
             throws StoreIdDownloadFailedException, StoreCopyFailedException, IOException
     {
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
-        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( new StoreId( storeId ) );
+        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
         doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
         return remoteStore;
     }
 
-    private org.neo4j.storageengine.api.StoreId randomKernelStoreId()
+    private static StoreId randomStoreId()
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
-        return new org.neo4j.storageengine.api.StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
+        return new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
     }
 
 }

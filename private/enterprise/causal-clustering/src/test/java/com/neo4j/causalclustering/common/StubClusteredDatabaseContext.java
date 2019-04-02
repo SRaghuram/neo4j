@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
@@ -21,6 +20,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 /**
  * StubClusteredDatabaseContext for testing.
@@ -51,7 +51,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
         this.logProvider = logProvider;
         this.isAvailable = isAvailable;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
-        storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );
+        storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = monitors;
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }

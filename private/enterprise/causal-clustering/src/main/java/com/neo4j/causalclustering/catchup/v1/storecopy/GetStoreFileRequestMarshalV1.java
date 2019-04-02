@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup.v1.storecopy;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 
@@ -15,6 +14,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.string.UTF8;
 
 public class GetStoreFileRequestMarshalV1 extends SafeChannelMarshal<GetStoreFileRequest>

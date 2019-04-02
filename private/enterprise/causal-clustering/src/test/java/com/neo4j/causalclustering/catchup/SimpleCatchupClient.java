@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyResponseAdaptors;
 import com.neo4j.causalclustering.catchup.storecopy.StreamToDiskProvider;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
 
@@ -24,6 +23,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 /**
@@ -55,7 +55,7 @@ class SimpleCatchupClient implements AutoCloseable
         this.databaseName = databaseName;
 
         from = getCatchupServerAddress();
-        correctStoreId = getStoreIdFromKernelStoreId( graphDb );
+        correctStoreId = graphDb.storeId();
         jobScheduler = new ThreadPoolJobScheduler();
         clientPageCache = createPageCache();
         streamToDiskProvider = new StreamToDiskProvider( temporaryDirectory, fsa, new Monitors() );
@@ -100,7 +100,7 @@ class SimpleCatchupClient implements AutoCloseable
     public StoreCopyFinishedResponse requestIndexSnapshot( long indexId ) throws Exception
     {
         long lastCheckPointedTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
-        StoreId storeId = getStoreIdFromKernelStoreId( graphDb );
+        StoreId storeId = graphDb.storeId();
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
 
         return catchUpClientFactory.getClient( from, log )
@@ -120,12 +120,6 @@ class SimpleCatchupClient implements AutoCloseable
     private static CheckPointer getCheckPointer( GraphDatabaseAPI graphDb )
     {
         return graphDb.getDependencyResolver().resolveDependency( CheckPointer.class );
-    }
-
-    private StoreId getStoreIdFromKernelStoreId( GraphDatabaseAPI graphDb )
-    {
-        org.neo4j.storageengine.api.StoreId storeId = graphDb.storeId();
-        return new StoreId( storeId.getCreationTime(), storeId.getRandomId(), storeId.getUpgradeTime(), storeId.getUpgradeId() );
     }
 
     private AdvertisedSocketAddress getCatchupServerAddress()

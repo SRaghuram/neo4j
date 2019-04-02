@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.tx;
 import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBufAllocator;
 import org.junit.Test;
 
@@ -19,6 +18,7 @@ import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.logging.NullLog;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;

@@ -8,7 +8,6 @@ package org.neo4j.backup.impl;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -18,6 +17,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 

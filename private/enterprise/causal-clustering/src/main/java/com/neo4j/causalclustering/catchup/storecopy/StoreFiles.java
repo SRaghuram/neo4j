@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.identity.StoreId;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -19,6 +17,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory.TEMP_COPY_DIRECTORY_NAME;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
@@ -104,8 +103,6 @@ public class StoreFiles
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( fs, pageCache, databaseLayout );
-        org.neo4j.storageengine.api.StoreId kernelStoreId = selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ).storeId( dependencies );
-        return new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(),
-                kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );
+        return selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ).storeId( dependencies );
     }
 }

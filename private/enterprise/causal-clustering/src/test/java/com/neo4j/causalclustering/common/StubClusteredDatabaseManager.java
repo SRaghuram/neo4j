@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.helpers.FakeJobScheduler;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -28,6 +27,7 @@ import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -150,11 +150,11 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         if ( config.storeId != null )
         {
             when( db.getStoreId() ).thenReturn( config.storeId );
-            dbContext.setStoreId( new StoreId( config.storeId ) );
+            dbContext.setStoreId( config.storeId );
         }
         else
         {
-            when( db.getStoreId() ).thenReturn( org.neo4j.storageengine.api.StoreId.DEFAULT );
+            when( db.getStoreId() ).thenReturn( StoreId.DEFAULT );
         }
         return dbContext;
     }
@@ -167,7 +167,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         private BooleanSupplier isAvailable = StubClusteredDatabaseManager.this::globalAvailability;
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.DatabaseCatchupComponents.class );
         private Monitors monitors;
-        private org.neo4j.storageengine.api.StoreId storeId;
+        private StoreId storeId;
         private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();
 
@@ -190,7 +190,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
             return withDatabaseId( new DatabaseId( databaseName ) );
         }
 
-        public DatabaseContextConfig withKernelStoreId( org.neo4j.storageengine.api.StoreId storeId )
+        public DatabaseContextConfig withStoreId( StoreId storeId )
         {
             this.storeId = storeId;
             return this;

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
@@ -17,6 +16,7 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -29,7 +29,7 @@ public class TxPullResponseEncodeDecodeTest
     {
         // given
         EmbeddedChannel channel = new EmbeddedChannel( new TxPullResponseEncoder(), new TxPullResponseDecoder() );
-        TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3, 4 ), newCommittedTransactionRepresentation() );
+        TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3, 4, 5 ), newCommittedTransactionRepresentation() );
 
         // when
         channel.writeOutbound( sent );

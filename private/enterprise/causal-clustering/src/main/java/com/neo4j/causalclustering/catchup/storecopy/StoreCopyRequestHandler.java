@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -62,11 +63,11 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         try
         {
             CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
-            if ( !DataSourceChecks.hasSameStoreId( request.expectedStoreId(), db ) )
+            if ( !Objects.equals( request.expectedStoreId(), db.getStoreId() ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
             }
-            else if ( !DataSourceChecks.isTransactionWithinReach( request.requiredTransactionId(), checkPointer ) )
+            else if ( checkPointer.lastCheckPointedTransactionId() < request.requiredTransactionId() )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
                 tryAsyncCheckpoint( db, checkPointer );

@@ -7,11 +7,12 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequestMarshalV1;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -27,7 +28,7 @@ public class GetIndexFilesRequestMarshalTest
                 new GetIndexFilesRequestMarshalV1.Decoder( DEFAULT_DATABASE_NAME ) );
     }
 
-    private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4 );
+    private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4, 5 );
     private static final long exepctedIndexId = 13;
     private static final Long expectedLastTransaction = 1234L;
 

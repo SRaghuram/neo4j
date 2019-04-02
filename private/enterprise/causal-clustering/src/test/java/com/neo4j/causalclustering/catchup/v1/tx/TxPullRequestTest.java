@@ -5,9 +5,10 @@
  */
 package com.neo4j.causalclustering.catchup.v1.tx;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;

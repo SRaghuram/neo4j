@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +22,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -324,12 +324,13 @@ class StoreFilesTest
         ThreadLocalRandom random = ThreadLocalRandom.current();
         long creationTime = random.nextLong();
         long randomId = random.nextLong();
+        long storeVersion = random.nextLong();
         long upgradeTime = random.nextLong();
         long upgradeId = random.nextLong();
 
         MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime );
         MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId );
-        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, random.nextLong() );
+        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, storeVersion );
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime );
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId );
 
@@ -337,7 +338,7 @@ class StoreFilesTest
 
         StoreId storeId = storeFiles.readStoreId( databaseLayout );
 
-        assertEquals( new StoreId( creationTime, randomId, upgradeTime, upgradeId ), storeId );
+        assertEquals( new StoreId( creationTime, randomId, storeVersion, upgradeTime, upgradeId ), storeId );
     }
 
     @Test

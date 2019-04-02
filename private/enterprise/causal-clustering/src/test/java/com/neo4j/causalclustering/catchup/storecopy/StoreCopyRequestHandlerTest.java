@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.helpers.FakeJobScheduler;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +31,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,8 +44,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 //TODO: Update tests with database name related cases.
 class StoreCopyRequestHandlerTest
 {
-    private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1 );
-    private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
+    private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1, 1 );
+    private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
     private final DefaultFileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction();
 
     private final Database database = mock( Database.class );
@@ -64,7 +64,7 @@ class StoreCopyRequestHandlerTest
                         fileSystemAbstraction, NullLogProvider.getInstance() );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
-        when( database.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
+        when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
         when( database.getScheduler() ).thenReturn( jobScheduler );

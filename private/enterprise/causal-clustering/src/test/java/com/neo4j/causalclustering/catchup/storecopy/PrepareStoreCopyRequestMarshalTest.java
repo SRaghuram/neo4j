@@ -8,11 +8,12 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequestDecoder;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequestEncoder;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -31,7 +32,7 @@ public class PrepareStoreCopyRequestMarshalTest
     public void storeIdIsTransmitted()
     {
         // given store id requests transmit store id
-        StoreId storeId = new StoreId( 1, 2, 3, 4 );
+        StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
         PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, DEFAULT_DATABASE_NAME );
 
         // when transmitted
@@ -42,7 +43,7 @@ public class PrepareStoreCopyRequestMarshalTest
         assertEquals( prepareStoreCopyRequest.storeId(), prepareStoreCopyRequestRead.storeId() );
     }
 
-    public static <E> void sendToChannel( E e, EmbeddedChannel embeddedChannel )
+    private static <E> void sendToChannel( E e, EmbeddedChannel embeddedChannel )
     {
         embeddedChannel.writeOutbound( e );
 

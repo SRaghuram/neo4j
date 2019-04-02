@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -22,6 +21,7 @@ import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_INVALID_REQUEST;
@@ -104,7 +104,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }
         StoreId expectedStoreId = msg.expectedStoreId();
-        StoreId localStoreId = new StoreId( db.getStoreId() );
+        StoreId localStoreId = db.getStoreId();
         if ( !localStoreId.equals( expectedStoreId ) )
         {
             log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different from this machine with %s", firstTxId,

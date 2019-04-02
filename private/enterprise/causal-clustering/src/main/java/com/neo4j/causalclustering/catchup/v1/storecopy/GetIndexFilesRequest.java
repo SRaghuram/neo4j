@@ -6,10 +6,11 @@
 package com.neo4j.causalclustering.catchup.v1.storecopy;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.StoreCopyRequest;
 
 import java.util.Objects;
+
+import org.neo4j.storageengine.api.StoreId;
 
 public class GetIndexFilesRequest extends StoreCopyRequest
 {

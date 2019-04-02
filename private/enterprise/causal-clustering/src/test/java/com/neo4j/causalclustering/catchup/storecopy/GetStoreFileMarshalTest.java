@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -19,6 +18,8 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -44,7 +45,7 @@ public class GetStoreFileMarshalTest
         embeddedChannel = new EmbeddedChannel( encoder, decoder );
     }
 
-    private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4 );
+    private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4, 5 );
     private static final File expectedFile = new File( "abc.123" );
     private static final Long expectedLastTransaction = 1234L;
 

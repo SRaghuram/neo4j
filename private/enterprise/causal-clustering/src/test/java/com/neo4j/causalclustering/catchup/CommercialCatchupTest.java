@@ -22,7 +22,6 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInst
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -37,9 +36,11 @@ import java.util.function.Function;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -75,8 +76,9 @@ abstract class CommercialCatchupTest
     {
         pipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
         databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseName( DEFAULT_DB )
-                .withKernelStoreId( org.neo4j.storageengine.api.StoreId.DEFAULT )
+        databaseManager.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DB )
+                .withStoreId( StoreId.DEFAULT )
                 .register();
         serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fsa );
     }
@@ -117,8 +119,7 @@ abstract class CommercialCatchupTest
                         responseHandled = true;
                         assertEquals( databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DB ) )
                                 .map( DatabaseContext::database )
-                                .map( db -> new StoreId( db.getStoreId().getCreationTime(), db.getStoreId().getRandomId(), db.getStoreId().getUpgradeTime(),
-                                        db.getStoreId().getUpgradeId() ) )
+                                .map( Database::getStoreId )
                                 .orElseThrow( IllegalStateException::new ), response.storeId() );
                     }
                 } );

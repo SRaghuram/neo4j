@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup.tx;
 
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -16,6 +15,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 public class TxPullClient
 {

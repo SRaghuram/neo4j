@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -32,6 +31,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
@@ -52,7 +52,7 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 class RemoteStoreTest
 {
-    private StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
     private DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "destination" ) );
     private CatchupAddressProvider catchupAddressProvider = fromSingleAddress( localhost );

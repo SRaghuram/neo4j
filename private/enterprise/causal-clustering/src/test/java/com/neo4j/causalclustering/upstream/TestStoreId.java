@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream;
 
-import com.neo4j.causalclustering.identity.StoreId;
-
-import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -19,13 +16,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TIME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_ID;
 
 public class TestStoreId
 {
@@ -56,13 +50,6 @@ public class TestStoreId
 
     private static StoreId doReadStoreId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        File metadataStore = databaseLayout.metadataStore();
-
-        long creationTime = MetaDataStore.getRecord( pageCache, metadataStore, TIME );
-        long randomNumber = MetaDataStore.getRecord( pageCache, metadataStore, RANDOM_NUMBER );
-        long upgradeTime = MetaDataStore.getRecord( pageCache, metadataStore, UPGRADE_TIME );
-        long upgradeId = MetaDataStore.getRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID );
-
-        return new StoreId( creationTime, randomNumber, upgradeTime, upgradeId );
+        return MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore() );
     }
 }

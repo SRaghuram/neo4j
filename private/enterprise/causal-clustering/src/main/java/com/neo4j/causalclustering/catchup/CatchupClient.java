@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
@@ -29,6 +28,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.neo4j.logging.Log;
+import org.neo4j.storageengine.api.StoreId;
 
 class CatchupClient implements VersionedCatchupClients
 {
