@@ -103,7 +103,7 @@ public class PersistentSnapshotDownloader implements Runnable
                 if ( snapshot.isPresent() )
                 {
                     snapshots.put( databaseName, snapshot.get() );
-                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseName, snapshot ) );
+                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseName, snapshot.get() ) );
                 }
                 else
                 {
