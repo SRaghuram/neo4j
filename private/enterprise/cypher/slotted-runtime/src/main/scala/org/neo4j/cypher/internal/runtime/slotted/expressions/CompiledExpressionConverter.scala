@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileClass
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
@@ -96,8 +97,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         if (compiled.size < projections.size) None
         else {
           log.debug(s" Compiling grouping expressions: $projections")
+          val declaration = compileGroupingClassDeclaration(compiler.compileGroupingExpression(compiled))
           Some(CompileWrappingDistinctGroupingExpression(
-            compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
+            compileClass(declaration).getDeclaredConstructor().newInstance().asInstanceOf[CompiledGroupingExpression],
+            projections.isEmpty))
         }
       }
     }
@@ -119,6 +122,105 @@ object CompiledExpressionConverter {
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
     case s: SlottedQueryState => s.params
     case _ => throw new InternalException(s"Expected a slotted query state")
+  }
+
+  def compileExpressionClassDeclaration(expression: IntermediateExpression): ClassDeclaration = {
+      val declarations = block(expression.variables.distinct.map { v =>
+        declareAndAssign(v.typ, v.name, v.value)
+      }: _*)
+
+      ClassDeclaration(
+        PACKAGE_NAME,
+        className(),
+        None,
+        Seq(typeRefOf[CompiledExpression]),
+        Seq.empty,
+        initializationCode = noop(),
+        fields = expression.fields,
+        methods = Seq(
+          MethodDeclaration("evaluate",
+                            owner = typeRefOf[CompiledExpression],
+                            returnType = typeRefOf[AnyValue],
+                            parameters = Seq(param[ExecutionContext]("context"),
+                                             param[DbAccess]("dbAccess"),
+                                             param[Array[AnyValue]]("params"),
+                                             param[ExpressionCursors]("cursors"),
+                                             param[Array[AnyValue]]("expressionVariables")),
+                            body = block(
+                              declarations,
+                              returns(nullCheck(expression)(expression.ir))
+                            ))))
+  }
+
+  def compileProjectionClassDeclaration(expression: IntermediateExpression): ClassDeclaration = {
+    val declarations = block(expression.variables.distinct.map { v =>
+      declareAndAssign(v.typ, v.name, v.value)
+    }: _*)
+
+    ClassDeclaration(
+      PACKAGE_NAME,
+      className(),
+      None,
+      Seq(typeRefOf[CompiledProjection]),
+      Seq.empty,
+      initializationCode = noop(),
+      fields = expression.fields,
+      methods = Seq(
+        MethodDeclaration("project",
+                          owner = typeRefOf[CompiledProjection],
+                          returnType = typeRefOf[Unit],
+                          parameters = Seq(param[ExecutionContext]("context"),
+                                           param[DbAccess]("dbAccess"),
+                                           param[Array[AnyValue]]("params"),
+                                           param[ExpressionCursors]("cursors"),
+                                           param[Array[AnyValue]]("expressionVariables")),
+                          body = block(
+                            declarations,
+                            expression.ir
+                          ))))
+  }
+
+  def compileGroupingClassDeclaration(grouping: IntermediateGroupingExpression): ClassDeclaration = {
+    def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
+      declareAndAssign(v.typ, v.name, v.value)
+    }: _*)
+
+    ClassDeclaration(
+      PACKAGE_NAME,
+      className(),
+      None,
+      Seq(typeRefOf[CompiledGroupingExpression]),
+      Seq.empty,
+      initializationCode = noop(),
+      fields = grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
+      methods = Seq(
+        MethodDeclaration("projectGroupingKey",
+                          owner = typeRefOf[CompiledGroupingExpression],
+                          returnType = typeRefOf[Unit],
+                          parameters = Seq(param[ExecutionContext]("context"),
+                                           param[AnyValue]("key")),
+                          body = block(
+                            declarations(grouping.projectKey),
+                            grouping.projectKey.ir)),
+        MethodDeclaration("computeGroupingKey",
+                          owner = typeRefOf[CompiledGroupingExpression],
+                          returnType = typeRefOf[AnyValue],
+                          parameters = Seq(param[ExecutionContext]("context"),
+                            param[DbAccess]("dbAccess"),
+                            param[Array[AnyValue]]("params"),
+                            param[ExpressionCursors]("cursors"),
+                            param[Array[AnyValue]]("expressionVariables")),
+                          body = block(
+                              declarations(grouping.computeKey),
+                              returns(nullCheck(grouping.computeKey)(grouping.computeKey.ir)))),
+        MethodDeclaration("getGroupingKey",
+                          owner = typeRefOf[CompiledGroupingExpression],
+                          returnType = typeRefOf[AnyValue],
+                          parameters = Seq(param[ExecutionContext]("context")),
+                          body = block(
+                            declarations(grouping.getKey),
+                            returns(nullCheck(grouping.getKey)(grouping.getKey.ir))))
+        ))
   }
 }
 

@@ -3579,7 +3579,10 @@ class CompiledExpressionsIT extends ExpressionsIT {
      override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression = {
       val compiler = defaultGenerator(slots)
       val compiled = for ((s,e) <- projections) yield slots(s) -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
-      CodeGeneration.compileGroupingExpression(compiler.compileGroupingExpression(compiled))
+
+       compileClass(
+         compileGroupingClassDeclaration(compiler.compileGroupingExpression(compiled)))
+         .getDeclaredConstructor().newInstance().asInstanceOf[CompiledGroupingExpression]
     }
 }
 
