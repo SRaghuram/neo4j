@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -22,6 +21,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 
 public class ClusterRuleIT
@@ -32,22 +32,28 @@ public class ClusterRuleIT
     @Rule
     public final ClusterRule clusterRule = new ClusterRule();
 
-    @Ignore
+    @Test
     public void shouldAssignPortsToMembersAutomatically() throws Exception
     {
-        Cluster cluster = clusterRule.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 5 ).startCluster();
+        int expectedNumberOfCoreMembers = 3;
+        int expectedNumberOfReadReplicas = 2;
 
-        int numberOfCoreMembers = cluster.coreMembers().size();
-        assertThat( numberOfCoreMembers, is( 3 ) );
-        int numberOfReadReplicas = cluster.readReplicas().size();
-        assertThat( numberOfReadReplicas, is( 5 ) );
+        Cluster cluster = clusterRule
+                .withNumberOfCoreMembers( expectedNumberOfCoreMembers )
+                .withNumberOfReadReplicas( expectedNumberOfReadReplicas )
+                .startCluster();
+
+        int actualNumberOfCoreMembers = cluster.coreMembers().size();
+        assertThat( actualNumberOfCoreMembers, is( expectedNumberOfCoreMembers ) );
+        int actualNumberOfReadReplicas = cluster.readReplicas().size();
+        assertThat( actualNumberOfReadReplicas, is( expectedNumberOfReadReplicas ) );
 
         Set<Integer> portsUsed = gatherPortsUsed( cluster );
 
         // so many for core members, so many for read replicas, all unique
-        assertThat( portsUsed.size(), is(
-                numberOfCoreMembers * NumberOfPortsUsedByCoreMember +
-                        numberOfReadReplicas * NumberOfPortsUsedByReadReplica ) );
+        assertThat( portsUsed, hasSize(
+                actualNumberOfCoreMembers * NumberOfPortsUsedByCoreMember +
+                        actualNumberOfReadReplicas * NumberOfPortsUsedByReadReplica ) );
     }
 
     private Set<Integer> gatherPortsUsed( Cluster cluster )
