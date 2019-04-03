@@ -109,7 +109,6 @@ public class CommercialSecurityModule extends SecurityModule
     @Override
     public void setup( Dependencies dependencies ) throws KernelException, IOException
     {
-        // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
 
@@ -285,11 +284,6 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private static AuthenticationStrategy createAuthenticationStrategy( Config config )
-    {
-        return new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config );
-    }
-
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
@@ -308,7 +302,7 @@ public class CommercialSecurityModule extends SecurityModule
                 initSystemGraphOnStart,
                 secureHasher,
                 new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
+                CommunitySecurityModule.createAuthenticationStrategy( config ),
                 config.get( SecuritySettings.native_authentication_enabled ),
                 config.get( SecuritySettings.native_authorization_enabled )
         );
@@ -668,7 +662,7 @@ public class CommercialSecurityModule extends SecurityModule
                 true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
+                CommunitySecurityModule.createAuthenticationStrategy( config ),
                 false,
                 true // At least one of these needs to be true for the realm to consider imports
         );
