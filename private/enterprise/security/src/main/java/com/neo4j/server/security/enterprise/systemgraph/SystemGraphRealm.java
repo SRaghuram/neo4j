@@ -39,31 +39,16 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     private final boolean authorizationEnabled;
     private final SystemGraphOperations systemGraphOperations;
 
-    // TODO move this to community as well
-    private boolean initOnStart;
-    private final SystemGraphInitializer systemGraphInitializer;
-
     public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
             SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
             boolean authorizationEnabled )
     {
-        super( systemGraphOperations, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
+        super( systemGraphOperations, systemGraphInitializer, initOnStart, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
 
         this.authorizationEnabled = authorizationEnabled;
         this.systemGraphOperations = systemGraphOperations;
-        this.systemGraphInitializer = systemGraphInitializer;
-        this.initOnStart = initOnStart;
-        setAuthorizationCachingEnabled( true );
-    }
 
-    // TODO: move this to community as well
-    @Override
-    public void start() throws Exception
-    {
-        if ( initOnStart )
-        {
-            systemGraphInitializer.initializeSystemGraph();
-        }
+        setAuthorizationCachingEnabled( true );
     }
 
     @Override

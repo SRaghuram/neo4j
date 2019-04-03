@@ -28,37 +28,33 @@ import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
-import org.neo4j.server.security.systemgraph.SystemGraphCredential;
-import org.neo4j.string.UTF8;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 
-public class SystemGraphInitializer
+public class SystemGraphInitializer extends BasicSystemGraphInitializer
 {
-    private final QueryExecutor queryExecutor;
     private final SystemGraphOperations systemGraphOperations;
     private final SystemGraphImportOptions importOptions;
-    private final SecureHasher secureHasher;
     private final Log log;
 
-    public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations, SystemGraphImportOptions importOptions,
-            SecureHasher secureHasher, Log log )
+    public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations,
+            SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log )
     {
-        this.queryExecutor = queryExecutor;
+        super( queryExecutor, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
+                importOptions.initialUserRepositorySupplier, secureHasher, log );
+
         this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
-        this.secureHasher = secureHasher;
         this.log = log;
     }
 
@@ -127,39 +123,6 @@ public class SystemGraphInitializer
         newDb( DEFAULT_DATABASE_NAME );
         newDb( SYSTEM_DATABASE_NAME );
         newDb( "*" );
-    }
-
-    /* Adds neo4j user if no users exist */
-    private void ensureDefaultUser() throws Exception
-    {
-        boolean addedUser = false;
-
-        if ( importOptions.initialUserRepositorySupplier != null )
-        {
-            UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
-            if ( initialUserRepository.numberOfUsers() > 0 )
-            {
-                // In alignment with InternalFlatFileRealm we only allow the INITIAL_USER_NAME here for now
-                // (This is what we get from the `set-initial-password` command)
-                User initialUser = initialUserRepository.getUserByName( INITIAL_USER_NAME );
-                if ( initialUser != null )
-                {
-                    systemGraphOperations.addUser( initialUser );
-                    addedUser = true;
-                }
-            }
-            stopUserRepository( initialUserRepository );
-        }
-
-        // If no initial user was set create the default neo4j user
-        if ( !addedUser )
-        {
-            Credential credential = SystemGraphCredential.createCredentialForPassword( UTF8.encode( INITIAL_PASSWORD ), secureHasher );
-            User user = new User.Builder().withName( INITIAL_USER_NAME ).withCredentials( credential ).withRequiredPasswordChange( true ).withoutFlag(
-                    SystemGraphRealm.IS_SUSPENDED ).build();
-
-            systemGraphOperations.addUser( user );
-        }
     }
 
     /* Tries to find an admin candidate among the existing users */
@@ -305,30 +268,10 @@ public class SystemGraphInitializer
         queryExecutor.executeQueryWithConstraint( query, params, "The specified database '" + dbName + "' already exists." );
     }
 
-    private boolean noUsers()
-    {
-        String query = "MATCH (u:User) RETURN count(u)";
-        return queryExecutor.executeQueryLong( query ) == 0;
-    }
-
     private boolean noRoles()
     {
         String query = "MATCH (r:Role) RETURN count(r)";
         return queryExecutor.executeQueryLong( query ) == 0;
-    }
-
-    private UserRepository startUserRepository( Supplier<UserRepository> supplier ) throws Exception
-    {
-        UserRepository userRepository = supplier.get();
-        userRepository.init();
-        userRepository.start();
-        return userRepository;
-    }
-
-    private void stopUserRepository( UserRepository userRepository ) throws Exception
-    {
-        userRepository.stop();
-        userRepository.shutdown();
     }
 
     private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Exception
