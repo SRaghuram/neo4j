@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{Interpreted, Slotted, SlottedWithCompiledExpressions}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -224,5 +225,22 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
                             |CREATE (b)-[:LINK_TO]->(a)
                             |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin,
       errorType = MISSING_NODE_ERRORS)
+  }
+
+  test("should allow function in DELETE expression") {
+
+    createNode("p" -> 1)
+    createNode("p" -> 2)
+    createNode("p" -> 3)
+
+    val result = executeSingle(
+      """MATCH (n)
+        |WITH collect(n) AS ns, collect(n.p) AS ps
+        |DELETE last(ns)
+        |RETURN last(ps) AS deleted""".stripMargin)
+    assertStats(result, nodesDeleted = 1)
+
+    val deleted = result.single("deleted")
+    executeSingle(s"MATCH (n {p: $deleted}) RETURN n").toList should be(empty)
   }
 }
