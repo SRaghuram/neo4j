@@ -76,8 +76,8 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
 
         if ( wasLeaderForTerm )
         {
-            log.info( "Step down event detected. This topology member, with MemberId %s, was leader in term %s, now moving " +
-                      "to follower.", myself, currentLeaderInfo.term() );
+            log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
+                      "to follower.", myself, dbName, currentLeaderInfo.term() );
             localLeadersByDatabaseName.put( dbName, currentLeaderInfo.stepDown() );
             handleStepDown0( currentLeaderInfo.stepDown(), dbName );
         }
