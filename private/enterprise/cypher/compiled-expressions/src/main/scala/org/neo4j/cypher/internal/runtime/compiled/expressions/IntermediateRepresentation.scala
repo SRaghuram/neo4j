@@ -185,7 +185,7 @@ case class NotEq(lhs: IntermediateRepresentation, rhs: IntermediateRepresentatio
 case class Not(test: IntermediateRepresentation) extends IntermediateRepresentation
 
 /**
-  *
+  * Checks if expression is null
   */
 case class IsNull(test: IntermediateRepresentation) extends IntermediateRepresentation
 
@@ -197,7 +197,7 @@ case class IsNull(test: IntermediateRepresentation) extends IntermediateRepresen
 case class Block(ops: Seq[IntermediateRepresentation]) extends IntermediateRepresentation
 
 /**
-  * Noop
+  * Noop does absolutely nothing.
   */
 case object Noop extends IntermediateRepresentation
 
@@ -315,7 +315,7 @@ case class NewInstance(constructor: Constructor, params: Seq[IntermediateReprese
 /**
   * Instantiate a new array
   * @param baseType the type of the array elements
-  * @param size
+  * @param size the size of the array.
   */
 case class NewArray(baseType: codegen.TypeReference, size: Int) extends IntermediateRepresentation
 
@@ -372,7 +372,6 @@ case class ClassDeclaration(packageName: String,
                             className: String,
                             extendsClass: Option[codegen.TypeReference],
                             implementsInterfaces: Seq[codegen.TypeReference],
-                            //constructor: ConstructorDeclaration,
                             constructorParameters: Seq[Parameter],
                             initializationCode: IntermediateRepresentation,
                             fields: Seq[Field],
@@ -530,8 +529,8 @@ object IntermediateRepresentation {
   def arrayLoad(array: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     ArrayLoad(array, offset)
 
-//  def arraySet(array: IntermediateRepresentation, offset: IntermediateRepresentation, value: IntermediateRepresentation): IntermediateRepresentation =
-//    ArraySet(array, offset, value)
+  def arraySet(array: IntermediateRepresentation, offset: IntermediateRepresentation, value: IntermediateRepresentation): IntermediateRepresentation =
+    ArraySet(array, offset, value)
 
   def arraySet(array: IntermediateRepresentation, offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     ArraySet(array, constant(offset), value)
