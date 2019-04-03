@@ -17,11 +17,9 @@ import org.apache.shiro.authz.SimpleRole;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -96,8 +94,8 @@ public class SystemGraphInitializer
         }
 
         // If no users or roles were imported we setup the
-        // default predefined roles and users and make sure we have an admin user
-        ensureDefaultUsersAndRoles();
+        // default predefined roles and user and make sure we have an admin user
+        ensureDefaultUserAndRoles();
     }
 
     private boolean isSystemGraphEmpty()
@@ -109,10 +107,19 @@ public class SystemGraphInitializer
         return !queryExecutor.executeQueryWithParamCheck( query, params );
     }
 
-    private void ensureDefaultUsersAndRoles() throws Exception
+    private void ensureDefaultUserAndRoles() throws Exception
     {
-        Set<String> addedDefaultUsers = ensureDefaultUsers();
-        ensureDefaultRoles( addedDefaultUsers );
+        if ( noUsers() )
+        {
+            ensureDefaultUser();
+            ensureDefaultRoles( INITIAL_USER_NAME );
+        }
+        else if ( noRoles() )
+        {
+            // This will be the case when upgrading from community to enterprise system-graph
+            String newAdmin = ensureAdmin();
+            ensureDefaultRoles( newAdmin );
+        }
     }
 
     private void ensureDefaultDatabases() throws InvalidArgumentsException
@@ -123,109 +130,96 @@ public class SystemGraphInitializer
     }
 
     /* Adds neo4j user if no users exist */
-    private Set<String> ensureDefaultUsers() throws Exception
+    private void ensureDefaultUser() throws Exception
     {
-        if ( numberOfUsers() == 0 )
+        boolean addedUser = false;
+
+        if ( importOptions.initialUserRepositorySupplier != null )
         {
-            Set<String> addedUsernames = new TreeSet<>();
-            if ( importOptions.initialUserRepositorySupplier != null )
+            UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
+            if ( initialUserRepository.numberOfUsers() > 0 )
             {
-                UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
-                if ( initialUserRepository.numberOfUsers() > 0 )
+                // In alignment with InternalFlatFileRealm we only allow the INITIAL_USER_NAME here for now
+                // (This is what we get from the `set-initial-password` command)
+                User initialUser = initialUserRepository.getUserByName( INITIAL_USER_NAME );
+                if ( initialUser != null )
                 {
-                    // In alignment with InternalFlatFileRealm we only allow the INITIAL_USER_NAME here for now
-                    // (This is what we get from the `set-initial-password` command)
-                    User initialUser = initialUserRepository.getUserByName( INITIAL_USER_NAME );
-                    if ( initialUser != null )
-                    {
-                        systemGraphOperations.addUser( initialUser );
-                        addedUsernames.add( initialUser.name() );
-                    }
+                    systemGraphOperations.addUser( initialUser );
+                    addedUser = true;
                 }
-                stopUserRepository( initialUserRepository );
             }
-
-            // If no initial user was set create the default neo4j user
-            if ( addedUsernames.isEmpty() )
-            {
-                Credential credential = SystemGraphCredential.createCredentialForPassword( UTF8.encode( INITIAL_PASSWORD ), secureHasher );
-                User user = new User.Builder()
-                        .withName( INITIAL_USER_NAME )
-                        .withCredentials( credential )
-                        .withRequiredPasswordChange( true )
-                        .withoutFlag( SystemGraphRealm.IS_SUSPENDED )
-                        .build();
-
-                systemGraphOperations.addUser( user );
-                addedUsernames.add( INITIAL_USER_NAME );
-            }
-
-            return addedUsernames;
+            stopUserRepository( initialUserRepository );
         }
-        return Collections.emptySet();
+
+        // If no initial user was set create the default neo4j user
+        if ( !addedUser )
+        {
+            Credential credential = SystemGraphCredential.createCredentialForPassword( UTF8.encode( INITIAL_PASSWORD ), secureHasher );
+            User user = new User.Builder().withName( INITIAL_USER_NAME ).withCredentials( credential ).withRequiredPasswordChange( true ).withoutFlag(
+                    SystemGraphRealm.IS_SUSPENDED ).build();
+
+            systemGraphOperations.addUser( user );
+        }
     }
 
-    /* Builds all predefined roles if no roles exist. Adds 'neo4j' to admin role if no admin is assigned */
-    private void ensureDefaultRoles( Set<String> addedDefaultUsers ) throws Exception
+    /* Tries to find an admin candidate among the existing users */
+    private String ensureAdmin( ) throws Exception
     {
-        List<String> newAdmins = new LinkedList<>( addedDefaultUsers );
+        String newAdmin = null;
 
-        if ( numberOfRoles() == 0 )
+        // Try to import the name of a single admin user as set by the SetDefaultAdmin command
+        if ( importOptions.defaultAdminRepositorySupplier != null )
         {
-            if ( newAdmins.isEmpty() )
+            UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
+            final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
+            if ( numberOfDefaultAdmins > 1 )
             {
-                String newAdminUsername = null;
-
-                // Try to import the name of a single admin user as set by the SetDefaultAdmin command
-                if ( importOptions.defaultAdminRepositorySupplier != null )
-                {
-                    UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
-                    final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
-                    if ( numberOfDefaultAdmins > 1 )
-                    {
-                        throw new InvalidArgumentsException(
-                                "No roles defined, and multiple users defined as default admin user." +
-                                        " Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                                        "` to select a valid admin." );
-                    }
-                    newAdminUsername = numberOfDefaultAdmins == 0 ? null :
-                                       defaultAdminRepository.getAllUsernames().iterator().next();
-                    stopUserRepository( defaultAdminRepository );
-                }
-
-                Set<String> usernames = systemGraphOperations.getAllUsernames();
-
-                if ( newAdminUsername != null )
-                {
-                    // We currently support only one default admin
-                    if ( systemGraphOperations.getUser( newAdminUsername, true ) == null )
-                    {
-                        throw new InvalidArgumentsException(
-                                "No roles defined, and default admin user '" + newAdminUsername +
-                                        "' does not exist. Please use `neo4j-admin " +
-                                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
-                    }
-                    newAdmins.add( newAdminUsername );
-                }
-                else if ( usernames.size() == 1 )
-                {
-                    // If only a single user exists, make her an admin
-                    newAdmins.add( usernames.iterator().next() );
-                }
-                else if ( usernames.contains( INITIAL_USER_NAME ) )
-                {
-                    // If the default neo4j user exists, make her an admin
-                    newAdmins.add( INITIAL_USER_NAME );
-                }
-                else
-                {
-                    throw new InvalidArgumentsException(
-                            "No roles defined, and cannot determine which user should be admin. " +
-                                    "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                                    "` to select an " + "admin." );
-                }
+                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user." + " Please use `neo4j-admin " +
+                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+            }
+            else if ( numberOfDefaultAdmins == 1 )
+            {
+                newAdmin = defaultAdminRepository.getAllUsernames().iterator().next();
             }
 
+            stopUserRepository( defaultAdminRepository );
+        }
+
+        Set<String> usernames = systemGraphOperations.getAllUsernames();
+
+        if ( newAdmin != null )
+        {
+            // We currently support only one default admin
+            if ( systemGraphOperations.getUser( newAdmin, true ) == null )
+            {
+                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. Please use `neo4j-admin " +
+                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+            }
+            return newAdmin;
+        }
+        else if ( usernames.size() == 1 )
+        {
+            // If only a single user exists, make her an admin
+            return usernames.iterator().next();
+        }
+        else if ( usernames.contains( INITIAL_USER_NAME ) )
+        {
+            // If the default neo4j user exists, make her an admin
+            return INITIAL_USER_NAME;
+        }
+        else
+        {
+            throw new InvalidArgumentsException(
+                    "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
+                            "` to select an " + "admin." );
+        }
+    }
+
+    /* Builds all predefined roles if no roles exist. Adds newAdmin to admin role */
+    private void ensureDefaultRoles( String newAdmin ) throws Exception
+    {
+        if ( noRoles() )
+        {
             // Create the predefined roles
             for ( String role : PredefinedRolesBuilder.roles.keySet() )
             {
@@ -235,11 +229,8 @@ public class SystemGraphInitializer
         }
 
         // Actually assign the admin role
-        for ( String username : newAdmins )
-        {
-            systemGraphOperations.addRoleToUser( PredefinedRoles.ADMIN, username );
-            log.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, username );
-        }
+        systemGraphOperations.addRoleToUser( PredefinedRoles.ADMIN, newAdmin );
+        log.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, newAdmin );
     }
 
     private void assignDefaultPrivileges( String roleName ) throws InvalidArgumentsException
@@ -314,16 +305,16 @@ public class SystemGraphInitializer
         queryExecutor.executeQueryWithConstraint( query, params, "The specified database '" + dbName + "' already exists." );
     }
 
-    private long numberOfUsers()
+    private boolean noUsers()
     {
         String query = "MATCH (u:User) RETURN count(u)";
-        return queryExecutor.executeQueryLong( query );
+        return queryExecutor.executeQueryLong( query ) == 0;
     }
 
-    private long numberOfRoles()
+    private boolean noRoles()
     {
         String query = "MATCH (r:Role) RETURN count(r)";
-        return queryExecutor.executeQueryLong( query );
+        return queryExecutor.executeQueryLong( query ) == 0;
     }
 
     private UserRepository startUserRepository( Supplier<UserRepository> supplier ) throws Exception
