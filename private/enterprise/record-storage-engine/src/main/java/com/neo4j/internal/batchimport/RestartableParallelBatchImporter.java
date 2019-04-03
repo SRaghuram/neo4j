@@ -7,7 +7,6 @@ package com.neo4j.internal.batchimport;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -110,23 +109,22 @@ public class RestartableParallelBatchImporter implements BatchImporter
     {
         try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseLayout, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig, jobScheduler );
-              ImportLogic logic = new ImportLogic( databaseLayout, fileSystem, store, config, dbConfig, logService,
+              ImportLogic logic = new ImportLogic( databaseLayout, store, config, dbConfig, logService,
                       executionMonitor, recordFormats, badCollector, monitor ) )
         {
             StateStorage stateStore = new StateStorage( fileSystem, new File( databaseLayout.databaseDirectory(), FILE_NAME_STATE ) );
 
-            PrefetchingIterator<State> states = initializeStates( logic );
+            PrefetchingIterator<State> states = initializeStates( logic, store );
             Pair<String,byte[]> previousState = stateStore.get();
             fastForwardToLastCompletedState( store, stateStore, previousState.first(), previousState.other(), states );
             logic.initialize( input );
             runRemainingStates( store, stateStore, previousState.other(), states );
-            logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store.getNeoStores(), fileSystem );
 
             logic.success();
         }
     }
 
-    private PrefetchingIterator<State> initializeStates( ImportLogic logic )
+    private PrefetchingIterator<State> initializeStates( ImportLogic logic, BatchingNeoStores store )
     {
         List<State> states = new ArrayList<>();
 
@@ -184,6 +182,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
+                logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store.getNeoStores(), fileSystem );
             }
         } );
 
@@ -213,9 +212,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
                 if ( state.name().equals( stateName ) )
                 {
                     // Prepare to start from this state
-                    store.pruneAndOpenExistingStore(
-                            type -> mainStoresToKeep.contains( type ),
-                            type -> tempStoresToKeep.contains( type ) );
+                    store.pruneAndOpenExistingStore( mainStoresToKeep::contains, tempStoresToKeep::contains );
                     if ( checkPoint.length == 0 )
                     {
                         // Advance the states iterator since there's no check point, i.e. this state is completed.
@@ -256,12 +253,5 @@ public class RestartableParallelBatchImporter implements BatchImporter
             state.remove();
             dataStatisticsStorage.remove();
         }
-    }
-
-    private static byte[] intCheckPoint( int type )
-    {
-        byte[] checkPoint = new byte[Integer.BYTES];
-        ByteBuffer.wrap( checkPoint ).putInt( type );
-        return checkPoint;
     }
 }

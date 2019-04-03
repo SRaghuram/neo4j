@@ -8,7 +8,6 @@ package com.neo4j.internal.batchimport;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.StandardCopyOption;
 
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -20,18 +19,19 @@ import org.neo4j.io.fs.ReadableClosableChannel;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 
 public class StateStorage
 {
-    public static final String NO_STATE = "";
-    public static final String INIT = "init";
+    static final String NO_STATE = "";
+    static final String INIT = "init";
 
     private final FileSystemAbstraction fs;
     private final File stateFile;
     private final File tempFile;
 
-    public StateStorage( FileSystemAbstraction fs, File stateFile )
+    StateStorage( FileSystemAbstraction fs, File stateFile )
     {
         this.fs = fs;
         this.stateFile = stateFile;
@@ -72,12 +72,12 @@ public class StateStorage
             channel.putInt( checkPoint.length );
             channel.put( checkPoint, checkPoint.length );
         }
-        fs.renameFile( tempFile, stateFile, StandardCopyOption.ATOMIC_MOVE );
+        fs.renameFile( tempFile, stateFile, ATOMIC_MOVE );
     }
 
     public void remove() throws IOException
     {
-        fs.renameFile( stateFile, tempFile, StandardCopyOption.ATOMIC_MOVE );
+        fs.renameFile( stateFile, tempFile, ATOMIC_MOVE );
         fs.deleteFileOrThrow( tempFile );
     }
 }
