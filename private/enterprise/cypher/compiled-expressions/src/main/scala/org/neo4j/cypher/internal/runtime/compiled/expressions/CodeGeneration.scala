@@ -9,14 +9,12 @@ import org.neo4j.codegen
 import org.neo4j.codegen.CodeGenerator.generateCode
 import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newInitializedArray}
 import org.neo4j.codegen.FieldReference.{field, staticField}
-import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen.Parameter.param
 import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.TypeReference.OBJECT
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
-import org.neo4j.values.storable._
 
 /**
   * Produces runnable code from an IntermediateRepresentation
@@ -24,10 +22,6 @@ import org.neo4j.values.storable._
 object CodeGeneration {
 
   private val DEBUG = false
-  private val VALUES = classOf[Values]
-  private val LONG = classOf[LongValue]
-  private val DOUBLE = classOf[DoubleValue]
-  private val TEXT = classOf[TextValue]
 
   def compileClass(c: ClassDeclaration): Class[_] = {
     val handle = compileClassDeclaration(c)
@@ -96,19 +90,7 @@ object CodeGeneration {
       block.put(block.self(), field(block.owner(), f.typ, f.name), compileExpression(v, block))
       codegen.Expression.EMPTY
 
-    //Values.longValue(value)
-    case Integer(value) =>
-      invoke(methodReference(VALUES, LONG,
-                             "longValue", classOf[Long]), constant(value.longValue()))
-    //Values.doubleValue(value)
-    case Float(value) =>
-      invoke(methodReference(VALUES, DOUBLE,
-                             "doubleValue", classOf[Double]), constant(value.doubleValue()))
-    //Values.stringValue(value)
-    case StringLiteral(value) =>
-      invoke(methodReference(VALUES, TEXT,
-                             "stringValue", classOf[String]), constant(value.stringValue()))
-    //loads a given constant
+     //loads a given constant
     case Constant(value) => constant(value)
 
     //new ArrayValue[]{p1, p2,...}

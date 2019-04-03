@@ -67,27 +67,6 @@ case class LoadField(field: Field) extends IntermediateRepresentation
 case class SetField(field: Field, value: IntermediateRepresentation) extends IntermediateRepresentation
 
 /**
-  * Loads constant IntegralValue
-  *
-  * @param value the constant value
-  */
-case class Integer(value: IntegralValue) extends IntermediateRepresentation
-
-/**
-  * Constant FloatingPointValue
-  *
-  * @param value the constant value
-  */
-case class Float(value: FloatingPointValue) extends IntermediateRepresentation
-
-/**
-  * Constant TextValue
-  *
-  * @param value the constant value
-  */
-case class StringLiteral(value: TextValue) extends IntermediateRepresentation
-
-/**
   * Constant java value
   *
   * @param value the constant value
