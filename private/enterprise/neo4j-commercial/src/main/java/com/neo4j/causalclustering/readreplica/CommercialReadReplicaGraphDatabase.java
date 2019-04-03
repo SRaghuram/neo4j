@@ -30,10 +30,9 @@ public class CommercialReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
     public CommercialReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies,
                                                SslDiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
-        Function<PlatformModule,AbstractEditionModule> factory =
-                platformModule -> new CommercialReadReplicaEditionModule( platformModule,
-                        discoveryServiceFactory, memberId );
-        new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
-                dependencies, this );
+        Function<PlatformModule,AbstractEditionModule> factory = platformModule ->
+                new CommercialReadReplicaEditionModule( platformModule, discoveryServiceFactory, memberId );
+        new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory )
+                .initFacade( storeDir, config, dependencies, this );
     }
 }

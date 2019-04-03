@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -158,6 +159,34 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         return addCoreMemberWithId( memberId, coreParams, instanceCoreParams, recordFormat );
     }
 
+    public CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    {
+        return addCoreMemberWithId( memberId, extraParams, instanceExtraParams, recordFormat );
+    }
+
+    private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams,
+            Map<String,IntFunction<String>> instanceExtraParams, String recordFormat )
+    {
+        HashMap<String,String> coreParams = new HashMap<>( this.coreParams );
+        coreParams.putAll( extraParams );
+        HashMap<String,IntFunction<String>> instanceCoreParams = new HashMap<>( this.instanceCoreParams );
+        instanceCoreParams.putAll( instanceExtraParams );
+
+        List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
+        CoreClusterMember coreClusterMember = createCoreClusterMember(
+                memberId,
+                PortAuthority.allocatePort(),
+                DEFAULT_CLUSTER_SIZE,
+                initialHosts,
+                recordFormat,
+                coreParams,
+                instanceCoreParams
+        );
+
+        coreMembers.put( memberId, coreClusterMember );
+        return coreClusterMember;
+    }
+
     public CoreClusterMember newCoreMember()
     {
         int newCoreServerId = ++highestCoreServerId;
@@ -168,24 +197,6 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     {
         int newReplicaServerId = ++highestReplicaServerId;
         return addReadReplicaWithId( newReplicaServerId );
-    }
-
-    private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams,
-            Map<String,IntFunction<String>> instanceExtraParams, String recordFormat )
-    {
-        List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        CoreClusterMember coreClusterMember = createCoreClusterMember(
-                memberId,
-                PortAuthority.allocatePort(),
-                DEFAULT_CLUSTER_SIZE,
-                initialHosts,
-                recordFormat,
-                extraParams,
-                instanceExtraParams
-        );
-
-        coreMembers.put( memberId, coreClusterMember );
-        return coreClusterMember;
     }
 
     public ReadReplica addReadReplicaWithIdAndRecordFormat( int memberId, String recordFormat )

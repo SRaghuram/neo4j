@@ -44,4 +44,5 @@ public class EnterpriseGraphFactory implements GraphFactory
             return new EnterpriseGraphDatabase( storeDir, config, dependencies );
         }
     }
+
 }

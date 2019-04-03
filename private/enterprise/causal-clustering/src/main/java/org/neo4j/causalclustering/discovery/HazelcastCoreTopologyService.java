@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -82,6 +83,7 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
 
     private final AtomicReference<LeaderInfo> leaderInfo = new AtomicReference<>( LeaderInfo.INITIAL );
     private final AtomicReference<Optional<LeaderInfo>> stepDownInfo = new AtomicReference<>( Optional.empty() );
+    private final ReentrantLock topologyRefreshLock = new ReentrantLock();
 
     private volatile HazelcastInstance hazelcastInstance;
 
@@ -375,11 +377,19 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
         coreRoles = HazelcastClusterTopology.getCoreRoles( hazelcastInstance, allCoreServers().members().keySet() );
     }
 
-    private synchronized void refreshTopology() throws InterruptedException
+    private void refreshTopology() throws InterruptedException
     {
-        refreshCoreTopology();
-        refreshReadReplicaTopology();
-        refreshRoles();
+        topologyRefreshLock.lock();
+        try
+        {
+            refreshCoreTopology();
+            refreshReadReplicaTopology();
+            refreshRoles();
+        }
+        finally
+        {
+            topologyRefreshLock.unlock();
+        }
         catchupAddressMap = extractCatchupAddressesMap( localCoreServers(), localReadReplicas() );
     }
 

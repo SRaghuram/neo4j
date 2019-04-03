@@ -17,6 +17,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.state.CoreBootstrapper;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -26,6 +27,7 @@ import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.TestTopology;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.time.Clocks;
@@ -54,10 +56,12 @@ public class ClusterBinderTest
     private final String dbName = config.get( CausalClusteringSettings.database );
 
     private ClusterBinder clusterBinder( SimpleStorage<ClusterId> clusterIdStorage,
-            CoreTopologyService topologyService )
+            CoreTopologyService topologyService, boolean isShutdown )
     {
+        AvailabilityGuard guard = mock( AvailabilityGuard.class );
+        when( guard.isShutdown() ).thenReturn( isShutdown );
         return new ClusterBinder( clusterIdStorage, new StubSimpleStorage<>(), topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), coreBootstrapper, dbName, minCoreHosts, new Monitors() );
+                Duration.of( 3_000, MILLIS ), coreBootstrapper, dbName, guard, minCoreHosts, new Monitors() );
     }
 
     @Test
@@ -76,13 +80,32 @@ public class ClusterBinderTest
                 .thenReturn( true ); // Then succeed
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
 
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );
 
         // when
         binder.bindToCluster();
 
         // then
         verify( topologyService, atLeast( 2 ) ).setClusterId( any(), anyString() );
+    }
+
+    @Test( expected = DatabaseShutdownException.class )
+    public void shouldThrowWhenDatabaseIsShutdown() throws Throwable
+    {
+        // given
+        Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
+                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+
+        CoreTopology topology = new CoreTopology( null, false, members );
+
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        when( topologyService.localCoreServers() ).thenReturn( topology );
+
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, true );
+
+        // when
+        binder.bindToCluster();
     }
 
     @Test( expected = TimeoutException.class )
@@ -100,7 +123,7 @@ public class ClusterBinderTest
                 .thenThrow( OperationTimeoutException.class ); // Causes a retry
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
 
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );
 
         // when
         binder.bindToCluster();
@@ -114,7 +137,7 @@ public class ClusterBinderTest
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.localCoreServers() ).thenReturn( unboundTopology );
 
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );
 
         try
         {
@@ -142,7 +165,7 @@ public class ClusterBinderTest
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.localCoreServers() ).thenReturn( unboundTopology ).thenReturn( boundTopology );
 
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );
 
         // when
         binder.bindToCluster();
@@ -166,7 +189,7 @@ public class ClusterBinderTest
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
 
-        ClusterBinder binder = clusterBinder( clusterIdStorage, topologyService );
+        ClusterBinder binder = clusterBinder( clusterIdStorage, topologyService, false );
 
         // when
         binder.bindToCluster();
@@ -190,7 +213,7 @@ public class ClusterBinderTest
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
 
-        ClusterBinder binder = clusterBinder( clusterIdStorage, topologyService );
+        ClusterBinder binder = clusterBinder( clusterIdStorage, topologyService, false );
 
         // when
         try
@@ -220,7 +243,7 @@ public class ClusterBinderTest
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
         when( coreBootstrapper.bootstrap( any() ) ).thenReturn( snapshot );
 
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
+        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );
 
         // when
         BoundState boundState = binder.bindToCluster();

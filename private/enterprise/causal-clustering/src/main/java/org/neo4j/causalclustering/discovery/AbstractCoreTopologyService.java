@@ -31,7 +31,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     }
 
     @Override
-    public final synchronized void addLocalCoreTopologyListener( Listener listener )
+    public final void addLocalCoreTopologyListener( Listener listener )
     {
         this.listenerService.addCoreTopologyListener( listener );
         listener.onCoreTopologyChange( localCoreServers() );

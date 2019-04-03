@@ -83,7 +83,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         }
 
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService,
-                dbName -> databaseInitializerMap.getOrDefault( dbName, NO_INITIALIZATION ) );
+                dbName -> databaseInitializerMap.getOrDefault( dbName, NO_INITIALIZATION ), globalAvailabilityGuard );
     }
 
     @Override

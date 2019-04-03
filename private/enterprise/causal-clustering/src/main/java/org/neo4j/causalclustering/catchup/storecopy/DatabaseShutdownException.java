@@ -7,7 +7,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 public class DatabaseShutdownException extends Exception
 {
-    DatabaseShutdownException( String message )
+    public DatabaseShutdownException( String message )
     {
         super( message );
     }

@@ -366,7 +366,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
     {
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializerMap::get );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService,
+                databaseInitializerMap::get, globalAvailabilityGuard );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
