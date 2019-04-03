@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 
@@ -47,7 +48,7 @@ public class Outcome implements Message, ConsensusOutcome
     /* Follower */
     private MemberId votedFor;
     private boolean renewElectionTimeout;
-    private boolean needsFreshSnapshot;
+    private SnapshotRequirement snapshotRequirement;
     private boolean isPreElection;
     private Set<MemberId> preVotesForMe;
 
@@ -104,7 +105,6 @@ public class Outcome implements Message, ConsensusOutcome
 
         votedFor = ctx.votedFor();
         renewElectionTimeout = false;
-        needsFreshSnapshot = false;
 
         isPreElection = (currentRole == Role.FOLLOWER) && ctx.isPreElection();
         steppingDownInTerm = OptionalLong.empty();
@@ -158,9 +158,9 @@ public class Outcome implements Message, ConsensusOutcome
         this.renewElectionTimeout = true;
     }
 
-    public void markNeedForFreshSnapshot()
+    public void markNeedForFreshSnapshot( long leaderPrevIndex, long localAppendIndex )
     {
-        this.needsFreshSnapshot = true;
+        this.snapshotRequirement = new SnapshotRequirement( leaderPrevIndex, localAppendIndex );
     }
 
     public void addVoteForMe( MemberId voteFrom )
@@ -208,7 +208,7 @@ public class Outcome implements Message, ConsensusOutcome
                ", commitIndex=" + commitIndex +
                ", votedFor=" + votedFor +
                ", renewElectionTimeout=" + renewElectionTimeout +
-               ", needsFreshSnapshot=" + needsFreshSnapshot +
+               ", snapshotRequirement=" + snapshotRequirement +
                ", votesForMe=" + votesForMe +
                ", preVotesForMe=" + preVotesForMe +
                ", lastLogIndexBeforeWeBecameLeader=" + lastLogIndexBeforeWeBecameLeader +
@@ -260,9 +260,9 @@ public class Outcome implements Message, ConsensusOutcome
     }
 
     @Override
-    public boolean needsFreshSnapshot()
+    public Optional<SnapshotRequirement> snapshotRequirement()
     {
-        return needsFreshSnapshot;
+        return Optional.ofNullable( snapshotRequirement );
     }
 
     public Set<MemberId> getVotesForMe()
@@ -354,7 +354,7 @@ public class Outcome implements Message, ConsensusOutcome
         }
         Outcome outcome = (Outcome) o;
         return term == outcome.term && leaderCommit == outcome.leaderCommit && commitIndex == outcome.commitIndex &&
-                renewElectionTimeout == outcome.renewElectionTimeout && needsFreshSnapshot == outcome.needsFreshSnapshot &&
+                renewElectionTimeout == outcome.renewElectionTimeout && Objects.equals( snapshotRequirement, outcome.snapshotRequirement ) &&
                 isPreElection == outcome.isPreElection && lastLogIndexBeforeWeBecameLeader == outcome.lastLogIndexBeforeWeBecameLeader &&
                 electedLeader == outcome.electedLeader && nextRole == outcome.nextRole &&
                 Objects.equals( steppingDownInTerm, outcome.steppingDownInTerm ) && Objects.equals( leader, outcome.leader ) &&
@@ -368,7 +368,7 @@ public class Outcome implements Message, ConsensusOutcome
     public int hashCode()
     {
         return Objects.hash( nextRole, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, renewElectionTimeout,
-                needsFreshSnapshot, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader,
+                snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader,
                 steppingDownInTerm, heartbeatResponses );
     }
 }

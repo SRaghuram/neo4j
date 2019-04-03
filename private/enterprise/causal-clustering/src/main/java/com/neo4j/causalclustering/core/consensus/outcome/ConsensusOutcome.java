@@ -5,9 +5,11 @@
  */
 package com.neo4j.causalclustering.core.consensus.outcome;
 
+import java.util.Optional;
+
 public interface ConsensusOutcome
 {
-    boolean needsFreshSnapshot();
+    Optional<SnapshotRequirement> snapshotRequirement();
 
     long getCommitIndex();
 }

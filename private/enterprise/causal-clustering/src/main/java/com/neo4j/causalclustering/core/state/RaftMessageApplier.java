@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
+import com.neo4j.causalclustering.core.consensus.outcome.SnapshotRequirement;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -19,6 +20,8 @@ import java.util.Optional;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobHandle;
+
+import static java.lang.String.format;
 
 public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
 {
@@ -45,17 +48,21 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     @Override
     public synchronized void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> wrappedMessage )
     {
-        // TODO: At tme moment download jobs are issued against both databases every time they are issued at all. This is probably fine for 3.5, but should be
-        // fixed for 4.0
         if ( stopped )
         {
             return;
         }
+
+        // TODO: At the moment download jobs are issued against both databases every time they are issued at all.
+        // TODO: This is probably fine for 3.5, but should be fixed for 4.0.
+
         try
         {
             ConsensusOutcome outcome = raftMachine.handle( wrappedMessage.message() );
-            if ( outcome.needsFreshSnapshot() )
+            if ( outcome.snapshotRequirement().isPresent() )
             {
+                SnapshotRequirement snapshotRequirement = outcome.snapshotRequirement().get();
+                log.info( format( "Scheduling download because of %s", snapshotRequirement ) );
                 Optional<JobHandle> downloadJob = downloadService.scheduleDownload( catchupAddressProvider );
                 if ( downloadJob.isPresent() )
                 {
