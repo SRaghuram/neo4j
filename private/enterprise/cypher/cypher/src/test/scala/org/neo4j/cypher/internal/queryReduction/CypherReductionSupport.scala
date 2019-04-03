@@ -59,7 +59,8 @@ object CypherReductionSupport {
     legacyCsvQuoteEscaping = false,
     csvBufferSize = CSVResources.DEFAULT_BUFFER_SIZE,
     nonIndexedLabelWarningThreshold = 0,
-    planWithMinimumCardinalityEstimates = true)
+    planWithMinimumCardinalityEstimates = true,
+    planSystemCommands = false)
   private val kernelMonitors = new Monitors
   private val compiler = CypherPlanner(WrappedMonitors(kernelMonitors), stepSequencer, metricsFactory, config, defaultUpdateStrategy,
     MasterCompiler.CLOCK, PlannerContextCreator)

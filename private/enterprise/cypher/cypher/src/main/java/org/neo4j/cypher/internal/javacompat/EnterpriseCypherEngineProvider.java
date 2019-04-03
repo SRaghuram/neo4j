@@ -47,8 +47,9 @@ public class EnterpriseCypherEngineProvider extends QueryEngineProvider
         LogService logService = resolver.resolveDependency( LogService.class );
         Monitors monitors = resolver.resolveDependency( Monitors.class );
         Config config = resolver.resolveDependency( Config.class );
+        boolean isSystemDatabase = graphAPI.databaseLayout().getDatabaseName().startsWith( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         CypherConfiguration cypherConfig = CypherConfiguration.fromConfig( config );
-        CypherPlannerConfiguration plannerConfig = cypherConfig.toCypherPlannerConfiguration( config );
+        CypherPlannerConfiguration plannerConfig = cypherConfig.toCypherPlannerConfiguration( config, isSystemDatabase );
         CypherRuntimeConfiguration runtimeConfig = cypherConfig.toCypherRuntimeConfiguration();
         LogProvider logProvider = logService.getInternalLogProvider();
         CommunityCompilerFactory communityCompilerFactory =
@@ -58,26 +59,19 @@ public class EnterpriseCypherEngineProvider extends QueryEngineProvider
                 new EnterpriseCompilerFactory( communityCompilerFactory, queryService, monitors, logProvider, plannerConfig, runtimeConfig );
 
         deps.satisfyDependency( compilerFactory );
-        return createEngine( queryService, config, logProvider, compilerFactory );
-    }
-
-    private QueryExecutionEngine createEngine( GraphDatabaseCypherService queryService, Config config,
-                                               LogProvider logProvider, EnterpriseCompilerFactory compilerFactory )
-    {
-        return config.get( GraphDatabaseSettings.snapshot_query ) ?
-               snapshotEngine( queryService, config, logProvider, compilerFactory ) :
-               standardEngine( queryService, logProvider, compilerFactory );
-    }
-
-    private SnapshotExecutionEngine snapshotEngine( GraphDatabaseCypherService queryService, Config config,
-                                                    LogProvider logProvider, EnterpriseCompilerFactory compilerFactory )
-    {
-        return new SnapshotExecutionEngine( queryService, config, logProvider, compilerFactory );
-    }
-
-    private ExecutionEngine standardEngine( GraphDatabaseCypherService queryService, LogProvider logProvider,
-                                            EnterpriseCompilerFactory compilerFactory )
-    {
-        return new ExecutionEngine( queryService, logProvider, compilerFactory );
+        if ( isSystemDatabase )
+        {
+            CommunityCompilerFactory normalCompilerFactory =
+                    new CommunityCompilerFactory( queryService, monitors, logProvider, cypherConfig.toCypherPlannerConfiguration( config, false ), runtimeConfig );
+            return new SystemExecutionEngine( queryService, logProvider, compilerFactory, normalCompilerFactory );
+        }
+        else if ( config.get( GraphDatabaseSettings.snapshot_query ) )
+        {
+            return new SnapshotExecutionEngine( queryService, config, logProvider, compilerFactory );
+        }
+        else
+        {
+            return new ExecutionEngine( queryService, logProvider, compilerFactory );
+        }
     }
 }

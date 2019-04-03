@@ -45,7 +45,8 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
   override def createCompiler(cypherVersion: CypherVersion,
                               cypherPlanner: CypherPlannerOption,
                               cypherRuntime: CypherRuntimeOption,
-                              cypherUpdateStrategy: CypherUpdateStrategy): Compiler = {
+                              cypherUpdateStrategy: CypherUpdateStrategy,
+                              executionEngineProvider: () => ExecutionEngine): Compiler = {
 
     val log = logProvider.getLog(getClass)
     val planner = cypherVersion match {
@@ -70,9 +71,14 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
           LastCommittedTxIdProvider(graph))
     }
 
+    val runtime = if (plannerConfig.planSystemCommands)
+      MultiDatabaseManagementCommandRuntime(executionEngineProvider())
+    else
+      EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings)
+
     CypherCurrentCompiler(
       planner,
-      EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings),
+      runtime,
       EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
       kernelMonitors)
   }
