@@ -46,10 +46,18 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
         public GraphDatabaseService newDatabase( Config config )
         {
             File absoluteStoreDir = storeDir.getAbsoluteFile();
-            File databasesRoot = absoluteStoreDir.getParentFile();
-            if ( !config.isConfigured( GraphDatabaseSettings.default_database ) )
+            File databasesRoot;
+            if ( config.isConfigured( GraphDatabaseSettings.databases_root_path ) )
             {
-                config.augment( GraphDatabaseSettings.default_database, absoluteStoreDir.getName() );
+                databasesRoot = config.get( GraphDatabaseSettings.databases_root_path );
+            }
+            else
+            {
+                databasesRoot = absoluteStoreDir.getParentFile();
+                if ( !config.isConfigured( GraphDatabaseSettings.default_database ) )
+                {
+                    config.augment( GraphDatabaseSettings.default_database, absoluteStoreDir.getName() );
+                }
             }
             config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
             return new CommercialGraphDatabase( databasesRoot, config, state.databaseDependencies() );
