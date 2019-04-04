@@ -54,7 +54,7 @@ class TestCatchupServer extends Server
 
         NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 
-        List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
+        List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = List.of(
                 new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler )
         );
 

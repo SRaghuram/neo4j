@@ -130,7 +130,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 {
     private final IdentityModule identityModule;
     private final SslPolicyLoader sslPolicyLoader;
-    private final RaftSender raftSender;
     private final RaftChannelPoolService raftChannelPoolService;
     private final CoreStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
@@ -221,7 +220,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         raftChannelPoolService = new RaftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider,
                         channelInitializer );
         globalLife.add( raftChannelPoolService );
-        raftSender = new RaftSender( logProvider, raftChannelPoolService );
         this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;

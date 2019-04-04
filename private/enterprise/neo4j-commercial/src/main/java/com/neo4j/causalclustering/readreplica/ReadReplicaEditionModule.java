@@ -132,7 +132,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
         topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, myself, hostnameResolver,
-                resolveStrategy( globaConfig, logProvider ), sslPolicyLoader );
+                resolveStrategy( globaConfig ), sslPolicyLoader );
 
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
@@ -258,7 +258,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new SecurePipelineFactory();
     }
 
-    protected CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<ReadReplicaDatabaseContext> databaseManager )
+    private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<ReadReplicaDatabaseContext> databaseManager )
     {
         return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
     }
@@ -312,7 +312,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    private static RetryStrategy resolveStrategy( Config config, LogProvider logProvider )
+    private static RetryStrategy resolveStrategy( Config config )
     {
         long refreshPeriodMillis = config.get( CausalClusteringSettings.cluster_topology_refresh ).toMillis();
         int pollingFrequencyWithinRefreshWindow = 2;
