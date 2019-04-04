@@ -69,6 +69,7 @@
         <plugin>
           <groupId>org.neo4j.build.plugins</groupId>
           <artifactId>licensing-maven-plugin</artifactId>
+          <version>1.7.8</version>
           <configuration>
             <excludedGroups>
               ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1}|(com.neo4j.bolt){1}|(com.neo4j.build){1}|(com.neo4j.test){1}|(com.neo4j.bench){1})$
@@ -122,6 +123,11 @@
               <port.authority.directory>${user.dir}/target/port-authority-${maven.build.timestamp}</port.authority.directory>
             </systemPropertyVariables>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.neo4j.build.plugins</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>3</version>
         </plugin>
       </plugins>
     </pluginManagement>
