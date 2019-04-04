@@ -20,7 +20,7 @@ import java.util.Set;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
-import org.neo4j.server.security.auth.LegacyCredential;
+import org.neo4j.server.security.systemgraph.BasicInMemorySystemGraphOperations;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
@@ -30,7 +30,7 @@ import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assert
 
 public class InMemorySystemGraphOperations extends SystemGraphOperations
 {
-    private Map<String,User> users = new HashMap<>();
+    private BasicInMemorySystemGraphOperations basic = new BasicInMemorySystemGraphOperations();
     private Map<String,Set<String>> rolesForUsers = new HashMap<>();
     private Map<String,RoleRecord> roles = new HashMap<>();
     private Map<String,Map<String,DatabasePrivilege>> rolePrivileges = new HashMap<>();
@@ -43,25 +43,19 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     @Override
     public void addUser( User user ) throws InvalidArgumentsException
     {
-        String username = user.name();
-        assertValidUsername( username );
-        if ( users.containsKey( username ) )
-        {
-            throw new InvalidArgumentsException( "The specified user '" + username + "' already exists." );
-        }
-        users.put( username, user );
+        basic.addUser( user );
     }
 
     @Override
     public Set<String> getAllUsernames()
     {
-        return users.keySet();
+        return basic.getAllUsernames();
     }
 
     @Override
     AuthorizationInfo doGetAuthorizationInfo( String username )
     {
-        User user = users.get( username );
+        User user = basic.users.get( username );
         if ( user == null || user.passwordChangeRequired() || user.hasFlag( IS_SUSPENDED ) )
         {
             return new SimpleAuthorizationInfo();
@@ -72,25 +66,25 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     @Override
     void suspendUser( String username ) throws InvalidArgumentsException
     {
-        User user = users.get( username );
+        User user = basic.users.get( username );
         if ( user == null )
         {
             throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
         }
         User augmented = user.augment().withFlag( IS_SUSPENDED ).build();
-        users.put( username, augmented );
+        basic.users.put( username, augmented );
     }
 
     @Override
     void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        User user = users.get( username );
+        User user = basic.users.get( username );
         if ( user == null )
         {
             throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
         }
         User augmented = user.augment().withoutFlag( IS_SUSPENDED ).build();
-        users.put( username, augmented );
+        basic.users.put( username, augmented );
     }
 
     @Override
@@ -232,21 +226,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     @Override
     public boolean deleteUser( String username ) throws InvalidArgumentsException
     {
-        User removed = users.remove( username );
-        if ( removed == null )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-        Set<String> rolesForUser = rolesForUsers.remove( username );
-        if ( rolesForUser != null )
-        {
-            for ( String role : rolesForUser )
-            {
-                RoleRecord roleRecord = roles.get( role );
-                roles.put( role, roleRecord.augment().withoutUser( username ).build() );
-            }
-        }
-        return true;
+        return basic.deleteUser( username );
     }
 
     @Override
@@ -259,26 +239,13 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     @Override
     public User getUser( String username, boolean silent ) throws InvalidArgumentsException
     {
-        User user = users.get( username );
-        if ( !silent && user == null )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-        return user;
+        return basic.getUser( username, silent );
     }
 
     @Override
    protected void setUserCredentials( String username, String newCredentials, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        User user = users.get( username );
-        if ( user == null )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-        User augmented = user.augment()
-                .withCredentials( LegacyCredential.forPassword( newCredentials ) )
-                .withRequiredPasswordChange( requirePasswordChange ).build();
-        users.put( username, augmented );
+        basic.setUserCredentials( username, newCredentials, requirePasswordChange );
     }
 
     private void removeRoleFromUsers( String roleName, Set<String> users )

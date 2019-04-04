@@ -8,21 +8,13 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
-import java.time.Clock;
-
-import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
-public class TestSystemGraphRealm
+public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
     public static SystemGraphRealm testRealm( SecurityLog securityLog, QueryExecutor queryExecutor ) throws Throwable
     {
@@ -59,42 +51,5 @@ public class TestSystemGraphRealm
         realm.start();
 
         return realm;
-    }
-
-    private static AuthenticationStrategy newRateLimitedAuthStrategy()
-    {
-        return new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() );
-    }
-
-    private static class TestContextSwitchingSystemGraphQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
-    {
-        private TestThreadToStatementContextBridge bridge;
-
-        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager<?> databaseManager )
-        {
-            super( databaseManager, DEFAULT_DATABASE_NAME );
-            bridge = new TestThreadToStatementContextBridge();
-        }
-
-        @Override
-        protected ThreadToStatementContextBridge getThreadToStatementContextBridge()
-        {
-            return bridge;
-        }
-    }
-
-    private static class TestThreadToStatementContextBridge extends ThreadToStatementContextBridge
-    {
-        @Override
-        public boolean hasTransaction()
-        {
-            return false;
-        }
-
-        @Override
-        public KernelTransaction getKernelTransactionBoundToThisThread( boolean strict )
-        {
-            return null;
-        }
     }
 }

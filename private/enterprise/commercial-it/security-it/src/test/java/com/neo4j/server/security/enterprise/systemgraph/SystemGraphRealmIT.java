@@ -9,45 +9,26 @@ import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
-import org.neo4j.server.security.auth.ShiroAuthToken;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.apache.shiro.authc.AuthenticationException;
-import org.apache.shiro.authc.ExcessiveAttemptsException;
-import org.apache.shiro.authz.AuthorizationInfo;
-import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
-import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
-import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.assertAuthenticationSucceeds;
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.testAuthenticationToken;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -55,24 +36,18 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.clearedPasswordWithSameLenghtAs;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphRealmIT
 {
-    private TestDatabaseManager dbManager;
+    private SystemGraphRealmTestHelper.TestDatabaseManager dbManager;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
-    private int maxFailedAttempts;
 
     @Inject
     private TestDirectory testDirectory;
@@ -80,10 +55,9 @@ class SystemGraphRealmIT
     @BeforeEach
     void setUp()
     {
-        dbManager = new TestDatabaseManager();
+        dbManager = new SystemGraphRealmTestHelper.TestDatabaseManager( testDirectory );
         log = new AssertableLogProvider();
         securityLog = new SecurityLog( log.getLog( getClass() ) );
-        maxFailedAttempts = Config.defaults().get( GraphDatabaseSettings.auth_max_failed_attempts );
     }
 
     @AfterEach
@@ -258,116 +232,6 @@ class SystemGraphRealmIT
         log.assertExactly(
                 info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
         );
-    }
-
-    @Test
-    void shouldRateLimitAuthentication() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
-        );
-
-        // First make sure one of the users will have a cached successful authentication result for variation
-        assertAuthenticationSucceeds( realm, "alice" );
-
-        assertAuthenticationFailsWithTooManyAttempts( realm, "alice", maxFailedAttempts + 1 );
-        assertAuthenticationFailsWithTooManyAttempts( realm, "bob", maxFailedAttempts + 1 );
-    }
-
-    @Test
-    void shouldClearPasswordOnNewUser() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
-        );
-
-        byte[] password = password( "jake" );
-
-        // When
-        realm.newUser( "jake", password, true );
-
-        // Then
-        assertThat( password, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
-        assertAuthenticationSucceeds( realm, "jake" );
-    }
-
-    @Test
-    void shouldClearPasswordOnNewUserAlreadyExists() throws Throwable
-    {
-        // Given
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
-        );
-
-        realm.newUser( "jake", password( "jake" ), true );
-        byte[] password = password( "abc123" );
-
-        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> realm.newUser( "jake", password, true ) );
-        assertThat( exception.getMessage(), equalTo( "The specified user 'jake' already exists." ) );
-
-        // Then
-        assertThat( password, equalTo( clearedPasswordWithSameLenghtAs( "abc123" ) ) );
-        assertAuthenticationSucceeds( realm, "jake" );
-    }
-
-    @Test
-    void shouldClearPasswordOnSetUserPassword() throws Throwable
-    {
-        // Given
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
-        );
-
-        realm.newUser( "jake", password( "abc123" ), false );
-
-        byte[] newPassword = password( "jake" );
-
-        // When
-        realm.setUserPassword( "jake", newPassword, false );
-
-        // Then
-        assertThat( newPassword, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
-        assertAuthenticationSucceeds( realm, "jake" );
-    }
-
-    @Test
-    void shouldClearPasswordOnSetUserPasswordWithInvalidPassword() throws Throwable
-    {
-        // Given
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
-        );
-
-        realm.newUser( "jake", password( "jake" ), false );
-        byte[] newPassword = password( "jake" );
-
-        // When
-        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> realm.setUserPassword( "jake", newPassword, false ) );
-        assertThat( exception.getMessage(), equalTo( "Old password and new password cannot be the same." ) );
-
-        // Then
-        assertThat( newPassword, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
-        assertAuthenticationSucceeds( realm, "jake" );
     }
 
     @Test
@@ -574,11 +438,6 @@ class SystemGraphRealmIT
         assertTrue( privileges.isEmpty() );
     }
 
-    private AuthorizationInfo getAuthSnapshot( SystemGraphRealm realm, String username )
-    {
-        return realm.getAuthorizationInfoSnapshot( new SimplePrincipalCollection( username, SecuritySettings.SYSTEM_GRAPH_REALM_NAME ) );
-    }
-
     private void prePopulateUsers( String... usernames ) throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
@@ -590,58 +449,6 @@ class SystemGraphRealmIT
         realm.shutdown();
     }
 
-    private class TestDatabaseManager extends LifecycleAdapter implements DatabaseManager<StandaloneDatabaseContext>
-    {
-        GraphDatabaseFacade testSystemDb;
-
-        TestDatabaseManager()
-        {
-            testSystemDb = (GraphDatabaseFacade) new TestCommercialGraphDatabaseFactory()
-                    .newImpermanentDatabaseBuilder( testDirectory.databaseDir() )
-                    .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
-                    .newGraphDatabase();
-        }
-
-        @Override
-        public Optional<StandaloneDatabaseContext> getDatabaseContext( DatabaseId databaseId )
-        {
-            if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
-            {
-                DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
-                Database database = dependencyResolver.resolveDependency( Database.class );
-                return Optional.of( new StandaloneDatabaseContext( database, testSystemDb ) );
-            }
-            return Optional.empty();
-        }
-
-        @Override
-        public StandaloneDatabaseContext createDatabase( DatabaseId databaseId )
-        {
-            throw new UnsupportedOperationException( "Call to createDatabase not expected" );
-        }
-
-        @Override
-        public void dropDatabase( DatabaseId databaseId )
-        {
-        }
-
-        @Override
-        public void stopDatabase( DatabaseId databaseId )
-        {
-        }
-
-        @Override
-        public void startDatabase( DatabaseId databaseId )
-        {
-        }
-
-        @Override
-        public SortedMap<DatabaseId,StandaloneDatabaseContext> registeredDatabases()
-        {
-            return Collections.emptySortedMap();
-        }
-    }
-
     private AssertableLogProvider.LogMatcher info( String message, String... arguments )
     {
         if ( arguments.length == 0 )
@@ -649,25 +456,6 @@ class SystemGraphRealmIT
             return inLog( this.getClass() ).info( message );
         }
         return inLog( this.getClass() ).info( message, (Object[]) arguments );
-    }
-
-    private static ShiroAuthToken testAuthenticationToken( String username, String password )
-    {
-        Map<String,Object> authToken = new TreeMap<>();
-        authToken.put( AuthToken.PRINCIPAL, username );
-        authToken.put( AuthToken.CREDENTIALS, UTF8.encode( password ) );
-        return new ShiroAuthToken( authToken );
-    }
-
-    private static void assertAuthenticationSucceeds( SystemGraphRealm realm, String username )
-    {
-        // NOTE: Password is the same as username
-        // Try twice to rule out differences if authentication info has been cached or not
-        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
-        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
-
-        // Also test the non-cached result explicitly
-        assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
     }
 
     private static void assertAuthenticationFails( SystemGraphRealm realm, String username )
@@ -681,27 +469,5 @@ class SystemGraphRealmIT
 
         // Also test the non-cached result explicitly
         assertThrows( AuthenticationException.class, () -> realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
-    }
-
-    private static void assertAuthenticationFailsWithTooManyAttempts( SystemGraphRealm realm, String username, int attempts )
-    {
-        // NOTE: Password is the same as username
-        for ( int i = 0; i < attempts; i++ )
-        {
-            try
-            {
-                assertNull( realm.getAuthenticationInfo( testAuthenticationToken( username, "wrong_password" ) ) );
-            }
-            catch ( ExcessiveAttemptsException e )
-            {
-                // This is what we were really looking for
-                return;
-            }
-            catch ( AuthenticationException e )
-            {
-                // This is expected
-            }
-        }
-        fail( "Did not get an ExcessiveAttemptsException after " + attempts + " attempts." );
     }
 }
