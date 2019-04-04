@@ -41,7 +41,7 @@ public class CommitStateHelper
 
     CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException
     {
-        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( pageCache, databaseLayout );
+        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( databaseLayout, pageCache );
         long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
         Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );

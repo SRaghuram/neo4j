@@ -246,7 +246,7 @@ public class CoreBootstrapper
 
     private boolean isStorePresent( ClusteredDatabaseContext db )
     {
-        return storageEngineFactory.storageExists( fs, pageCache, db.databaseLayout() );
+        return storageEngineFactory.storageExists( fs, db.databaseLayout(), pageCache );
     }
 
     private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
@@ -268,7 +268,7 @@ public class CoreBootstrapper
      */
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout, Config config ) throws IOException
     {
-        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( pageCache, databaseLayout );
+        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( databaseLayout, pageCache );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( databaseLayout, fs, pageCache )
                 .withConfig( config )
