@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 
+import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.runtime.morsel._
