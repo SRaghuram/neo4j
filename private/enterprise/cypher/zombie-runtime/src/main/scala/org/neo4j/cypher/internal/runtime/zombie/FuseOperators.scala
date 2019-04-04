@@ -93,8 +93,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // Did we find any sequence of operators that we can fuse with the headPlan?
     if (fusedPlans.length < FUSE_LIMIT) {
       (None, middlePlans, produceResult)
-    }
-    else {
+    } else {
       // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
       dprintln(() => s"@@@ Fused plans ${fusedPlans.map(_.getClass.getSimpleName)}")
 

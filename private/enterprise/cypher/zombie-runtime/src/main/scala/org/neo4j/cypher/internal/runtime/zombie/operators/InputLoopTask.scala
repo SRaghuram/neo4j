@@ -89,13 +89,12 @@ abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTe
     Seq(DATA_READ, INPUT_MORSEL, INNER_LOOP)
   }
 
-  //override def canContinue: Boolean
+
   override def genCanContinue: IntermediateRepresentation = {
-    //inputMorsel.isValidRow || innerLoop
+    /** {{{inputMorsel.isValidRow || innerLoop}}}*/
     or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP))
   }
 
-  //def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
   override def genOperate: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
@@ -161,20 +160,35 @@ abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTe
     )
   }
 
-  //protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean
+  /**
+    * Responsible for generating method:
+    * {{{
+    *   def initializeInnerLoop(context: QueryContext,
+    *                           state: QueryState,
+    *                           resources: QueryResources): Boolean
+    * }}}
+    */
   protected def genInitializeInnerLoop: IntermediateRepresentation
 
   /**
     * Execute the inner loop for the current input row, and write results to the output.
+    *
+    * Responsible for generating:
+    * {{{
+    *   def innerLoop(outputRow: MorselExecutionContext,
+    *                 context: QueryContext,
+    *                 state: QueryState): Unit
+    * }}}
     */
-  //protected def innerLoop(outputRow: MorselExecutionContext,
-  //                        context: QueryContext,
-  //                        state: QueryState): Unit
   protected def genInnerLoop: IntermediateRepresentation
 
   /**
     * Close any resources used by the inner loop.
+    *
+    * Responsible for generating:
+    * {{{
+    *    def closeInnerLoop(resources: QueryResources): Unit
+    * }}}
     */
-  //protected def closeInnerLoop(resources: QueryResources): Unit
   protected def genCloseInnerLoop: IntermediateRepresentation
 }

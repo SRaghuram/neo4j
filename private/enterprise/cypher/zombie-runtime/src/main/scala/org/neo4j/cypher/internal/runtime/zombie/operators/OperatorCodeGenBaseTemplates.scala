@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileClass
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel._
@@ -39,18 +40,17 @@ object ContinuableOperatorTaskWithMorselGenerator {
   type CompiledTaskFactory = (Read, MorselParallelizer) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
   /**
-    * This is responsible for generating a class for the
+    * Responsible for generating a tailored class and creates a factory for creating new instances of the class
     */
   def generateClassAndTaskFactory(template: ContinuableOperatorTaskWithMorselTemplate): CompiledTaskFactory = {
-    val clazz = generateClass(template)
+    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className()))
     val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
-    (dataRead: org.neo4j.internal.kernel.api.Read, inputMorsel: MorselParallelizer) => {
+
+    (dataRead, inputMorsel) => {
       IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy).asInstanceOf[ContinuableOperatorTaskWithMorsel])
     }
   }
 
-  private def generateClass(template: ContinuableOperatorTaskWithMorselTemplate): Class[_] =
-    CodeGeneration.compileClass(template.genClassDeclaration(PACKAGE_NAME, className()))
 }
 
 trait OperatorTaskTemplate {
@@ -58,11 +58,18 @@ trait OperatorTaskTemplate {
     throw new InternalException("Illegal start operator template")
   }
 
-  def genInit: IntermediateRepresentation = noop
+  def genInit: IntermediateRepresentation = noop()
 
-  //def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
   // TODO: Make separate genOperate and genOperateSingleRow methods to clarify the distinction
   //       between streaming (loop over the whole output morsel) and stateless (processing of single row inlined into outer loop) usage
+  /**
+    * Responsible for generating:
+    * {{{
+    *     def operate(output: MorselExecutionContext,
+    *                 context: QueryContext,
+    *                 state: QueryState, resources: QueryResources): Unit
+    * }}}
+    */
   def genOperate: IntermediateRepresentation
 
   // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
@@ -71,7 +78,13 @@ trait OperatorTaskTemplate {
 }
 
 trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
-  //override def canContinue: Boolean
+
+  /**
+    * Responsible for generating:
+    * {{{
+    *   override def canContinue: Boolean
+    * }}}
+    */
   def genCanContinue: IntermediateRepresentation
 }
 

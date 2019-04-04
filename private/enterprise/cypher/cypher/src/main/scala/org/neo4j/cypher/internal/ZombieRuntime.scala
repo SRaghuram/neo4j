@@ -97,7 +97,6 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      prePopulateResults: Boolean,
                      inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
-
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
