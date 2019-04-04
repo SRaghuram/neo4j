@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{InstanceField, IntermediateRepresentation, Parameter}
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{InstanceField, IntermediateRepresentation, Parameter}
 import org.neo4j.cypher.internal.runtime.morsel.{CursorPool, MorselExecutionContext}
 import org.neo4j.internal.kernel.api.{Cursor, NodeCursor, Read}
 

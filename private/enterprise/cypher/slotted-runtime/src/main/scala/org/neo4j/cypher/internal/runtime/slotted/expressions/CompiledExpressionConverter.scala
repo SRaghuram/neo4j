@@ -5,15 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
+import org.neo4j.codegen.api.CodeGeneration.compileClass
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{ClassDeclaration, MethodDeclaration}
 import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileClass
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, _}
+
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.{defaultGenerator, nullCheck}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
@@ -119,6 +120,11 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 }
 
 object CompiledExpressionConverter {
+  private val PACKAGE_NAME = "org.neo4j.codegen"
+
+
+  private def className(): String = "Expression" + System.nanoTime()
+
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
     case s: SlottedQueryState => s.params
     case _ => throw new InternalException(s"Expected a slotted query state")

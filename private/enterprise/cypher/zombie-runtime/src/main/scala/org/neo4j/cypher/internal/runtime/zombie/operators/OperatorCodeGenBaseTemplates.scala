@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileClass
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
-import org.neo4j.cypher.internal.runtime.compiled.expressions._
+
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration

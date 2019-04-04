@@ -8,12 +8,13 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import java.util
 import java.util.regex
 
+import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, noValue, or, ternary, variable}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{ASTCachedNodeProperty, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -2556,6 +2557,12 @@ object IntermediateCodeGeneration {
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
+
+  def nullCheck(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
+    val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullCheck)
+    if (checks.nonEmpty) ternary(checks.reduceLeft(or), noValue, onNotNull)
+    else onNotNull
+  }
 }
 
 private class DefaultIntermediateCodeGeneration(slots: SlotConfiguration) extends IntermediateCodeGeneration(slots) {

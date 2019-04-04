@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
+import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration.LocalVariableSlotMapper
@@ -57,7 +58,7 @@ object OperatorIntermediateCodeGeneration {
 class OperatorIntermediateCodeGeneration(slots: SlotConfiguration)
   extends IntermediateCodeGeneration(slots) {
 
-  import IntermediateRepresentation.{assign, block, load}
+  import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, load}
 
   val locals: LocalVariableSlotMapper = new LocalVariableSlotMapper(slots)
 

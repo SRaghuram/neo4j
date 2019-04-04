@@ -5,15 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
+import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -108,7 +108,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
 class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
                                        (codeGen: OperatorIntermediateCodeGeneration) extends ContinuableOperatorTaskTemplate {
-  import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
+  import org.neo4j.codegen.api.IntermediateRepresentation._
 
   override def toString: String = "ProduceResultTaskTemplate"
 

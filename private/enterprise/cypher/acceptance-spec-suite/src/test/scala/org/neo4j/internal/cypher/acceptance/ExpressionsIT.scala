@@ -9,6 +9,7 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
+import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
