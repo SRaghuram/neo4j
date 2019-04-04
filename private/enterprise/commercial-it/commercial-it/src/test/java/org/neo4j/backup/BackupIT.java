@@ -917,7 +917,7 @@ class BackupIT
 
     private void forceTransactionLogRotation( GraphDatabaseService db ) throws IOException
     {
-        for ( int i = 0; i < 1000; i++ )
+        for ( int i = 0; i < 10; i++ )
         {
             createNode( db );
             rotateAndCheckPoint( db );
