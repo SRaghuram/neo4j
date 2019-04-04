@@ -56,7 +56,4 @@ public class AnyGroupFilterTest
 
         assertEquals( asSet( 1, 2, 3, 4, 7 ), ports );
     }
-
-
-
 }

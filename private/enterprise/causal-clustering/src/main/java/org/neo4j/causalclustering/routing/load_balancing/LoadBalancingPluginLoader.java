@@ -40,7 +40,7 @@ public class LoadBalancingPluginLoader
         LoadBalancingPlugin plugin = findPlugin( config );
         plugin.init( topologyService, leaderLocator, logProvider, config );
 
-        if ( config.get( CausalClusteringSettings.load_balancing_shuffle ) )
+        if ( config.get( CausalClusteringSettings.load_balancing_shuffle ) && !(plugin instanceof ShufflingPlugin) )
         {
             return new ServerShufflingProcessor( plugin );
         }

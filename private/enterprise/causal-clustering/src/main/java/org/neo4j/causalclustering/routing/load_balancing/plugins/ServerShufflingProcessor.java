@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
+import org.neo4j.causalclustering.routing.load_balancing.ShufflingPlugin;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 
 /**

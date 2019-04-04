@@ -23,6 +23,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -89,6 +90,27 @@ public class LoadBalancingPluginLoaderTest
                 config );
 
         // then
+        assertTrue( plugin instanceof ServerPoliciesPlugin );
+        assertEquals( ServerPoliciesPlugin.PLUGIN_NAME, ((ServerPoliciesPlugin) plugin).pluginName() );
+    }
+
+    @Test
+    public void serverPoliciesPluginShouldShuffleSelf() throws Throwable
+    {
+        // given
+        Config config = Config.builder()
+                .withSetting( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
+                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "true" ).build();
+
+        // when
+        LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
+                mock( TopologyService.class ),
+                mock( LeaderLocator.class ),
+                NullLogProvider.getInstance(),
+                config );
+
+        // then
+        assertFalse( plugin instanceof  ServerShufflingProcessor );
         assertTrue( plugin instanceof ServerPoliciesPlugin );
         assertEquals( ServerPoliciesPlugin.PLUGIN_NAME, ((ServerPoliciesPlugin) plugin).pluginName() );
     }

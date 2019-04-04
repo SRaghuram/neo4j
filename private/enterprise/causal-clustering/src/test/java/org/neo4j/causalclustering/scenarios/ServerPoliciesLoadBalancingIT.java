@@ -192,16 +192,21 @@ public class ServerPoliciesLoadBalancingIT
     public void shouldPartiallyOrderRoutersByPolicy() throws Exception
     {
         Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core" + id + ",core" );
+        IntFunction<String> oddEven = i -> i % 2 == 0 ? "Even" : "Odd";
+        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core,core" + oddEven.apply( id ) );
 
-        String evensPolicy = "groups(core0,core2,core4)";
-        String oddsPolicy = "groups(core1,core3)";
+        String evensPolicy = "groups(coreEven)";
+        String evensHaltPolicy = "groups(coreEven);halt()";
+        String oddsPolicy = "groups(coreOdd)";
+        String oddsMinPolicy = "groups(coreOdd) -> min(3);groups(coreEven)";
         String allPolicy = "all()";
 
         Map<String,String> coreParams = stringMap(
                 CausalClusteringSettings.cluster_allow_reads_on_followers.name(), "true",
                 CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evens", evensPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evensHalt", evensHaltPolicy,
                 CausalClusteringSettings.load_balancing_config.name() + ".server_policies.odds", oddsPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.oddsMin", oddsMinPolicy,
                 CausalClusteringSettings.load_balancing_config.name() + ".server_policies.all", allPolicy,
                 CausalClusteringSettings.multi_dc_license.name(), "true");
 
@@ -223,6 +228,10 @@ public class ServerPoliciesLoadBalancingIT
             assertThat( getServers( db, policyContext( "odds" ) ),
                     new RouterPartialOrderMatcher( false, asSet( 1, 3 ), asSet( 0, 2 ) ) );
             assertThat( getServers( db, policyContext( "evens" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "evensHalt" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "oddsMin" ) ),
                     new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
         }
     }
@@ -458,7 +467,7 @@ public class ServerPoliciesLoadBalancingIT
 
         private int findPartialOrderForAddress( List<Set<AdvertisedSocketAddress>> addressSubsets, AdvertisedSocketAddress address )
         {
-            for( int i = 0; i < addressSubsets.size(); i++ )
+            for ( int i = 0; i < addressSubsets.size(); i++ )
             {
                 if ( addressSubsets.get( i ).contains( address ) )
                 {
