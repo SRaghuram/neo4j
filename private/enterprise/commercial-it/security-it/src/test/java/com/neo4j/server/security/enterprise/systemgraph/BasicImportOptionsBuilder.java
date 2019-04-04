@@ -17,6 +17,7 @@ import org.neo4j.server.security.systemgraph.SystemGraphCredential;
 import org.neo4j.string.UTF8;
 
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 
 class BasicImportOptionsBuilder
 {
@@ -74,21 +75,13 @@ class BasicImportOptionsBuilder
     {
         for ( String username : usernames )
         {
-            byte[] encodedPassword;
-
-            if ( password != null )
-            {
-                encodedPassword = UTF8.encode( password );
-            }
-            else
+            if ( password == null )
             {
                 // Use username as password to simplify test assertions
-                encodedPassword = UTF8.encode( username );
+                password = username;
             }
 
-            SystemGraphCredential credential = SystemGraphCredential.createCredentialForPassword( encodedPassword, new SecureHasher() );
-
-            User user = new User.Builder( username, credential ).withRequiredPasswordChange( pwdChangeRequired ).build();
+            User user = new User.Builder( username, credentialFor( password ) ).withRequiredPasswordChange( pwdChangeRequired ).build();
             repository.create( user );
         }
     }
