@@ -22,7 +22,7 @@
         <mockito.version>1.10.19</mockito.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
-        <test.runner.jvm.settings.additional>-Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
+        <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
     </properties>
 
     <licenses>
@@ -322,13 +322,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>-Xmx6g</argLine>
-                </configuration>
             </plugin>
         </plugins>
     </build>
