@@ -5,15 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.codegen.api.CodeGeneration.compileClass
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{ClassDeclaration, MethodDeclaration}
 import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.{defaultGenerator, nullCheck}
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
@@ -39,12 +36,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
     case e => try {
-      val ir = defaultGenerator(physicalPlan.slotConfigurations(id)).compileExpression(e)
-      if (ir.nonEmpty) {
-        log.debug(s"Compiling expression: $e")
-      }
-      ir.map(i => CompileWrappingExpression(CodeGeneration.compileExpression(i),
-                                                         inner.toCommandExpression(id, expression)))
+      log.debug(s"Compiling expression: $expression")
+      defaultGenerator(physicalPlan.slotConfigurations(id))
+        .compileExpression(e)
+        .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
       case t: Throwable =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
@@ -59,17 +54,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
-
-      val slots = physicalPlan.slotConfigurations(id)
-      val compiler = defaultGenerator(slots)
-      val compiled = for {(k, v) <- projections
-                          c <- compiler.compileExpression(v)} yield slots.get(k).get.offset -> c
-      if (compiled.size < projections.size) None
-      else {
-        log.debug(s" Compiling projection: $projections")
-        Some(CompileWrappingProjection(CodeGeneration.compileProjection(compiler.compileProjection(compiled)),
-                                       projections.isEmpty))
-      }
+      log.debug(s" Compiling projection: $projections")
+      defaultGenerator(physicalPlan.slotConfigurations(id))
+        .compileProjection(projections)
+        .map(CompileWrappingProjection(_, projections.isEmpty))
     }
     catch {
       case t: Throwable =>
@@ -91,18 +79,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         // TODO Support compiled ordered GroupingExpression
         None
       } else {
-        val slots = physicalPlan.slotConfigurations(id)
-        val compiler = defaultGenerator(slots)
-        val compiled = for {(k, v) <- projections
-                            c <- compiler.compileExpression(v)} yield slots(k) -> c
-        if (compiled.size < projections.size) None
-        else {
-          log.debug(s" Compiling grouping expressions: $projections")
-          val declaration = compileGroupingClassDeclaration(compiler.compileGroupingExpression(compiled))
-          Some(CompileWrappingDistinctGroupingExpression(
-            compileClass(declaration).getDeclaredConstructor().newInstance().asInstanceOf[CompiledGroupingExpression],
-            projections.isEmpty))
-        }
+        log.debug(s" Compiling projection: $projections")
+        defaultGenerator(physicalPlan.slotConfigurations(id))
+          .compileGrouping(projections)
+          .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
       }
     }
     catch {
@@ -120,113 +100,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 }
 
 object CompiledExpressionConverter {
-  private val PACKAGE_NAME = "org.neo4j.codegen"
-
-
-  private def className(): String = "Expression" + System.nanoTime()
 
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
     case s: SlottedQueryState => s.params
     case _ => throw new InternalException(s"Expected a slotted query state")
-  }
-
-  def compileExpressionClassDeclaration(expression: IntermediateExpression): ClassDeclaration = {
-      val declarations = block(expression.variables.distinct.map { v =>
-        declareAndAssign(v.typ, v.name, v.value)
-      }: _*)
-
-      ClassDeclaration(
-        PACKAGE_NAME,
-        className(),
-        None,
-        Seq(typeRefOf[CompiledExpression]),
-        Seq.empty,
-        initializationCode = noop(),
-        fields = expression.fields,
-        methods = Seq(
-          MethodDeclaration("evaluate",
-                            owner = typeRefOf[CompiledExpression],
-                            returnType = typeRefOf[AnyValue],
-                            parameters = Seq(param[ExecutionContext]("context"),
-                                             param[DbAccess]("dbAccess"),
-                                             param[Array[AnyValue]]("params"),
-                                             param[ExpressionCursors]("cursors"),
-                                             param[Array[AnyValue]]("expressionVariables")),
-                            body = block(
-                              declarations,
-                              returns(nullCheck(expression)(expression.ir))
-                            ))))
-  }
-
-  def compileProjectionClassDeclaration(expression: IntermediateExpression): ClassDeclaration = {
-    val declarations = block(expression.variables.distinct.map { v =>
-      declareAndAssign(v.typ, v.name, v.value)
-    }: _*)
-
-    ClassDeclaration(
-      PACKAGE_NAME,
-      className(),
-      None,
-      Seq(typeRefOf[CompiledProjection]),
-      Seq.empty,
-      initializationCode = noop(),
-      fields = expression.fields,
-      methods = Seq(
-        MethodDeclaration("project",
-                          owner = typeRefOf[CompiledProjection],
-                          returnType = typeRefOf[Unit],
-                          parameters = Seq(param[ExecutionContext]("context"),
-                                           param[DbAccess]("dbAccess"),
-                                           param[Array[AnyValue]]("params"),
-                                           param[ExpressionCursors]("cursors"),
-                                           param[Array[AnyValue]]("expressionVariables")),
-                          body = block(
-                            declarations,
-                            expression.ir
-                          ))))
-  }
-
-  def compileGroupingClassDeclaration(grouping: IntermediateGroupingExpression): ClassDeclaration = {
-    def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
-      declareAndAssign(v.typ, v.name, v.value)
-    }: _*)
-
-    ClassDeclaration(
-      PACKAGE_NAME,
-      className(),
-      None,
-      Seq(typeRefOf[CompiledGroupingExpression]),
-      Seq.empty,
-      initializationCode = noop(),
-      fields = grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
-      methods = Seq(
-        MethodDeclaration("projectGroupingKey",
-                          owner = typeRefOf[CompiledGroupingExpression],
-                          returnType = typeRefOf[Unit],
-                          parameters = Seq(param[ExecutionContext]("context"),
-                                           param[AnyValue]("key")),
-                          body = block(
-                            declarations(grouping.projectKey),
-                            grouping.projectKey.ir)),
-        MethodDeclaration("computeGroupingKey",
-                          owner = typeRefOf[CompiledGroupingExpression],
-                          returnType = typeRefOf[AnyValue],
-                          parameters = Seq(param[ExecutionContext]("context"),
-                            param[DbAccess]("dbAccess"),
-                            param[Array[AnyValue]]("params"),
-                            param[ExpressionCursors]("cursors"),
-                            param[Array[AnyValue]]("expressionVariables")),
-                          body = block(
-                              declarations(grouping.computeKey),
-                              returns(nullCheck(grouping.computeKey)(grouping.computeKey.ir)))),
-        MethodDeclaration("getGroupingKey",
-                          owner = typeRefOf[CompiledGroupingExpression],
-                          returnType = typeRefOf[AnyValue],
-                          parameters = Seq(param[ExecutionContext]("context")),
-                          body = block(
-                            declarations(grouping.getKey),
-                            returns(nullCheck(grouping.getKey)(grouping.getKey.ir))))
-        ))
   }
 }
 

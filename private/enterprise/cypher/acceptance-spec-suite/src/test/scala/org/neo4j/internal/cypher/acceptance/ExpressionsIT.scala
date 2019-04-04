@@ -9,7 +9,6 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
@@ -83,7 +82,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   protected var query: QueryContext = _
   private var cursors: ExpressionCursors = _
-  private var expressionVariables: Array[AnyValue] = _
+  private val expressionVariables: Array[AnyValue] = Array.empty
   private var tx: InternalTransaction = _
   private var context: TransactionalContext = _
   private val random = ThreadLocalRandom.current()
@@ -257,7 +256,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("distance function") {
     val compiled = compile(function("distance", parameter(0), parameter(1)))
-    val keys = Array("p1", "p2")
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
                                  pointValue(Cartesian, 1.0, 1.0))) should equal(doubleValue(Math.sqrt(2)))
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
@@ -947,7 +945,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("ORS should throw on non-boolean input") {
     val compiled = compile(ors(parameter(0), parameter(1), parameter(2), parameter(3), parameter(4)))
-    val keys = Array("a", "b", "c", "d", "e")
     evaluate(compiled, params(Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)) should equal(Values.FALSE)
 
     evaluate(compiled, params(Values.FALSE, Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)) should equal(Values.TRUE)
@@ -999,7 +996,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("ANDS should throw on non-boolean input") {
     val compiled = compile(ands(parameter(0), parameter(1), parameter(2), parameter(3), parameter(4)))
-    val keys = Array("a", "b", "c", "d", "e")
     evaluate(compiled, params(Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)) should equal(Values.TRUE)
 
     evaluate(compiled, params(Values.TRUE, Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)) should equal(Values.FALSE)
@@ -3433,11 +3429,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compiled.evaluate(context, query, Array.empty, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
-                       params: Array[AnyValue],
-                       context: ExecutionContext): AnyValue =
-    compiled.evaluate(context, query, params, cursors, expressionVariables)
-
-  private def evaluate(compiled: CompiledExpression,
                        nExpressionSlots: Int,
                        params: Array[AnyValue] = Array.empty,
                        context: ExecutionContext = ctx): AnyValue =
@@ -3568,23 +3559,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 }
 
 class CompiledExpressionsIT extends ExpressionsIT {
-     override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-      CodeGeneration.compileExpression(defaultGenerator(slots).compileExpression(e).getOrElse(fail()))
 
-     override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection = {
-      val compiler = defaultGenerator(slots)
-      val compiled = for ((s,e) <- projections) yield slots(s).offset -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
-      CodeGeneration.compileProjection(compiler.compileProjection(compiled))
-    }
+  override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
+       defaultGenerator(slots).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
-     override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression = {
-      val compiler = defaultGenerator(slots)
-      val compiled = for ((s,e) <- projections) yield slots(s) -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
+     override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
+       defaultGenerator(slots).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
-       compileClass(
-         compileGroupingClassDeclaration(compiler.compileGroupingExpression(compiled)))
-         .getDeclaredConstructor().newInstance().asInstanceOf[CompiledGroupingExpression]
-    }
+
+  override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
+    defaultGenerator(slots).compileGrouping(projections).getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
 class InterpretedExpressionIT extends ExpressionsIT {
