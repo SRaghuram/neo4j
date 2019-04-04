@@ -5,26 +5,34 @@
  */
 package com.neo4j.causalclustering.helper;
 
+import java.io.File;
+
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public class TemporaryDatabase implements AutoCloseable
 {
-    private final GraphDatabaseService graphDatabaseService;
+    private final GraphDatabaseAPI graphDatabaseAPI;
 
-    public TemporaryDatabase( GraphDatabaseService graphDatabaseService )
+    public TemporaryDatabase( GraphDatabaseAPI graphDatabaseAPI )
     {
-        this.graphDatabaseService = graphDatabaseService;
+        this.graphDatabaseAPI = graphDatabaseAPI;
     }
 
     public GraphDatabaseService graphDatabaseService()
     {
-        return graphDatabaseService;
+        return graphDatabaseAPI;
+    }
+
+    public File defaultDatabaseDirectory()
+    {
+        return graphDatabaseAPI.databaseLayout().databaseDirectory();
     }
 
     @Override
     public void close()
     {
-        graphDatabaseService.shutdown();
+        graphDatabaseAPI.shutdown();
     }
 }
 

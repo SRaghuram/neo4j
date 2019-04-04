@@ -7,6 +7,7 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.backup.stores.BackupStore;
 import com.neo4j.backup.stores.BackupStoreWithSomeData;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataAndNoIdFiles;
 import com.neo4j.backup.stores.DefaultDatabasesBackup;
 import com.neo4j.backup.stores.EmptyBackupStore;
 import com.neo4j.causalclustering.common.Cluster;
@@ -87,7 +88,7 @@ public class NewMemberSeedingIT
 
     private static Iterable<BackupStore> stores()
     {
-        return Arrays.asList( new EmptyBackupStore(), new BackupStoreWithSomeData() );
+        return Arrays.asList( new EmptyBackupStore(), new BackupStoreWithSomeData(), new BackupStoreWithSomeDataAndNoIdFiles() );
     }
 
     @Before

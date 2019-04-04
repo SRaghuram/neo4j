@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
@@ -35,6 +36,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -50,6 +53,8 @@ import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,6 +68,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension
 class CoreBootstrapperIT
@@ -74,7 +80,7 @@ class CoreBootstrapperIT
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
 
-    private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
     private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -94,7 +100,7 @@ class CoreBootstrapperIT
     @BeforeEach
     void setup()
     {
-        this.temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
+        this.temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( pageCache );
         this.neo4jHome = testDirectory.directory();
         this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
@@ -108,12 +114,14 @@ class CoreBootstrapperIT
     {
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( databaseLayout )
+                .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
+                .withLogFiles( buildLogFiles( databaseLayout ) )
                 .register();
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
@@ -131,12 +139,14 @@ class CoreBootstrapperIT
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( databaseLayout )
+                .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
+                .withLogFiles( buildLogFiles( databaseLayout ) )
                 .register();
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
@@ -158,12 +168,12 @@ class CoreBootstrapperIT
                 .amountOfNodes( nodeCount )
                 .build();
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
@@ -191,12 +201,12 @@ class CoreBootstrapperIT
                               .withSetting( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
                               .build();
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, config, logProvider, pageCache, storageEngineFactory );
 
         // when
@@ -208,7 +218,7 @@ class CoreBootstrapperIT
     }
 
     @Test
-    void shouldBootstrapWithDeletedIdFiles() throws Exception
+    void shouldFailToBootstrapWithDeletedIdFiles() throws Exception
     {
         // given
         int nodeCount = 100;
@@ -220,20 +230,20 @@ class CoreBootstrapperIT
 
         IdFilesDeleter.deleteIdFiles( database.layout(), fileSystem );
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                        .withDatabaseName( DEFAULT_DATABASE_NAME )
                        .withDatabaseLayout( database.layout() )
                        .register();
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
+        assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
+        assertThat( exception.getCause().getMessage(), containsString( "Recovery is required" ) );
     }
 
     @Test
@@ -248,19 +258,20 @@ class CoreBootstrapperIT
                 .needToRecover()
                 .build();
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( database.layout() )
                 .register();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers, fileSystem,
                 defaultConfig, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        IllegalStateException exception = assertThrows( IllegalStateException.class, () -> bootstrapper.bootstrap( membership ) );
-        assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( exception.getMessage() ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
+        assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
+        assertableLogProvider.assertAtLeastOnce( inLog( DatabaseBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 
     @Test
@@ -277,7 +288,7 @@ class CoreBootstrapperIT
                 .needToRecover()
                 .build();
 
-        databaseService.givenDatabaseWithConfig()
+        databaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( database.layout() )
                 .register();
@@ -289,13 +300,13 @@ class CoreBootstrapperIT
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, config, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        Exception exception = assertThrows( Exception.class, () -> bootstrapper.bootstrap( membership ) );
-        assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( exception.getMessage() ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
+        assertableLogProvider.assertAtLeastOnce( inLog( DatabaseBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig, int nodeCount ) throws IOException
@@ -310,7 +321,7 @@ class CoreBootstrapperIT
         /* The session state is initially empty. */
         assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateFiles.SESSION_TRACKER ) );
 
-        for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseService.registeredDatabases().entrySet() )
+        for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get, nodeCount );
             if ( databaseEntry.getKey().name().equals( SYSTEM_DATABASE_NAME ) )
@@ -351,6 +362,13 @@ class CoreBootstrapperIT
     private int recordIdBatchSize()
     {
         return parseInt( record_id_batch_size.getDefaultValue() );
+    }
+
+    private LogFiles buildLogFiles( DatabaseLayout databaseLayout ) throws IOException
+    {
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem )
+                .withConfig( defaultConfig )
+                .build();
     }
 
     private static MemberId randomMember()

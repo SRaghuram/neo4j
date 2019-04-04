@@ -63,6 +63,9 @@ import static org.neo4j.configuration.Settings.setting;
 @ServiceProvider
 public class CausalClusteringSettings implements LoadableConfig
 {
+    public static final String TEMP_STORE_COPY_DIRECTORY_NAME = "temp-copy";
+    public static final String TEMP_BOOTSTRAP_DIRECTORY_NAME = "temp-bootstrap";
+
     @Description( "Time out for a new member to catch up" )
     public static final Setting<Duration> join_catch_up_timeout =
             setting( "causal_clustering.join_catch_up_timeout", DURATION, "10m" );

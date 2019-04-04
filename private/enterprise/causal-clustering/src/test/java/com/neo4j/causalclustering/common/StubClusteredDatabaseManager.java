@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.helpers.FakeJobScheduler;
 
 import java.util.Collections;
@@ -21,11 +22,11 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -144,8 +145,8 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         when( db.getDatabaseName() ).thenReturn( config.databaseId.name() );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
 
-        StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logProvider,
-                config.isAvailable, config.monitors, config.catchupComponentsFactory );
+        StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
+                config.logProvider, config.isAvailable, config.catchupComponentsFactory );
 
         if ( config.storeId != null )
         {
@@ -166,10 +167,11 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         private LogProvider logProvider = NullLogProvider.getInstance();
         private BooleanSupplier isAvailable = StubClusteredDatabaseManager.this::globalAvailability;
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.DatabaseCatchupComponents.class );
-        private Monitors monitors;
         private StoreId storeId;
         private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();
+        private StoreFiles storeFiles = mock( StoreFiles.class );
+        private LogFiles logFiles = mock( LogFiles.class );
 
         private DatabaseContextConfig()
         {
@@ -202,12 +204,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
             return this;
         }
 
-        public DatabaseContextConfig withMonitors( Monitors monitors )
-        {
-            this.monitors = monitors;
-            return this;
-        }
-
         public DatabaseContextConfig withCatchupComponentsFactory( CatchupComponentsFactory catchupComponentsFactory )
         {
             this.catchupComponentsFactory = catchupComponentsFactory;
@@ -235,6 +231,18 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         public DatabaseContextConfig withDependencies( Dependencies dependencies )
         {
             this.dependencies = dependencies;
+            return this;
+        }
+
+        public DatabaseContextConfig withStoreFiles( StoreFiles storeFiles )
+        {
+            this.storeFiles = storeFiles;
+            return this;
+        }
+
+        public DatabaseContextConfig withLogFiles( LogFiles logFiles )
+        {
+            this.logFiles = logFiles;
             return this;
         }
 

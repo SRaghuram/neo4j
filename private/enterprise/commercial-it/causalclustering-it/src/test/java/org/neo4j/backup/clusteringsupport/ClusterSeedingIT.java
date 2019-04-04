@@ -7,6 +7,7 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.backup.stores.BackupStore;
 import com.neo4j.backup.stores.BackupStoreWithSomeData;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataAndNoIdFiles;
 import com.neo4j.backup.stores.DefaultDatabasesBackup;
 import com.neo4j.backup.stores.EmptyBackupStore;
 import com.neo4j.backup.stores.NoStore;
@@ -67,7 +68,8 @@ public class ClusterSeedingIT
         return new Object[][]{
                 {new NoStore(), true},
                 {new EmptyBackupStore(), false},
-                {new BackupStoreWithSomeData(), false}
+                {new BackupStoreWithSomeData(), false},
+                {new BackupStoreWithSomeDataAndNoIdFiles(), false},
         };
     }
 

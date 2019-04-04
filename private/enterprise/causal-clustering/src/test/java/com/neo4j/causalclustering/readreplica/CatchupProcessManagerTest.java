@@ -38,7 +38,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.FakeClockJobScheduler;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
@@ -90,7 +89,6 @@ public class CatchupProcessManagerTest
     {
         return databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( databaseName )
-                .withMonitors( new Monitors() )
                 .withDependencies( mock( Dependencies.class ) )
                 .register();
     }

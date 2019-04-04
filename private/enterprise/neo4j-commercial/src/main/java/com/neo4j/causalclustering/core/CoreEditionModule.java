@@ -375,7 +375,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager,
             IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
-        TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
+        TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseManager, temporaryDatabaseFactory,
                 sslPolicyLoader, dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }

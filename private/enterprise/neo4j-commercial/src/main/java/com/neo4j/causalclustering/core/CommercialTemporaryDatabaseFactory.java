@@ -15,47 +15,56 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.ignore_store_lock;
 import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.TRUE;
 
 public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFactory
 {
+    private final PageCache pageCache;
+
+    public CommercialTemporaryDatabaseFactory( PageCache pageCache )
+    {
+        this.pageCache = pageCache;
+    }
+
     @Override
-    public TemporaryDatabase startTemporaryDatabase( PageCache pageCache, File rootDirectory, Map<String,String> params )
+    public TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig )
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        GraphDatabaseService db = new CommercialGraphDatabaseFactory()
-                .setUserLogProvider( NullLogProvider.getInstance() ).setExternalDependencies( dependencies )
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
+                .setUserLogProvider( NullLogProvider.getInstance() )
+                .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( rootDirectory )
-                .setConfig( augmentParams( params, rootDirectory ) ).newGraphDatabase();
+                .setConfig( augmentConfig( originalConfig, rootDirectory ) )
+                .newGraphDatabase();
 
         return new TemporaryDatabase( db );
     }
 
-    private static Map<String,String> augmentParams( Map<String,String> params, File databaseDirectory )
+    private static Map<String,String> augmentConfig( Config originalConfig, File rootDirectory )
     {
-        Map<String,String> augmentedParams = new HashMap<>( params );
+        Map<String,String> augmentedParams = new HashMap<>();
+
+        // use the same record format as specified by the original config
+        augmentedParams.put( GraphDatabaseSettings.record_format.name(), originalConfig.get( GraphDatabaseSettings.record_format ) );
+
+        // make all database and transaction log directories live in the specified root directory
+        augmentedParams.put( GraphDatabaseSettings.databases_root_path.name(), rootDirectory.getAbsolutePath() );
+        augmentedParams.put( GraphDatabaseSettings.transaction_logs_root_path.name(), rootDirectory.getAbsolutePath() );
 
         /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
         augmentedParams.putIfAbsent( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
         augmentedParams.putIfAbsent( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
         augmentedParams.putIfAbsent( "metrics.enabled", Settings.FALSE );
         augmentedParams.putIfAbsent( "metrics.csv.enabled", Settings.FALSE );
-
-        /* Touching the store is allowed during bootstrapping. */
-        augmentedParams.putIfAbsent( ignore_store_lock.name(), TRUE );
-
-        augmentedParams.putIfAbsent( GraphDatabaseSettings.store_internal_log_path.name(),
-                new File( databaseDirectory, "bootstrap.debug.log" ).getAbsolutePath() );
 
         return augmentedParams;
     }

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
@@ -35,35 +36,35 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private boolean isEmpty;
     private StoreId storeId;
     private final Monitors monitors;
+    private final StoreFiles storeFiles;
+    private final LogFiles logFiles;
 
-    /* This constructor is provided so that StubClusteredDatabaseContext can still conform to the ClusteredDatabaseContextFactory interface */
-    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles ignoredTxLogs,
-            StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
-    {
-        this( database, facade, logProvider, isAvailable, null, catchupComponentsFactory );
-    }
-
-    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogProvider logProvider, BooleanSupplier isAvailable,
-            Monitors monitors, CatchupComponentsFactory catchupComponentsFactory )
+    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
+            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
         this.logProvider = logProvider;
+        this.storeFiles = storeFiles;
+        this.logFiles = logFiles;
         this.isAvailable = isAvailable;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
-        this.monitors = monitors;
+        this.monitors = new Monitors();
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
 
     @Override
-    public void replaceWith( File sourceDir )
-    { //no-op
+    public void replaceWith( File sourceDir ) throws IOException
+    {
+        storeFiles.delete( database.getDatabaseLayout(), logFiles );
+        storeFiles.moveTo( sourceDir, database.getDatabaseLayout(), logFiles );
     }
 
     @Override
-    public void delete()
-    { //no-op
+    public void delete() throws IOException
+    {
+        storeFiles.delete( database.getDatabaseLayout(), logFiles );
     }
 
     @Override
