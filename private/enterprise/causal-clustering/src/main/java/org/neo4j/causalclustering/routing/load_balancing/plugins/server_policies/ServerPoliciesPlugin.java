@@ -10,12 +10,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -89,14 +91,25 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         CoreTopology coreTopology = topologyService.localCoreServers();
         ReadReplicaTopology rrTopology = topologyService.localReadReplicas();
 
-        return new LoadBalancingResult( routeEndpoints( coreTopology ), writeEndpoints( coreTopology ),
+        return new LoadBalancingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( coreTopology ),
                 readEndpoints( coreTopology, rrTopology, policy ), timeToLive );
     }
 
-    private List<Endpoint> routeEndpoints( CoreTopology cores )
+    private List<Endpoint> routeEndpoints( CoreTopology cores, Policy policy )
     {
-        return cores.members().values().stream().map( extractBoltAddress() )
-                .map( Endpoint::route ).collect( Collectors.toList() );
+
+        Set<ServerInfo> routers = cores.members().entrySet().stream()
+                .map( e ->
+                {
+                    MemberId m = e.getKey();
+                    CoreServerInfo c = e.getValue();
+                    return new ServerInfo( c.connectors().boltAddress(), m, c.groups() );
+                } ).collect( Collectors.toSet());
+
+        Set<ServerInfo> preferredRouters = policy.apply( routers );
+
+        return Stream.concat( preferredRouters.stream(), routers.stream().filter( r -> !preferredRouters.contains( r ) ) )
+        .map( r -> Endpoint.route( r.boltAddress() ) ).collect( Collectors.toList() );
     }
 
     private List<Endpoint> writeEndpoints( CoreTopology cores )
