@@ -199,7 +199,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
 
         handlerFactory = ignored -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
-        ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory, defaultDatabaseName );
+        ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory );
 
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
         CommandIndexTracker commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );

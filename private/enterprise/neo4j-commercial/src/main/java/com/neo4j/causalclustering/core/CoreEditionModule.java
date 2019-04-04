@@ -416,11 +416,11 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         CatchupHandlerFactory handlerFactory = snapshotService -> getHandlerFactory( fileSystem, snapshotService, databaseManager );
 
         //TODO:
-        //  - Implement start stop etc... for databases and make sure storecopy catchup machinery uses it
+        //  - Implement start stop etc... for databases and make sure store-copy catchup machinery uses it
         //  - plan how to test independent lifecycle
         coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
                 replicationModule, databaseManager, globalHealth, catchupComponentsProvider, serverInstalledProtocolHandler,
-                handlerFactory, defaultDatabaseName, panicService );
+                handlerFactory, panicService );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, globalConfig, logProvider, identityModule.myself() );

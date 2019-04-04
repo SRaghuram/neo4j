@@ -111,15 +111,12 @@ public final class CatchupComponentsProvider
      * Global Server instance for the Neo4j Catchup Protocol. Responds to store copy and catchup requests from other Neo4j instances
      * @param installedProtocolsHandler
      * @param catchupServerHandler
-     * @param defaultDatabaseName the default database name for the Neo4j instance, usually "neo4j"
      * @return a catchup server
      */
-    public Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler,
-            String defaultDatabaseName )
+    public Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
     {
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( catchupServerHandler )
-                .defaultDatabaseName( defaultDatabaseName )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.server() )
@@ -138,11 +135,9 @@ public final class CatchupComponentsProvider
      * Optional global server instance for the Neo4j Backup protocol. Basically works the same way as the catchup protocol.
      * @param installedProtocolsHandler
      * @param catchupServerHandler
-     * @param databaseName
      * @return an optional backup server
      */
-    public Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler,
-            String databaseName )
+    public Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
     {
         TransactionBackupServiceProvider transactionBackupServiceProvider =
                 new TransactionBackupServiceProvider( logProvider, supportedCatchupProtocols,
@@ -153,7 +148,7 @@ public final class CatchupComponentsProvider
                         scheduler,
                         portRegister );
 
-        return transactionBackupServiceProvider.resolveIfBackupEnabled( config, databaseName );
+        return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
     }
 
     /**

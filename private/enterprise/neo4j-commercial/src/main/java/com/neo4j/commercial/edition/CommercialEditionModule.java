@@ -212,7 +212,7 @@ public class CommercialEditionModule extends CommunityEditionModule
                 portRegister
         );
 
-        Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config, config.get( GraphDatabaseSettings.default_database ) );
+        Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }

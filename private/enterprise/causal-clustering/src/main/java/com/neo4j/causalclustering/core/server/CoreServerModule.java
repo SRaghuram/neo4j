@@ -73,7 +73,7 @@ public class CoreServerModule
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule,
             ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, Health kernelDatabaseHealth,
             CatchupComponentsProvider catchupComponentsProvider, InstalledProtocolHandler installedProtocolsHandler,
-            CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
+            CatchupHandlerFactory handlerFactory, Panicker panicker )
     {
         this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.globalConfig = globalModule.getGlobalConfig();
@@ -117,8 +117,8 @@ public class CoreServerModule
         this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( snapshotService );
-        this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
-        this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
+        this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
 
         RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess );
         globalDependencies.satisfyDependency( raftLogPruner );

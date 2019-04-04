@@ -44,12 +44,11 @@ public final class CatchupServerBuilder
         return new StepBuilder();
     }
 
-    private static class StepBuilder implements NeedsCatchupServerHandler, NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols,
+    private static class StepBuilder implements NeedsCatchupServerHandler, NeedsCatchupProtocols, NeedsModifierProtocols,
             NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, NeedsPortRegister,
             AcceptsOptionalParams
     {
         private CatchupServerHandler catchupServerHandler;
-        private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
         private Collection<ModifierSupportedProtocols> modifierProtocols;
@@ -67,16 +66,9 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler )
+        public NeedsCatchupProtocols catchupServerHandler( CatchupServerHandler catchupServerHandler )
         {
             this.catchupServerHandler = catchupServerHandler;
-            return this;
-        }
-
-        @Override
-        public NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName )
-        {
-            this.defaultDatabaseName = defaultDatabaseName;
             return this;
         }
 
@@ -180,12 +172,7 @@ public final class CatchupServerBuilder
 
     public interface NeedsCatchupServerHandler
     {
-        NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler );
-    }
-
-    public interface NeedsDefaultDatabaseName
-    {
-        NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName );
+        NeedsCatchupProtocols catchupServerHandler( CatchupServerHandler catchupServerHandler );
     }
 
     public interface NeedsCatchupProtocols

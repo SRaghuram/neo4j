@@ -53,7 +53,7 @@ public class TransactionBackupServiceProvider
         this.portRegister = portRegister;
     }
 
-    public Optional<Server> resolveIfBackupEnabled( Config config, String databaseName )
+    public Optional<Server> resolveIfBackupEnabled( Config config )
     {
         if ( config.get( OnlineBackupSettings.online_backup_enabled ) )
         {
@@ -61,7 +61,6 @@ public class TransactionBackupServiceProvider
             logProvider.getLog( TransactionBackupServiceProvider.class ).info( "Binding backup service on address %s", backupAddress );
             Server catchupServer = CatchupServerBuilder.builder()
                     .catchupServerHandler( catchupServerHandler )
-                    .defaultDatabaseName( databaseName )
                     .catchupProtocols( catchupProtocols )
                     .modifierProtocols( supportedModifierProtocols )
                     .pipelineBuilder( serverPipelineBuilderFactory )

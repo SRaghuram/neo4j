@@ -25,12 +25,12 @@ public class ReadReplicaServerModule
     private final CatchupClientFactory catchupClientFactory;
 
     ReadReplicaServerModule( ClusteredDatabaseManager<ReadReplicaDatabaseContext> databaseManager, CatchupComponentsProvider catchupComponentsProvider,
-            CatchupHandlerFactory handlerFactory, String databaseName )
+            CatchupHandlerFactory handlerFactory )
     {
         CatchupServerHandler catchupServerHandler = handlerFactory.create( null );
         InstalledProtocolHandler installedProtocolsHandler = new InstalledProtocolHandler();
-        this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
-        this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
+        this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
         this.catchupComponents = new CatchupComponentsRepository( databaseManager );
         this.catchupClientFactory = catchupComponentsProvider.createCatchupClient();
     }
