@@ -333,7 +333,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     }
 
     @Test
-    void shouldRespectConstraintsWithoutReadPrivileges() throws Throwable
+    void shouldRespectExistsConstraintsWithoutReadPrivileges() throws Throwable
     {
         userManager.newUser( "Alice", password( "foo" ), false );
         userManager.newRole( "custom", "Alice" );
@@ -341,14 +341,32 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
         dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
         userManager.grantPrivilegeToRole( "custom", dbPriv );
-//        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
+        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
+        assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
+
+        CommercialLoginContext subject = neo.login( "Alice", "foo" );
+        assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
+        assertFail( subject, "CREATE (:A)", "with label `A` must have the property `number`" );
+        assertSuccess( adminSubject, "MATCH (a:A) RETURN count(a)", r -> assertKeyIs( r, "count(a)", 1 ));
+    }
+
+    @Test
+    void shouldRespectUniqueConstraintsWithoutReadPrivileges() throws Throwable
+    {
+        userManager.newUser( "Alice", password( "foo" ), false );
+        userManager.newRole( "custom", "Alice" );
+
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
+        userManager.grantPrivilegeToRole( "custom", dbPriv );
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT a.number IS UNIQUE" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
-        assertSuccess( subject, "CREATE (:A)", ResourceIterator::close );
-        assertSuccess( adminSubject, "MATCH (a:A) RETURN a.number",
-                r -> assertKeyIs( r, "a.number", 4, null ));
+        assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
+        // UniquePropertyValueValidationException gets a read exception when trying to pretty print the error message, by looking up the label name
+        assertFail( subject, "CREATE (:A {number: 4})", READ_OPS_NOT_ALLOWED );
+        assertSuccess( adminSubject, "MATCH (a:A) RETURN count(a)", r -> assertKeyIs( r, "count(a)", 1 ));
     }
 
     // TESTS

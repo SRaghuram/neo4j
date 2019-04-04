@@ -157,8 +157,8 @@ class PropertyExistenceEnforcer
             super( next );
             this.read = read;
             this.cursorFactory = cursorFactory;
-            this.nodeCursor = cursorFactory.allocateNodeCursor();
-            this.propertyCursor = cursorFactory.allocatePropertyCursor();
+            this.nodeCursor = cursorFactory.allocateFullAccessNodeCursor();
+            this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor();
             this.relationshipCursor = cursorFactory.allocateRelationshipScanCursor();
         }
 
