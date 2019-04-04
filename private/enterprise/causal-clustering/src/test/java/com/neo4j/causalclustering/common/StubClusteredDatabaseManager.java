@@ -17,7 +17,6 @@ import java.util.function.BooleanSupplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseExistsException;
-import org.neo4j.dbms.database.DatabasesComparator;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -35,7 +34,7 @@ import static org.mockito.Mockito.when;
 
 public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<ClusteredDatabaseContext>
 {
-    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>( new DatabasesComparator() );
+    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
     private boolean isStoppedForSomeReason;
     private CompositeDatabaseHealth globalDatabaseHealth;
 
