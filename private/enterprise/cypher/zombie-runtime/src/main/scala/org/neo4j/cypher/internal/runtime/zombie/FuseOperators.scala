@@ -23,21 +23,21 @@ class FuseOperators(operatorFactory: OperatorFactory,
                     readOnly: Boolean,
                     queryIndexes: QueryIndexes) {
 
-  def compilePipeline(p: Pipeline): Option[ExecutablePipeline] = {
+  def compilePipeline(p: Pipeline): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledProduceResult) = fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
 
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan))
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle)
     val produceResultOperator = unhandledProduceResult.map(operatorFactory.createProduceResults)
-    Some(ExecutablePipeline(p.id,
+    ExecutablePipeline(p.id,
       headOperator,
       middleOperators,
       produceResultOperator,
       p.serial,
       physicalPlan.slotConfigurations(p.headPlan.id),
       p.inputBuffer,
-      p.outputBuffer))
+      p.outputBuffer)
   }
 
   private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
