@@ -77,11 +77,8 @@ public class ReadAndDeleteTransactionConflictIT
                 {
                     Record record = readResult.next();
                     Value value = record.get( "r" );
-                    if ( !value.isNull() )
-                    {
-                        relCounter++;
-                        assertThat( value.asRelationship().type(), is( "REL" ) );
-                    }
+                    relCounter++;
+                    assertThat( value.asRelationship().type(), is( "REL" ) );
                 }
             }
             assertThat( relCounter, is( lessThanOrEqualTo( 1000 ) ) );
@@ -121,11 +118,8 @@ public class ReadAndDeleteTransactionConflictIT
                 {
                     Record record = readResult.next();
                     Value value = record.get( "r" );
-                    if ( !value.isNull() )
-                    {
-                        relCounter++;
-                        assertThat( value.asRelationship().asMap().get( "a" ), isOneOf( 1L, null ) );
-                    }
+                    relCounter++;
+                    assertThat( value.asRelationship().asMap().get( "a" ), isOneOf( 1L, null ) );
                 }
             }
             assertThat( relCounter, is( lessThanOrEqualTo( 1000 ) ) );
@@ -165,11 +159,8 @@ public class ReadAndDeleteTransactionConflictIT
                 {
                     Record record = readResult.next();
                     Value value = record.get( "n" );
-                    if ( !value.isNull() )
-                    {
-                        nodeCounter++;
-                        assertThat( value.asNode(), notNullValue() );
-                    }
+                    nodeCounter++;
+                    assertThat( value.asNode(), notNullValue() );
                 }
             }
             assertThat( nodeCounter, is( lessThanOrEqualTo( 1000 ) ) );
@@ -209,11 +200,8 @@ public class ReadAndDeleteTransactionConflictIT
                 {
                     Record record = readResult.next();
                     Value value = record.get( "n" );
-                    if ( !value.isNull() )
-                    {
-                        nodeCounter++;
-                        assertThat( value.asNode().asMap().get( "a" ), isOneOf( 1L, null ) );
-                    }
+                    nodeCounter++;
+                    assertThat( value.asNode().asMap().get( "a" ), isOneOf( 1L, null ) );
                 }
             }
             assertThat( nodeCounter, is( lessThanOrEqualTo( 1000 ) ) );
