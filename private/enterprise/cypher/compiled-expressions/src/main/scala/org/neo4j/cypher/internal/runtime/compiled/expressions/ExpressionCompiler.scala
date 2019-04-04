@@ -38,9 +38,9 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Produces IntermediateRepresentation from a Cypher Expression
+  * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
+abstract class ExpressionCompiler(slots: SlotConfiguration) {
 
   private val namer = new VariableNamer
 
@@ -58,9 +58,14 @@ abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
     def variableName(name: String): String = variables.getOrElseUpdate(name, nextVariableName())
   }
 
-  import IntermediateCodeGeneration._
+  import ExpressionCompiler._
   import IntermediateRepresentation._
 
+  /**
+    * Compiles the given expression to an instance of [[CompiledExpression]]
+    * @param e the expression to compile
+    * @return an instance of [[CompiledExpression]] corresponding to the provided expression
+    */
   def compileExpression(e: Expression): Option[CompiledExpression] = {
     intermediateCompileExpression(e).map { expression =>
       val classDeclaration =
@@ -92,6 +97,11 @@ abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
   }
 
+  /**
+    * Compiles the given projection to an instance of [[CompiledProjection]]
+    * @param projections the projection to compile
+    * @return an instance of [[CompiledProjection]] corresponding to the provided projection
+    */
   def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
     val compiled = for {(k, v) <- projections
                         c <- intermediateCompileExpression(v)} yield slots.get(k).get.offset -> c
@@ -127,13 +137,18 @@ abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
   }
 
-  def compileGrouping(projections: Map[String, Expression]): Option[CompiledGroupingExpression] = {
+  /**
+    * Compiles the given groupings to an instance of [[CompiledGroupingExpression]]
+    * @param groupings the groupings to compile
+    * @return an instance of [[CompiledGroupingExpression]] corresponding to the provided groupings
+    */
+  def compileGrouping(groupings: Map[String, Expression]): Option[CompiledGroupingExpression] = {
     def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
       declareAndAssign(v.typ, v.name, v.value)
     }: _*)
-    val compiled = for {(k, v) <- projections
+    val compiled = for {(k, v) <- groupings
                         c <- intermediateCompileExpression(v)} yield slots(k) -> c
-    if (compiled.size < projections.size) None
+    if (compiled.size < groupings.size) None
     else {
       val grouping = intermediateCompileGroupingExpression(compiled)
       val classDeclaration =
@@ -178,6 +193,11 @@ abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
   }
 
+  /**
+    * Compiles the given expression to an [[IntermediateExpression]]
+    * @param expression the expression to compile
+    * @return an [[IntermediateExpression]] corresponding to the provided expression.
+    */
   def intermediateCompileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
 
     //functions
@@ -2654,8 +2674,8 @@ abstract class IntermediateCodeGeneration(slots: SlotConfiguration) {
   }
 }
 
-object IntermediateCodeGeneration {
-  def defaultGenerator(slots: SlotConfiguration): IntermediateCodeGeneration = new DefaultIntermediateCodeGeneration(slots)
+object ExpressionCompiler {
+  def defaultGenerator(slots: SlotConfiguration): ExpressionCompiler = new DefaultExpressionCompiler(slots)
 
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
   private val DB_ACCESS = load("dbAccess")
@@ -2688,7 +2708,7 @@ object IntermediateCodeGeneration {
   }
 }
 
-private class DefaultIntermediateCodeGeneration(slots: SlotConfiguration) extends IntermediateCodeGeneration(slots) {
+private class DefaultExpressionCompiler(slots: SlotConfiguration) extends ExpressionCompiler(slots) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

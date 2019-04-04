@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}

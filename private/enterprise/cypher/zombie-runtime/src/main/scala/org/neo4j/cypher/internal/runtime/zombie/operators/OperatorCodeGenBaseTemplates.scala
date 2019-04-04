@@ -10,7 +10,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
+import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
@@ -149,7 +149,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
 class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
                                    var shouldWriteToContext: Boolean = true)
-                                  (codeGen: OperatorIntermediateCodeGeneration) extends OperatorTaskTemplate {
+                                  (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   override def genOperate: IntermediateRepresentation = {
     if (shouldWriteToContext) {
       block(

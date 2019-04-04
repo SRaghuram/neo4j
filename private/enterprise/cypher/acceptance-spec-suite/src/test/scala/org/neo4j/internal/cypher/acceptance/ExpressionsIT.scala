@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateCodeGeneration.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor

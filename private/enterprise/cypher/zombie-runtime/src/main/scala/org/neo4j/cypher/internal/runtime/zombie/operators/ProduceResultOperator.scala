@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
+import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
@@ -107,7 +107,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 }
 
 class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
-                                       (codeGen: OperatorIntermediateCodeGeneration) extends ContinuableOperatorTaskTemplate {
+                                       (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskTemplate {
   import org.neo4j.codegen.api.IntermediateRepresentation._
 
   override def toString: String = "ProduceResultTaskTemplate"

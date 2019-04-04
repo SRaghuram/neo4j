@@ -8,11 +8,11 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration.LocalVariableSlotMapper
+import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler.LocalVariableSlotMapper
 
 import scala.collection.mutable.ArrayBuffer
 
-object OperatorIntermediateCodeGeneration {
+object OperatorExpressionCompiler {
 
   class LocalVariableSlotMapper(slots: SlotConfiguration) {
     val longSlotToLocal = new Array[String](slots.numberOfLongs)
@@ -55,8 +55,8 @@ object OperatorIntermediateCodeGeneration {
   }
 }
 
-class OperatorIntermediateCodeGeneration(slots: SlotConfiguration)
-  extends IntermediateCodeGeneration(slots) {
+class OperatorExpressionCompiler(slots: SlotConfiguration)
+  extends ExpressionCompiler(slots) {
 
   import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, load}
 

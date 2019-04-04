@@ -10,7 +10,7 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.zombie.OperatorIntermediateCodeGeneration
+import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
@@ -146,7 +146,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                             val nodeVarName: String,
                                             val offset: Int,
                                             val argumentSize: SlotConfiguration.Size)
-                                           (codeGen: OperatorIntermediateCodeGeneration) extends InputLoopTaskTemplate {
+                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate {
   import OperatorCodeGenHelperTemplates._
 
   // Setup the innermost output template
