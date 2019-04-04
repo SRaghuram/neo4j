@@ -127,6 +127,7 @@ public final class CatchupComponentsProvider
                 .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
                 .scheduler( scheduler )
                 .bootstrapConfig( serverConfig( config ) )
+                .portRegister( portRegister )
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
                 .serverName( CATCHUP_SERVER_NAME )

@@ -45,7 +45,8 @@ public final class CatchupServerBuilder
     }
 
     private static class StepBuilder implements NeedsCatchupServerHandler, NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols,
-            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, AcceptsOptionalParams
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, NeedsPortRegister,
+            AcceptsOptionalParams
     {
         private CatchupServerHandler catchupServerHandler;
         private String defaultDatabaseName;
@@ -122,6 +123,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister )
+        {
+            this.portRegister = portRegister;
+            return this;
+        }
+
+        @Override
         public AcceptsOptionalParams serverName( String serverName )
         {
             this.serverName = serverName;
@@ -143,14 +151,7 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister )
-        {
-            this.portRegister = portRegister;
-            return this;
-        }
-
-        @Override
-        public AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
+        public NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
             return this;
@@ -219,7 +220,12 @@ public final class CatchupServerBuilder
 
     public interface NeedsBootstrapConfig
     {
-        AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration );
+        NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration );
+    }
+
+    public interface NeedsPortRegister
+    {
+        AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister );
     }
 
     public interface AcceptsOptionalParams
@@ -227,7 +233,6 @@ public final class CatchupServerBuilder
         AcceptsOptionalParams serverName( String serverName );
         AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
-        AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister );
         Server build();
     }
 

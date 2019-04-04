@@ -51,7 +51,7 @@ public class RaftServerFactory
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
-    public RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
+    RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
             MessageLogger<MemberId> messageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols )
     {
@@ -64,7 +64,7 @@ public class RaftServerFactory
         this.supportedModifierProtocols = supportedModifierProtocols;
     }
 
-    public Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
+    Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
     {
         Config config = globalModule.getGlobalConfig();
 
@@ -88,7 +88,7 @@ public class RaftServerFactory
         Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider,
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
-                BootstrapConfiguration.serverConfig( config ) );
+                globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );

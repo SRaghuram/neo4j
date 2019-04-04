@@ -22,7 +22,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
 
@@ -41,26 +40,6 @@ public class Server extends SuspendableLifeCycle
     private EventLoopGroup workerGroup;
     private Channel channel;
     private ListenSocketAddress listenAddress;
-
-    public Server( ChildInitializer childInitializer, LogProvider debugLogProvider, LogProvider userLogProvider, ListenSocketAddress listenAddress,
-            String serverName, Executor executor, BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName, executor, bootstrapConfiguration );
-    }
-
-    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName, Executor executor,
-            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName, executor,
-                bootstrapConfiguration );
-    }
-
-    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-            ListenSocketAddress listenAddress, String serverName, Executor executor,
-            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, null, bootstrapConfiguration );
-    }
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
             ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
@@ -186,17 +165,11 @@ public class Server extends SuspendableLifeCycle
 
     private void registerListenAddress()
     {
-        if ( portRegister != null )
-        {
-            portRegister.register( serverName, listenAddress );
-        }
+        portRegister.register( serverName, listenAddress );
     }
 
     private void deregisterListenAddress()
     {
-        if ( portRegister != null )
-        {
-            portRegister.deregister( serverName );
-        }
+        portRegister.deregister( serverName );
     }
 }

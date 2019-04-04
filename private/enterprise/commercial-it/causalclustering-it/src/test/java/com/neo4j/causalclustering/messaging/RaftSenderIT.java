@@ -42,6 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
@@ -137,7 +138,7 @@ class RaftSenderIT
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
         ExecutorService serverExecutor = Executors.newCachedThreadPool();
         return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor,
-                BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
     private RaftChannelPoolService raftPoolService( ApplicationProtocols clientProtocol )

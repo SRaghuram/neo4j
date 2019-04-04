@@ -76,6 +76,7 @@ public final class CausalClusteringTestHelpers
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress ).scheduler( scheduler )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )
+                .portRegister( new ConnectorPortRegister() )
                 .debugLogProvider( NullLogProvider.getInstance() )
                 .userLogProvider( NullLogProvider.getInstance() )
                 .serverName( "test-catchup-server" )

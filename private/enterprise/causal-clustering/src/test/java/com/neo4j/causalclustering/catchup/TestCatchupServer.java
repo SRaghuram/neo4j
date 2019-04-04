@@ -22,17 +22,12 @@ import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
@@ -44,9 +39,9 @@ class TestCatchupServer extends Server
 {
     TestCatchupServer( CatchupServerHandler catchupServerHandler, LogProvider logProvider, ExecutorService executor )
     {
-        super( childInitializer( catchupServerHandler, logProvider ), logProvider, logProvider,
+        super( childInitializer( catchupServerHandler, logProvider ), null, logProvider, logProvider,
                 new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server", executor,
-                BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
     private static ChildInitializer childInitializer( CatchupServerHandler catchupServerHandler, LogProvider logProvider )

@@ -69,8 +69,8 @@ public class TransactionBackupServiceProvider
                     .listenAddress( backupAddress )
                     .scheduler( scheduler )
                     .bootstrapConfig( serverConfig( config ) )
-                    .debugLogProvider( logProvider )
                     .portRegister( portRegister )
+                    .debugLogProvider( logProvider )
                     .serverName( BACKUP_SERVER_NAME )
                     .build();
             return Optional.of( catchupServer );
