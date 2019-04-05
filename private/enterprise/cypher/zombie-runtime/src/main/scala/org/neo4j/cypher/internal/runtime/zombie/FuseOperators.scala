@@ -21,11 +21,14 @@ class FuseOperators(operatorFactory: OperatorFactory,
                     physicalPlan: PhysicalPlan,
                     converters: ExpressionConverters,
                     readOnly: Boolean,
-                    queryIndexes: QueryIndexes) {
+                    queryIndexes: QueryIndexes,
+                    fusingEnabled: Boolean) {
 
   def compilePipeline(p: Pipeline): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
-    val (maybeHeadOperator, unhandledMiddlePlans, unhandledProduceResult) = fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
+    val (maybeHeadOperator, unhandledMiddlePlans, unhandledProduceResult) =
+      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
+      else (None, p.middlePlans, p.produceResults)
 
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan))
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle)

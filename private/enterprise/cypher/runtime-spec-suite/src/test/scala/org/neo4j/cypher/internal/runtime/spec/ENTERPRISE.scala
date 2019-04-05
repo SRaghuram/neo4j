@@ -39,6 +39,10 @@ object ENTERPRISE {
   val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
                                          GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded")
 
+  val SINGLE_THREADED_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
+                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded",
+                                                   GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false")
+
   val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
                                   GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
 

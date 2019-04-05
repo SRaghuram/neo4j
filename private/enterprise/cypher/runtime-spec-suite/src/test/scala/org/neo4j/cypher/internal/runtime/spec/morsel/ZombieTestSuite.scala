@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.runtime.spec.tests.{InputTestBase, LimitTestBase}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.result.RuntimeResult
 
@@ -67,6 +68,7 @@ class ZombieUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, ZombieRuntime
 class ZombieUnwindStressTest extends UnwindStressTestBase(ZombieRuntime)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
+class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
 

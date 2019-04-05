@@ -60,7 +60,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
 
     //=======================================================
-    val fuseOperators = new FuseOperators(operatorFactory, physicalPlan, converters, true, queryIndexes)
+    val fuseOperators = new FuseOperators(operatorFactory, physicalPlan, converters, true, queryIndexes,
+                                          context.config.fuseOperators)
 
     val executablePipelines =
       for (p <- pipelineBuilder.pipelines) yield {
