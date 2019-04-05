@@ -599,7 +599,7 @@ public class TransactionGuardIT
                 TestGraphDatabaseFactoryState state )
         {
             return config -> customFacadeFactory.newFacade( storeDir, config,
-                    newDependencies( state.databaseDependencies() ) );
+                    newDependencies( state.databaseDependencies() ) ).database( config.get( GraphDatabaseSettings.default_database ) );
         }
     }
 

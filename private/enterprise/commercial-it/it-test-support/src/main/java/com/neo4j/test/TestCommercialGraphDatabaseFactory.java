@@ -45,7 +45,8 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
             augmentConfig( config, databasesRoot, storeDir );
             TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
             TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
-            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
+            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) ).database(
+                    config.get( GraphDatabaseSettings.default_database ) );
         };
     }
 
@@ -69,7 +70,8 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         {
             augmentConfig( config, storeDir.getParentFile(), storeDir );
             return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
-                    GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
+                    GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) ).database(
+                    config.get( GraphDatabaseSettings.default_database ) );
         };
     }
 

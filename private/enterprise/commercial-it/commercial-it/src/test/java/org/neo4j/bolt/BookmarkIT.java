@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -83,9 +84,7 @@ public class BookmarkIT
         CompletableFuture<String> secondBookmarkFuture = CompletableFuture.supplyAsync( () -> createNode( driver ) );
         assertEventually( "Transaction did not block as expected", commitBlocker::hasBlockedTransaction, is( true ), 1, MINUTES );
 
-        Set<String> otherBookmarks = Stream.generate( () -> createNode( driver ) )
-                .limit( 10 )
-                .collect( toSet() );
+        Set<String> otherBookmarks = Stream.generate( () -> createNode( driver ) ).limit( 10 ).collect( toSet() );
 
         commitBlocker.unblock();
         String lastBookmark = secondBookmarkFuture.get();
@@ -108,7 +107,8 @@ public class BookmarkIT
     {
         GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
         GraphDatabaseFacadeFactory facadeFactory = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        return facadeFactory.newFacade( directory.databaseDir(), configWithBoltEnabled(), state.databaseDependencies() );
+        return (GraphDatabaseAPI) facadeFactory.newFacade( directory.databaseDir(), configWithBoltEnabled(), state.databaseDependencies() ).database(
+                GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     private static String createNode( Driver driver )

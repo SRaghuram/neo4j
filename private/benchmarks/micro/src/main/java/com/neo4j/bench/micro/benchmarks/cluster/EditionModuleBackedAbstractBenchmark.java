@@ -21,12 +21,12 @@ import java.nio.file.Path;
 import java.util.Stack;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -51,10 +51,9 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
-        graphDatabaseFacade = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY,
-                                                              TxProbingEditionModule::new ).newFacade( tempDirectory.toFile(),
-                                                                                                       Config.defaults(),
-                                                                                                       GraphDatabaseDependencies.newDependencies() );
+        graphDatabaseFacade = (GraphDatabaseFacade) new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
+                tempDirectory.toFile(), Config.defaults(), GraphDatabaseDependencies.newDependencies() ).database(
+                Config.defaults().get( GraphDatabaseSettings.default_database ) );
 
         setUp();
     }
