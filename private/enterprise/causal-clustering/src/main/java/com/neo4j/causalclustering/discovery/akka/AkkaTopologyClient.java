@@ -100,18 +100,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return topologyState.localCoreTopology();
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return topologyState.localReadReplicaTopology();
-    }
-
-    @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         AdvertisedSocketAddress advertisedSocketAddress = topologyState.retrieveSocketAddress( upstream );

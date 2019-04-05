@@ -12,8 +12,8 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
@@ -23,25 +23,26 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class BackupDelegatorTest
+class BackupDelegatorTest
 {
     private RemoteStore remoteStore;
     private CatchupClientFactory catchUpClient;
     private StoreCopyClient storeCopyClient;
 
-    BackupDelegator subject;
+    private BackupDelegator subject;
 
     private final AdvertisedSocketAddress anyAddress = new AdvertisedSocketAddress( "any.address", 1234 );
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         remoteStore = mock( RemoteStore.class );
         catchUpClient = mock( CatchupClientFactory.class );
@@ -50,7 +51,7 @@ public class BackupDelegatorTest
     }
 
     @Test
-    public void tryCatchingUpDelegatesToRemoteStore() throws StoreCopyFailedException, IOException
+    void tryCatchingUpDelegatesToRemoteStore() throws StoreCopyFailedException, IOException
     {
         // given
         AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4j.com", 5432 );
@@ -66,7 +67,7 @@ public class BackupDelegatorTest
     }
 
     @Test
-    public void startDelegatesToCatchUpClient()
+    void startDelegatesToCatchUpClient()
     {
         // when
         subject.start();
@@ -76,7 +77,7 @@ public class BackupDelegatorTest
     }
 
     @Test
-    public void stopDelegatesToCatchUpClient()
+    void stopDelegatesToCatchUpClient()
     {
         // when
         subject.stop();
@@ -86,7 +87,7 @@ public class BackupDelegatorTest
     }
 
     @Test
-    public void fetchStoreIdDelegatesToStoreCopyClient() throws StoreIdDownloadFailedException
+    void fetchStoreIdDelegatesToStoreCopyClient() throws StoreIdDownloadFailedException
     {
         // given
         AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4.com", 935 );
@@ -103,7 +104,7 @@ public class BackupDelegatorTest
     }
 
     @Test
-    public void retrieveStoreDelegatesToStoreCopyService()
+    void retrieveStoreDelegatesToStoreCopyService()
             throws StoreCopyFailedException, CatchupAddressResolutionException
     {
         // given
@@ -118,6 +119,6 @@ public class BackupDelegatorTest
         verify( remoteStore ).copy( argumentCaptor.capture(), eq( storeId ), eq( databaseLayout ), eq( true ) );
 
         //and
-        assertEquals( anyAddress, argumentCaptor.getValue().primary() );
+        assertEquals( anyAddress, argumentCaptor.getValue().primary( DEFAULT_DATABASE_NAME ) );
     }
 }

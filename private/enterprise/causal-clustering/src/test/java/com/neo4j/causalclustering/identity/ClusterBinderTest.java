@@ -52,8 +52,7 @@ public class ClusterBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final DatabaseId databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
-    private final DatabaseId testDatabaseId = new DatabaseId( "default" );
+    private final DatabaseId databaseId = new DatabaseId( "my_database" );
 
     private ClusterBinder clusterBinder( SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService )
@@ -68,7 +67,7 @@ public class ClusterBinderTest
         // given
         CoreTopology unboundTopology = new CoreTopology( null, false, emptyMap() );
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( unboundTopology );
+        when( topologyService.coreServersForDatabase( databaseId ) ).thenReturn( unboundTopology );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -84,7 +83,7 @@ public class ClusterBinderTest
         }
 
         // then
-        verify( topologyService, atLeast( 2 ) ).localCoreServers();
+        verify( topologyService, atLeast( 2 ) ).coreServersForDatabase( databaseId );
     }
 
     @Test
@@ -96,7 +95,7 @@ public class ClusterBinderTest
         CoreTopology boundTopology = new CoreTopology( publishedClusterId, false, emptyMap() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( unboundTopology ).thenReturn( boundTopology );
+        when( topologyService.coreServersForDatabase( databaseId ) ).thenReturn( unboundTopology ).thenReturn( boundTopology );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -107,7 +106,7 @@ public class ClusterBinderTest
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         assertEquals( publishedClusterId, clusterId.get() );
-        verify( topologyService, atLeast( 2 ) ).localCoreServers();
+        verify( topologyService, atLeast( 2 ) ).coreServersForDatabase( databaseId );
     }
 
     @Test
@@ -117,7 +116,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, testDatabaseId ) ).thenReturn( true );
+        when( topologyService.setClusterId( previouslyBoundClusterId, databaseId ) ).thenReturn( true );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -128,7 +127,7 @@ public class ClusterBinderTest
         binder.bindToCluster();
 
         // then
-        verify( topologyService ).setClusterId( previouslyBoundClusterId, testDatabaseId );
+        verify( topologyService ).setClusterId( previouslyBoundClusterId, databaseId );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         assertEquals( previouslyBoundClusterId, clusterId.get() );
@@ -141,7 +140,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, testDatabaseId ) ).thenReturn( false );
+        when( topologyService.setClusterId( previouslyBoundClusterId, databaseId ) ).thenReturn( false );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -172,8 +171,8 @@ public class ClusterBinderTest
         CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-        when( topologyService.setClusterId( any(), eq(testDatabaseId ) ) ).thenReturn( true );
+        when( topologyService.setClusterId( any(), eq( this.databaseId ) ) ).thenReturn( true );
+        when( topologyService.coreServersForDatabase( this.databaseId ) ).thenReturn( bootstrappableTopology );
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
         when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseId, snapshot ) );
 
@@ -186,7 +185,7 @@ public class ClusterBinderTest
         verify( coreBootstrapper ).bootstrap( any() );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
-        verify( topologyService ).setClusterId( clusterId.get(), testDatabaseId );
+        verify( topologyService ).setClusterId( clusterId.get(), this.databaseId );
         assertEquals( singletonMap( databaseId, snapshot ), boundState.snapshots() );
     }
 

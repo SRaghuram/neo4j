@@ -340,9 +340,9 @@ public class ReadReplicaStartupProcessTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase()
+        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
-            CoreTopology coreTopology = topologyService.allCoreServers();
+            CoreTopology coreTopology = topologyService.coreServersForDatabase( databaseId );
             return Optional.ofNullable( coreTopology.members().keySet().iterator().next() );
         }
     }

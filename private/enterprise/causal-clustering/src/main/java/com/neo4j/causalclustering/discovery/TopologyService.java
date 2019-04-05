@@ -26,11 +26,17 @@ public interface TopologyService extends Lifecycle
     // TODO: evaluate returning clusterId = null for global Topologies returned by allCoreServers()
     CoreTopology allCoreServers();
 
-    CoreTopology localCoreServers();
+    default CoreTopology coreServersForDatabase( DatabaseId databaseId )
+    {
+        return allCoreServers().filterTopologyByDb( databaseId );
+    }
 
     ReadReplicaTopology allReadReplicas();
 
-    ReadReplicaTopology localReadReplicas();
+    default ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    {
+        return allReadReplicas().filterTopologyByDb( databaseId );
+    }
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 

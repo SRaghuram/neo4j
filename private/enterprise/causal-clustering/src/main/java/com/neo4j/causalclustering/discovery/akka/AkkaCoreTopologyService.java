@@ -209,21 +209,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return topologyState.localCoreTopology();
-    }
-
-    @Override
     public ReadReplicaTopology allReadReplicas()
     {
         return topologyState.readReplicaTopology();
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return topologyState.localReadReplicaTopology();
     }
 
     @Override

@@ -25,6 +25,7 @@ import org.neo4j.test.DbRepresentation;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -61,7 +62,7 @@ public class RecoveryIT
     {
         // given
         Cluster cluster = clusterRule.startCluster();
-        int clusterSize = cluster.numberOfCoreMembersReportedByTopology();
+        int clusterSize = cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME );
 
         fireSomeLoadAtTheCluster( cluster );
 
@@ -108,7 +109,7 @@ public class RecoveryIT
 
     private static void fireSomeLoadAtTheCluster( Cluster cluster ) throws Exception
     {
-        for ( int i = 0; i < cluster.numberOfCoreMembersReportedByTopology(); i++ )
+        for ( int i = 0; i < cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ); i++ )
         {
             final String prop = "val" + i;
             cluster.coreTx( ( db, tx ) ->

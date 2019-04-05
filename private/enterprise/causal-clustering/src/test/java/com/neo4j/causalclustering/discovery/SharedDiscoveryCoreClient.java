@@ -28,8 +28,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
 
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
     private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
-    private volatile ReadReplicaTopology localReadReplicaTopology = ReadReplicaTopology.EMPTY;
-    private volatile CoreTopology localCoreTopology = CoreTopology.EMPTY;
 
     SharedDiscoveryCoreClient( SharedDiscoveryService sharedDiscoveryService,
             MemberId member, LogProvider logProvider, Config config )
@@ -75,9 +73,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public void start0() throws InterruptedException
     {
         coreTopology = sharedDiscoveryService.getCoreTopology( this );
-        localCoreTopology = coreTopology.filterTopologyByDb( localDatabaseId );
         readReplicaTopology = sharedDiscoveryService.getReadReplicaTopology();
-        localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDatabaseId );
 
         sharedDiscoveryService.registerCoreMember( this );
         log.info( "Registered core server %s", myself );
@@ -112,27 +108,15 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return localCoreTopology;
-    }
-
-    @Override
     public ReadReplicaTopology allReadReplicas()
     {
         return readReplicaTopology;
     }
 
     @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return localReadReplicaTopology;
-    }
-
-    @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        Optional<AdvertisedSocketAddress> coreAdvertisedSocketAddress = localCoreServers().find( upstream ).map( CoreServerInfo::getCatchupServer );
+        Optional<AdvertisedSocketAddress> coreAdvertisedSocketAddress = allCoreServers().find( upstream ).map( CoreServerInfo::getCatchupServer );
         if ( coreAdvertisedSocketAddress.isPresent() )
         {
             return coreAdvertisedSocketAddress.get();
@@ -163,7 +147,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     {
         log.info( "Notified of core topology change " + coreTopology );
         this.coreTopology = coreTopology;
-        this.localCoreTopology = coreTopology.filterTopologyByDb( localDatabaseId );
         listenerService.notifyListeners( coreTopology );
     }
 
@@ -171,7 +154,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     {
         log.info( "Notified of read replica topology change " + readReplicaTopology );
         this.readReplicaTopology = readReplicaTopology;
-        this.localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDatabaseId );
     }
 
     public boolean refusesToBeLeader()

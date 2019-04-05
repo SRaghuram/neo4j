@@ -44,7 +44,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class PersistentSnapshotDownloaderTest
 {
     private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "localhost", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( fromAddress );
+    private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( fromAddress );
     private final Panicker panicker = mock( Panicker.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final NoPauseTimeoutStrategy backoffStrategy = new NoPauseTimeoutStrategy();

@@ -10,26 +10,25 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
-public class UpstreamStrategyAddressSupplier implements ThrowingSupplier<AdvertisedSocketAddress,CatchupAddressResolutionException>
+public class UpstreamAddressLookup
 {
     private final UpstreamDatabaseStrategySelector strategySelector;
     private final TopologyService topologyService;
 
-    UpstreamStrategyAddressSupplier( UpstreamDatabaseStrategySelector strategySelector, TopologyService topologyService )
+    UpstreamAddressLookup( UpstreamDatabaseStrategySelector strategySelector, TopologyService topologyService )
     {
         this.strategySelector = strategySelector;
         this.topologyService = topologyService;
     }
 
-    @Override
-    public AdvertisedSocketAddress get() throws CatchupAddressResolutionException
+    public AdvertisedSocketAddress lookupAddressForDatabase( DatabaseId databaseId ) throws CatchupAddressResolutionException
     {
         try
         {
-            MemberId upstreamMember = strategySelector.bestUpstreamDatabase();
+            MemberId upstreamMember = strategySelector.bestUpstreamMemberForDatabase( databaseId );
             return topologyService.findCatchupAddress( upstreamMember );
         }
         catch ( UpstreamDatabaseSelectionException e )

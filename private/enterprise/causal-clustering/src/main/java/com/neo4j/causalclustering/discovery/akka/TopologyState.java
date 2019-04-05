@@ -37,9 +37,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     private volatile Map<MemberId,AdvertisedSocketAddress> rrCatchupAddressMap;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
     private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
-    private volatile CoreTopology localCoreTopology = CoreTopology.EMPTY;
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
-    private volatile ReadReplicaTopology localReadReplicaTopology = ReadReplicaTopology.EMPTY;
 
     public TopologyState( Config config, LogProvider logProvider, Consumer<CoreTopology> listener )
     {
@@ -56,7 +54,6 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     {
         TopologyDifference diff = this.coreTopology.difference( newCoreTopology );
         this.coreTopology = newCoreTopology;
-        this.localCoreTopology = newCoreTopology.filterTopologyByDb( localDatabaseId );
         this.coreCatchupAddressMap = extractCatchupAddressesMap( newCoreTopology );
         if ( diff.hasChanges() )
         {
@@ -70,7 +67,6 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     {
         TopologyDifference diff = this.readReplicaTopology.difference( newReadReplicaTopology );
         this.readReplicaTopology = newReadReplicaTopology;
-        this.localReadReplicaTopology = newReadReplicaTopology.filterTopologyByDb( localDatabaseId );
         this.rrCatchupAddressMap = extractCatchupAddressesMap( newReadReplicaTopology );
         if ( diff.hasChanges() )
         {
@@ -110,16 +106,6 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     public ReadReplicaTopology readReplicaTopology()
     {
         return readReplicaTopology;
-    }
-
-    public CoreTopology localCoreTopology()
-    {
-        return localCoreTopology;
-    }
-
-    public ReadReplicaTopology localReadReplicaTopology()
-    {
-        return localReadReplicaTopology;
     }
 
     private Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( Topology<?> topology )

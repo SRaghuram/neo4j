@@ -58,7 +58,8 @@ public class StoreCopyClient
     {
         try
         {
-            PrepareStoreCopyResponse prepareStoreCopyResponse = prepareStoreCopy( catchupAddressProvider.primary(), expectedStoreId, storeFileStreamProvider );
+            AdvertisedSocketAddress fromAddress = catchupAddressProvider.primary( databaseName );
+            PrepareStoreCopyResponse prepareStoreCopyResponse = prepareStoreCopy( fromAddress, expectedStoreId, storeFileStreamProvider );
             TransactionIdHandler txIdHandler = new TransactionIdHandler( prepareStoreCopyResponse );
             copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider, requestWiseTerminationCondition,
                     destDir, txIdHandler );
@@ -106,7 +107,7 @@ public class StoreCopyClient
         {
             try
             {
-                AdvertisedSocketAddress address = addressProvider.secondary();
+                AdvertisedSocketAddress address = addressProvider.secondary( databaseName );
                 log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
 
                 StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )

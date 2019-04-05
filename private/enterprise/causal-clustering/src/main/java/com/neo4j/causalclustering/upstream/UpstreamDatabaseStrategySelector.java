@@ -8,8 +8,9 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.LinkedHashSet;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -41,23 +42,18 @@ public class UpstreamDatabaseStrategySelector
         strategies.add( defaultStrategy );
     }
 
-    public MemberId bestUpstreamDatabase() throws UpstreamDatabaseSelectionException
+    public MemberId bestUpstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
         MemberId result = null;
         for ( UpstreamDatabaseSelectionStrategy strategy : strategies )
         {
             log.debug( "Trying selection strategy [%s]", strategy.toString() );
-            try
+
+            Optional<MemberId> upstreamMember = strategy.upstreamMemberForDatabase( databaseId );
+            if ( upstreamMember.isPresent() )
             {
-                if ( strategy.upstreamDatabase().isPresent() )
-                {
-                    result = strategy.upstreamDatabase().get();
-                    break;
-                }
-            }
-            catch ( NoSuchElementException ex )
-            {
-                // Do nothing, this strategy failed
+                result = upstreamMember.get();
+                break;
             }
         }
 

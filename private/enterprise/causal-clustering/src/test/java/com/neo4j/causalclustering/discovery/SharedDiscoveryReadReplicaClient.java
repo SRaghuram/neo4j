@@ -73,21 +73,9 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return allCoreServers().filterTopologyByDb( databaseId );
-    }
-
-    @Override
     public ReadReplicaTopology allReadReplicas()
     {
         return sharedDiscoveryService.getReadReplicaTopology();
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return allReadReplicas().filterTopologyByDb( databaseId );
     }
 
     @Override

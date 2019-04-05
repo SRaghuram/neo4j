@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,10 +31,12 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isIn;
 
-public class ConnectRandomlyToServerGroupStrategyImplTest
+class ConnectRandomlyToServerGroupStrategyImplTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "employees" );
+
     @Test
-    public void shouldStayWithinGivenSingleServerGroup()
+    void shouldStayWithinGivenSingleServerGroup()
     {
         // given
         final List<String> myServerGroup = Collections.singletonList( "my_server_group" );
@@ -45,14 +47,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
     }
 
     @Test
-    public void shouldSelectAnyFromMultipleServerGroups()
+    void shouldSelectAnyFromMultipleServerGroups()
     {
         // given
         final List<String> myServerGroups = Arrays.asList( "a", "b", "c" );
@@ -63,14 +65,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroups, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
     }
 
     @Test
-    public void shouldReturnEmptyIfNoGroupsInConfig()
+    void shouldReturnEmptyIfNoGroupsInConfig()
     {
         // given
         MemberId[] myGroupMemberIds = UserDefinedConfigurationStrategyTest.memberIDs( 10 );
@@ -79,14 +81,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( Collections.emptyList(), topologyService, null );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
     }
 
     @Test
-    public void shouldReturnEmptyIfGroupOnlyContainsSelf()
+    void shouldReturnEmptyIfGroupOnlyContainsSelf()
     {
         // given
         final List<String> myServerGroup = Collections.singletonList( "group" );
@@ -97,7 +99,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
@@ -120,7 +122,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
             readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( wanted ), new DatabaseId( "default" ) ) );
+                    new HashSet<>( wanted ), DATABASE_ID ) );
 
             offset++;
         }
@@ -130,7 +132,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
             readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( unwanted ), new DatabaseId( "default" ) ) );
+                    new HashSet<>( unwanted ), DATABASE_ID ) );
 
             offset++;
         }

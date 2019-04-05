@@ -133,7 +133,7 @@ public class StoreCopyClientIT
         InMemoryStoreStreamProvider storeFileStream = new InMemoryStoreStreamProvider();
 
         // when catchup is performed for valid transactionId and StoreId
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( from( catchupServer.address().getPort() ) );
+        CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( from( catchupServer.address().getPort() ) );
         subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
@@ -146,7 +146,7 @@ public class StoreCopyClientIT
     @Test
     public void shouldHandleMultipleRequestsOnReusedChannel()
     {
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( from( catchupServer.address().getPort() ) );
+        CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( from( catchupServer.address().getPort() ) );
         for ( int i = 0; i < 100; i++ )
         {
             StoreFileStreamProvider storeFileStream = new IgnoringStoreFileStreamProvider();
@@ -167,7 +167,7 @@ public class StoreCopyClientIT
         InMemoryStoreStreamProvider clientStoreFileStream = new InMemoryStoreStreamProvider();
 
         // when catchup is performed for valid transactionId and StoreId
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( from( catchupServer.address().getPort() ) );
+        CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( from( catchupServer.address().getPort() ) );
         subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), clientStoreFileStream, () -> defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
@@ -257,7 +257,7 @@ public class StoreCopyClientIT
             halfWayFailingServer.start();
 
             CatchupAddressProvider addressProvider =
-                    CatchupAddressProvider.fromSingleAddress( new AdvertisedSocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
+                    new CatchupAddressProvider.SingleAddressProvider( new AdvertisedSocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
             StoreId storeId = halfWayFailingServerHandler.getStoreId();
             File databaseDir = testDirectory.storeDir();
@@ -296,13 +296,13 @@ public class StoreCopyClientIT
             subject.copyStoreFiles( new CatchupAddressProvider()
             {
                 @Override
-                public AdvertisedSocketAddress primary()
+                public AdvertisedSocketAddress primary( DatabaseId databaseId )
                 {
                     return from( catchupServer.address().getPort() );
                 }
 
                 @Override
-                public AdvertisedSocketAddress secondary()
+                public AdvertisedSocketAddress secondary( DatabaseId databaseId )
                 {
 
                     return new AdvertisedSocketAddress( "localhost", port );
@@ -327,13 +327,13 @@ public class StoreCopyClientIT
             subject.copyStoreFiles( new CatchupAddressProvider()
             {
                 @Override
-                public AdvertisedSocketAddress primary()
+                public AdvertisedSocketAddress primary( DatabaseId databaseId )
                 {
                     return from( catchupServer.address().getPort() );
                 }
 
                 @Override
-                public AdvertisedSocketAddress secondary() throws CatchupAddressResolutionException
+                public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
                 {
                     throw catchupAddressResolutionException;
                 }

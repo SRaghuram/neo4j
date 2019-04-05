@@ -15,9 +15,8 @@ import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -40,16 +39,23 @@ import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isIn;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
-public class UserDefinedConfigurationStrategyTest
-
+class UserDefinedConfigurationStrategyTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "customers" );
+
+    private final String northGroup = "north";
+    private final String southGroup = "south";
+    private final String westGroup = "west";
+    private final String eastGroup = "east";
+    private final List<String> noEastGroup = List.of( northGroup, southGroup, westGroup );
+
     @Test
-    public void shouldPickTheFirstMatchingServerIfCore()
+    void shouldPickTheFirstMatchingServerIfCore()
     {
         // given
         MemberId theCoreMemberId = new MemberId( UUID.randomUUID() );
@@ -62,15 +68,14 @@ public class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( theCoreMemberId ) );
     }
 
     @Test
-    public void shouldPickTheFirstMatchingServerIfReadReplica()
+    void shouldPickTheFirstMatchingServerIfReadReplica()
     {
         // given
         MemberId[] readReplicaIds = memberIDs( 100 );
@@ -84,8 +89,7 @@ public class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( isIn( readReplicaIds ) ) );
@@ -93,7 +97,7 @@ public class UserDefinedConfigurationStrategyTest
     }
 
     @Test
-    public void shouldReturnEmptyIfNoMatchingServers()
+    void shouldReturnEmptyIfNoMatchingServers()
     {
         // given
         MemberId[] readReplicaIds = memberIDs( 100 );
@@ -107,15 +111,14 @@ public class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
     }
 
     @Test
-    public void shouldReturnEmptyIfInvalidFilterSpecification()
+    void shouldReturnEmptyIfInvalidFilterSpecification()
     {
         // given
         TopologyService topologyService = fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
@@ -127,15 +130,14 @@ public class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
     }
 
     @Test
-    public void shouldNotReturnSelf()
+    void shouldNotReturnSelf()
     {
         // given
         String wantedGroup = eastGroup;
@@ -149,8 +151,7 @@ public class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), readReplicaIds[0] );
 
         //when
-
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
@@ -220,21 +221,9 @@ public class UserDefinedConfigurationStrategyTest
             }
 
             @Override
-            public CoreTopology localCoreServers()
-            {
-                return coreTopology; // N.B: not supporting local db!
-            }
-
-            @Override
             public ReadReplicaTopology allReadReplicas()
             {
                 return readReplicaTopology;
-            }
-
-            @Override
-            public ReadReplicaTopology localReadReplicas()
-            {
-                return readReplicaTopology; // N.B: not supporting local db!
             }
 
             @Override
@@ -292,12 +281,6 @@ public class UserDefinedConfigurationStrategyTest
     {
         return Stream.generate( () -> new MemberId( UUID.randomUUID() ) ).limit( howMany ).toArray( MemberId[]::new );
     }
-
-    private final String northGroup = "north";
-    private final String southGroup = "south";
-    private final String westGroup = "west";
-    private final String eastGroup = "east";
-    private final List<String> noEastGroup = Arrays.asList( northGroup, southGroup, westGroup );
 
     private Set<String> noEastGroupGenerator( MemberId memberId )
     {

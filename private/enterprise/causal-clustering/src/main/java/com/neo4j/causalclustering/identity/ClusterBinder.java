@@ -42,7 +42,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
     }
 
     private final SimpleStorage<ClusterId> clusterIdStorage;
-    private final SimpleStorage<DatabaseName> dbNameStorage;
+    private final SimpleStorage<DatabaseName> databaseNameStorage;
     private final CoreTopologyService topologyService;
     private final CoreBootstrapper coreBootstrapper;
     private final Monitor monitor;
@@ -54,13 +54,13 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
     private ClusterId clusterId;
 
-    public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> dbNameStorage,
+    public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> databaseNameStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
             Duration timeout, CoreBootstrapper coreBootstrapper, DatabaseId databaseId, int minCoreHosts, Monitors monitors )
     {
         this.monitor = monitors.newMonitor( Monitor.class );
         this.clusterIdStorage = clusterIdStorage;
-        this.dbNameStorage = dbNameStorage;
+        this.databaseNameStorage = databaseNameStorage;
         this.topologyService = topologyService;
         this.coreBootstrapper = coreBootstrapper;
         this.clock = clock;
@@ -111,7 +111,8 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
     {
         DatabaseName newName = new DatabaseName( databaseId );
 
-        dbNameStorage.writeOrVerify( newName, existing -> {
+        databaseNameStorage.writeOrVerify( newName, existing ->
+        {
             if ( !newName.equals( existing ) )
             {
                 throw new IllegalStateException( format( "Your configured database name has changed. Found %s but expected %s in %s.",
@@ -133,7 +134,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         do
         {
-            topology = topologyService.localCoreServers();
+            topology = topologyService.coreServersForDatabase( databaseId );
 
             if ( topology.clusterId() != null )
             {

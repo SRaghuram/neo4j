@@ -25,6 +25,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -98,7 +99,7 @@ class PanicIT
         @Override
         int membersInTopology()
         {
-            return cluster.numberOfCoreMembersReportedByTopology();
+            return cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME );
         }
 
         @Override
@@ -125,7 +126,7 @@ class PanicIT
         @Override
         int membersInTopology()
         {
-            return cluster.numberOfReadReplicaMembersReportedByTopology();
+            return cluster.numberOfReadReplicaMembersReportedByTopology( DEFAULT_DATABASE_NAME );
         }
 
         @Override

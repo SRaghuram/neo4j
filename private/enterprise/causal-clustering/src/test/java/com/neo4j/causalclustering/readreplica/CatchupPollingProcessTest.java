@@ -20,8 +20,8 @@ import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -39,9 +39,9 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
@@ -52,7 +52,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-public class CatchupPollingProcessTest
+class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
@@ -69,19 +69,19 @@ public class CatchupPollingProcessTest
     private final MockClientResponses clientResponses = responses();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
     private final Panicker panicker = mock( Panicker.class );
-    private CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
+    private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 
     private CatchupPollingProcess txPuller;
     private MockCatchupClient catchupClient;
 
-    @Before
-    public void before() throws Throwable
+    @BeforeEach
+    void before() throws Throwable
     {
         databaseService.registerDatabase( databaseId, clusteredDatabaseContext );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
-        when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );
-        when( catchupAddressProvider.secondary() ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
@@ -90,7 +90,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldSendPullRequestOnTickForAllVersions() throws Exception
+    void shouldSendPullRequestOnTickForAllVersions() throws Exception
     {
         // given
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
@@ -103,11 +103,11 @@ public class CatchupPollingProcessTest
 
         // then
         verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, databaseId );
-        verify( catchupAddressProvider, times( 2 ) ).primary();
+        verify( catchupAddressProvider, times( 2 ) ).primary( databaseId );
     }
 
     @Test
-    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1() throws Exception
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1() throws Exception
     {
         // when
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -122,7 +122,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2() throws Exception
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2() throws Exception
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -138,7 +138,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldUseProvidedCatchupAddressProviderWhenStoreCopying() throws Exception
+    void shouldUseProvidedCatchupAddressProviderWhenStoreCopying() throws Exception
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -160,7 +160,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
+    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -185,7 +185,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
+    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -211,7 +211,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldPanicOnException() throws ExecutionException, InterruptedException
+    void shouldPanicOnException() throws ExecutionException, InterruptedException
     {
         when( txApplier.lastQueuedTxId() ).thenThrow( IllegalStateException.class );
         txPuller.start();
@@ -221,7 +221,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldNotSignalOperationalUntilPullingV1() throws Throwable
+    void shouldNotSignalOperationalUntilPullingV1() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -249,7 +249,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldNotSignalOperationalUntilPullingV2() throws Throwable
+    void shouldNotSignalOperationalUntilPullingV2() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );

@@ -29,6 +29,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @ClusterExtension
@@ -84,19 +85,19 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -120,19 +121,19 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         executorService.shutdown();
     }
@@ -141,14 +142,14 @@ public class ClusterFormationIT
     void shouldBeAbleToRestartTheCluster() throws Exception
     {
         // when started then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.shutdown();
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
@@ -159,7 +160,7 @@ public class ClusterFormationIT
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
     }
 
     private CoreClusterMember getExistingCoreMember()

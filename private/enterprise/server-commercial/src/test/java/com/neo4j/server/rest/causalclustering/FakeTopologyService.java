@@ -101,19 +101,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return new CoreTopology( clusterId, true, coreMembers );
-    }
-
-    @Override
     public ReadReplicaTopology allReadReplicas()
-    {
-        return new ReadReplicaTopology( replicaMembers );
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
     {
         return new ReadReplicaTopology( replicaMembers );
     }

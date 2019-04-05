@@ -86,7 +86,7 @@ class StoreCopyClientTest
 
     // params
     private final AdvertisedSocketAddress expectedAdvertisedAddress = new AdvertisedSocketAddress( "host", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( expectedAdvertisedAddress );
+    private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( expectedAdvertisedAddress );
     private final StoreId expectedStoreId = new StoreId( 1, 2, 3, 4, 5 );
     private final StoreFileStreamProvider expectedStoreFileStream = mock( StoreFileStreamProvider.class );
 

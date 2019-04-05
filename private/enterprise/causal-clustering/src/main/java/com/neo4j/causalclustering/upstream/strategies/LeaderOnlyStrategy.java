@@ -13,8 +13,10 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.kernel.database.DatabaseId;
 
 @ServiceProvider
 public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
@@ -27,21 +29,23 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
     }
 
     @Override
-    public Optional<MemberId> upstreamDatabase() throws UpstreamDatabaseSelectionException
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        Map<MemberId,RoleInfo> memberRoles = topologyService.allCoreRoles();
+        Set<MemberId> coreMemberIds = topologyService.coreServersForDatabase( databaseId ).members().keySet();
+        Map<MemberId,RoleInfo> coreMemberRoles = topologyService.allCoreRoles();
 
-        if ( memberRoles.size() == 0 )
+        if ( coreMemberIds.isEmpty() || coreMemberRoles.isEmpty() )
         {
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
-        for ( Map.Entry<MemberId,RoleInfo> entry : memberRoles.entrySet() )
+        for ( MemberId memberId : coreMemberIds )
         {
-            RoleInfo role = entry.getValue();
-            if ( role == RoleInfo.LEADER && !Objects.equals( myself, entry.getKey() ) )
+            RoleInfo role = coreMemberRoles.getOrDefault( memberId, RoleInfo.UNKNOWN );
+
+            if ( role == RoleInfo.LEADER && !Objects.equals( myself, memberId ) )
             {
-                return Optional.of( entry.getKey() );
+                return Optional.of( memberId );
             }
         }
 

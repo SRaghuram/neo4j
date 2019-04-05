@@ -16,7 +16,6 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,7 +31,7 @@ class CoreDownloaderTest
 
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final AdvertisedSocketAddress remoteAddress = new AdvertisedSocketAddress( "remoteAddress", 1234 );
-    private final CatchupAddressProvider addressProvider = fromSingleAddress( remoteAddress );
+    private final CatchupAddressProvider addressProvider = new CatchupAddressProvider.SingleAddressProvider( remoteAddress );
 
     private final SnapshotDownloader snapshotDownloader = mock( SnapshotDownloader.class );
     private final StoreDownloader storeDownloader = mock( StoreDownloader.class );

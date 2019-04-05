@@ -5,10 +5,9 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,30 +23,26 @@ import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCore
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.fakeReadReplicaTopology;
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.fakeTopologyService;
 import static org.hamcrest.CoreMatchers.hasItem;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class TypicallyConnectToRandomReadReplicaStrategyTest
+class TypicallyConnectToRandomReadReplicaStrategyTest
 {
-    MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
+    private final MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
 
     @Test
-    public void shouldConnectToCoreOneInTenTimesByDefault()
+    void shouldConnectToCoreOneInTenTimesByDefault()
     {
         // given
         MemberId theCoreMemberId = new MemberId( UUID.randomUUID() );
         TopologyService topologyService = fakeTopologyService( fakeCoreTopology( theCoreMemberId ),
                 fakeReadReplicaTopology( UserDefinedConfigurationStrategyTest.memberIDs( 100 ) ) );
 
-        Config config = mock( Config.class );
-        when( config.get( CausalClusteringSettings.database ) ).thenReturn( "default" );
-
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
-        connectionStrategy.inject( topologyService, config, NullLogProvider.getInstance(), myself );
+        connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         List<MemberId> responses = new ArrayList<>();
 
@@ -56,7 +51,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
         {
             for ( int j = 0; j < 2; j++ )
             {
-                responses.add( connectionStrategy.upstreamDatabase().get() );
+                responses.add( connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME ).get() );
             }
             assertThat( responses, hasItem( theCoreMemberId ) );
             responses.clear();
@@ -66,7 +61,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
     }
 
     @Test
-    public void filtersSelf()
+    void filtersSelf()
     {
         // given
         String groupName = "groupName";
@@ -77,7 +72,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
                 NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamDatabase();
+        Optional<MemberId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME );
 
         // then
         assertTrue( found.isPresent() );
@@ -85,7 +80,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
     }
 
     @Test
-    public void onCounterTriggerFiltersSelf()
+    void onCounterTriggerFiltersSelf()
     {
         // given counter always triggers to get a core member
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 1 );
@@ -97,7 +92,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = connectionStrategy.upstreamDatabase();
+        Optional<MemberId> found = connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME );
 
         // then
         assertTrue( found.isPresent() );
@@ -105,7 +100,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
     }
 
     @Test
-    public void randomCoreDoesNotReturnSameCoreTwice()
+    void randomCoreDoesNotReturnSameCoreTwice()
     {
         // given counter always core member
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 1 );
@@ -119,7 +114,7 @@ public class TypicallyConnectToRandomReadReplicaStrategyTest
 
         // when we collect enough results to feel confident of random values
         List<MemberId> found = IntStream.range( 0, 20 )
-                .mapToObj( i -> connectionStrategy.upstreamDatabase() )
+                .mapToObj( i -> connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME ) )
                 .filter( Optional::isPresent )
                 .map( Optional::get )
                 .collect( Collectors.toList() );

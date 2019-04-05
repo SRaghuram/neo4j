@@ -46,9 +46,11 @@ public class RemoteStore
     private final CommitStateHelper commitStateHelper;
     private final StoreCopyClientMonitor storeCopyClientMonitor;
     private final StorageEngineFactory storageEngineFactory;
+    private final String databaseName;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory )
+            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
+            String databaseName )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -61,6 +63,7 @@ public class RemoteStore
         this.monitors = monitors;
         this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         this.storageEngineFactory = storageEngineFactory;
+        this.databaseName = databaseName;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
@@ -103,7 +106,7 @@ public class RemoteStore
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
-            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config );
+            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, databaseName );
 
             txPuller.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );

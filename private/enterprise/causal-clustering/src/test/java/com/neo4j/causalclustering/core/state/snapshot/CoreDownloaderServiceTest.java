@@ -42,7 +42,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 public class CoreDownloaderServiceTest
 {
     private final AdvertisedSocketAddress someMemberAddress = new AdvertisedSocketAddress( "localhost", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( someMemberAddress );
+    private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( someMemberAddress );
     private final CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );

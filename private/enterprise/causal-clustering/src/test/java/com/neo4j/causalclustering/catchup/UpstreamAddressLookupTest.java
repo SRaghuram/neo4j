@@ -19,22 +19,24 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class UpstreamStrategyAddressSupplierTest
+public class UpstreamAddressLookupTest
 {
-    private MemberId defaultMember = new MemberId( UUID.randomUUID() );
-    private MemberId firstMember = new MemberId( UUID.randomUUID() );
-    private MemberId secondMember = new MemberId( UUID.randomUUID() );
-    private AdvertisedSocketAddress defaultAddress = new AdvertisedSocketAddress( "Default", 123 );
-    private AdvertisedSocketAddress firstAddress = new AdvertisedSocketAddress( "First", 456 );
-    private AdvertisedSocketAddress secondAddress = new AdvertisedSocketAddress( "Second", 789 );
-    private TopologyService topologyService = mock( TopologyService.class );
+    private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
+    private final MemberId firstMember = new MemberId( UUID.randomUUID() );
+    private final MemberId secondMember = new MemberId( UUID.randomUUID() );
+    private final AdvertisedSocketAddress defaultAddress = new AdvertisedSocketAddress( "Default", 123 );
+    private final AdvertisedSocketAddress firstAddress = new AdvertisedSocketAddress( "First", 456 );
+    private final AdvertisedSocketAddress secondAddress = new AdvertisedSocketAddress( "Second", 789 );
+    private final TopologyService topologyService = mock( TopologyService.class );
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -57,13 +59,13 @@ public class UpstreamStrategyAddressSupplierTest
                         NullLogProvider.getInstance() );
 
         // and
-        UpstreamStrategyAddressSupplier upstreamStrategyAddressSupplier =
-                new UpstreamStrategyAddressSupplier( upstreamDatabaseStrategySelector, topologyService );
+        UpstreamAddressLookup upstreamAddressLookup =
+                new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // when
-        AdvertisedSocketAddress firstResult = upstreamStrategyAddressSupplier.get();
-        AdvertisedSocketAddress secondResult = upstreamStrategyAddressSupplier.get();
-        AdvertisedSocketAddress thirdResult = upstreamStrategyAddressSupplier.get();
+        AdvertisedSocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
+        AdvertisedSocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
+        AdvertisedSocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
 
         // then
         assertEquals( firstAddress, firstResult );
@@ -79,14 +81,14 @@ public class UpstreamStrategyAddressSupplierTest
                 new UpstreamDatabaseStrategySelector( new CountedSelectionStrategy( defaultMember, 0 ) );
 
         // and
-        UpstreamStrategyAddressSupplier upstreamStrategyAddressSupplier =
-                new UpstreamStrategyAddressSupplier( upstreamDatabaseStrategySelector, topologyService );
+        UpstreamAddressLookup upstreamAddressLookup =
+                new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // then
         expectedException.expect( CatchupAddressResolutionException.class );
 
         // when
-        upstreamStrategyAddressSupplier.get();
+        upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
     }
 
     private class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
@@ -102,7 +104,7 @@ public class UpstreamStrategyAddressSupplierTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase()
+        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
             MemberId consumed = upstreamDatabase;
             numberOfIterations--;
@@ -111,23 +113,6 @@ public class UpstreamStrategyAddressSupplierTest
                 upstreamDatabase = null;
             }
             return Optional.ofNullable( consumed );
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return super.hashCode() + (upstreamDatabase.hashCode() * 17) + (31 * numberOfIterations);
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( o == null || !(o instanceof CountedSelectionStrategy) )
-            {
-                return false;
-            }
-            CountedSelectionStrategy other = (CountedSelectionStrategy) o;
-            return this.upstreamDatabase.equals( other.upstreamDatabase ) && this.numberOfIterations == other.numberOfIterations;
         }
     }
 }

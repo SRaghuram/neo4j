@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -23,7 +24,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
-import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -58,7 +58,7 @@ public class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -78,7 +78,7 @@ public class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -95,7 +95,7 @@ public class StoreDownloaderTest
         RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseContext );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -113,7 +113,7 @@ public class StoreDownloaderTest
         StoreCopyProcess storeCopyProcess = databaseContext.catchupComponents().storeCopyProcess();
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -132,7 +132,7 @@ public class StoreDownloaderTest
         // when
         try
         {
-            downloader.bringUpToDate( wrongDb, primaryAddress, fromSingleAddress( secondaryAddress ) );
+            downloader.bringUpToDate( wrongDb, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
             fail();
         }
         catch ( IllegalStateException ignored )

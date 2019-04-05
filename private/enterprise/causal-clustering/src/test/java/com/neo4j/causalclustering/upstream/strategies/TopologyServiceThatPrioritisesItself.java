@@ -58,24 +58,12 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public CoreTopology localCoreServers()
-    {
-        return allCoreServers();
-    }
-
-    @Override
     public ReadReplicaTopology allReadReplicas()
     {
         Map<MemberId,ReadReplicaInfo> readReplicaMembers = new HashMap<>();
         readReplicaMembers.put( myself, readReplicaInfo( matchingGroupName ) );
         readReplicaMembers.put( readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
         return new ReadReplicaTopology( readReplicaMembers );
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return allReadReplicas();
     }
 
     @Override

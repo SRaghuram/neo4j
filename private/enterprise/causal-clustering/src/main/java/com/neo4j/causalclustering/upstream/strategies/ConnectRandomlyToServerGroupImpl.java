@@ -16,6 +16,8 @@ import java.util.Random;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class ConnectRandomlyToServerGroupImpl
 {
     private final List<String> groups;
@@ -30,9 +32,9 @@ public class ConnectRandomlyToServerGroupImpl
         this.myself = myself;
     }
 
-    public Optional<MemberId> upstreamDatabase()
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
     {
-        Map<MemberId,ReadReplicaInfo> replicas = topologyService.localReadReplicas().members();
+        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicasForDatabase( databaseId ).members();
 
         List<MemberId> choices =
                 groups.stream().flatMap( group -> replicas.entrySet().stream().filter( isMyGroupAndNotMe( group ) ) ).map( Map.Entry::getKey ).collect(

@@ -43,6 +43,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
+// todo: rework messages logged in this class
 class ReadReplicaStartupProcess implements Lifecycle
 {
     private final Executor executor;
@@ -52,8 +53,6 @@ class ReadReplicaStartupProcess implements Lifecycle
     private final TimeoutStrategy syncRetryStrategy;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final TopologyService topologyService;
-
-    private String lastIssue;
 
     private final CatchupComponentsRepository catchupComponents;
     private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
@@ -88,38 +87,23 @@ class ReadReplicaStartupProcess implements Lifecycle
         catchupProcessManager.init();
     }
 
-    private String issueOf( String operation, int attempt )
-    {
-        return format( "Failed attempt %d of %s", attempt, operation );
-    }
-
     @Override
     public void start() throws Exception
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         var dbsToSync =  new HashMap<>( clusteredDatabaseManager.registeredDatabases() );
-        int attempt = 0;
         Set<DatabaseId> syncedDbs = new HashSet<>();
         while ( !syncedDbs.equals( dbsToSync.keySet() ) )
         {
             try
             {
-
-                attempt++;
-                MemberId source;
                 try
                 {
                     debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
-                    source = selectionStrategy.bestUpstreamDatabase();
-                    Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
+                    Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( dbsToSync ).get();
                     Set<DatabaseId> successful = findSuccessfullySyncedDatabaseIds( results );
                     debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
                     syncedDbs.addAll( successful );
-                }
-                catch ( UpstreamDatabaseSelectionException e )
-                {
-                    lastIssue = issueOf( "finding upstream member", attempt );
-                    debugLog.warn( lastIssue );
                 }
                 catch ( ExecutionException e )
                 {
@@ -133,9 +117,7 @@ class ReadReplicaStartupProcess implements Lifecycle
             catch ( InterruptedException e )
             {
                 Thread.currentThread().interrupt();
-                lastIssue = "Interrupted while trying to start read replica";
-                debugLog.warn( lastIssue );
-                userLog.error( lastIssue );
+                userLog.error( "Interrupted while trying to start read replica" );
                 throw new RuntimeException( e );
             }
         }
@@ -144,15 +126,14 @@ class ReadReplicaStartupProcess implements Lifecycle
         catchupProcessManager.start();
     }
 
-    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( MemberId source,
-            Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
+    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
     {
         CompletableFuture<Map<DatabaseId,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
         for ( var nameDbEntry : dbsToSync.entrySet() )
         {
             DatabaseId databaseId = nameDbEntry.getKey();
             CompletableFuture<AsyncResult> stage =
-                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue(), source ), executor );
+                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue() ), executor );
             combinedFuture = combinedFuture.thenCombineAsync( stage, ( resultsMap, currentResult ) ->
             {
                 resultsMap.put( databaseId, currentResult );
@@ -171,8 +152,19 @@ class ReadReplicaStartupProcess implements Lifecycle
                 .collect( toSet() );
     }
 
-    private AsyncResult doSyncStoreCopyWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext, MemberId source )
+    private AsyncResult doSyncStoreCopyWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext )
     {
+        MemberId source;
+        try
+        {
+            source = selectionStrategy.bestUpstreamMemberForDatabase( clusteredDatabaseContext.databaseId().name() );
+        }
+        catch ( UpstreamDatabaseSelectionException e )
+        {
+            debugLog.warn( "finding upstream member for database " + clusteredDatabaseContext.databaseId().name() );
+            return AsyncResult.FAIL;
+        }
+
         try
         {
             syncStoreWithUpstream( clusteredDatabaseContext, source );

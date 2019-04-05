@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.Topology;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
@@ -464,14 +463,14 @@ public class Cluster
         return await( () -> getMemberWithRole( databaseId, role ), notNull(), timeout, timeUnit );
     }
 
-    public int numberOfCoreMembersReportedByTopology()
+    public int numberOfCoreMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( TopologyService::localCoreServers );
+        return numberOfMembersReportedByCoreTopology( service -> service.coreServersForDatabase( databaseName ) );
     }
 
-    public int numberOfReadReplicaMembersReportedByTopology()
+    public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( TopologyService::localReadReplicas );
+        return numberOfMembersReportedByCoreTopology( service -> service.readReplicasForDatabase( databaseName ) );
     }
 
     private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology> topologySelector )

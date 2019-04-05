@@ -12,6 +12,7 @@ import java.util.Optional;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.NamedService;
@@ -51,7 +52,7 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     {
     }
 
-    public abstract Optional<MemberId> upstreamDatabase() throws UpstreamDatabaseSelectionException;
+    public abstract Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException;
 
     @Override
     public String toString()

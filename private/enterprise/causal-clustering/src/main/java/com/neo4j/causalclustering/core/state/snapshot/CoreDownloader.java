@@ -60,7 +60,7 @@ public class CoreDownloader
     Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( addressProvider );
+        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( db.databaseName(), addressProvider );
         if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
@@ -81,11 +81,11 @@ public class CoreDownloader
         return coreSnapshot;
     }
 
-    private Optional<AdvertisedSocketAddress> lookupPrimary( CatchupAddressProvider addressProvider )
+    private Optional<AdvertisedSocketAddress> lookupPrimary( String databaseName, CatchupAddressProvider addressProvider )
     {
         try
         {
-            return Optional.of( addressProvider.primary() );
+            return Optional.of( addressProvider.primary( databaseName ) );
         }
         catch ( CatchupAddressResolutionException e )
         {

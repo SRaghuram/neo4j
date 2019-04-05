@@ -41,6 +41,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -114,7 +115,7 @@ class RestartIT
 
         // then
         assertEventually( () -> cluster.healthyCoreMembers(), hasSize( 3 ), 1, MINUTES );
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology(), equalTo( 3 ), 1, MINUTES );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalTo( 3 ), 1, MINUTES );
 
         done.set( true );
 

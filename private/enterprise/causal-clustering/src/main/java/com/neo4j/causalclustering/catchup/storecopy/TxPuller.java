@@ -38,17 +38,18 @@ class TxPuller
     private State currentState = State.NORMAL;
     private long highestTx;
 
-    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
+    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config, String databaseName )
     {
         Clock clock = Clock.systemUTC();
         Duration inactivityTimeout = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout );
-        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock );
+        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock, databaseName );
     }
 
     @VisibleForTesting
-    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock )
+    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock,
+            String databaseName )
     {
-        this.addressProvider = new StateBasedAddressProvider( catchupAddressProvider );
+        this.addressProvider = new StateBasedAddressProvider( databaseName, catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );
         this.resettableCondition = noProgressHandler;
         this.connectionErrorLogger = new CappedLogger( log );
@@ -184,10 +185,12 @@ class TxPuller
 
     private static class StateBasedAddressProvider
     {
+        private final String databaseName;
         private final CatchupAddressProvider catchupAddressProvider;
 
-        private StateBasedAddressProvider( CatchupAddressProvider catchupAddressProvider )
+        private StateBasedAddressProvider( String databaseName, CatchupAddressProvider catchupAddressProvider )
         {
+            this.databaseName = databaseName;
             this.catchupAddressProvider = catchupAddressProvider;
         }
 
@@ -197,9 +200,9 @@ class TxPuller
             {
             case LAST_ATTEMPT:
             case COMPLETE:
-                return catchupAddressProvider.primary();
+                return catchupAddressProvider.primary( databaseName );
             default:
-                return catchupAddressProvider.secondary();
+                return catchupAddressProvider.secondary( databaseName );
             }
         }
     }
