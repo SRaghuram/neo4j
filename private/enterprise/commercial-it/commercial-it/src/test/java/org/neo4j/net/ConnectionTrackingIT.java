@@ -413,7 +413,7 @@ public class ConnectionTrackingIT
         Response response = withBasicAuth( "neo4j", "neo4j" )
                 .POST( changePasswordUri, quotedJson( "{'password':'" + newPassword + "'}" ) );
 
-        assertEquals( 200, response.status() );
+        assertEquals( 204, response.status() );
     }
 
     private static void createNewUser( String username, String password )

@@ -22,7 +22,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.helpers.CommunityServerBuilder;
-import org.neo4j.server.rest.web.DatabaseActions;
 
 public class CommercialServerBuilder extends CommunityServerBuilder
 {
@@ -80,12 +79,6 @@ public class CommercialServerBuilder extends CommunityServerBuilder
         {
             super( config, dependencies );
             this.configFile = configFile;
-        }
-
-        @Override
-        protected DatabaseActions createDatabaseActions()
-        {
-            return createDatabaseActionsObject( database );
         }
 
         @Override
