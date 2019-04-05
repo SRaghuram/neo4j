@@ -227,6 +227,22 @@ public class ProcedureIT
     }
 
     @Test
+    void shouldGiveNiceErrorMessageWhenMissingArgumentWhenDefaultArguments()
+    {
+        //Expect
+        // When
+        try ( Transaction ignore = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL db.awaitIndex()" ) );
+            assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
+                    "Procedure call does not provide the required number of arguments: got 0 expected 2 (where 1 is optional).%n%n" +
+                    "Procedure db.awaitIndex has signature: " +
+                    "db.awaitIndex(index :: STRING?, timeOutSeconds  =  300 :: INTEGER?) :: VOID%n" +
+                    "meaning that it expects 2 arguments of type STRING?, INTEGER?" ) ) );
+        }
+    }
+
+    @Test
     void shouldGiveNiceErrorWhenMissingArgumentsToVoidFunction()
     {
         try ( Transaction ignore = db.beginTx() )
