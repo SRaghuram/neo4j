@@ -21,6 +21,7 @@ import scala.collection.mutable
 
 object SlottedExecutionContext {
   def empty = new SlottedExecutionContext(SlotConfiguration.empty)
+  val DEBUG = false
 }
 
 trait SlottedCompatible {
@@ -107,7 +108,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def getRefAt(offset: Int): AnyValue = {
     val value = refs(offset)
-    if (value == null)
+    if (SlottedExecutionContext.DEBUG && value == null)
       throw new InternalException(s"Reference value not initialised at offset $offset in $this")
     value
   }
