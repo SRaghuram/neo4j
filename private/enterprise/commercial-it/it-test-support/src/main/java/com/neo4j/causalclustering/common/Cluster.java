@@ -63,6 +63,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -792,5 +793,10 @@ public class Cluster
         }
         int ordinal = ThreadLocalRandom.current().nextInt( list.size() );
         return Optional.of( list.get( ordinal ) );
+    }
+
+    public Stream<ClusterMember<? extends GraphDatabaseFacade>> allMembers()
+    {
+        return Stream.concat( coreMembers.values().stream(), readReplicas.values().stream() );
     }
 }

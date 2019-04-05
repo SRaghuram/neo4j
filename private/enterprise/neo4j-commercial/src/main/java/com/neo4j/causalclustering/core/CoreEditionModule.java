@@ -74,6 +74,12 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
+import com.neo4j.dbms.InternalOperator;
+import com.neo4j.dbms.OperatorState;
+import com.neo4j.dbms.OperatorConnector;
+import com.neo4j.dbms.ReconcilingDatabaseOperator;
+import com.neo4j.dbms.LocalOperator;
+import com.neo4j.dbms.SystemOperator;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
@@ -84,6 +90,7 @@ import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -120,7 +127,9 @@ import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.dbms.OperatorState.STOPPED;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
@@ -446,6 +455,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalLife.add( coreServerModule.membershipWaiterLifecycle() );
     }
 
+    @Override
     public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
         ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
@@ -458,23 +468,27 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     @Override
     public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
-        createCommercialEditionDatabases( databaseManager, config );
+        var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
+
+        initialDatabases.put( new DatabaseId( SYSTEM_DATABASE_NAME ), STOPPED );
+        initialDatabases.put( new DatabaseId( config.get( default_database ) ), STOPPED );
+
+        initialDatabases.keySet().forEach( databaseManager::createDatabase );
+
+        setupDatabaseOperators( databaseManager, initialDatabases );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
+    private void setupDatabaseOperators( DatabaseManager<?> databaseManager, Map<DatabaseId,OperatorState> initialDatabases )
     {
-        createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
-        createConfiguredDatabases( databaseManager, config );
-    }
+        var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
+        var connector = new OperatorConnector( reconciler );
 
-    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
-    {
-        createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
-    }
+        var localOperator = new LocalOperator( connector );
+        var internalOperator = new InternalOperator( connector );
+        var systemOperator = new SystemOperator( connector );
 
-    private void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
-    {
-        databaseManager.createDatabase( new DatabaseId( databaseName ) );
+        globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
+        globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
     }
 
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()

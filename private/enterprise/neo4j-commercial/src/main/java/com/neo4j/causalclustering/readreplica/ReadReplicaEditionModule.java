@@ -35,11 +35,19 @@ import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
+import com.neo4j.dbms.InternalOperator;
+import com.neo4j.dbms.LocalOperator;
+import com.neo4j.dbms.OperatorConnector;
+import com.neo4j.dbms.OperatorState;
+import com.neo4j.dbms.ReconcilingDatabaseOperator;
+import com.neo4j.dbms.SystemOperator;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 
@@ -76,6 +84,9 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
+import static com.neo4j.dbms.OperatorState.STOPPED;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -91,12 +102,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private final GlobalModule globalModule;
 
     private final MemberId myself;
-    private final PipelineBuilders pipelineBuilders;
     private final JobScheduler jobScheduler;
     private final PanicService panicService;
     private final CatchupComponentsProvider catchupComponentsProvider;
 
-    private CatchupHandlerFactory handlerFactory;
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         this.globalModule = globalModule;
@@ -135,7 +144,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
-        pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
         editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
@@ -197,7 +206,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
 
-        handlerFactory = ignored -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
+        CatchupHandlerFactory handlerFactory = ignored -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
         ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory );
 
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
@@ -233,23 +242,27 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     @Override
     public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
-        createCommercialEditionDatabases( databaseManager, config );
+        var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
+
+        initialDatabases.put( new DatabaseId( SYSTEM_DATABASE_NAME ), STOPPED );
+        initialDatabases.put( new DatabaseId( config.get( default_database ) ), STOPPED );
+
+        initialDatabases.keySet().forEach( databaseManager::createDatabase );
+
+        setupDatabaseOperators( databaseManager, initialDatabases );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
+    private void setupDatabaseOperators( DatabaseManager<?> databaseManager, Map<DatabaseId,OperatorState> initialDatabases )
     {
-        createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        createConfiguredDatabases( databaseManager, config );
-    }
+        var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
+        var connector = new OperatorConnector( reconciler );
 
-    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
-    {
-        createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
-    }
+        var localOperator = new LocalOperator( connector );
+        var internalOperator = new InternalOperator( connector );
+        var systemOperator = new SystemOperator( connector );
 
-    protected void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
-    {
-        databaseManager.createDatabase( new DatabaseId( databaseName ) );
+        globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
+        globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
     }
 
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()
