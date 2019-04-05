@@ -11,11 +11,7 @@ import java.util.function.Supplier;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.SystemGraphCredential;
-import org.neo4j.string.UTF8;
-
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 

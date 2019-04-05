@@ -66,11 +66,9 @@ import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
@@ -485,7 +483,7 @@ public class CommercialSecurityModule extends SecurityModule
         return new FileRoleRepository( fileSystem, getRoleRepositoryFile( config ), logProvider );
     }
 
-    public static UserRepository getDefaultAdminRepository( Config config, LogProvider logProvider,
+    private static UserRepository getDefaultAdminRepository( Config config, LogProvider logProvider,
             FileSystemAbstraction fileSystem )
     {
         return new FileUserRepository( fileSystem, getDefaultAdminRepositoryFile( config ), logProvider );
