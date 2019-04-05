@@ -132,7 +132,7 @@ public class DatabaseBootstrapper
         try
         {
             log.info( "Bootstrapping database " + dbContext.databaseName() + " for members " + members );
-            prepareForBootstrap( dbContext );
+            ensureRecoveredOrThrow( dbContext, config );
             initializeStoreIfNeeded( dbContext );
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( dbContext );
             CoreSnapshot snapshot = buildCoreSnapshot( dbContext );
@@ -142,16 +142,6 @@ public class DatabaseBootstrapper
         catch ( Exception e )
         {
             throw new BootstrapException( dbContext.databaseName(), e );
-        }
-    }
-
-    private void prepareForBootstrap( ClusteredDatabaseContext dbContext ) throws Exception
-    {
-        ensureRecoveredOrThrow( dbContext, config );
-
-        if ( isStorePresent( dbContext ) )
-        {
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( dbContext.databaseLayout(), config );
         }
     }
 
@@ -214,19 +204,15 @@ public class DatabaseBootstrapper
         return coreSnapshot;
     }
 
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( ClusteredDatabaseContext dbContext ) throws IOException
-    {
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( dbContext.databaseLayout(), config );
-    }
-
     /**
      * For the purpose of idempotent application from Raft log to the transaction log, every entry in the transaction log
      * carries in its header the corresponding Raft log index. At bootstrap time an empty transaction log entry denoting
      * the beginning of time (Raft log index -1) is created. This is used during recovery by the Raft machinery to pick up
      * where it left off. It is also highly useful for debugging.
      */
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout layout, Config config ) throws IOException
+    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( ClusteredDatabaseContext dbContext ) throws IOException
     {
+        DatabaseLayout layout = dbContext.databaseLayout();
         TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( layout, pageCache );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( layout, fs, pageCache )
