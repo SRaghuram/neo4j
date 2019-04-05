@@ -147,6 +147,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                            (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate {
   import OperatorCodeGenHelperTemplates._
 
+  private val nodeCursorField = nodeCursor(codeGen.namer.nextVariableName())
+
   // Setup the innermost output template
   innermost.delegate = new OperatorTaskTemplate {
     override def genOperate: IntermediateRepresentation = {
@@ -161,7 +163,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
   }
 
   override def genFields: Seq[Field] = {
-    (super.genFields :+ CURSOR) ++ inner.genFields
+    (super.genFields :+ nodeCursorField) ++ inner.genFields
   }
 
   override def genLocalVariables: Seq[LocalVariable] = {
@@ -173,8 +175,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //context.transactionalContext.dataRead.allNodesScan(cursor)
     //true
     block(
-      setField(CURSOR, ALLOCATE_NODE_CURSOR),
-      ALL_NODE_SCAN,
+      setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
+      allNodeScan(loadField(nodeCursorField)),
       constant(true)
     )
   }
@@ -186,7 +188,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //  <<< inner.genOperate() >>>
     //  //outputRow.moveToNextRow() // <- This needs to move to the innermost level
     //}
-    loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(CURSOR), method[NodeCursor, Boolean]("next"))))(
+    loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("next"))))(
       block(
         // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
         //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
@@ -204,7 +206,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
           noop()
         },
 
-        codeGen.setLongAt(offset, invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
+        codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperate
       )
     )
@@ -214,8 +216,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //resources.cursorPools.nodeCursorPool.free(cursor)
     //cursor = null
     block(
-      FREE_NODE_CURSOR,
-      setField(CURSOR, constant(null))
+      freeNodeCursor(loadField(nodeCursorField)),
+      setField(nodeCursorField, constant(null))
     )
   }
 }

@@ -55,8 +55,8 @@ object OperatorExpressionCompiler {
   }
 }
 
-class OperatorExpressionCompiler(slots: SlotConfiguration)
-  extends ExpressionCompiler(slots) {
+class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNamer)
+  extends ExpressionCompiler(slots, namer) {
 
   import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, load}
 

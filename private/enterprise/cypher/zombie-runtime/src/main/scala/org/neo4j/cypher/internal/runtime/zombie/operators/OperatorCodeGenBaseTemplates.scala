@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.internal.kernel.api.{NodeCursor, Read}
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.values.AnyValue
 
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
@@ -114,7 +114,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param[Array[AnyValue]]("params"),
               param[ExpressionCursors]("cursors"),
               param[Array[AnyValue]]("expressionVariables"),
-              param[CursorPool[NodeCursor]]("nodeCursorPool"),
+              param[CursorPools]("cursorPools"),
               param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
           ),
           body = genOperate,

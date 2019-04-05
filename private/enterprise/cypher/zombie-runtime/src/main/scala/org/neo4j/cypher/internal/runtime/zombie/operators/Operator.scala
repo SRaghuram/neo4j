@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
 
 /**
@@ -227,7 +226,7 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
       cursors = resources.expressionCursors,
       expressionVariables = resources.expressionVariables(state.nExpressionSlots),
       //--- Additional operator codegen dependencies
-      nodeCursorPool = resources.cursorPools.nodeCursorPool,
+      cursorPools = resources.cursorPools,
       //--- Additional produce result codegen dependencies
       resultVisitor = state.visitor
     )
@@ -253,7 +252,7 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
                                       params: Array[AnyValue],
                                       cursors: ExpressionCursors,
                                       expressionVariables: Array[AnyValue],
-                                      nodeCursorPool: CursorPool[NodeCursor],
+                                      cursorPools: CursorPools,
                                       resultVisitor: QueryResultVisitor[E]): Unit
 }
 

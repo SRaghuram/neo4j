@@ -51,7 +51,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(id)
-    val expressionCompiler = new OperatorExpressionCompiler(slots) // NOTE: We assume slots is the same within an entire pipeline
+    val namer = new VariableNamer
+    val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots is the same within an entire pipeline
     generateSlotAccessorFunctions(slots)
 
     // Fold plans in reverse to build-up code generation templates with inner templates

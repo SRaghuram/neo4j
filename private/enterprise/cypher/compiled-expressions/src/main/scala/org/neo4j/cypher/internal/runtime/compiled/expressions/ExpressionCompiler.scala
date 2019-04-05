@@ -37,26 +37,24 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+class VariableNamer {
+  private var counter: Int = 0
+  private val parameters = mutable.Map.empty[String, String]
+  private val variables = mutable.Map.empty[String, String]
+  def nextVariableName(): String = {
+    val nextName = s"v$counter"
+    counter += 1
+    nextName
+  }
+
+  def parameterName(name: String): String = parameters.getOrElseUpdate(name, nextVariableName())
+  def variableName(name: String): String = variables.getOrElseUpdate(name, nextVariableName())
+}
+
 /**
   * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class ExpressionCompiler(slots: SlotConfiguration) {
-
-  private val namer = new VariableNamer
-
-  private class VariableNamer {
-    private var counter: Int = 0
-    private val parameters = mutable.Map.empty[String, String]
-    private val variables = mutable.Map.empty[String, String]
-    def nextVariableName(): String = {
-      val nextName = s"v$counter"
-      counter += 1
-      nextName
-    }
-
-    def parameterName(name: String): String = parameters.getOrElseUpdate(name, nextVariableName())
-    def variableName(name: String): String = variables.getOrElseUpdate(name, nextVariableName())
-  }
+abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer = new VariableNamer) {
 
   import ExpressionCompiler._
   import IntermediateRepresentation._
