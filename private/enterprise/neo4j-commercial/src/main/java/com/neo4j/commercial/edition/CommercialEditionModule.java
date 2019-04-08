@@ -51,8 +51,8 @@ import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
@@ -138,7 +138,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Logger msgLog )
+    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Log msgLog )
     {
         CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog, graphDatabaseFacade );
         createDatabaseManagerDependentModules( databaseManager );

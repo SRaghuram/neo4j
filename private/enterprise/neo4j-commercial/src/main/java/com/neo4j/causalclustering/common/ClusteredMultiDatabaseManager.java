@@ -31,7 +31,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.monitoring.Health;
 
 import static java.lang.String.format;
@@ -57,7 +56,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
 
     private volatile AvailabilityRequirement currentRequirement;
 
-    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade facade,
+    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
             ClusteredDatabaseContextFactory<DB> contextFactory, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths, AvailabilityGuard availabilityGuard )
     {
@@ -94,7 +93,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         currentRequirement = null;
     }
 
-    private synchronized void stopWithRequirement( AvailabilityRequirement requirement ) throws Exception
+    private synchronized void stopWithRequirement( AvailabilityRequirement requirement )
     {
         log.info( "Stopping, reason: " + requirement.description() );
         boolean storeCopying = requirement == notCopyingReq;
@@ -107,7 +106,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    public synchronized void start() throws Exception
+    public synchronized void start()
     {
         if ( isAvailable() )
         {

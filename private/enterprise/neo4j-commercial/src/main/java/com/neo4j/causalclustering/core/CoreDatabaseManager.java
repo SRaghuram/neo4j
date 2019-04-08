@@ -25,8 +25,8 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.monitoring.Health;
 
 public class CoreDatabaseManager extends ClusteredMultiDatabaseManager<CoreDatabaseContext>
@@ -34,7 +34,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager<CoreDatab
 
     private final Supplier<CoreStateService> coreStateService;
 
-    CoreDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade facade,
+    CoreDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
             Supplier<CoreStateService> coreStateService, CatchupComponentsFactory catchupComponentsFactory,
             AvailabilityGuard availabilityGuard, FileSystemAbstraction fs, PageCache pageCache,
             LogProvider logProvider, Config config, Health globalHealths )

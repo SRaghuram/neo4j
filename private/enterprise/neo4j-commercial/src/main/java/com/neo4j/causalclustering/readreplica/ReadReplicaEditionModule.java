@@ -63,8 +63,8 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
@@ -183,7 +183,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<ReadReplicaDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Logger log )
+    public DatabaseManager<ReadReplicaDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
          ClusteredMultiDatabaseManager<ReadReplicaDatabaseContext> databaseManager = new ClusteredMultiDatabaseManager<>( platform, this, log, facade,
                  ReadReplicaDatabaseContext::new, catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),

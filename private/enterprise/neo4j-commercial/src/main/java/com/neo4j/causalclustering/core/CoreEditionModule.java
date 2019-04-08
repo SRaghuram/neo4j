@@ -109,8 +109,8 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
@@ -442,7 +442,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalLife.add( coreServerModule.membershipWaiterLifecycle() );
     }
 
-    public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Logger log )
+    public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
         ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
                 this::coreStateComponents, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),

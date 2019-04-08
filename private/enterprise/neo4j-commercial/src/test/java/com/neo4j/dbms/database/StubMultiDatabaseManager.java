@@ -10,7 +10,7 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.NullLogger;
+import org.neo4j.logging.NullLog;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -20,7 +20,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
 {
     StubMultiDatabaseManager()
     {
-        super( null, null, NullLogger.getInstance(), null );
+        super( null, null, NullLog.getInstance(), null );
     }
 
     @Override

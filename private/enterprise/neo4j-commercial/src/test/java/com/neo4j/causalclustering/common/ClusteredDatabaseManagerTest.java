@@ -20,22 +20,19 @@ import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.logging.Logger;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.DatabaseHealth;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@SuppressWarnings( "unchecked" )
 class ClusteredDatabaseManagerTest
 {
 
@@ -152,7 +149,7 @@ class ClusteredDatabaseManagerTest
 
     private ClusteredDatabaseManager<StubClusteredDatabaseContext> newDatabaseManager( AvailabilityGuard availabilityGuard )
     {
-        return new ClusteredMultiDatabaseManager<>( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Logger.class ),
+        return new ClusteredMultiDatabaseManager<>( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Log.class ),
                 mock( GraphDatabaseFacade.class ), StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
                 mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), Config.defaults(),
                 mock( DatabaseHealth.class ), availabilityGuard );

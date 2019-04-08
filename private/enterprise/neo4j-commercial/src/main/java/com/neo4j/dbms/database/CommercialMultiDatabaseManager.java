@@ -10,12 +10,12 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.Logger;
+import org.neo4j.logging.Log;
 
 public class CommercialMultiDatabaseManager extends MultiDatabaseManager<StandaloneDatabaseContext>
 {
 
-    public CommercialMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade facade )
+    public CommercialMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade )
     {
         super( globalModule, edition, log, facade );
     }

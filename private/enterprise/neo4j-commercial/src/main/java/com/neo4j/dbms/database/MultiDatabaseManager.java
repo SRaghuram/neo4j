@@ -16,7 +16,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.Logger;
+import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
 
@@ -24,7 +24,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 {
     protected volatile boolean started;
 
-    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade )
+    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade graphDatabaseFacade )
     {
         super( globalModule, edition, log, graphDatabaseFacade );
     }
@@ -117,7 +117,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 
     protected void dropDatabase( DatabaseId databaseId, DB context )
     {
-        log.log( "Drop '%s' database.", databaseId.name() );
+        log.info( "Drop '%s' database.", databaseId.name() );
         Database database = context.database();
         database.drop();
     }
