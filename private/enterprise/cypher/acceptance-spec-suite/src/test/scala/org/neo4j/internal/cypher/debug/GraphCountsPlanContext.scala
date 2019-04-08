@@ -65,7 +65,7 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
       val labelId = getLabelId(labelName)
       val propertyKeyId = getPropertyKeyId(propertyKey)
 
-      tc.schemaRead.constraintsGetForSchema(SchemaDescriptorFactory.forLabel(labelId, propertyKeyId)).hasNext
+      tc.schemaRead.constraintsGetForSchema(SchemaDescriptorFactory.forLabelNoIndex(labelId, propertyKeyId)).hasNext
     } catch {
       case _: KernelException => false
     }

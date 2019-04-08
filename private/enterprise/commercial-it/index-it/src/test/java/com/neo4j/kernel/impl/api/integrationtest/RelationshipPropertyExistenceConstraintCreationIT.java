@@ -77,6 +77,6 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     @Override
     DefaultRelationTypeSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
-        return SchemaDescriptorFactory.forRelType( typeId, propertyKeyId );
+        return SchemaDescriptorFactory.forRelTypeNoIndex( typeId, propertyKeyId );
     }
 }
