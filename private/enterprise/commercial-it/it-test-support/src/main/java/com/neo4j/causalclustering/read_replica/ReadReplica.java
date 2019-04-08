@@ -36,6 +36,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -95,6 +96,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         config.put( new BoltConnector( "bolt" ).enabled.name(), "true" );
         config.put( new BoltConnector( "bolt" ).listen_address.name(), listenAddress( listenAddress, boltPort ) );
         config.put( new BoltConnector( "bolt" ).advertised_address.name(), boltAdvertisedSocketAddress );
+        config.put( new BoltConnector( "bolt" ).encryption_level.name(), DISABLED.name() );
         config.put( new HttpConnector( "http", Encryption.NONE ).type.name(), "HTTP" );
         config.put( new HttpConnector( "http", Encryption.NONE ).enabled.name(), "true" );
         config.put( new HttpConnector( "http", Encryption.NONE ).listen_address.name(), listenAddress( listenAddress, httpPort ) );
