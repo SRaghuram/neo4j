@@ -12,6 +12,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -123,9 +124,16 @@ public class Server extends SuspendableLifeCycle
             debugLog.warn( "Interrupted while closing channel." );
         }
 
-        if ( workerGroup != null && workerGroup.shutdownGracefully( 2, 5, TimeUnit.SECONDS ).awaitUninterruptibly( 10, TimeUnit.SECONDS ) )
+        if ( workerGroup != null )
         {
-            debugLog.warn( "Worker group not shutdown within 10 seconds." );
+            // A quiet period of exactly zero cannot be used because that won't finish all queued tasks,
+            // which is the guarantee we want, because we don't care about a quiet period per se.
+            Future<?> fShutdown = workerGroup.shutdownGracefully( 100, 5000, TimeUnit.MILLISECONDS );
+            if ( !fShutdown.awaitUninterruptibly( 15000, TimeUnit.MILLISECONDS ) )
+            {
+                // This is not really expected to ever happen.
+                debugLog.warn( "Worker group not shutdown within time limit." );
+            }
         }
         workerGroup = null;
     }
