@@ -1987,12 +1987,11 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
-  protected final def getLongFromExecutionContext(offset: Int): IntermediateRepresentation =
-    invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
+  protected final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+    invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
 
-  protected final def getRefFromExecutionContext(offset: Int): IntermediateRepresentation =
-    invoke(LOAD_CONTEXT, method[ExecutionContext, AnyValue, Int]("getRefAt"),
-           constant(offset))
+  protected final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+    invoke(context, method[ExecutionContext, AnyValue, Int]("getRefAt"), constant(offset))
 
   protected final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),

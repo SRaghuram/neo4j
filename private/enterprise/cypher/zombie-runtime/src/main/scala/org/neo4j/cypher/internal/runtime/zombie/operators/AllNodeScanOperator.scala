@@ -147,7 +147,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                            (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate {
   import OperatorCodeGenHelperTemplates._
 
-  private val nodeCursorField = nodeCursor(codeGen.namer.nextVariableName())
+  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
 
   // Setup the innermost output template
   innermost.delegate = new OperatorTaskTemplate {
@@ -188,7 +188,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //  <<< inner.genOperate() >>>
     //  //outputRow.moveToNextRow() // <- This needs to move to the innermost level
     //}
-    loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("next"))))(
+    loop(and(OUTPUT_ROW_IS_VALID, cursorNext[NodeCursor](loadField(nodeCursorField))))(
       block(
         // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
         //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
@@ -216,7 +216,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //resources.cursorPools.nodeCursorPool.free(cursor)
     //cursor = null
     block(
-      freeNodeCursor(loadField(nodeCursorField)),
+      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
       setField(nodeCursorField, constant(null))
     )
   }

@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler.LocalVariableSlotMapper
+import org.neo4j.cypher.internal.runtime.zombie.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -58,7 +59,7 @@ object OperatorExpressionCompiler {
 class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNamer)
   extends ExpressionCompiler(slots, namer) {
 
-  import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, load}
+  import org.neo4j.codegen.api.IntermediateRepresentation._
 
   val locals: LocalVariableSlotMapper = new LocalVariableSlotMapper(slots)
 
@@ -66,18 +67,26 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNa
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
-      assign(local, getLongFromExecutionContext(offset))
+      block(
+        assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+        load(local)
+      )
+    } else {
+      load(local)
     }
-    load(local)
   }
 
   override final def getRefAt(offset: Int): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
-      assign(local, getRefFromExecutionContext(offset))
+      block(
+        assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+        load(local)
+      )
+    } else {
+      load(local)
     }
-    load(local)
   }
 
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {

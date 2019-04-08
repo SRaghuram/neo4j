@@ -210,7 +210,6 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
 }
 
 abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOperatorTaskWithMorsel {
-  protected val dataRead: org.neo4j.internal.kernel.api.Read
 
   override def operate(output: MorselExecutionContext,
                        context: QueryContext,

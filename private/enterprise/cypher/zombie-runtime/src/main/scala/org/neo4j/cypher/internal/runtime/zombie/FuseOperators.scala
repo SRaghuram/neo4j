@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, Pipeline}
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
@@ -22,7 +23,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                     converters: ExpressionConverters,
                     readOnly: Boolean,
                     queryIndexes: QueryIndexes,
-                    fusingEnabled: Boolean) {
+                    fusingEnabled: Boolean,
+                    tokenContext: TokenContext) {
 
   def compilePipeline(p: Pipeline): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
@@ -85,6 +87,32 @@ class FuseOperators(operatorFactory: OperatorFactory,
           case plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
             (new SingleThreadedAllNodeScanTaskTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize)(expressionCompiler),
+              p :: fusedPlans, unhandledPlans, unhandledProduceResult)
+
+          case plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
+            val fromOffset = slots.getLongOffsetFor(fromName)
+            val relOffset = slots.getLongOffsetFor(relName)
+            val toOffset = slots.getLongOffsetFor(to)
+            val maybeTokens = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
+                case Some(token) => Left(token)
+                case None => Right(r.name)
+              }
+            )
+
+            val typeTokens = maybeTokens.collect {
+              case Left(token: Int) => token
+            }
+            val missingTypes = maybeTokens.collect {
+              case Right(name: String) => name
+            }
+            (new ExpandAllOperatorTaskTemplate(innerTemplate,
+                                               innermostTemplate,
+                                               fromOffset,
+                                               relOffset,
+                                               toOffset,
+                                               dir,
+                                               typeTokens.toArray,
+                                               missingTypes.toArray)(expressionCompiler),
               p :: fusedPlans, unhandledPlans, unhandledProduceResult)
 
           case plans.Selection(predicate, _) =>
