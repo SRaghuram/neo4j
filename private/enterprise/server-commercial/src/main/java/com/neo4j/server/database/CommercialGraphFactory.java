@@ -7,8 +7,7 @@ package com.neo4j.server.database;
 
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
@@ -29,16 +28,20 @@ public class CommercialGraphFactory implements GraphFactory
     {
         CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
-        DiscoveryServiceFactory discoveryServiceFactory = new DiscoveryServiceFactorySelector().select( config );
 
         switch ( mode )
         {
         case CORE:
-            return new CoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, CoreEditionModule::new );
+            return new CoreGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new );
         case READ_REPLICA:
-            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new );
+            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), ReadReplicaEditionModule::new );
         default:
             return new CommercialGraphDatabase( storeDir, config, dependencies );
         }
+    }
+
+    private static AkkaDiscoveryServiceFactory newDiscoveryServiceFactory()
+    {
+        return new AkkaDiscoveryServiceFactory();
     }
 }

@@ -64,7 +64,6 @@ Apache Software License, Version 2.0
   forever-agent
   Graphite Integration for Metrics
   grpc
-  hazelcast-all
   Jackson
   Javassist
   JAX-RS provider for JSON content type

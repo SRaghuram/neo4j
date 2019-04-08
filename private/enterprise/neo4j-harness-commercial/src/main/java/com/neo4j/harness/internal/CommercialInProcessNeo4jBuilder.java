@@ -5,9 +5,6 @@
  */
 package com.neo4j.harness.internal;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
@@ -23,8 +20,6 @@ import org.neo4j.server.database.GraphFactory;
 
 public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuilder
 {
-    private DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
-
     public CommercialInProcessNeo4jBuilder()
     {
         this( SystemUtils.getJavaIoTmpDir() );
@@ -50,7 +45,6 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
     @Override
     protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, ExternalDependencies dependencies )
     {
-        config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
         return new CommercialNeoServer( config, graphFactory, dependencies );
     }
 

@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
@@ -73,7 +73,7 @@ public class ServerGroupsIT
 
         int nServers = 3;
         cluster = new Cluster( testDir.directory( "cluster" ), nServers, nServers,
-                new HazelcastDiscoveryServiceFactory(), emptyMap(), instanceCoreParams,
+                new AkkaDiscoveryServiceFactory(), emptyMap(), instanceCoreParams,
                 emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         // when

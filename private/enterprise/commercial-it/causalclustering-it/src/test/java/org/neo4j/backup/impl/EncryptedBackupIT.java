@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -348,8 +348,7 @@ class EncryptedBackupIT
             int noOfCoreMembers = 3;
             int noOfReadReplicas = 3;
 
-            // use secure discovery service factory to make cluster members communicate with SSL enabled
-            DiscoveryServiceFactory discoveryServiceFactory = new SslHazelcastDiscoveryServiceFactory();
+            DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
             return new Cluster( testDir.directory( UUID.randomUUID().toString() ), noOfCoreMembers, noOfReadReplicas,
                     discoveryServiceFactory, emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
         }

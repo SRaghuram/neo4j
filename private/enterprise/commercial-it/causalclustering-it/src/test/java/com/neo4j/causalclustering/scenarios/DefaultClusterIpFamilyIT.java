@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import org.junit.jupiter.api.Nested;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.HAZELCAST;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV6;
@@ -33,38 +33,38 @@ class DefaultClusterIpFamilyIT
     }
 
     @Nested
-    class HazelcastIpv4NoWildcard extends BaseClusterIpFamilyIT
+    class AkkaIpv4NoWildcard extends BaseClusterIpFamilyIT
     {
-        HazelcastIpv4NoWildcard()
+        AkkaIpv4NoWildcard()
         {
-            super( HAZELCAST, IPV4, false );
+            super( AKKA, IPV4, false );
         }
     }
 
     @Nested
-    class HazelcastIpv6NoWildcard extends BaseClusterIpFamilyIT
+    class AkkaIpv6NoWildcard extends BaseClusterIpFamilyIT
     {
-        HazelcastIpv6NoWildcard()
+        AkkaIpv6NoWildcard()
         {
-            super( HAZELCAST, IPV6, false );
+            super( AKKA, IPV6, false );
         }
     }
 
     @Nested
-    class HazelcastIpv4Wildcard extends BaseClusterIpFamilyIT
+    class AkkaIpv4Wildcard extends BaseClusterIpFamilyIT
     {
-        HazelcastIpv4Wildcard()
+        AkkaIpv4Wildcard()
         {
-            super( HAZELCAST, IPV4, true );
+            super( AKKA, IPV4, true );
         }
     }
 
     @Nested
-    class HazelcastIpv6Wildcard extends BaseClusterIpFamilyIT
+    class AkkaIpv6Wildcard extends BaseClusterIpFamilyIT
     {
-        HazelcastIpv6Wildcard()
+        AkkaIpv6Wildcard()
         {
-            super( HAZELCAST, IPV6, true );
+            super( AKKA, IPV6, true );
         }
     }
 }

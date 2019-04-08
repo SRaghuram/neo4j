@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.diagnostics;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipWaiter;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
-import com.neo4j.causalclustering.discovery.HazelcastCoreTopologyService;
 import com.neo4j.causalclustering.helper.Limiters;
 import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -17,7 +16,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.neo4j.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -35,7 +33,7 @@ import static java.lang.String.format;
  * This pattern also de-clutters implementing classes from specifics of logging (e.g.
  * formatting, dual-logging, rate limiting, ...) and encourages a structured interface.
  */
-public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopologyService.Monitor, PersistentSnapshotDownloader.Monitor, MembershipWaiter.Monitor
+public class CoreMonitor implements ClusterBinder.Monitor, PersistentSnapshotDownloader.Monitor, MembershipWaiter.Monitor
 {
     private final Log debug;
     private final Log user;
@@ -82,18 +80,6 @@ public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopology
     public void boundToCluster( ClusterId clusterId )
     {
         user.info( "Bound to cluster with id " + clusterId.uuid() );
-    }
-
-    @Override
-    public void discoveredMember( SocketAddress socketAddress )
-    {
-        user.info( "Discovered core member at " + socketAddress );
-    }
-
-    @Override
-    public void lostMember( SocketAddress socketAddress )
-    {
-        user.warn( "Lost core member at " + socketAddress );
     }
 
     @Override

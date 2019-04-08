@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.hazelcast.core.OperationTimeoutException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -38,7 +37,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -60,52 +58,6 @@ public class ClusterBinderTest
     {
         return new ClusterBinder( clusterIdStorage, new StubSimpleStorage<>(), topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
                 Duration.of( 3_000, MILLIS ), coreBootstrapper, dbName, minCoreHosts, new Monitors() );
-    }
-
-    @Test
-    public void shouldRetryWhenPublishFailsWithTransientErrors() throws Throwable
-    {
-        // given
-        Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
-                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
-
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
-        CoreTopologyService topologyService = mock( CoreTopologyService.class );
-
-        when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ) // Cause a retry one
-                .thenReturn( true ); // Then succeed
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
-
-        // when
-        binder.bindToCluster();
-
-        // then
-        verify( topologyService, atLeast( 2 ) ).setClusterId( any(), anyString() );
-    }
-
-    @Test( expected = TimeoutException.class )
-    public void shouldTimeoutIfPublishContinuallyFailsWithTransientErrors() throws Throwable
-    {
-        // given
-        Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
-                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
-
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
-        CoreTopologyService topologyService = mock( CoreTopologyService.class );
-
-        when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ); // Causes a retry
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
-
-        // when
-        binder.bindToCluster();
     }
 
     @Test

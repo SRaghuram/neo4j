@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.eclipse.collections.impl.factory.Sets;
@@ -172,7 +172,7 @@ class ServerPoliciesLoadBalancingIT
             Map<String,IntFunction<String>> instanceReplicaParams ) throws Exception
     {
         Cluster cluster = new Cluster( testDir.directory( "cluster" ), cores, readReplicas,
-                new HazelcastDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
+                new AkkaDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
                 emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         cluster.start();

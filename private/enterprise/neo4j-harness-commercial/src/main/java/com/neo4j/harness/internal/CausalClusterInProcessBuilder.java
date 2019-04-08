@@ -6,8 +6,6 @@
 package com.neo4j.harness.internal;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -59,7 +57,6 @@ public class CausalClusterInProcessBuilder
         private PortPickingFactory portFactory = PortPickingFactory.DEFAULT;
         private final Map<String, String> config = new HashMap<>();
         private List<String> databases = new ArrayList<>( Collections.singletonList( "default" ) );
-        private DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
 
         @Override
         public WithCores withBuilder( BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder )
@@ -119,13 +116,6 @@ public class CausalClusterInProcessBuilder
             return this;
         }
 
-        @Override
-        public Builder withDiscoveryServiceFactory( DiscoveryImplementation discoveryServiceFactory )
-        {
-            this.discoveryServiceFactory = discoveryServiceFactory;
-            return this;
-        }
-
         public CausalCluster build()
         {
             int nDatabases = databases.size();
@@ -172,8 +162,6 @@ public class CausalClusterInProcessBuilder
         Builder withOptionalPortsStrategy( PortPickingStrategy s );
 
         Builder withOptionalDatabases( List<String> databaseNames );
-
-        Builder withDiscoveryServiceFactory( DiscoveryImplementation discoveryServiceFactory );
     }
 
     /**
@@ -198,7 +186,7 @@ public class CausalClusterInProcessBuilder
             this.st = st;
         }
 
-        int hazelcastPort( int coreId )
+        int discoveryPort( int coreId )
         {
             return st.port( 55000, coreId );
         }
@@ -261,7 +249,6 @@ public class CausalClusterInProcessBuilder
         private final Log log;
         private final PortPickingFactory portFactory;
         private final Map<String,String> config;
-        private final DiscoveryImplementation discoveryServiceFactory;
         private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
         private List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
@@ -276,7 +263,6 @@ public class CausalClusterInProcessBuilder
             this.portFactory = builder.portFactory;
             this.databaseNames = builder.databases;
             this.config = builder.config;
-            this.discoveryServiceFactory = builder.discoveryServiceFactory;
             this.serverBuilder = builder.serverBuilder;
         }
 
@@ -306,8 +292,8 @@ public class CausalClusterInProcessBuilder
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
-                int hazelcastPort = portFactory.hazelcastPort( coreId );
-                initialMembers.add( "localhost:" + hazelcastPort );
+                int discoveryPort = portFactory.discoveryPort( coreId );
+                initialMembers.add( "localhost:" + discoveryPort );
             }
 
             List<Thread> coreThreads = new ArrayList<>();
@@ -315,7 +301,7 @@ public class CausalClusterInProcessBuilder
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
-                int hazelcastPort = portFactory.hazelcastPort( coreId );
+                int discoveryPort = portFactory.discoveryPort( coreId );
                 int txPort = portFactory.txCorePort( coreId );
                 int raftPort = portFactory.raftCorePort( coreId );
                 int boltPort = portFactory.boltCorePort( coreId );
@@ -334,7 +320,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.multi_dc_license.name(), "true" );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
 
-                builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( hazelcastPort ) );
+                builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
                 builder.withConfig( CausalClusteringSettings.raft_listen_address.name(), specifyPortOnly( raftPort ) );
 
@@ -350,8 +336,6 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
                 config.forEach( builder::withConfig );
-
-                builder.withConfig( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.toString() );
 
                 int finalCoreId = coreId;
                 Thread coreThread = new Thread( () ->
@@ -396,8 +380,6 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( ServerSettings.jmx_module_enabled.name(), Settings.FALSE );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-
-                builder.withConfig( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.toString() );
 
                 config.forEach( builder::withConfig );
 

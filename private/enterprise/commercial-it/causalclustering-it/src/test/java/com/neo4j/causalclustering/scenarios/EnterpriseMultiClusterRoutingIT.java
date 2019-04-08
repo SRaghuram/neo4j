@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.HAZELCAST;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
 
 class EnterpriseMultiClusterRoutingIT
@@ -25,50 +25,50 @@ class EnterpriseMultiClusterRoutingIT
     }
 
     @Nested
-    @DisplayName( "[hazelcast discovery, 6 core hosts, 2 databases]" )
-    class Hz6core2db extends BaseMultiClusterRoutingIT
+    @DisplayName( "[akka discovery, 6 core hosts, 2 databases]" )
+    class Akka6Core2Db extends BaseMultiClusterRoutingIT
     {
-        Hz6core2db()
+        Akka6Core2Db()
         {
-            super( 6, 0, DB_NAMES_1, HAZELCAST );
+            super( 6, 0, DB_NAMES_1, AKKA );
         }
     }
 
     @Nested
     @DisplayName( "[shared discovery, 5 core hosts, 1 database]" )
-    class Shared5core1db extends BaseMultiClusterRoutingIT
+    class Shared5Core1Db extends BaseMultiClusterRoutingIT
     {
-        Shared5core1db()
+        Shared5Core1Db()
         {
             super( 5, 0, DB_NAMES_2, SHARED );
         }
     }
 
     @Nested
-    @DisplayName( "[hazelcast discovery, 5 core hosts, 1 database]" )
-    class Hz5core1db extends BaseMultiClusterRoutingIT
+    @DisplayName( "[akka discovery, 5 core hosts, 1 database]" )
+    class Akka5Core1Db extends BaseMultiClusterRoutingIT
     {
-        Hz5core1db()
+        Akka5Core1Db()
         {
-            super( 5, 0, DB_NAMES_2, HAZELCAST );
+            super( 5, 0, DB_NAMES_2, AKKA );
         }
     }
 
     @Nested
-    @DisplayName( "[hazelcast discovery, 6 core hosts, 3 read replicas, 3 databases]" )
-    class Hz9core3rr3db extends BaseMultiClusterRoutingIT
+    @DisplayName( "[akka discovery, 6 core hosts, 3 read replicas, 3 databases]" )
+    class Akka9Core3Rr3Db extends BaseMultiClusterRoutingIT
     {
-        Hz9core3rr3db()
+        Akka9Core3Rr3Db()
         {
-            super( 9, 3, DB_NAMES_3, HAZELCAST );
+            super( 9, 3, DB_NAMES_3, AKKA );
         }
     }
 
     @Nested
     @DisplayName( "[shared discovery, 6 core hosts, 3 read replicas, 3 databases]" )
-    class Shared8core2rr3db extends BaseMultiClusterRoutingIT
+    class Shared8Core2Rr3Db extends BaseMultiClusterRoutingIT
     {
-        Shared8core2rr3db()
+        Shared8Core2Rr3Db()
         {
             super( 8, 2, DB_NAMES_3, SHARED );
         }

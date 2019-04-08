@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
@@ -73,8 +73,7 @@ class SystemGraphSecurityReplicationIT
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        // use secure discovery service factory to make cluster members communicate with SSL enabled
-        DiscoveryServiceFactory discoveryServiceFactory = new SslHazelcastDiscoveryServiceFactory();
+        DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
         cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, params,
                 emptyMap(), params, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 

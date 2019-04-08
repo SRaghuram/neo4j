@@ -32,7 +32,7 @@ import static org.neo4j.helpers.collection.Iterables.first;
 
 /**
  * This class drives raft membership changes by glueing together various components:
- * - target membership from hazelcast
+ * - target membership from discovery service
  * - raft membership state machine
  * - raft log events
  */

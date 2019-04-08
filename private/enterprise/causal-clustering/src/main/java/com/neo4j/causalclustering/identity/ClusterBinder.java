@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.hazelcast.core.OperationTimeoutException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -119,22 +118,17 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             }
         } );
 
-        long endTime = clock.millis() + timeout.toMillis();
-        boolean shouldRetryPublish = false;
-
         if ( clusterIdStorage.exists() )
         {
             clusterId = clusterIdStorage.readState();
-            do
-            {
-                shouldRetryPublish = publishClusterId( clusterId );
-            } while ( shouldRetryPublish && clock.millis() < endTime );
+            publishClusterId( clusterId );
             monitor.boundToCluster( clusterId );
             return new BoundState( clusterId );
         }
 
         Map<String,CoreSnapshot> snapshots = Collections.emptyMap();
         CoreTopology topology;
+        long endTime = clock.millis() + timeout.toMillis();
 
         do
         {
@@ -150,14 +144,15 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
                 clusterId = new ClusterId( UUID.randomUUID() );
                 snapshots = coreBootstrapper.bootstrap( topology.members().keySet() );
                 monitor.bootstrapped( snapshots, clusterId );
-                shouldRetryPublish = publishClusterId( clusterId );
+                publishClusterId( clusterId );
             }
 
             retryWaiter.apply();
 
-        } while ( ( clusterId == null || shouldRetryPublish ) && clock.millis() < endTime );
+        }
+        while ( clusterId == null && clock.millis() < endTime );
 
-        if ( clusterId == null || shouldRetryPublish )
+        if ( clusterId == null )
         {
             throw new TimeoutException( format(
                     "Failed to join a cluster with members %s. Another member should have published " +
@@ -174,23 +169,12 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         return Optional.ofNullable( clusterId );
     }
 
-    private boolean publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
+    private void publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
     {
-        boolean shouldRetry = false;
-        try
+        boolean success = topologyService.setClusterId( localClusterId, dbName );
+        if ( !success )
         {
-            boolean success = topologyService.setClusterId( localClusterId, dbName );
-
-            if ( !success )
-            {
-                throw new BindingException( "Failed to publish: " + localClusterId );
-            }
+            throw new BindingException( "Failed to publish: " + localClusterId );
         }
-        catch ( OperationTimeoutException e )
-        {
-            shouldRetry = true;
-        }
-
-        return shouldRetry;
     }
 }

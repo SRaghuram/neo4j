@@ -34,7 +34,6 @@ Apache Software License, Version 2.0
   Data Mapper for Jackson
   FindBugs-jsr305
   Guava: Google Core Libraries for Java
-  hazelcast-all
   Jackson
   javax.inject
   Jetty :: Asynchronous HTTP Client

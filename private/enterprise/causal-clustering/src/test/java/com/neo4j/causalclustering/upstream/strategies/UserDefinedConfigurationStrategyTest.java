@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
@@ -18,6 +19,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,7 +36,6 @@ import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
-import static com.neo4j.causalclustering.discovery.HazelcastClusterTopology.extractCatchupAddressesMap;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -183,6 +184,24 @@ public class UserDefinedConfigurationStrategyTest
                 new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                         new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) ),
                 new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ), groupGenerator.apply( memberId ), "default" );
+    }
+
+    private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( CoreTopology coreTopology, ReadReplicaTopology rrTopology )
+    {
+        Map<MemberId,AdvertisedSocketAddress> catchupAddressMap = new HashMap<>();
+
+        for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.members().entrySet() )
+        {
+            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
+        }
+
+        for ( Map.Entry<MemberId,ReadReplicaInfo> entry : rrTopology.members().entrySet() )
+        {
+            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
+
+        }
+
+        return catchupAddressMap;
     }
 
     static TopologyService fakeTopologyService( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
