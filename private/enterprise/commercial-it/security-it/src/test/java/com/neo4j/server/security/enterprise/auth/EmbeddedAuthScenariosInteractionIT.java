@@ -364,8 +364,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
-        // UniquePropertyValueValidationException gets a read exception when trying to pretty print the error message, by looking up the label name
-        assertFail( subject, "CREATE (:A {number: 4})", READ_OPS_NOT_ALLOWED );
+        assertFail( subject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
         assertSuccess( adminSubject, "MATCH (a:A) RETURN count(a)", r -> assertKeyIs( r, "count(a)", 1 ));
     }
 

@@ -126,6 +126,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
+        public boolean allowsTokenReads()
+        {
+            return allowsReads || allowsWrites || allowsTokenCreates || allowsSchemaWrites;
+        }
+
+        @Override
         public boolean allowsReads()
         {
             return allowsReads;
