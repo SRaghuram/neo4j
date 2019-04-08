@@ -1,11 +1,24 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.commercial.edition;
+package org.neo4j.community.edition;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,12 +46,11 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.NATIVE_REALM_NAME;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -48,10 +60,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.helpers.collection.Iterators.count;
 
 @ExtendWith( TestDirectoryExtension.class )
-class SystemDatabaseIT
+class CommunitySystemDatabaseIT
 {
     @Inject
     private TestDirectory testDirectory;
@@ -63,10 +76,7 @@ class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( auth_provider, NATIVE_REALM_NAME )
-                .newGraphDatabase();
+        database = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() ).newGraphDatabase();
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, new DatabaseId( DEFAULT_DATABASE_NAME ) );
         systemDb = getDatabaseByName( databaseManager, new DatabaseId( SYSTEM_DATABASE_NAME ) );
@@ -99,6 +109,12 @@ class SystemDatabaseIT
         try ( Transaction ignored = defaultDb.beginTx() )
         {
             assertEquals( 0, count( defaultDb.findNodes( systemLabel ) ) );
+            assertEquals( 0, count( defaultDb.getAllLabels() ) );
+        }
+        try ( Transaction ignored = systemDb.beginTx() )
+        {
+            assertEquals( 1, count( systemDb.findNodes( systemLabel ) ) );
+            assertEquals( 1, count( systemDb.getAllLabels() ) );
         }
     }
 
@@ -183,7 +199,7 @@ class SystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
-            databaseWithSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
+            databaseWithSystemDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );
         }
@@ -222,7 +238,7 @@ class SystemDatabaseIT
         return databaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new ).databaseFacade();
     }
 
-    private DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )
+    private static DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
