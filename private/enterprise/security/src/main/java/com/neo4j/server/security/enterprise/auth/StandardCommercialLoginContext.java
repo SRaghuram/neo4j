@@ -156,6 +156,20 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
+        public boolean allowsTraverseAllLabels()
+        {
+            // TODO implement me
+            return true;
+        }
+
+        @Override
+        public boolean allowsTraverseLabels( IntStream labels )
+        {
+            // TODO implement me
+            return true;
+        }
+
+        @Override
         public boolean allowsReadAllLabels()
         {
             return allowsReadAllLabels;
