@@ -416,7 +416,7 @@ public class TransactionGuardIT
         return databaseWithTimeout;
     }
 
-    private int getBoltConnectorPort( GraphDatabaseAPI databaseAPI )
+    private static int getBoltConnectorPort( GraphDatabaseAPI databaseAPI )
     {
         ConnectorPortRegister connectorPortRegister = databaseAPI.getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class );
@@ -434,7 +434,7 @@ public class TransactionGuardIT
         return databaseWithoutTimeout;
     }
 
-    private org.neo4j.driver.v1.Config getDriverConfig()
+    private static org.neo4j.driver.v1.Config getDriverConfig()
     {
         return org.neo4j.driver.v1.Config.build()
                 .withEncryptionLevel( org.neo4j.driver.v1.Config.EncryptionLevel.NONE )
@@ -460,7 +460,7 @@ public class TransactionGuardIT
         return neoServer;
     }
 
-    private Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
+    private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
     {
         BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
         return MapUtil.genericMap(
@@ -473,17 +473,17 @@ public class TransactionGuardIT
                 GraphDatabaseSettings.auth_enabled, Settings.FALSE );
     }
 
-    private Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
+    private static Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
     {
         return MapUtil.genericMap();
     }
 
-    private String transactionUri( CommercialNeoServer neoServer )
+    private static String transactionUri( CommercialNeoServer neoServer )
     {
         return neoServer.baseUri().toString() + "db/data/transaction";
     }
 
-    private URL prepareTestImportFile( int lines ) throws IOException
+    private static URL prepareTestImportFile( int lines ) throws IOException
     {
         File tempFile = File.createTempFile( "testImport", ".csv" );
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( tempFile, StandardCharsets.UTF_8 ) )
@@ -496,7 +496,7 @@ public class TransactionGuardIT
         return tempFile.toURI().toURL();
     }
 
-    private void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )
+    private static void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )
     {
         try ( Transaction ignored = database.beginTx() )
         {
@@ -587,7 +587,7 @@ public class TransactionGuardIT
     private class CustomGuardTestGraphDatabaseFactory extends TestGraphDatabaseFactory
     {
 
-        private GraphDatabaseFacadeFactory customFacadeFactory;
+        private final GraphDatabaseFacadeFactory customFacadeFactory;
 
         CustomGuardTestGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
         {
@@ -599,7 +599,7 @@ public class TransactionGuardIT
                 TestGraphDatabaseFactoryState state )
         {
             return config -> customFacadeFactory.newFacade( storeDir, config,
-                    newDependencies( state.databaseDependencies() ) ).database( config.get( GraphDatabaseSettings.default_database ) );
+                    newDependencies( state.databaseDependencies() ) );
         }
     }
 
@@ -652,7 +652,7 @@ public class TransactionGuardIT
 
     private class TerminationIdGeneratorFactory implements IdGeneratorFactory
     {
-        private IdGeneratorFactory delegate;
+        private final IdGeneratorFactory delegate;
 
         TerminationIdGeneratorFactory( IdGeneratorFactory delegate )
         {
@@ -687,7 +687,7 @@ public class TransactionGuardIT
     private final class TerminationIdGenerator implements IdGenerator
     {
 
-        private IdGenerator delegate;
+        private final IdGenerator delegate;
 
         TerminationIdGenerator( IdGenerator delegate )
         {

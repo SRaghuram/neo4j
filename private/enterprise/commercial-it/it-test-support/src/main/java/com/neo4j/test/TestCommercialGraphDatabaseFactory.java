@@ -18,6 +18,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.test.TestGraphDatabaseFacadeFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 
@@ -45,8 +46,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
             augmentConfig( config, databasesRoot, storeDir );
             TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
             TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
-            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) ).database(
-                    config.get( GraphDatabaseSettings.default_database ) );
+            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
 
@@ -70,8 +70,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         {
             augmentConfig( config, storeDir.getParentFile(), storeDir );
             return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
-                    GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) ).database(
-                    config.get( GraphDatabaseSettings.default_database ) );
+                    GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
 

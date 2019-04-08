@@ -5,17 +5,20 @@
  */
 package com.neo4j.commercial.edition.factory;
 
-import com.neo4j.commercial.edition.CommercialGraphDatabase;
+import com.neo4j.commercial.edition.CommercialEditionModule;
 
 import java.io.File;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
 {
@@ -43,7 +46,7 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
         }
 
         @Override
-        public GraphDatabaseService newDatabase( Config config )
+        public DatabaseManagementService newDatabase( Config config )
         {
             File absoluteStoreDir = storeDir.getAbsoluteFile();
             File databasesRoot;
@@ -60,7 +63,8 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
                 }
             }
             config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-            return new CommercialGraphDatabase( databasesRoot, config, state.databaseDependencies() );
+            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
+                    .initFacade( storeDir, config, state.databaseDependencies(), new GraphDatabaseFacade() );
         }
     }
 }
