@@ -97,14 +97,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
 
   // TODO: Use methods of actual interface to generate declaration?
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
-    val fields = genFields
 
     ClassDeclaration(packageName, className,
       extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
       implementsInterfaces = Seq.empty,
       constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
       initializationCode = genInit,
-      fields = fields,
       methods = Seq(
         MethodDeclaration("operateCompiled",
           owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
@@ -118,7 +116,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
           ),
           body = genOperate,
-          localVariables = genLocalVariables, // NOTE: This have to be called after genOperate!
+          genLocalVariables = () => genLocalVariables, // NOTE: This have to be called after genOperate!
           parameterizedWith = Some(("E", extending[Exception])),
           throws = Some(typeParam("E"))
         ),
@@ -142,8 +140,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
           parameters = Seq.empty,
           body = loadField(INPUT_MORSEL)
         )
-      )
-    )
+      ), genFields = () => genFields)// NOTE: This have to be called after genOperate!
   }
 }
 

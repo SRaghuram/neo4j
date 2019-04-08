@@ -116,7 +116,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               p :: fusedPlans, unhandledPlans, unhandledProduceResult)
 
           case plans.Selection(predicate, _) =>
-            val compiledPredicate: IntermediateExpression = expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
+            val compiledPredicate = () => expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
               return (None, middlePlans, unhandledProduceResult)
             )
             (new FilterOperatorTemplate(innerTemplate, compiledPredicate), p :: fusedPlans, unhandledPlans, unhandledProduceResult)

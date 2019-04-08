@@ -74,7 +74,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
           Seq(typeRefOf[CompiledExpression]),
           Seq.empty,
           initializationCode = noop(),
-          fields = expression.fields,
+          genFields = () => expression.fields,
           methods = Seq(
             MethodDeclaration("evaluate",
                               owner = typeRefOf[CompiledExpression],
@@ -114,7 +114,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
           Seq(typeRefOf[CompiledProjection]),
           Seq.empty,
           initializationCode = noop(),
-          fields = expression.fields,
+          genFields = () => expression.fields,
           methods = Seq(
             MethodDeclaration("project",
                               owner = typeRefOf[CompiledProjection],
@@ -157,7 +157,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
           Seq(typeRefOf[CompiledGroupingExpression]),
           Seq.empty,
           initializationCode = noop(),
-          fields = grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
+          genFields = () => grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
           methods = Seq(
             MethodDeclaration("projectGroupingKey",
                               owner = typeRefOf[CompiledGroupingExpression],

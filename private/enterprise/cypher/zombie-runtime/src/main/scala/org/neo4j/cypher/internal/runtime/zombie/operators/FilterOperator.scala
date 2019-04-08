@@ -51,12 +51,19 @@ class FilterOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class FilterOperatorTemplate(val inner: OperatorTaskTemplate, predicate: IntermediateExpression) extends OperatorTaskTemplate {
+class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate: () => IntermediateExpression) extends OperatorTaskTemplate {
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
 
+  private var predicate: IntermediateExpression =_
+
   override def genOperate: IntermediateRepresentation = {
+    if (predicate != null) {
+      throw new IllegalStateException("genOperate must be called first!!")
+    }
+    predicate = generatePredicate()
+
     condition(equal(nullCheck(predicate)(predicate.ir), trueValue)) (
       inner.genOperate
     )
