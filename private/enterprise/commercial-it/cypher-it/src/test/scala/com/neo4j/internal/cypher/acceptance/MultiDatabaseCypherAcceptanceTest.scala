@@ -25,7 +25,7 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASE neo4j")
 
     // THEN
-    result.toList should be(List(Map("name" -> "neo4j", "status" -> "started")))
+    result.toList should be(List(Map("name" -> "neo4j", "status" -> "online")))
   }
 
   test("should list default databases") {
@@ -36,7 +36,7 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toList should be(List(Map("name" -> "system", "status" -> "started"), Map("name" -> "neo4j", "status" -> "started")))
+    result.toList should be(List(Map("name" -> "system", "status" -> "online"), Map("name" -> "neo4j", "status" -> "online")))
   }
 
   test("should create database in systemdb") {
@@ -49,7 +49,7 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> "started")))
+    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
   }
 
   test("should create and delete databases") {
@@ -65,9 +65,9 @@ class MultiDatabaseCypherAcceptanceTest
 
     // THEN
     result.toList should contain allOf(
-      Map("name" -> "foo", "status" -> "started"),
-      Map("name" -> "bar", "status" -> "started"),
-      Map("name" -> "baz", "status" -> "started")
+      Map("name" -> "foo", "status" -> "created"),
+      Map("name" -> "bar", "status" -> "created"),
+      Map("name" -> "baz", "status" -> "created")
     )
 
     // GIVEN
@@ -81,6 +81,131 @@ class MultiDatabaseCypherAcceptanceTest
     databaseNames should contain allOf("foo", "baz")
     databaseNames should not contain "bar"
 
+  }
+
+  test("should start database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    val result = execute("SHOW DATABASE foo")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
+
+    // WHEN
+    execute("START DATABASE foo")
+    val result2 = execute("SHOW DATABASE foo")
+
+    // THEN
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+  }
+
+  test("should stop database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("START DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+
+    // WHEN
+    execute("STOP DATABASE foo")
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "offline")))
+  }
+
+  test("should re-start database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("START DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online"))) // make sure it was started
+    execute("STOP DATABASE foo")
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "offline"))) // and stopped
+
+    // WHEN
+    execute("START DATABASE foo")
+
+    // THEN
+    val result3 = execute("SHOW DATABASE foo")
+    result3.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+  }
+
+  test("should not be able to start non existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("START DATABASE foo") // TODO: Shouldn't this throw?
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty)
+  }
+
+  test("should not be able to stop non existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty)
+  }
+
+  test("should not be able to stop a database that is not started") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
+  }
+
+  test("should not be able to start a dropped database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("DROP DATABASE foo")
+
+    // WHEN
+    execute("START DATABASE foo") // TODO: Shouldn't this throw?
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty) //TODO: Or should it state deleted?
+  }
+
+  test("should not be able to stop a dropped database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("DROP DATABASE foo")
+
+    // WHEN
+    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty) //TODO: Or should it state deleted?
   }
 
   private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
