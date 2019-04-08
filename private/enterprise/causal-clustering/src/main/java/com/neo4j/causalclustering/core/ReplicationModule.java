@@ -54,14 +54,9 @@ public class ReplicationModule
 
         TimeoutStrategy progressRetryStrategy = new ExponentialBackoffStrategy( initialBackoff, upperBoundBackoff );
         long availabilityTimeoutMillis = config.get( CausalClusteringSettings.replication_retry_timeout_base ).toMillis();
-        replicator = new RaftReplicator(
-                raftMachine,
-                myself,
-                outbound,
-                sessionPool,
-                progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
-                globalAvailabilityGuard, logProvider, databaseManager,
-                globalModule.getGlobalMonitors() );
+
+        replicator = new RaftReplicator( raftMachine, myself, outbound, sessionPool, progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
+                globalAvailabilityGuard, logProvider, databaseManager, globalModule.getGlobalMonitors() );
     }
 
     public RaftReplicator getReplicator()

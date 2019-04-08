@@ -28,11 +28,11 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     {
         Database db = mock( Database.class );
         when( db.getDatabaseId() ).thenReturn( databaseId );
-        return databaseContextFactory( db, mock( GraphDatabaseFacade.class ) );
+        return createDatabaseContext( db, mock( GraphDatabaseFacade.class ) );
     }
 
     @Override
-    protected DatabaseContext databaseContextFactory( Database database, GraphDatabaseFacade facade )
+    protected DatabaseContext createDatabaseContext( Database database, GraphDatabaseFacade facade )
     {
         return spy( new StandaloneDatabaseContext( database, facade ) );
     }

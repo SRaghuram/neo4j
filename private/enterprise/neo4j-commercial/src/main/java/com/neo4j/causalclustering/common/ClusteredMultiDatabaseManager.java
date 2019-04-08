@@ -71,8 +71,8 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         this.pageCache = pageCache;
         this.globalHealths = globalHealths;
         this.catchupComponentsFactory = catchupComponentsFactory;
+        this.storeFiles = new StoreFiles( fs, pageCache );
         raiseAvailabilityGuard( notStoppedReq );
-        storeFiles = new StoreFiles( fs, pageCache );
     }
 
     private void raiseAvailabilityGuard( AvailabilityRequirement requirement )
@@ -149,13 +149,13 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    protected DB databaseContextFactory( Database database, GraphDatabaseFacade facade )
+    protected DB createDatabaseContext( Database database, GraphDatabaseFacade facade )
     {
-        LogFiles logFiles = buildLocalDatabaseLogFiles( database.getDatabaseLayout() );
-        return contextFactory.create( database, facade, logFiles, storeFiles, logProvider, this::isAvailable, catchupComponentsFactory );
+        LogFiles transactionLogs = buildTransactionLogs( database.getDatabaseLayout() );
+        return contextFactory.create( database, facade, transactionLogs, storeFiles, logProvider, this::isAvailable, catchupComponentsFactory );
     }
 
-    private LogFiles buildLocalDatabaseLogFiles( DatabaseLayout dbLayout )
+    private LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
     {
         try
         {

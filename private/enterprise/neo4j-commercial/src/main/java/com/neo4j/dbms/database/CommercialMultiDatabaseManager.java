@@ -21,7 +21,7 @@ public class CommercialMultiDatabaseManager extends MultiDatabaseManager<Standal
     }
 
     @Override
-    protected StandaloneDatabaseContext databaseContextFactory( Database database, GraphDatabaseFacade facade )
+    protected StandaloneDatabaseContext createDatabaseContext( Database database, GraphDatabaseFacade facade )
     {
         return new StandaloneDatabaseContext( database, facade );
     }
