@@ -173,9 +173,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val methodToCall = dir match {
-      case OUTGOING => method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingCursor")
-      case INCOMING => method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingCursor")
-      case BOTH => method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allCursor")
+      case OUTGOING => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingCursor")
+      case INCOMING => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingCursor")
+      case BOTH => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allCursor")
     }
     val resultBoolean = codeGen.namer.nextVariableName()
 
