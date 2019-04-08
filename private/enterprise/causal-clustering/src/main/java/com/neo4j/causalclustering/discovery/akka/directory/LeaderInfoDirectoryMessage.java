@@ -18,7 +18,7 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public class LeaderInfoDirectoryMessage
 {
-    public static LeaderInfoDirectoryMessage EMPTY = new LeaderInfoDirectoryMessage( Collections.emptyMap() );
+    public static final LeaderInfoDirectoryMessage EMPTY = new LeaderInfoDirectoryMessage( Collections.emptyMap() );
 
     private final Map<DatabaseId,LeaderInfo> leaders;
 

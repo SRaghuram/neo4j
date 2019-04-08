@@ -73,7 +73,7 @@ public class MemberId implements Serializable
      */
     public static class Marshal extends SafeStateMarshal<MemberId>
     {
-        public static Marshal INSTANCE = new Marshal();
+        public static final Marshal INSTANCE = new Marshal();
 
         @Override
         public void marshal( MemberId memberId, WritableChannel channel ) throws IOException

@@ -18,7 +18,7 @@ import org.neo4j.logging.LogProvider;
 
 public class RestartNeededListeningActor extends AbstractActor
 {
-    public static String NAME = "cc-core-restart-needed-listener";
+    public static final String NAME = "cc-core-restart-needed-listener";
 
     public static Props props( Runnable restart, EventStream eventStream, Cluster cluster, LogProvider logProvider )
     {
