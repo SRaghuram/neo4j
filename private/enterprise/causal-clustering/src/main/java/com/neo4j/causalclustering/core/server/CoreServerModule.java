@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.core.ReplicationModule;
-import com.neo4j.causalclustering.core.consensus.ConsensusModule;
+import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipWaiter;
@@ -54,7 +54,7 @@ public class CoreServerModule implements CatchupServerProvider
 {
     private final MembershipWaiterLifecycle membershipWaiterLifecycle;
     private final IdentityModule identityModule;
-    private final ConsensusModule consensusModule;
+    private final RaftGroup raftGroup;
     private final ClusteringModule clusteringModule;
     private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
     private final Health kernelDatabaseHealth;
@@ -70,7 +70,7 @@ public class CoreServerModule implements CatchupServerProvider
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private final Optional<Server> backupServer;
 
-    public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, ConsensusModule consensusModule,
+    public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, RaftGroup raftGroup,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule,
             ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, Health kernelDatabaseHealth,
             CatchupComponentsProvider catchupComponentsProvider, InstalledProtocolHandler installedProtocolsHandler,
@@ -81,7 +81,7 @@ public class CoreServerModule implements CatchupServerProvider
         LifeSupport globalLife = globalModule.getGlobalLife();
         this.databaseManager = databaseManager;
         this.identityModule = identityModule;
-        this.consensusModule = consensusModule;
+        this.raftGroup = raftGroup;
         this.clusteringModule = clusteringModule;
         this.kernelDatabaseHealth = kernelDatabaseHealth;
         this.globalModule = globalModule;
@@ -92,19 +92,19 @@ public class CoreServerModule implements CatchupServerProvider
         CompositeSuspendable suspendOnStoreCopy = new CompositeSuspendable();
 
         commandApplicationProcess = new CommandApplicationProcess(
-                consensusModule.raftLog(),
+                raftGroup.raftLog(),
                 globalConfig.get( CausalClusteringSettings.state_machine_apply_max_batch_size ),
                 globalConfig.get( CausalClusteringSettings.state_machine_flush_window_size ),
                 logProvider,
                 replicationModule.getProgressTracker(),
                 replicationModule.getSessionTracker(), coreStateService,
-                consensusModule.inFlightCache(), globalMonitors,
+                raftGroup.inFlightCache(), globalMonitors,
                 panicker );
 
         globalDependencies.satisfyDependency( commandApplicationProcess ); // lastApplied() for CC-robustness
 
         this.snapshotService = new CoreSnapshotService( commandApplicationProcess, coreStateService,
-                consensusModule.raftLog(), consensusModule.raftMachine() );
+                raftGroup.raftLog(), raftGroup.raftMachine() );
 
         this.catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupComponentsProvider.createCatchupClient() );
@@ -121,7 +121,7 @@ public class CoreServerModule implements CatchupServerProvider
         this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
         this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
 
-        RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess );
+        RaftLogPruner raftLogPruner = new RaftLogPruner( raftGroup.raftMachine(), commandApplicationProcess );
         globalDependencies.satisfyDependency( raftLogPruner );
 
         globalLife.add( new PruningScheduler( raftLogPruner, jobScheduler,
@@ -137,7 +137,7 @@ public class CoreServerModule implements CatchupServerProvider
         MembershipWaiter membershipWaiter = new MembershipWaiter( identityModule.myself(), jobScheduler, kernelDatabaseHealth,
                 electionTimeout * 4, logProvider, globalModule.getGlobalMonitors() );
         long joinCatchupTimeout = globalConfig.get( CausalClusteringSettings.join_catch_up_timeout ).toMillis();
-        return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, consensusModule.raftMachine(), logProvider );
+        return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, raftGroup.raftMachine(), logProvider );
     }
 
     public CatchupComponentsRepository catchupComponents()
@@ -159,7 +159,7 @@ public class CoreServerModule implements CatchupServerProvider
     public CoreLife createCoreLife( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler, LogProvider logProvider,
             RecoveryFacade recoveryFacade )
     {
-        return new CoreLife( consensusModule.raftMachine(), databaseManager, clusteringModule.clusterBinder(),
+        return new CoreLife( raftGroup.raftMachine(), databaseManager, clusteringModule.clusterBinder(),
                 commandApplicationProcess, handler, snapshotService, downloadService, logProvider, recoveryFacade );
     }
 

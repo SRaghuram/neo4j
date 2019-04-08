@@ -12,7 +12,8 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.PipelineBuilders;
-import com.neo4j.causalclustering.core.consensus.ConsensusModule;
+import com.neo4j.causalclustering.core.consensus.RaftGroup;
+import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
@@ -134,7 +135,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private final CoreStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
     private final CatchupComponentsProvider catchupComponentsProvider;
-    private ConsensusModule consensusModule;
+    private RaftGroup raftGroup;
     private ReplicationModule replicationModule;
     private CoreServerModule coreServerModule;
     private CoreTopologyService topologyService;
@@ -247,7 +248,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalProcedures.register( new GetRoutersForAllDatabasesProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new GetRoutersForDatabaseProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
-        globalProcedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
+        globalProcedures.register( new CoreRoleProcedure( raftGroup.raftMachine() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
         globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
@@ -256,7 +257,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     @Override
     protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        RaftMachine raftMachine = consensusModule.raftMachine();
+        RaftMachine raftMachine = raftGroup.raftMachine();
         LeaderService leaderService = new DefaultLeaderService( raftMachine, topologyService );
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
@@ -269,7 +270,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( globalHealth ) );
         panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
-        panicService.addPanicEventHandler( consensusModule.raftMachine() );
+        panicService.addPanicEventHandler( raftGroup.raftMachine() );
         panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( coreServerModule.catchupServer() ) );
         coreServerModule.backupServer().ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( server ) ) );
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
@@ -283,7 +284,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     public boolean isLeader()
     {
-        return consensusModule.raftMachine().currentRole() == Role.LEADER;
+        return raftGroup.raftMachine().currentRole() == Role.LEADER;
     }
 
     /**
@@ -388,23 +389,26 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 clusteringModule.clusterIdentity(), logProvider, logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
-        consensusModule = new ConsensusModule( identityModule.myself(), globalModule, loggingOutbound, clusterStateLayout, topologyService,
-                storageFactory, defaultDatabaseName );
+        RaftGroupFactory raftGroupFactory =
+                new RaftGroupFactory( identityModule.myself(), globalModule, loggingOutbound, clusterStateLayout, topologyService, storageFactory );
 
-        replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
+        // TODO: Life, monitors and dependencies should be per group/database.
+        raftGroup = raftGroupFactory.create( defaultDatabaseName, globalLife, globalModule.getGlobalMonitors(), globalModule.getGlobalDependencies() );
+
+        replicationModule = new ReplicationModule( raftGroup.raftMachine(), identityModule.myself(), globalModule, globalConfig,
                 loggingOutbound, storageFactory, logProvider, globalGuard, databaseManager, defaultDatabaseName );
 
         StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName, globalLife );
 
         coreStateService = new CoreStateService( identityModule.myself(), globalModule, storageFactory, globalConfig,
-                consensusModule.raftMachine(), databaseManager, replicationModule, lastFlushedStateStorage, panicService );
+                raftGroup.raftMachine(), databaseManager, replicationModule, lastFlushedStateStorage, panicService );
 
         CatchupHandlerFactory handlerFactory = snapshotService -> getHandlerFactory( fileSystem, snapshotService, databaseManager );
 
         //TODO:
         //  - Implement start stop etc... for databases and make sure store-copy catchup machinery uses it
         //  - plan how to test independent lifecycle
-        coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
+        coreServerModule = new CoreServerModule( identityModule, globalModule, raftGroup, coreStateService, clusteringModule,
                 replicationModule, databaseManager, globalHealth, catchupComponentsProvider, serverInstalledProtocolHandler,
                 handlerFactory, panicService );
         globalModule.getGlobalDependencies().satisfyDependency( coreServerModule );
@@ -416,18 +420,18 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 createUpstreamDatabaseStrategySelector( identityModule.myself(), globalConfig, logProvider, topologyService, defaultStrategy );
 
         CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
-                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
+                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( raftGroup.raftMachine(), topologyService,
                         catchupStrategySelector );
 
-        globalModule.getGlobalDependencies().satisfyDependency( consensusModule.raftMachine() );
+        globalModule.getGlobalDependencies().satisfyDependency( raftGroup.raftMachine() );
 
-        consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
-        accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
+        raftGroup.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
+        accessCapability = new LeaderCanWrite( raftGroup.raftMachine() );
 
         RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( globalModule, raftMessageDispatcher,
                 catchupAddressProvider, panicService );
         LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
-                raftMessageHandlerChainFactory.createMessageHandlerChain( consensusModule, coreServerModule );
+                raftMessageHandlerChainFactory.createMessageHandlerChain( raftGroup, coreServerModule );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
                 supportedRaftProtocols, supportedModifierProtocols );

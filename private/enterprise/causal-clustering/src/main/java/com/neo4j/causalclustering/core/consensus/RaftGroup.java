@@ -41,13 +41,13 @@ import java.util.Map;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.catchup_batch_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
@@ -55,80 +55,61 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipp
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
 import static org.neo4j.time.Clocks.systemClock;
 
-public class ConsensusModule
+public class RaftGroup
 {
     private final MonitoredRaftLog raftLog;
     private final RaftMachine raftMachine;
     private final RaftMembershipManager raftMembershipManager;
     private final InFlightCache inFlightCache;
-
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
-    public ConsensusModule( MemberId myself, final GlobalModule globalModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout layout, CoreTopologyService coreTopologyService, CoreStateStorageFactory storageFactory,
-            String defaultDatabaseName )
+    RaftGroup( Config config, LogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock, MemberId myself,
+            LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, String databaseName )
     {
-        final Config globalConfig = globalModule.getGlobalConfig();
-        final LogService logService = globalModule.getLogService();
-        final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
-        final LifeSupport globalLife = globalModule.getGlobalLife();
-        final Monitors globalMonitors = globalModule.getGlobalMonitors();
-        final Dependencies globalDependencies = globalModule.getGlobalDependencies();
-
         LogProvider logProvider = logService.getInternalLogProvider();
-
-        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
-
-        JobScheduler jobScheduler = globalModule.getJobScheduler();
-        RaftLog underlyingLog = createRaftLog( globalConfig, globalLife, fileSystem, layout, marshals, logProvider, jobScheduler, defaultDatabaseName );
-
-        raftLog = new MonitoredRaftLog( underlyingLog, globalMonitors );
-
-        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( defaultDatabaseName, globalLife );
-        StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, globalMonitors );
-        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( defaultDatabaseName, globalLife );
-        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( defaultDatabaseName, globalLife );
-
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
-        leaderAvailabilityTimers = createElectionTiming( globalConfig, timerService, logProvider );
+        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
+        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, databaseName );
+        raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
-        Integer minimumConsensusGroupSize = globalConfig.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseName, life );
+        StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, monitors );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseName, life );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseName, life );
 
-        MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
+        leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
 
         SendToMyself leaderOnlyReplicator = new SendToMyself( myself, outbound );
+        Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
+        MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
+        raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider, minimumConsensusGroupSize,
+                leaderAvailabilityTimers.getElectionTimeout(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
-        raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider,
-                minimumConsensusGroupSize, leaderAvailabilityTimers.getElectionTimeout(), systemClock(), globalConfig.get( join_catch_up_timeout ).toMillis(),
-                raftMembershipStorage );
-        globalDependencies.satisfyDependency( raftMembershipManager );
+        dependencies.satisfyDependency( raftMembershipManager );
+        life.add( raftMembershipManager );
 
-        globalLife.add( raftMembershipManager );
+        // TODO: In-flight cache should support sharing between multiple databases.
+        inFlightCache = InFlightCacheFactory.create( config, monitors );
+        RaftLogShippingManager logShipping = new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself,
+                raftMembershipManager, leaderAvailabilityTimers.getElectionTimeout(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
+                inFlightCache );
 
-        inFlightCache = InFlightCacheFactory.create( globalConfig, globalMonitors );
+        boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
-        RaftLogShippingManager logShipping =
-                new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself,
-                        raftMembershipManager, leaderAvailabilityTimers.getElectionTimeout(), globalConfig.get( catchup_batch_size ),
-                        globalConfig.get( log_shipping_max_lag ), inFlightCache );
+        raftMachine = new RaftMachine( myself, termState, voteState, raftLog, leaderAvailabilityTimers, outbound, logProvider, raftMembershipManager,
+                logShipping, inFlightCache, config.get( refuse_to_be_leader ), supportsPreVoting, monitors );
 
-        boolean supportsPreVoting = globalConfig.get( CausalClusteringSettings.enable_pre_voting );
+        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( clock );
+        monitors.addMonitorListener( durationSinceLastMessageMonitor );
+        dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
-        raftMachine = new RaftMachine( myself, termState, voteState, raftLog, leaderAvailabilityTimers,
-                outbound, logProvider, raftMembershipManager, logShipping, inFlightCache,
-                globalConfig.get( refuse_to_be_leader ),
-                supportsPreVoting, globalMonitors );
+        // TODO: Multi-clustering and this setting should die.
+        String dbName = config.get( CausalClusteringSettings.database );
+        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, dbName ) );
 
-        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( globalModule.getGlobalClock() );
-        globalMonitors.addMonitorListener( durationSinceLastMessageMonitor );
-        globalDependencies.satisfyDependency( durationSinceLastMessageMonitor );
-
-        String dbName = globalConfig.get( CausalClusteringSettings.database );
-
-        globalLife.add( new RaftCoreTopologyConnector( coreTopologyService, raftMachine, dbName ) );
-
-        globalLife.add( logShipping );
+        life.add( logShipping );
     }
 
     private static LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )
@@ -140,9 +121,7 @@ public class ConsensusModule
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
             Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, String defaultDatabaseName )
     {
-        RaftLogImplementation raftLogImplementation =
-                RaftLogImplementation
-                        .valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
+        RaftLogImplementation raftLogImplementation = RaftLogImplementation.valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
         switch ( raftLogImplementation )
         {
         case IN_MEMORY:
@@ -155,9 +134,8 @@ public class ConsensusModule
             long rotateAtSize = config.get( CausalClusteringSettings.raft_log_rotation_size );
             int readerPoolSize = config.get( CausalClusteringSettings.raft_log_reader_pool_size );
 
-            CoreLogPruningStrategy pruningStrategy =
-                    new CoreLogPruningStrategyFactory( config.get( CausalClusteringSettings.raft_log_pruning_strategy ),
-                            logProvider ).newInstance();
+            CoreLogPruningStrategy pruningStrategy = new CoreLogPruningStrategyFactory(
+                    config.get( CausalClusteringSettings.raft_log_pruning_strategy ), logProvider ).newInstance();
 
             // Default database name is used here temporarily because both system and default database
             // live in a single Raft group and append to the same Raft log under `cluster-state/db/neo4j/raft-log` directory.
@@ -165,8 +143,9 @@ public class ConsensusModule
             // E.g. system will use "system" to append to a Raft log located under `cluster-state/db/system/raft-log`
             File directory = layout.raftLogDirectory( defaultDatabaseName );
 
-            return life.add( new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider,
-                    readerPoolSize, systemClock(), scheduler, pruningStrategy ) );
+            return life.add(
+                    new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,
+                            pruningStrategy ) );
         }
         default:
             throw new IllegalStateException( "Unknown raft log implementation: " + raftLogImplementation );
