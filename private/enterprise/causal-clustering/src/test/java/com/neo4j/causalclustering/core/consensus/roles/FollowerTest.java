@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.consensus.membership.RaftTestGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -175,7 +175,7 @@ public class FollowerTest
         int term = 1;
         int followerAppendIndex = 9;
         RaftLog entryLog = new InMemoryRaftLog();
-        entryLog.append( new RaftLogEntry( 0, new RaftTestGroup( 0 ) ) );
+        entryLog.append( new RaftLogEntry( 0, new RaftTestMembers( 0 ) ) );
         RaftState state = raftState()
                 .myself( myself )
                 .term( term )
@@ -204,7 +204,7 @@ public class FollowerTest
     {
         // given
         RaftLog entryLog = new InMemoryRaftLog();
-        entryLog.append( new RaftLogEntry( 0, new RaftTestGroup( 0 ) ) );
+        entryLog.append( new RaftLogEntry( 0, new RaftTestMembers( 0 ) ) );
         int term = 1;
         RaftState state = raftState()
                 .myself( myself )
@@ -239,7 +239,7 @@ public class FollowerTest
     {
         // given
         RaftLog entryLog = new InMemoryRaftLog();
-        entryLog.append( new RaftLogEntry( 0, new RaftTestGroup( 0 ) ) );
+        entryLog.append( new RaftLogEntry( 0, new RaftTestMembers( 0 ) ) );
         RaftState state = raftState()
                 .myself( myself )
                 .entryLog( entryLog )
@@ -266,7 +266,7 @@ public class FollowerTest
 
         // given
         RaftLog entryLog = new InMemoryRaftLog();
-        entryLog.append( new RaftLogEntry( 0, new RaftTestGroup( 0 ) ) );
+        entryLog.append( new RaftLogEntry( 0, new RaftTestMembers( 0 ) ) );
         RaftState state = raftState()
                 .myself( myself )
                 .entryLog( entryLog )

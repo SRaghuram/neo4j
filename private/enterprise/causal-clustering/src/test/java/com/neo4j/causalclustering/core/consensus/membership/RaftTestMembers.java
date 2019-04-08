@@ -15,16 +15,16 @@ import java.util.Set;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.lang.String.format;
 
-public class RaftTestGroup implements RaftGroup<MemberId>
+public class RaftTestMembers implements RaftMembers<MemberId>
 {
     private final Set<MemberId> members = new HashSet<>();
 
-    public RaftTestGroup( Set<MemberId> members )
+    public RaftTestMembers( Set<MemberId> members )
     {
         this.members.addAll( members );
     }
 
-    public RaftTestGroup( int... memberIds )
+    public RaftTestMembers( int... memberIds )
     {
         for ( int memberId : memberIds )
         {
@@ -32,7 +32,7 @@ public class RaftTestGroup implements RaftGroup<MemberId>
         }
     }
 
-    public RaftTestGroup( MemberId... memberIds )
+    public RaftTestMembers( MemberId... memberIds )
     {
         this.members.addAll( Arrays.asList( memberIds ) );
     }
@@ -55,7 +55,7 @@ public class RaftTestGroup implements RaftGroup<MemberId>
             return false;
         }
 
-        RaftTestGroup that = (RaftTestGroup) o;
+        RaftTestMembers that = (RaftTestMembers) o;
 
         return members.equals( that.members );
 

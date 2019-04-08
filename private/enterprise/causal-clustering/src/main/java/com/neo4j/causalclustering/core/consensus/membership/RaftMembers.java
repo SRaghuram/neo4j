@@ -9,12 +9,12 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
 import java.util.Set;
 
-public interface RaftGroup<MEMBER> extends ReplicatedContent
+public interface RaftMembers<MEMBER> extends ReplicatedContent
 {
     Set<MEMBER> getMembers();
 
     interface Builder<MEMBER>
     {
-        RaftGroup<MEMBER> build( Set<MEMBER> members );
+        RaftMembers<MEMBER> build( Set<MEMBER> members );
     }
 }

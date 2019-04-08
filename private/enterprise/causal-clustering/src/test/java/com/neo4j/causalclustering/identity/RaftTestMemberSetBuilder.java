@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.consensus.membership.RaftGroup;
-import com.neo4j.causalclustering.core.consensus.membership.RaftTestGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftMembers;
+import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 
 import java.util.Set;
 
-public class RaftTestMemberSetBuilder implements RaftGroup.Builder
+public class RaftTestMemberSetBuilder implements RaftMembers.Builder
 {
     public static RaftTestMemberSetBuilder INSTANCE = new RaftTestMemberSetBuilder();
 
@@ -19,8 +19,8 @@ public class RaftTestMemberSetBuilder implements RaftGroup.Builder
     }
 
     @Override
-    public RaftGroup build( Set members )
+    public RaftMembers build( Set members )
     {
-        return new RaftTestGroup( members );
+        return new RaftTestMembers( members );
     }
 }

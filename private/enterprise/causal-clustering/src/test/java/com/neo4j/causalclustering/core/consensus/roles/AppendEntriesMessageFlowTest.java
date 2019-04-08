@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.consensus.membership.RaftTestGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -56,7 +56,7 @@ public class AppendEntriesMessageFlowTest
     {
         // given
         RaftLog raftLog = new InMemoryRaftLog();
-        raftLog.append( new RaftLogEntry( 0, new RaftTestGroup( 0 ) ) );
+        raftLog.append( new RaftLogEntry( 0, new RaftTestMembers( 0 ) ) );
 
         raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
                 .raftLog( raftLog )

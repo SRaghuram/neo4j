@@ -59,12 +59,12 @@ class RaftMembershipManagerTest
         RaftMembershipManager membershipManager = life.add( raftMembershipManager( log ) );
         // when
         membershipManager.processLog( 0, asList(
-                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 4 ) ) ),
-                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 5 ) ) )
+                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 4 ) ) ),
+                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 5 ) ) )
         ) );
 
         // then
-        assertEquals( new RaftTestGroup( 1, 2, 3, 5 ).getMembers(), membershipManager.votingMembers() );
+        assertEquals( new RaftTestMembers( 1, 2, 3, 5 ).getMembers(), membershipManager.votingMembers() );
     }
 
     @Test
@@ -78,8 +78,8 @@ class RaftMembershipManagerTest
 
         // when
         List<RaftLogCommand> logCommands = asList(
-                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 4 ) ) ),
-                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 5 ) ) ),
+                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 4 ) ) ),
+                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 5 ) ) ),
                 new TruncateLogCommand( 1 )
         );
 
@@ -90,7 +90,7 @@ class RaftMembershipManagerTest
         membershipManager.processLog( 0, logCommands );
 
         // then
-        assertEquals( new RaftTestGroup( 1, 2, 3, 4 ).getMembers(), membershipManager.votingMembers() );
+        assertEquals( new RaftTestMembers( 1, 2, 3, 4 ).getMembers(), membershipManager.votingMembers() );
         assertFalse( membershipManager.uncommittedMemberChangeInLog() );
     }
 
@@ -105,9 +105,9 @@ class RaftMembershipManagerTest
 
         // when
         List<RaftLogCommand> logCommands = asList(
-                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 4 ) ) ),
-                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 5 ) ) ),
-                new AppendLogEntry( 2, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 6 ) ) ),
+                new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 4 ) ) ),
+                new AppendLogEntry( 1, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 5 ) ) ),
+                new AppendLogEntry( 2, new RaftLogEntry( 0, new RaftTestMembers( 1, 2, 3, 6 ) ) ),
                 new TruncateLogCommand( 2 )
         );
         for ( RaftLogCommand logCommand : logCommands )
@@ -117,7 +117,7 @@ class RaftMembershipManagerTest
         membershipManager.processLog( 0, logCommands );
 
         // then
-        assertEquals( new RaftTestGroup( 1, 2, 3, 5 ).getMembers(), membershipManager.votingMembers() );
+        assertEquals( new RaftTestMembers( 1, 2, 3, 5 ).getMembers(), membershipManager.votingMembers() );
     }
 
     @Test
@@ -127,8 +127,8 @@ class RaftMembershipManagerTest
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
         RaftMembershipManager membershipManager = life.add( raftMembershipManager( raftLog ) );
 
-        RaftTestGroup membersA = new RaftTestGroup( 0, 1, 2, 3, 4 );
-        RaftTestGroup membersB = new RaftTestGroup( 1, 2, 3, 4 ); // without myself
+        RaftTestMembers membersA = new RaftTestMembers( 0, 1, 2, 3, 4 );
+        RaftTestMembers membersB = new RaftTestMembers( 1, 2, 3, 4 ); // without myself
 
         List<RaftLogCommand> logCommands = singletonList(
                 new AppendLogEntry( 0, new RaftLogEntry( 0, membersA ) ) );
@@ -154,8 +154,8 @@ class RaftMembershipManagerTest
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
         RaftMembershipManager membershipManager = life.add( raftMembershipManager( raftLog ) );
 
-        RaftTestGroup membersA = new RaftTestGroup( 0, 1, 2, 3, 4 );
-        RaftTestGroup membersB = new RaftTestGroup( 0, 2, 3, 4 ); // without number 1
+        RaftTestMembers membersA = new RaftTestMembers( 0, 1, 2, 3, 4 );
+        RaftTestMembers membersB = new RaftTestMembers( 0, 2, 3, 4 ); // without number 1
 
         List<RaftLogCommand> logCommands = singletonList(
                 new AppendLogEntry( 0, new RaftLogEntry( 0, membersA ) ) );
