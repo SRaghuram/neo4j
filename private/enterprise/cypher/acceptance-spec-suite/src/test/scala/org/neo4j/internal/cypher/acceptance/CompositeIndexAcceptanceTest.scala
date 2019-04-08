@@ -1085,9 +1085,20 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
+    def createMe(): Unit = {
+      createNodesInTxState()
+      // Values that should not be valid for the query
+      graph.execute(
+        """
+          |CREATE (:Awesome {prop2: 42, prop1: 'futhark'})
+          |CREATE (:Awesome {prop2: false, prop1: 'futhark'})
+          |CREATE (:Awesome {prop2: ['foo', 'bar'], prop1: 'futhark'})
+          |""".stripMargin)
+    }
+
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Awesome) WHERE n.prop1 = 'futhark' AND n.prop2 STARTS WITH 'o' RETURN n.prop1, n.prop2",
-      executeBefore = createNodesInTxState,
+      executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
@@ -1273,6 +1284,52 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toSet should equal(expected)
   }
 
+  test("should use composite index and get correct value for STARTS WITH when all string values match") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+
+    def createMe(): Unit = {
+      graph.execute(
+        """
+          |CREATE (:Awesome {prop1: 'foo', prop2: 'alligator'})
+          |CREATE (:Awesome {prop1: 'futhark', prop2: 'owl'})
+          |CREATE (:Awesome {prop1: 'futhark', prop2: 'otter'})
+          |CREATE (:Awesome {prop1: 'futhark', prop2: 'dragonfly'})
+          |CREATE (:Awesome {prop1: 'fehu', prop2: 'whale'})
+        """.stripMargin)
+
+      // Values that should not be valid for the query
+      graph.execute(
+        """
+          |CREATE (:Awesome {prop1: 5, prop2: 'seagull'})
+          |CREATE (:Awesome {prop1: false, prop2: 'fish'})
+          |CREATE (:Awesome {prop1: true, prop2: 'horse'})
+          |CREATE (:Awesome {prop1: 3.14, prop2: 'salmon'})
+        """.stripMargin)
+      createLabeledNode(Map("prop1" -> LocalDate.of(1991, 10, 18).toEpochDay, "prop2" -> "peacock"), "Awesome")
+      createLabeledNode(Map("prop1" -> LocalTime.of(0, 30, 0), "prop2" -> "mole"), "Awesome")
+      createLabeledNode(Map("prop1" -> DurationValue.duration(0, 0, 1800, 0).asObject(), "prop2" -> "kangaroo"), "Awesome")
+    }
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'f' AND exists(n.prop2) RETURN n.prop1, n.prop2",
+      executeBefore = createMe,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
+            .containingArgument(":Awesome(prop1,prop2)")
+            .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]")
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> "fehu", "n.prop2" -> "whale"),
+      Map("n.prop1" -> "foo", "n.prop2" -> "alligator"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "dragonfly"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "otter"),
+      Map("n.prop1" -> "futhark", "n.prop2" -> "owl")
+    )
+    result.toSet should equal(expected)
+  }
+
   test("cannot use composite index for ENDS WITH") {
     // TODO update when composite can handle ENDS WITH
     graph.createIndex("Awesome", "prop1", "prop2")
@@ -1309,6 +1366,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     def createMe(): Unit = {
       createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
       createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
+
+      // Values that should not be valid for the query
+      createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
     }
 
     // When
@@ -1348,6 +1412,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
       createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
       createLabeledNode(Map("name" -> "Joe", "city" -> point3), "User")
+
+      // Values that should not be valid for the query
+      createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
+      createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
     }
 
     // When
@@ -1371,6 +1442,62 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       Map("n.name" -> "Joe", "n.city" -> point3)
     )
     result.toSet should equal(expected)
+  }
+
+  test("should use composite index and get correct answers when not returning values for range") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    var nodes = Set.empty[Node]
+
+    def createMe(): Unit = {
+      createNodesInTxState()
+      nodes = Set(
+        createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
+        createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
+      )
+    }
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN n",
+      executeBefore = createMe, expectedDifferentResults = Configs.InterpretedAndSlotted,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    result.toSet should equal(nodes.map(node => Map("n" -> node)))
+  }
+
+  test("should use composite index and get correct answers when not returning values for equality") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    var nodes = Set.empty[Node]
+
+    def createMe(): Unit = {
+      createNodesInTxState()
+      nodes = Set(
+        createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
+        createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
+      )
+    }
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN n",
+      executeBefore = createMe, expectedDifferentResults = Configs.InterpretedAndSlotted,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
+          .containingArgument(":Awesome(prop1,prop2)")
+          .withExactVariables("n")
+        plan should not(includeSomewhere.aPlan("Filter"))
+      }))
+
+    result.toComparableResult should equal(Seq(Map("n" -> nodes.head)))
   }
 
   case class haveIndexes(expectedIndexes: String*) extends Matcher[GraphDatabaseQueryService] {
