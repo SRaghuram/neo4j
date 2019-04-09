@@ -124,10 +124,11 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName())
   private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName())
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
-                                            if (types.nonEmpty) arrayOf[Int](types.map(constant):_*)
-                                            else constant(null)
+                                            if (types.isEmpty && missingTypes.isEmpty) constant(null)
+                                            else arrayOf[Int](types.map(constant):_*)
   )
-  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName())
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
+                                                      arrayOf[String](missingTypes.map(constant):_*))
 
   // Setup the innermost output template
   innermost.delegate = new OperatorTaskTemplate {
@@ -206,9 +207,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def loadTypes = {
     if (missingTypes.isEmpty) noop()
     else {
-      condition(not(equal(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length)))){
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
         setField(typeField,
-                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], TokenRead]("computeTypes"),
+                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
                               loadField(typeField), loadField(missingTypeField), DB_ACCESS))
       }
     }
@@ -270,11 +271,11 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
 object ExpandAllOperatorTaskTemplate {
   def computeTypes(computed: Array[Int], missing: Array[String], tokenRead: DbAccess): Array[Int] = {
-    val newTokens = mutable.Set(computed:_*)
+    val newTokens = mutable.ArrayBuffer(computed:_*)
     missing.foreach(s => {
       val token = tokenRead.relationshipType(s)
-      if (token != TokenRead.NO_TOKEN) {
-        newTokens.add(token)
+      if (token != TokenRead.NO_TOKEN && !newTokens.contains(token)) {
+        newTokens.append(token)
       }
     })
     newTokens.toArray
