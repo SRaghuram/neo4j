@@ -54,7 +54,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
     private final RetryStrategy retryStrategy;
-    private final TopologyState topologyState;
+    private final GlobalTopologyState globalTopologyState;
     private final ExecutorService executor;
     private final Clock clock;
 
@@ -67,7 +67,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         this.retryStrategy = topologyServiceRetryStrategy;
         this.executor = executor;
         this.clock = clock;
-        this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
+        this.globalTopologyState = new GlobalTopologyState( logProvider, listenerService::notifyListeners );
     }
 
     @Override
@@ -76,8 +76,8 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         actorSystemLifecycle.createClusterActorSystem();
 
         SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
-        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
@@ -130,7 +130,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
     private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
     {
-        this.topologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
+        this.globalTopologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
         actorSystemLifecycle.addSeenAddresses( coreTopologyMessage.akkaMembers() );
     }
 
@@ -200,19 +200,19 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     @Override
     public DatabaseId localDatabaseId()
     {
-        return topologyState.localDatabaseId();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CoreTopology allCoreServers()
     {
-        return topologyState.coreTopology();
+        return globalTopologyState.coreTopology();
     }
 
     @Override
     public ReadReplicaTopology allReadReplicas()
     {
-        return topologyState.readReplicaTopology();
+        return globalTopologyState.readReplicaTopology();
     }
 
     @Override
@@ -220,7 +220,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         try
         {
-            return retryStrategy.apply( () -> topologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
+            return retryStrategy.apply( () -> globalTopologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
         }
         catch ( TimeoutException e )
         {
@@ -231,12 +231,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     @Override
     public Map<MemberId,RoleInfo> allCoreRoles()
     {
-        return topologyState.allCoreRoles();
+        return globalTopologyState.allCoreRoles();
     }
 
     @VisibleForTesting
-    TopologyState topologyState()
+    GlobalTopologyState topologyState()
     {
-        return topologyState;
+        return globalTopologyState;
     }
 }

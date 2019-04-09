@@ -201,7 +201,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
          ClusteredMultiDatabaseManager<ReadReplicaDatabaseContext> databaseManager = new ClusteredMultiDatabaseManager<>( platform, this, log, facade,
                  ReadReplicaDatabaseContext::new, catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
                  logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
-        createDatabaseManagerDependentModules( databaseManager );
+        createDatabaseManagerDependentModules( databaseManager ); // todo: move DiscoveryMember creation here to avoid the supplier
         return databaseManager;
     }
 

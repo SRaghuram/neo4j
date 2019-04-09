@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.discovery;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.kernel.database.DatabaseId;
-
 public class CoreTopologyListenerService
 {
     private final Set<CoreTopologyService.Listener> listeners;
@@ -33,9 +31,10 @@ public class CoreTopologyListenerService
     {
         for ( CoreTopologyService.Listener listener : listeners )
         {
-            DatabaseId databaseId = listener.databaseId();
-
-            listener.onCoreTopologyChange( coreTopology.filterTopologyByDb( databaseId ) );
+            if ( listener.databaseId().equals( coreTopology.databaseId() ) )
+            {
+                listener.onCoreTopologyChange( coreTopology );
+            }
         }
     }
 }

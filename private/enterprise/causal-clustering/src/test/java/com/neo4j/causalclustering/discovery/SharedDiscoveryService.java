@@ -70,7 +70,7 @@ public final class SharedDiscoveryService
 
     CoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped  )
     {
-        return new CoreTopology( clusterIdDbNames.get( databaseId ),
+        return new CoreTopology( databaseId, clusterIdDbNames.get( databaseId ),
                 canBeBootstrapped, Collections.unmodifiableMap( coreMembers )  );
     }
 

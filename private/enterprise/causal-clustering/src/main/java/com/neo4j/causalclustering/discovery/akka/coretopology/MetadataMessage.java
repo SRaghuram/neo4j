@@ -43,6 +43,11 @@ public class MetadataMessage
         return Optional.ofNullable( metadata.get( address ) );
     }
 
+    public Stream<CoreServerInfoForMemberId> getStream()
+    {
+        return metadata.values().stream();
+    }
+
     public Stream<CoreServerInfoForMemberId> getStream( UniqueAddress address )
     {
         return Stream.ofNullable( metadata.get( address ) );

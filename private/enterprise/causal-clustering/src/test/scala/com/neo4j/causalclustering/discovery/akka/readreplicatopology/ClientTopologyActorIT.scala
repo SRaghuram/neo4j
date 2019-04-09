@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSin
 import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 
@@ -49,6 +50,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
         val newCoreTopology = new CoreTopology(
+          DEFAULT_DATABASE_NAME,
           new ClusterId(UUID.randomUUID()),
           false,
           Map(

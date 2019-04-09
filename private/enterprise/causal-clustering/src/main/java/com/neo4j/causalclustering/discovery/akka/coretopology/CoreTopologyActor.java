@@ -12,12 +12,10 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 
 import java.util.Collection;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -38,7 +36,6 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final TopologyBuilder topologyBuilder;
-    private final DatabaseId databaseId;
 
     private final Address myAddress;
 
@@ -51,8 +48,6 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private MetadataMessage memberData;
     private ClusterIdDirectoryMessage clusterIdPerDb;
     private ClusterViewMessage clusterView;
-
-    private CoreTopology coreTopology;
 
     private CoreTopologyActor( DiscoveryMember myself,
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
@@ -68,10 +63,8 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
-        this.databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
-        this.coreTopology = CoreTopology.EMPTY;
         this.myAddress = cluster.selfAddress();
 
         // Children, who will be sending messages to us
@@ -95,19 +88,19 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private void handleClusterViewMessage( ClusterViewMessage message )
     {
         clusterView = message;
-        buildTopology();
+        buildTopologies();
     }
 
     private void handleMetadataMessage( MetadataMessage message )
     {
         memberData = message;
-        buildTopology();
+        buildTopologies();
     }
 
     private void handleClusterIdDirectoryMessage( ClusterIdDirectoryMessage message )
     {
         clusterIdPerDb = message;
-        buildTopology();
+        buildTopologies();
     }
 
     private void handleClusterIdSettingMessage( ClusterIdSettingMessage message )
@@ -115,19 +108,26 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         clusterIdActor.forward( message, context() );
     }
 
-    private void buildTopology()
+    private void buildTopologies()
     {
-        CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( clusterIdPerDb.get( databaseId ), clusterView, memberData );
-        if ( !this.coreTopology.equals( newCoreTopology ) || !Objects.equals( this.coreTopology.clusterId(),  newCoreTopology.clusterId() ) )
-        {
-            this.coreTopology = newCoreTopology;
-            Collection<Address> akkaMemberAddresses = clusterView.members()
-                    .stream()
-                    .map( Member::address )
-                    .filter( addr -> !addr.equals( myAddress ) )
-                    .collect( Collectors.toList() );
-            topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
-            readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
-        }
+        memberData.getStream()
+                .flatMap( info -> info.coreServerInfo().getDatabaseIds().stream() )
+                .distinct()
+                .forEach( this::buildTopology );
+    }
+
+    private void buildTopology( DatabaseId databaseId )
+    {
+        CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, clusterIdPerDb.get( databaseId ), clusterView, memberData );
+
+        Collection<Address> akkaMemberAddresses = clusterView.members()
+                .stream()
+                .map( Member::address )
+                .filter( addr -> !addr.equals( myAddress ) )
+                .collect( Collectors.toList() );
+
+        // todo: this method used to only execute the following two lines if new topology is different form the existing one -- do we need this now?
+        topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
+        readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
     }
 }

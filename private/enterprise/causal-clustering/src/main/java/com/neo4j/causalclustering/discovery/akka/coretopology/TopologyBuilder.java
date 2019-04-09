@@ -36,7 +36,7 @@ public class TopologyBuilder
         this.log = logProvider.getLog( getClass() );
     }
 
-    CoreTopology buildCoreTopology( @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
+    CoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
 
         log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
@@ -44,8 +44,9 @@ public class TopologyBuilder
                 getCoreInfos( cluster, memberData )
                 .collect( Collectors.toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
-        boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData );
-        CoreTopology newCoreTopology = new CoreTopology( clusterId, canBeBootstrapped, coreMembers );
+        boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData, databaseId );
+        CoreTopology newCoreTopology = new CoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
+        System.out.println( "+++ Built new topology: " + newCoreTopology );
         log.debug( "Returned topology: %s", newCoreTopology );
         return newCoreTopology;
     }
@@ -57,11 +58,10 @@ public class TopologyBuilder
                  .flatMap( memberData::getStream );
     }
 
-    private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData )
+    private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData, DatabaseId databaseId )
     {
         boolean iDoNotRefuseToBeLeader = !config.get( CausalClusteringSettings.refuse_to_be_leader );
         boolean clusterHasConverged = cluster.converged();
-        DatabaseId databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( cluster, memberData, databaseId );
 
         return iDoNotRefuseToBeLeader && clusterHasConverged  && iAmFirstPotentialLeader;

@@ -37,14 +37,16 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final DiscoveryMember myself;
     private final Log log;
     private final LogProvider logProvider;
-    private final TopologyState topologyState;
+    private final GlobalTopologyState globalTopologyState;
 
     public AkkaTopologyClient( Config config, LogProvider logProvider, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle )
     {
         this.config = config;
         this.myself = myself;
         this.actorSystemLifecycle = actorSystemLifecycle;
-        this.topologyState = new TopologyState( config, logProvider, ignored -> {} );
+        this.globalTopologyState = new GlobalTopologyState( logProvider, ignored ->
+        {
+        } );
         this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
     }
@@ -61,9 +63,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         ClusterClientSettings clusterClientSettings = actorSystemLifecycle.clusterClientSettings();
         ActorRef clusterClient = actorSystemLifecycle.systemActorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
 
-        SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
 
         Props clientTopologyProps = ClientTopologyActor.props(
                 myself,
@@ -85,25 +87,25 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     @Override
     public DatabaseId localDatabaseId()
     {
-        return topologyState.localDatabaseId();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CoreTopology allCoreServers()
     {
-        return topologyState.coreTopology();
+        return globalTopologyState.coreTopology();
     }
 
     @Override
     public ReadReplicaTopology allReadReplicas()
     {
-        return topologyState.readReplicaTopology();
+        return globalTopologyState.readReplicaTopology();
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        AdvertisedSocketAddress advertisedSocketAddress = topologyState.retrieveSocketAddress( upstream );
+        AdvertisedSocketAddress advertisedSocketAddress = globalTopologyState.retrieveSocketAddress( upstream );
         if ( advertisedSocketAddress == null )
         {
             throw new CatchupAddressResolutionException( upstream );
@@ -114,7 +116,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     @Override
     public Map<MemberId,RoleInfo> allCoreRoles()
     {
-        return topologyState.allCoreRoles();
+        return globalTopologyState.allCoreRoles();
     }
 
     @Override

@@ -29,6 +29,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
 {
+    private static final String DATABASE_NAME = DEFAULT_DATABASE_NAME;
+
     private final MemberId myself;
     private final String matchingGroupName;
 
@@ -54,7 +56,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( myself, coreServerInfo() );
         coreMembers.put( coreNotSelf, coreServerInfo() );
-        return new CoreTopology( new ClusterId( new UUID( 99, 88 ) ), canBeBootstrapped, coreMembers );
+        return new CoreTopology( new DatabaseId( DATABASE_NAME ), new ClusterId( new UUID( 99, 88 ) ), canBeBootstrapped, coreMembers );
     }
 
     @Override
@@ -90,7 +92,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         AdvertisedSocketAddress anyCatchupServer = new AdvertisedSocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
         Set<String> groups = Set.of( groupNames );
-        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DATABASE_NAME ) );
         return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
     }
 
@@ -99,7 +101,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 2468 );
         Set<String> groups = Set.of( groupNames );
-        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DATABASE_NAME ) );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 }

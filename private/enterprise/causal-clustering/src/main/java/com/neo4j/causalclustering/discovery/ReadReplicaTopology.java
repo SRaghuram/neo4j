@@ -14,6 +14,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
+// todo: consider renaming to DatabaseReadReplicaTopology
 public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
     public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( emptyMap() );

@@ -37,6 +37,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -69,7 +70,7 @@ public class ClusterOverviewProcedureTest
         roleMap.put( follower1, RoleInfo.FOLLOWER );
         roleMap.put( follower2, RoleInfo.FOLLOWER );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( null, false, coreMembers ) );
+        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, null, false, coreMembers ) );
         when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( replicaMembers ) );
         when( topologyService.allCoreRoles() ).thenReturn( roleMap );
 

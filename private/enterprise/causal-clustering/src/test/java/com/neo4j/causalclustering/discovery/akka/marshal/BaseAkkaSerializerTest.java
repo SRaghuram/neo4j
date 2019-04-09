@@ -34,6 +34,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class BaseAkkaSerializerTest
@@ -84,8 +85,8 @@ public class BaseAkkaSerializerTest
                     new MemberIdSerializer()},
             new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                     new ReadReplicaInfoSerializer()},
-            new Object[]{new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
-                    new CoreTopologySerializer()},
+                new Object[]{new CoreTopology( DEFAULT_DATABASE_NAME, new ClusterId( UUID.randomUUID() ), true,
+                        CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
             new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                     new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem)system )},
             new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},

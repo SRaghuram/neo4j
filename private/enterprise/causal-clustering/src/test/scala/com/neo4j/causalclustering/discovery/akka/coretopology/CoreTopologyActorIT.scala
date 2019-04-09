@@ -42,7 +42,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
           Then("update topology")
           awaitAssert(
-            verify(topologyBuilder).buildCoreTopology(ArgumentMatchers.eq(clusterId), any(), any())
+            verify(topologyBuilder).buildCoreTopology(ArgumentMatchers.eq(databaseName), ArgumentMatchers.eq(clusterId), any(), any())
           )
           awaitExpectedCoreTopology()
         }
@@ -59,7 +59,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
           Then("update topology")
           awaitAssert(
-            verify(topologyBuilder).buildCoreTopology(any(), any(), ArgumentMatchers.eq(event))
+            verify(topologyBuilder).buildCoreTopology(ArgumentMatchers.eq(databaseName), any(), any(), ArgumentMatchers.eq(event))
           )
           awaitExpectedCoreTopology()
         }
@@ -75,7 +75,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
           Then("update topology")
           awaitAssert(
-            verify(topologyBuilder).buildCoreTopology(any(), ArgumentMatchers.eq(clusterView), any())
+            verify(topologyBuilder).buildCoreTopology(ArgumentMatchers.eq(databaseName), any(), ArgumentMatchers.eq(clusterView), any())
           )
           awaitExpectedCoreTopology()
         }
@@ -85,8 +85,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
-          val nullClusterIdTopology = new CoreTopology(null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
-          Mockito.when(topologyBuilder.buildCoreTopology(any(), any(), any()))
+          val nullClusterIdTopology = new CoreTopology(databaseName, null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
+          Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseName), any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
           topologyActorRef ! clusterView
           awaitExpectedCoreTopology(nullClusterIdTopology)
@@ -94,7 +94,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           When("update cluster ID")
           val clusterIdData = Map(databaseId -> clusterId).asJava
           val event = new ClusterIdDirectoryMessage(clusterIdData)
-          Mockito.when(topologyBuilder.buildCoreTopology(any(), any(), any()))
+          Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseName), any(), any(), any()))
             .thenReturn(expectedCoreTopology)
           topologyActorRef ! event
 
@@ -155,6 +155,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new CoreTopology(
+      databaseName,
       clusterId,
       false,
       Map(
@@ -162,7 +163,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
         new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
       ).asJava
     )
-    Mockito.when(topologyBuilder.buildCoreTopology(any(), any(), any()))
+    Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseName), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
 
     val readReplicaProbe = TestProbe("readReplicaActor")

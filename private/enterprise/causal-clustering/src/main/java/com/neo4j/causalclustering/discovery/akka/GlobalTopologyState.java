@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
@@ -16,32 +15,31 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptyMap;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
+public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink
 {
-    private final DatabaseId localDatabaseId;
     private final Log log;
     private final Consumer<CoreTopology> callback;
     private volatile Map<MemberId,AdvertisedSocketAddress> coreCatchupAddressMap;
     private volatile Map<MemberId,AdvertisedSocketAddress> rrCatchupAddressMap;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
-    private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
+    private final Map<DatabaseId,CoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
 
-    public TopologyState( Config config, LogProvider logProvider, Consumer<CoreTopology> listener )
+    public GlobalTopologyState( LogProvider logProvider, Consumer<CoreTopology> listener )
     {
-        this.localDatabaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.log = logProvider.getLog( getClass() );
         this.coreCatchupAddressMap = emptyMap();
         this.rrCatchupAddressMap = emptyMap();
@@ -52,8 +50,13 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     @Override
     public void onTopologyUpdate( CoreTopology newCoreTopology )
     {
-        TopologyDifference diff = this.coreTopology.difference( newCoreTopology );
-        this.coreTopology = newCoreTopology;
+        CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( newCoreTopology.databaseId(), newCoreTopology );
+        if ( currentCoreTopology == null )
+        {
+            currentCoreTopology = CoreTopology.EMPTY;
+        }
+
+        TopologyDifference diff = currentCoreTopology.difference( newCoreTopology );
         this.coreCatchupAddressMap = extractCatchupAddressesMap( newCoreTopology );
         if ( diff.hasChanges() )
         {
@@ -87,20 +90,18 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
     public Map<MemberId,RoleInfo> allCoreRoles()
     {
         Set<MemberId> leaders = remoteDbLeaderMap.values().stream().map( LeaderInfo::memberId ).collect( Collectors.toSet() );
-        Set<MemberId> allCoreMembers = coreTopology.members().keySet();
+        Set<MemberId> allCoreMembers = coreTopologiesByDatabase.values().stream()
+                .flatMap( topology -> topology.members().keySet().stream() )
+                .collect( Collectors.toSet() );
 
         Function<MemberId,RoleInfo> roleMapper = m -> leaders.contains( m ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
         return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
-    public DatabaseId localDatabaseId()
-    {
-        return localDatabaseId;
-    }
-
     public CoreTopology coreTopology()
     {
-        return coreTopology;
+        // todo: do not return default topology like this!
+        return coreTopologiesByDatabase.getOrDefault( new DatabaseId( DEFAULT_DATABASE_NAME ), CoreTopology.EMPTY );
     }
 
     public ReadReplicaTopology readReplicaTopology()

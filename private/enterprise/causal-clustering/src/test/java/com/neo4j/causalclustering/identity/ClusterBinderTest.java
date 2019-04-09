@@ -65,7 +65,7 @@ public class ClusterBinderTest
     public void shouldTimeoutWhenNotBootstrappableAndNobodyElsePublishesClusterId() throws Throwable
     {
         // given
-        CoreTopology unboundTopology = new CoreTopology( null, false, emptyMap() );
+        CoreTopology unboundTopology = new CoreTopology( DATABASE_NAME, null, false, emptyMap() );
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreServersForDatabase( databaseId ) ).thenReturn( unboundTopology );
 
@@ -91,8 +91,8 @@ public class ClusterBinderTest
     {
         // given
         ClusterId publishedClusterId = new ClusterId( UUID.randomUUID() );
-        CoreTopology unboundTopology = new CoreTopology( null, false, emptyMap() );
-        CoreTopology boundTopology = new CoreTopology( publishedClusterId, false, emptyMap() );
+        CoreTopology unboundTopology = new CoreTopology( DATABASE_NAME, null, false, emptyMap() );
+        CoreTopology boundTopology = new CoreTopology( DATABASE_NAME, publishedClusterId, false, emptyMap() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreServersForDatabase( databaseId ) ).thenReturn( unboundTopology ).thenReturn( boundTopology );
@@ -168,7 +168,7 @@ public class ClusterBinderTest
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
+        CoreTopology bootstrappableTopology = new CoreTopology( databaseName, null, true, members );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.setClusterId( any(), eq( this.databaseId ) ) ).thenReturn( true );

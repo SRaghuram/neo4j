@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -16,28 +15,35 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 
+// todo: consider renaming to DatabaseCoreTopology
 public class CoreTopology implements Topology<CoreServerInfo>
 {
-    public static final CoreTopology EMPTY = new CoreTopology( null, false, emptyMap() );
+    public static final CoreTopology EMPTY = new CoreTopology( null, null, false, emptyMap() );
 
+    private final DatabaseId databaseId;
     private final ClusterId clusterId;
     private final boolean canBeBootstrapped;
     private final Map<MemberId,CoreServerInfo> coreMembers;
 
-    public CoreTopology( ClusterId clusterId, boolean canBeBootstrapped, Map<MemberId,CoreServerInfo> coreMembers )
+    public CoreTopology( DatabaseId databaseId, ClusterId clusterId, boolean canBeBootstrapped, Map<MemberId,CoreServerInfo> coreMembers )
     {
+        this.databaseId = databaseId;
         this.clusterId = clusterId;
         this.canBeBootstrapped = canBeBootstrapped;
-        this.coreMembers = new HashMap<>( coreMembers );
+        this.coreMembers = Map.copyOf( coreMembers );
     }
 
     @Override
     public Map<MemberId,CoreServerInfo> members()
     {
         return coreMembers;
+    }
+
+    public DatabaseId databaseId()
+    {
+        return databaseId;
     }
 
     public ClusterId clusterId()
@@ -48,12 +54,6 @@ public class CoreTopology implements Topology<CoreServerInfo>
     public boolean canBeBootstrapped()
     {
         return canBeBootstrapped;
-    }
-
-    @Override
-    public String toString()
-    {
-        return format( "{clusterId=%s, bootstrappable=%s, coreMembers=%s}", clusterId, canBeBootstrapped(), coreMembers );
     }
 
     public Optional<MemberId> randomCoreMemberId()
@@ -70,7 +70,7 @@ public class CoreTopology implements Topology<CoreServerInfo>
     {
         Map<MemberId, CoreServerInfo> filteredMembers = filterHostsByDb( members(), databaseId );
 
-        return new CoreTopology( clusterId(), canBeBootstrapped(), filteredMembers );
+        return new CoreTopology( databaseId, clusterId(), canBeBootstrapped(), filteredMembers );
     }
 
     @Override
@@ -85,12 +85,26 @@ public class CoreTopology implements Topology<CoreServerInfo>
             return false;
         }
         CoreTopology that = (CoreTopology) o;
-        return Objects.equals( coreMembers, that.coreMembers );
+        return canBeBootstrapped == that.canBeBootstrapped &&
+               Objects.equals( databaseId, that.databaseId ) &&
+               Objects.equals( clusterId, that.clusterId ) &&
+               Objects.equals( coreMembers, that.coreMembers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( coreMembers );
+        return Objects.hash( databaseId, clusterId, canBeBootstrapped, coreMembers );
+    }
+
+    @Override
+    public String toString()
+    {
+        return "CoreTopology{" +
+               "databaseId='" + databaseId + '\'' +
+               ", clusterId=" + clusterId +
+               ", canBeBootstrapped=" + canBeBootstrapped +
+               ", coreMembers=" + coreMembers +
+               '}';
     }
 }

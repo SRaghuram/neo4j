@@ -64,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.DefaultParameterValue.nullValue;
@@ -108,7 +109,7 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        final CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        final CoreTopology clusterTopology = new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers );
         when( coreTopologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
@@ -155,7 +156,7 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        final CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        final CoreTopology clusterTopology = new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers );
         when( coreTopologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
@@ -188,7 +189,7 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 1 ), addressesForCore( 1, false ) );
         coreMembers.put( member( 2 ), addressesForCore( 2, false ) );
 
-        final CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        final CoreTopology clusterTopology = new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers );
         when( coreTopologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
@@ -222,7 +223,7 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        final CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        final CoreTopology clusterTopology = new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers );
         when( coreTopologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
@@ -250,7 +251,7 @@ class GetRoutingTableProcedureForSingleDCTest
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( clusterId, false, coreMembers ) );
+        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers ) );
         when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( readReplicaInfoMap( 1 ) ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
@@ -289,7 +290,7 @@ class GetRoutingTableProcedureForSingleDCTest
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( clusterId, false, coreMembers ) );
+        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers ) );
         when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
@@ -319,7 +320,7 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( clusterId, false, coreMembers ) );
+        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers ) );
         when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
@@ -348,7 +349,7 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( clusterId, false, coreMembers ) );
+        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers ) );
         when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
@@ -385,7 +386,7 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 1 ), addressesForCore( 1, false ) );
         coreMembers.put( member( 2 ), addressesForCore( 2, false ) );
 
-        CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        CoreTopology clusterTopology = new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, false, coreMembers );
         when( coreTopologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 

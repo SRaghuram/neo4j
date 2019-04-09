@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<CoreTopology>
     @Override
     protected CoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
+        String databaseName = StringMarshal.unmarshal( channel );
         ClusterId clusterId = clusterIdMarshal.unmarshal( channel );
         boolean canBeBootstrapped = BooleanMarshal.unmarshal( channel );
 
@@ -42,12 +44,13 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<CoreTopology>
             members.put( memberId, coreServerInfo );
         }
 
-        return new CoreTopology( clusterId, canBeBootstrapped, members );
+        return new CoreTopology( databaseName, clusterId, canBeBootstrapped, members );
     }
 
     @Override
     public void marshal( CoreTopology coreTopology, WritableChannel channel ) throws IOException
     {
+        StringMarshal.marshal( channel, coreTopology.databaseName() );
         clusterIdMarshal.marshal( coreTopology.clusterId(), channel );
         BooleanMarshal.marshal( channel, coreTopology.canBeBootstrapped() );
 
