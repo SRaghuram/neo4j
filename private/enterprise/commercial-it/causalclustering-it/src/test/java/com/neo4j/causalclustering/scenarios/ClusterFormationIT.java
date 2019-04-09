@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -19,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
@@ -100,13 +100,13 @@ public class ClusterFormationIT
     }
 
     @Test
-    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad()
+    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws TimeoutException
     {
         // given
         ExecutorService executorService = Executors.newSingleThreadExecutor();
+        CoreGraphDatabase leader = cluster.awaitLeader().database();
         executorService.submit( () ->
         {
-            CoreGraphDatabase leader = cluster.getMemberWithRole( Role.LEADER ).database();
             try ( Transaction tx = leader.beginTx() )
             {
                 leader.createNode();

@@ -323,7 +323,7 @@ class EncryptedBackupIT
 
             // and the cluster is populated with more data
             DataCreator.createDataInOneTransaction( cluster, 100 );
-            dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
+            dataMatchesEventually( cluster.awaitLeader(), allMembers( cluster ) );
 
             // then an incremental backup is successful on that cluster
             exitCode = backupClient.getAsInt();
@@ -419,7 +419,7 @@ class EncryptedBackupIT
             {
                 try
                 {
-                    dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
+                    dataMatchesEventually( cluster.awaitLeader(), allMembers( cluster ) );
                     return runBackupSameJvm( backupHome, selectedNodeAddress );
                 }
                 catch ( Exception e )

@@ -236,8 +236,8 @@ public abstract class BaseClusterOverviewIT
 
             cluster.start();
 
+            CoreClusterMember leader = cluster.awaitLeader();
             List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
-            CoreClusterMember leader = cluster.getMemberWithRole( Role.LEADER );
             cluster.removeCoreMembers( followers );
 
             ClusterOverviewHelper.assertEventualOverview( ClusterOverviewHelper.containsRole( LEADER, 0 ), leader, "core" );
@@ -259,7 +259,7 @@ public abstract class BaseClusterOverviewIT
 
             List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
 
-            CoreClusterMember follower = cluster.getMemberWithRole( Role.FOLLOWER );
+            CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER );
             follower.raft().triggerElection();
 
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(

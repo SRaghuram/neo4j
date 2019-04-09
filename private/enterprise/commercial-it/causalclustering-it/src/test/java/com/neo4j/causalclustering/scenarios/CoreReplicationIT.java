@@ -97,7 +97,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -152,7 +152,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -176,7 +176,7 @@ class CoreReplicationIT
         awaitForDataToBeApplied( leader );
         dataMatchesEventually( leader, cluster.coreMembers() );
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
         try ( Transaction tx = follower.beginTx() )

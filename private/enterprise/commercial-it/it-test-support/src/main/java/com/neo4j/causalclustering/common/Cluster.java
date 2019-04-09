@@ -366,7 +366,7 @@ public class Cluster
         }
     }
 
-    public CoreClusterMember getMemberWithRole( Role role )
+    private CoreClusterMember getMemberWithRole( Role role )
     {
         return getMemberWithAnyRole( role );
     }
@@ -446,6 +446,11 @@ public class Cluster
     public CoreClusterMember awaitLeader( long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
         return awaitCoreMemberWithRole( Role.LEADER, timeout, timeUnit );
+    }
+
+    public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException
+    {
+        return awaitCoreMemberWithRole( role, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 
     public CoreClusterMember awaitCoreMemberWithRole( Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
