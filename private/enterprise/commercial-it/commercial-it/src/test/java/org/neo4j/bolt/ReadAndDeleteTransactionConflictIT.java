@@ -37,7 +37,7 @@ import static org.junit.Assert.assertThat;
 public class ReadAndDeleteTransactionConflictIT
 {
     private SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private RepeatRule outerRepeat = new RepeatRule( true, 10 );
+    private RepeatRule outerRepeat = new RepeatRule( false, 1 );
     private Neo4jRule graphDb = new Neo4jRule()
             .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
     private CleanupRule cleanupRule = new CleanupRule();
