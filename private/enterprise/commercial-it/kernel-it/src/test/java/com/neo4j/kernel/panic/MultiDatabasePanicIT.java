@@ -70,7 +70,7 @@ class MultiDatabasePanicIT
         assertTrue( secondPanicListener.isPanic() );
     }
 
-    private Health getDatabaseHealth( GraphDatabaseFacade facade )
+    private static Health getDatabaseHealth( GraphDatabaseFacade facade )
     {
         return facade.getDependencyResolver().resolveDependency( DatabaseHealth.class );
     }

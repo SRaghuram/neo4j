@@ -64,7 +64,7 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
             }
             config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
             return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
-                    .initFacade( storeDir, config, state.databaseDependencies(), new GraphDatabaseFacade() );
+                    .initFacade( databasesRoot, config, state.databaseDependencies(), new GraphDatabaseFacade() );
         }
     }
 }
