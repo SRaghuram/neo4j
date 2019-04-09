@@ -17,8 +17,6 @@ import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
-import com.neo4j.causalclustering.core.consensus.membership.MembershipWaiter;
-import com.neo4j.causalclustering.core.consensus.membership.MembershipWaiterLifecycle;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreLife;
@@ -52,7 +50,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CoreServerModule implements CatchupServerProvider
 {
-    private final MembershipWaiterLifecycle membershipWaiterLifecycle;
     private final IdentityModule identityModule;
     private final RaftGroup raftGroup;
     private final ClusteringModule clusteringModule;
@@ -115,8 +112,6 @@ public class CoreServerModule implements CatchupServerProvider
         this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseManager,
                 commandApplicationProcess, logProvider, backoffStrategy, panicker, globalMonitors );
 
-        this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
-
         CatchupServerHandler catchupServerHandler = handlerFactory.create( snapshotService );
         this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
         this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
@@ -129,15 +124,6 @@ public class CoreServerModule implements CatchupServerProvider
 
         suspendOnStoreCopy.add( this.catchupServer );
         backupServer.ifPresent( suspendOnStoreCopy::add );
-    }
-
-    private MembershipWaiterLifecycle createMembershipWaiterLifecycle()
-    {
-        long electionTimeout = globalConfig.get( CausalClusteringSettings.leader_election_timeout ).toMillis();
-        MembershipWaiter membershipWaiter = new MembershipWaiter( identityModule.myself(), jobScheduler, kernelDatabaseHealth,
-                electionTimeout * 4, logProvider, globalModule.getGlobalMonitors() );
-        long joinCatchupTimeout = globalConfig.get( CausalClusteringSettings.join_catch_up_timeout ).toMillis();
-        return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, raftGroup.raftMachine(), logProvider );
     }
 
     public CatchupComponentsRepository catchupComponents()
@@ -171,10 +157,5 @@ public class CoreServerModule implements CatchupServerProvider
     public CoreDownloaderService downloadService()
     {
         return downloadService;
-    }
-
-    public MembershipWaiterLifecycle membershipWaiterLifecycle()
-    {
-        return membershipWaiterLifecycle;
     }
 }

@@ -452,7 +452,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         addCoreServerComponentsToLifecycle( coreServerModule, raftMessageHandlerChain, globalLife );
 
         addPanicEventHandlers( globalLife, panicService );
-        globalLife.add( coreServerModule.membershipWaiterLifecycle() );
     }
 
     @Override
