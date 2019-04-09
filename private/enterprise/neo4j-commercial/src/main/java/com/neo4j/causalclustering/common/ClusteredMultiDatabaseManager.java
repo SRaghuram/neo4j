@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManagerException;
+import org.neo4j.dbms.database.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -200,7 +200,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to start database %s", databaseId ), t );
+            throw new DatabaseManagementException( format( "Unable to start database %s", databaseId ), t );
         }
     }
 
@@ -223,7 +223,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to stop database %s", databaseId ), t );
+            throw new DatabaseManagementException( format( "Unable to stop database %s", databaseId ), t );
         }
     }
 
@@ -238,7 +238,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to drop database %s", databaseId ), t );
+            throw new DatabaseManagementException( format( "Unable to drop database %s", databaseId ), t );
         }
     }
 }
