@@ -53,7 +53,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE10;
+import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.helpers.Exceptions.rootCause;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -61,6 +61,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 @RunWith( Parameterized.class )
 public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 {
+    private static final GraphDatabaseSettings.SchemaIndex nonDefaultSchemaIndex = NATIVE30;
+
     @Parameterized.Parameters( name = "{2}" )
     public static Collection<Object[]> parameters()
     {
@@ -108,7 +110,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        callIndexProcedure( indexPattern( label, propKey ), GraphDatabaseSettings.SchemaIndex.NATIVE20.providerName() );
+        callIndexProcedure( indexPattern( label, propKey ), nonDefaultSchemaIndex.providerName() );
         commit();
 
         // then
@@ -183,7 +185,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         String pattern = indexPattern( label, propertyKey );
         try
         {
-            callIndexProcedure( pattern, GraphDatabaseSettings.SchemaIndex.NATIVE20.providerName() );
+            callIndexProcedure( pattern, nonDefaultSchemaIndex.providerName() );
             fail( "Should have failed" );
         }
         catch ( ProcedureException e )
@@ -259,7 +261,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
-        String specifiedProvider = NATIVE10.providerName();
+        String specifiedProvider = nonDefaultSchemaIndex.providerName();
         RawIterator<AnyValue[],ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
         // then
         assertThat( Arrays.asList( result.next() ), contains( stringValue( pattern ), stringValue( specifiedProvider ),
@@ -296,8 +298,8 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
     private void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexReference index )
     {
-        assertEquals( "provider key", "lucene+native", index.providerKey() );
-        assertEquals( "provider version", "1.0", index.providerVersion() );
+        assertEquals( "provider key", nonDefaultSchemaIndex.providerKey(), index.providerKey() );
+        assertEquals( "provider version", nonDefaultSchemaIndex.providerVersion(), index.providerVersion() );
         assertEquals( expectedUnique, index.isUnique() );
         assertEquals( "label id", labelId, index.schema().getEntityTokenIds()[0] );
         for ( int i = 0; i < propertyKeyIds.length; i++ )
@@ -408,7 +410,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     {
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
-        String specifiedProvider = NATIVE10.providerName();
+        String specifiedProvider = nonDefaultSchemaIndex.providerName();
         callIndexProcedure( pattern, specifiedProvider );
         commit();
     }
