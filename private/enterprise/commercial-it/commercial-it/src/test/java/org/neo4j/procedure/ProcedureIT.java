@@ -250,7 +250,7 @@ public class ProcedureIT
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.sideEffectWithDefault()" ) );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
-                    "Procedure call does not provide the required number of arguments: got 1 expected 3.%n%n" +
+                    "Procedure call does not provide the required number of arguments: got 0 expected 3 (where 1 is optional).%n%n" +
                             "Procedure org.neo4j.procedure.sideEffectWithDefault has signature: org.neo4j.procedure" +
                             ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
                             "meaning that it expects 3 arguments of type STRING?, STRING?, STRING? (line 1, column 1 (offset: 0))" ) ) );
