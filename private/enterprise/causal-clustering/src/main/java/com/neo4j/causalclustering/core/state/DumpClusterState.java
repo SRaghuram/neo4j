@@ -89,7 +89,6 @@ public class DumpClusterState
         try
         {
             dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
-            dumpSimpleState( CoreStateFiles.DB_NAME, storageFactory.createMultiClusteringDbNameStorage() );
             dumpSimpleState( CoreStateFiles.CLUSTER_ID, storageFactory.createClusterIdStorage() );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life ) );

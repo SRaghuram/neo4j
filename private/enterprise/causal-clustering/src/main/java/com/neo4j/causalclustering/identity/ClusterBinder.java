@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
@@ -41,32 +40,30 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         void boundToCluster( ClusterId clusterId );
     }
 
+    private final DatabaseId databaseId;
     private final SimpleStorage<ClusterId> clusterIdStorage;
-    private final SimpleStorage<DatabaseName> databaseNameStorage;
     private final CoreTopologyService topologyService;
     private final CoreBootstrapper coreBootstrapper;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
-    private final DatabaseId databaseId;
     private final int minCoreHosts;
 
     private ClusterId clusterId;
 
-    public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> databaseNameStorage,
+    public ClusterBinder( DatabaseId databaseId, SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, CoreBootstrapper coreBootstrapper, DatabaseId databaseId, int minCoreHosts, Monitors monitors )
+            Duration timeout, CoreBootstrapper coreBootstrapper, int minCoreHosts, Monitors monitors )
     {
+        this.databaseId = databaseId;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.clusterIdStorage = clusterIdStorage;
-        this.databaseNameStorage = databaseNameStorage;
         this.topologyService = topologyService;
         this.coreBootstrapper = coreBootstrapper;
         this.clock = clock;
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
-        this.databaseId = databaseId;
         this.minCoreHosts = minCoreHosts;
     }
 
@@ -109,17 +106,6 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
      */
     public BoundState bindToCluster() throws Exception
     {
-        DatabaseName newName = new DatabaseName( databaseId );
-
-        databaseNameStorage.writeOrVerify( newName, existing ->
-        {
-            if ( !newName.equals( existing ) )
-            {
-                throw new IllegalStateException( format( "Your configured database name has changed. Found %s but expected %s in %s.",
-                        databaseId.name(), existing.name(), CausalClusteringSettings.database.name() ) );
-            }
-        } );
-
         if ( clusterIdStorage.exists() )
         {
             clusterId = clusterIdStorage.readState();

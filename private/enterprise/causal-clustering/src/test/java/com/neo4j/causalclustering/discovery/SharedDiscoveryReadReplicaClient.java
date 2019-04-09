@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -25,19 +26,19 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
 {
     private final SharedDiscoveryService sharedDiscoveryService;
     private final ReadReplicaInfo addresses;
-    private final MemberId memberId;
+    private final DiscoveryMember myself;
     private final Log log;
     private final DatabaseId databaseId;
 
-    SharedDiscoveryReadReplicaClient( SharedDiscoveryService sharedDiscoveryService, Config config, MemberId memberId,
+    SharedDiscoveryReadReplicaClient( SharedDiscoveryService sharedDiscoveryService, Config config, DiscoveryMember myself,
             LogProvider logProvider )
     {
         this.sharedDiscoveryService = sharedDiscoveryService;
         this.databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
         this.addresses = new ReadReplicaInfo( ClientConnectorAddresses.extractFromConfig( config ),
                 socketAddress( config.get( CausalClusteringSettings.transaction_advertised_address ).toString(),
-                        AdvertisedSocketAddress::new ), databaseId );
-        this.memberId = memberId;
+                        AdvertisedSocketAddress::new ), Set.of(), Set.of( databaseId ) ); // todo: no dbName like this!
+        this.myself = myself;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -51,7 +52,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     public void start0()
     {
         sharedDiscoveryService.registerReadReplica( this );
-        log.info( "Registered read replica member id: %s at %s", memberId, addresses );
+        log.info( "Registered read replica member id: %s at %s", myself(), addresses );
     }
 
     @Override
@@ -106,15 +107,10 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     @Override
     public MemberId myself()
     {
-        return memberId;
+        return myself.id();
     }
 
-    public MemberId getMemberId()
-    {
-        return memberId;
-    }
-
-    public ReadReplicaInfo getReadReplicainfo()
+    public ReadReplicaInfo getReadReplicaInfo()
     {
         return addresses;
     }

@@ -57,8 +57,8 @@ public class ClusterBinderTest
     private ClusterBinder clusterBinder( SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService )
     {
-        return new ClusterBinder( clusterIdStorage, new StubSimpleStorage<>(), topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), coreBootstrapper, databaseId, minCoreHosts, new Monitors() );
+        return new ClusterBinder( databaseId, clusterIdStorage, topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
+                Duration.of( 3_000, MILLIS ), coreBootstrapper, minCoreHosts, new Monitors() );
     }
 
     @Test

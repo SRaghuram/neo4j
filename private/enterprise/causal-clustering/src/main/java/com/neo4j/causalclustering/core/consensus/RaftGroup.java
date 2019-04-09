@@ -106,9 +106,7 @@ public class RaftGroup
         monitors.addMonitorListener( durationSinceLastMessageMonitor );
         dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
-        // TODO: Multi-clustering and this setting should die.
-        DatabaseId dbId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
-        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, dbId ) );
+        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, databaseId ) );
 
         life.add( logShipping );
 

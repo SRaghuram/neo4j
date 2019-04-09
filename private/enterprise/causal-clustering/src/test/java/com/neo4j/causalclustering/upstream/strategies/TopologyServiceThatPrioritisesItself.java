@@ -15,10 +15,8 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -26,6 +24,8 @@ import java.util.UUID;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
 {
@@ -89,15 +89,17 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         AdvertisedSocketAddress anyRaftAddress = new AdvertisedSocketAddress( "hostname", 1234 );
         AdvertisedSocketAddress anyCatchupServer = new AdvertisedSocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
-        Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, new DatabaseId( "dbName" ), false );
+        Set<String> groups = Set.of( groupNames );
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
     }
 
     private static ReadReplicaInfo readReplicaInfo( String... groupNames )
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 2468 );
-        Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, new DatabaseId( "dbName" ) );
+        Set<String> groups = Set.of( groupNames );
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 }

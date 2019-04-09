@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
@@ -36,12 +37,13 @@ import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
+import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isIn;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 class UserDefinedConfigurationStrategyTest
@@ -182,10 +184,12 @@ class UserDefinedConfigurationStrategyTest
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
     {
-        return new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
-                new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
-                        new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) ),
-                new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ), groupGenerator.apply( memberId ), new DatabaseId( "default" ) );
+        ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( List.of(
+                new ConnectorUri( bolt, new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
+        AdvertisedSocketAddress catchupAddress = new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() );
+        Set<String> groups = groupGenerator.apply( memberId );
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
     }
 
     private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( CoreTopology coreTopology, ReadReplicaTopology rrTopology )

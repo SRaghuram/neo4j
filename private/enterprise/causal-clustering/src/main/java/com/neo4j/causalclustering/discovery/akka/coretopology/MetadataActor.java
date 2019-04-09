@@ -13,26 +13,26 @@ import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForMemberId>>
 {
-    static Props props( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
+    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
     {
         return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config, logProvider ) );
     }
 
     static final String MEMBER_DATA_KEY = "member-data";
-    private final MemberId myself;
+    private final DiscoveryMember myself;
 
     private final ActorRef topologyActor;
     private final Config config;
 
-    public MetadataActor( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
+    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
     {
         super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty, logProvider );
         this.myself = myself;
@@ -49,7 +49,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     public void sendInitialDataToReplicator()
     {
-        CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself, CoreServerInfo.from( config ) );
+        CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself.id(), new CoreServerInfo( config, myself.databaseNames() ) );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 

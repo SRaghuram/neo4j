@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
-import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestTopology}
+import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
@@ -158,7 +158,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val clusterClientProbe = TestProbe()
     val props = ClientTopologyActor.props(
-      memberId,
+      new TestDiscoveryMember(memberId),
       coreTopologySink,
       readReplicaTopologySink,
       discoverySink,

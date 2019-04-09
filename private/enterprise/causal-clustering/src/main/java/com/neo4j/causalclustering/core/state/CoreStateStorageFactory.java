@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.ClusterId;
-import com.neo4j.causalclustering.identity.DatabaseName;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.File;
@@ -50,11 +49,6 @@ public class CoreStateStorageFactory
     public SimpleStorage<MemberId> createMemberIdStorage()
     {
         return createSimpleStorage( layout.memberIdStateFile(), CoreStateFiles.CORE_MEMBER_ID );
-    }
-
-    public SimpleStorage<DatabaseName> createMultiClusteringDbNameStorage()
-    {
-        return createSimpleStorage( layout.multiClusteringDbNameStateFile(), CoreStateFiles.DB_NAME );
     }
 
     public StateStorage<IdAllocationState> createIdAllocationStorage( DatabaseId databaseId, LifeSupport life )

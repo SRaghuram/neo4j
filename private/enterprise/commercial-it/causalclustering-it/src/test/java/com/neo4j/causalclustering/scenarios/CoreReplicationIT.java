@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -60,6 +61,7 @@ class CoreReplicationIT
             .withNumberOfCoreMembers( 3 )
             .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
             .withNumberOfReadReplicas( 0 )
+            .withDiscoveryServiceType( DiscoveryServiceType.AKKA )
             .withTimeout( 1000, SECONDS );
 
     @BeforeAll

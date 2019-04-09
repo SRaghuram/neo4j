@@ -42,5 +42,6 @@ public interface TopologyService extends Lifecycle
 
     Map<MemberId,RoleInfo> allCoreRoles();
 
+    // todo: rename to myId?
     MemberId myself();
 }

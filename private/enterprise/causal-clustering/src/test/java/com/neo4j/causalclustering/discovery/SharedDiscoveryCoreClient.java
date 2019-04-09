@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -30,19 +31,19 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
 
     SharedDiscoveryCoreClient( SharedDiscoveryService sharedDiscoveryService,
-            MemberId member, LogProvider logProvider, Config config )
+            DiscoveryMember myself, LogProvider logProvider, Config config )
     {
-        super( config, member, logProvider, logProvider );
+        super( config, myself, logProvider, logProvider );
         this.localDatabaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) ) ;
         this.sharedDiscoveryService = sharedDiscoveryService;
-        this.coreServerInfo = CoreServerInfo.from( config );
+        this.coreServerInfo = new CoreServerInfo( config, Set.of( localDatabaseId ) ); // todo: no db name like this!
         this.refusesToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
     }
 
     @Override
     public int compareTo( SharedDiscoveryCoreClient o )
     {
-        return Optional.ofNullable( o ).map( c -> c.myself.getUuid().compareTo( this.myself.getUuid() ) ).orElse( -1 );
+        return Optional.ofNullable( o ).map( c -> c.myself().getUuid().compareTo( this.myself().getUuid() ) ).orElse( -1 );
     }
 
     @Override
@@ -131,11 +132,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
         sharedDiscoveryService.casLeaders( steppingDown, databaseId );
-    }
-
-    public MemberId getMemberId()
-    {
-        return myself;
     }
 
     public CoreServerInfo getCoreServerInfo()

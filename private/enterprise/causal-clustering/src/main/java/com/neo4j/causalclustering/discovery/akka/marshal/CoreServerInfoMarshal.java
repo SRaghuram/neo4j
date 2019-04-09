@@ -34,15 +34,24 @@ public class CoreServerInfoMarshal extends SafeChannelMarshal<CoreServerInfo>
         AdvertisedSocketAddress raftServer = advertisedSocketAddressMarshal.unmarshal( channel );
         AdvertisedSocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
         ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
+
         int groupsSize = channel.getInt();
         Set<String> groups = new HashSet<>( groupsSize );
         for ( int i = 0; i < groupsSize; i++ )
         {
             groups.add( StringMarshal.unmarshal( channel ) );
         }
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+
+        int databaseIdsSize = channel.getInt();
+        Set<DatabaseId> databaseIds = new HashSet<>( groupsSize );
+        for ( int i = 0; i < databaseIdsSize; i++ )
+        {
+            databaseIds.add( DatabaseIdMarshal.INSTANCE.unmarshal( channel ) );
+        }
+
         boolean refuseToBeLeader = BooleanMarshal.unmarshal( channel );
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectorAddresses, groups, databaseId, refuseToBeLeader );
+
+        return new CoreServerInfo( raftServer, catchupServer, clientConnectorAddresses, groups, databaseIds, refuseToBeLeader );
     }
 
     @Override
@@ -51,12 +60,19 @@ public class CoreServerInfoMarshal extends SafeChannelMarshal<CoreServerInfo>
         advertisedSocketAddressMarshal.marshal( coreServerInfo.getRaftServer(), channel );
         advertisedSocketAddressMarshal.marshal( coreServerInfo.getCatchupServer(), channel );
         clientConnectorAddressesMarshal.marshal( coreServerInfo.connectors(), channel );
+
         channel.putInt( coreServerInfo.groups().size() );
         for ( String group : coreServerInfo.groups() )
         {
             StringMarshal.marshal( channel, group );
         }
-        DatabaseIdMarshal.INSTANCE.marshal( coreServerInfo.getDatabaseId(), channel );
+
+        channel.putInt( coreServerInfo.getDatabaseIds().size() );
+        for ( DatabaseId databaseId : coreServerInfo.getDatabaseIds() )
+        {
+            DatabaseIdMarshal.INSTANCE.marshal( databaseId, channel );
+        }
+
         BooleanMarshal.marshal( channel, coreServerInfo.refusesToBeLeader() );
     }
 }

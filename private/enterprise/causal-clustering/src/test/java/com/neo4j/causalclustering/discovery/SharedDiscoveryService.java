@@ -81,7 +81,7 @@ public final class SharedDiscoveryService
 
     void registerCoreMember( SharedDiscoveryCoreClient client )
     {
-        CoreServerInfo previousMember = coreMembers.putIfAbsent( client.getMemberId(), client.getCoreServerInfo() );
+        CoreServerInfo previousMember = coreMembers.putIfAbsent( client.myself(), client.getCoreServerInfo() );
         if ( previousMember == null )
         {
 
@@ -93,7 +93,7 @@ public final class SharedDiscoveryService
 
     void registerReadReplica( SharedDiscoveryReadReplicaClient client )
     {
-        ReadReplicaInfo previousRR = readReplicas.putIfAbsent( client.getMemberId(), client.getReadReplicainfo() );
+        ReadReplicaInfo previousRR = readReplicas.putIfAbsent( client.myself(), client.getReadReplicaInfo() );
         if ( previousRR == null )
         {
             notifyCoreClients();
@@ -105,14 +105,14 @@ public final class SharedDiscoveryService
         synchronized ( this )
         {
             listeningClients.remove( client );
-            coreMembers.remove( client.getMemberId() );
+            coreMembers.remove( client.myself() );
         }
         notifyCoreClients();
     }
 
     void unRegisterReadReplica( SharedDiscoveryReadReplicaClient client )
     {
-        readReplicas.remove( client.getMemberId() );
+        readReplicas.remove( client.myself() );
         notifyCoreClients();
     }
 

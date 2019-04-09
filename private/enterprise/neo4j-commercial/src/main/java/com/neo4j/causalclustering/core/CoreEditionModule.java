@@ -32,6 +32,8 @@ import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DefaultDiscoveryMember;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
@@ -93,6 +95,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -371,9 +374,12 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager,
             IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( identityModule.myself(), () -> databaseManager );
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseManager, temporaryDatabaseFactory,
-                sslPolicyLoader, databaseId -> databaseInitializerMap.getOrDefault( databaseId, DatabaseInitializer.NO_INITIALIZATION ) );
+        Function<DatabaseId,DatabaseInitializer> databaseInitializer = id -> databaseInitializerMap.getOrDefault( id, DatabaseInitializer.NO_INITIALIZATION );
+
+        return new ClusteringModule( defaultDatabaseId, discoveryServiceFactory, discoveryMember, globalModule, storageFactory,
+                databaseManager, temporaryDatabaseFactory, sslPolicyLoader, databaseInitializer );
     }
 
     private void createDatabaseManagerDependentModules( final ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager )

@@ -13,6 +13,7 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -33,12 +34,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 {
     private final Config config;
     private final ActorSystemLifecycle actorSystemLifecycle;
-    private final MemberId myself;
+    private final DiscoveryMember myself;
     private final Log log;
     private final LogProvider logProvider;
     private final TopologyState topologyState;
 
-    public AkkaTopologyClient( Config config, LogProvider logProvider, MemberId myself, ActorSystemLifecycle actorSystemLifecycle )
+    public AkkaTopologyClient( Config config, LogProvider logProvider, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle )
     {
         this.config = config;
         this.myself = myself;
@@ -119,6 +120,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     @Override
     public MemberId myself()
     {
-        return myself;
+        return myself.id();
     }
 }

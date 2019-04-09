@@ -82,7 +82,7 @@ public class TopologyBuilder
         return memberData.getOpt( member )
                 .map( metadata -> {
                     CoreServerInfo c = metadata.coreServerInfo();
-                    return !c.refusesToBeLeader() && c.getDatabaseId().equals( databaseId );
+                    return !c.refusesToBeLeader() && c.getDatabaseIds().contains( databaseId );
                 })
                 .orElse( false );
     }

@@ -171,7 +171,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
 
     val props = CoreTopologyActor.props(
-      new MemberId(UUID.randomUUID()),
+      new TestDiscoveryMember(),
       topologySink,
       readReplicaProbe.ref,
       replicatorProbe.ref,

@@ -14,7 +14,7 @@ import akka.cluster.Member;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreTopology;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -27,8 +27,8 @@ import org.neo4j.logging.LogProvider;
 
 public class CoreTopologyActor extends AbstractActorWithTimers
 {
-    public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
+    public static Props props( DiscoveryMember myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor,
+            ActorRef replicator, Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         return Props.create( CoreTopologyActor.class,
                 () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config, logProvider ) );
@@ -54,7 +54,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private CoreTopology coreTopology;
 
-    CoreTopologyActor( MemberId myself,
+    private CoreTopologyActor( DiscoveryMember myself,
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             ActorRef readReplicaTopologyActor,
             ActorRef replicator,

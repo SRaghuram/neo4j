@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -57,7 +58,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final ExecutorService executor;
     private final Clock clock;
 
-    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+    public AkkaCoreTopologyService( Config config, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, ExecutorService executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );

@@ -10,11 +10,13 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.Config;
@@ -73,13 +75,19 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
 
     private Map<DatabaseId,List<AdvertisedSocketAddress>> routeEndpoints()
     {
-        Stream<CoreServerInfo> allCoreMemberInfo = topologyService.allCoreServers().members().values().stream();
+        Map<DatabaseId,Set<CoreServerInfo>> coresByDb = new HashMap<>();
 
-        Map<DatabaseId, List<CoreServerInfo>> coresByDb = allCoreMemberInfo.collect( Collectors.groupingBy( CoreServerInfo::getDatabaseId ) );
-
-        Function<Map.Entry<DatabaseId,List<CoreServerInfo>>,List<AdvertisedSocketAddress>> extractQualifiedBoltAddresses = entry ->
+        for ( CoreServerInfo info : topologyService.allCoreServers().members().values() )
         {
-            List<CoreServerInfo> cores = entry.getValue();
+            for ( DatabaseId databaseId : info.getDatabaseIds() )
+            {
+                coresByDb.computeIfAbsent( databaseId, ignore -> new HashSet<>() ).add( info );
+            }
+        }
+
+        Function<Map.Entry<DatabaseId,Set<CoreServerInfo>>,List<AdvertisedSocketAddress>> extractQualifiedBoltAddresses = entry ->
+        {
+            Set<CoreServerInfo> cores = entry.getValue();
             return cores.stream().map( ClientConnector::boltAddress ).collect( Collectors.toList() );
         };
 

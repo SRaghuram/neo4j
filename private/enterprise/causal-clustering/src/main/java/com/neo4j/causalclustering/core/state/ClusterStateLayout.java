@@ -60,11 +60,6 @@ public class ClusterStateLayout
         return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );
     }
 
-    public File multiClusteringDbNameStateFile()
-    {
-        return globalClusterStateFile( CoreStateFiles.DB_NAME );
-    }
-
     public File idAllocationStateDirectory( DatabaseId databaseId )
     {
         return databaseClusterStateDirectory( CoreStateFiles.ID_ALLOCATION, databaseId );

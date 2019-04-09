@@ -118,7 +118,7 @@ public class TopologyTest
         public Topology<ReadReplicaInfo> filterTopologyByDb( DatabaseId databaseId )
         {
             Map<MemberId, ReadReplicaInfo> newMembers = this.members.entrySet().stream()
-                    .filter( e -> e.getValue().getDatabaseId().equals( databaseId ) )
+                    .filter( e -> e.getValue().getDatabaseIds().contains( databaseId ) )
                     .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
             return new TestTopology( newMembers );
         }

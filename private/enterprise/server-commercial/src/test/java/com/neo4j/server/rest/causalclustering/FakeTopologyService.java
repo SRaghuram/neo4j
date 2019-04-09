@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,13 +29,14 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
     private final ClusterId clusterId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
-    private final DatabaseId databaseId = new DatabaseId( "dbName" );
     private final MemberId myself;
 
     FakeTopologyService( Collection<MemberId> cores, Collection<MemberId> replicas, MemberId myself, RoleInfo myselfRole )
@@ -46,7 +48,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
 
         for ( MemberId coreMemberId : cores )
         {
-            CoreServerInfo coreServerInfo = coreServerInfo( databaseId );
+            CoreServerInfo coreServerInfo = coreServerInfo();
             coreMembers.put( coreMemberId, coreServerInfo );
             roles.put( coreMemberId, RoleInfo.FOLLOWER );
         }
@@ -54,44 +56,48 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
         replicaMembers = new HashMap<>();
         for ( MemberId replicaMemberId : replicas )
         {
-            ReadReplicaInfo readReplicaInfo = readReplicaInfo( databaseId );
+            ReadReplicaInfo readReplicaInfo = readReplicaInfo();
             replicaMembers.put( replicaMemberId, readReplicaInfo );
             roles.put( replicaMemberId, RoleInfo.READ_REPLICA );
         }
 
         if ( RoleInfo.READ_REPLICA.equals( myselfRole ) )
         {
-            replicaMembers.put( myself, readReplicaInfo( databaseId ) );
+            replicaMembers.put( myself, readReplicaInfo() );
             roles.put( myself, RoleInfo.READ_REPLICA );
         }
         else
         {
-            coreMembers.put( myself, coreServerInfo( databaseId ) );
+            coreMembers.put( myself, coreServerInfo() );
             roles.put( myself, RoleInfo.FOLLOWER );
         }
         roles.put( myself, myselfRole );
     }
 
-    private CoreServerInfo coreServerInfo( DatabaseId databaseId )
+    private static CoreServerInfo coreServerInfo()
     {
         AdvertisedSocketAddress raftServer = new AdvertisedSocketAddress( "hostname", 1234 );
         AdvertisedSocketAddress catchupServer = new AdvertisedSocketAddress( "hostname", 1234 );
         ClientConnectorAddresses clientConnectors = new ClientConnectorAddresses( Collections.emptyList() );
+        Set<String> groups = Set.of();
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
         boolean refuseToBeLeader = false;
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, databaseId, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, groups, databaseIds, refuseToBeLeader );
     }
 
-    private ReadReplicaInfo readReplicaInfo( DatabaseId databaseId )
+    private static ReadReplicaInfo readReplicaInfo()
     {
-        ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
+        ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( List.of() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 1234 );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, databaseId );
+        Set<String> groups = Set.of();
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 
     @Override
     public DatabaseId localDatabaseId()
     {
-        return databaseId;
+        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -52,12 +52,6 @@ class ClusterStateLayoutTest
     }
 
     @Test
-    void shouldExposeMultiClusteringDbNameStateFile()
-    {
-        assertEquals( path( dataDir, "cluster-state", "db-name-state", "db-name" ), layout.multiClusteringDbNameStateFile() );
-    }
-
-    @Test
     void shouldExposeIdAllocationStateDirectory()
     {
         assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "id-allocation-state" ), layout.idAllocationStateDirectory( DATABASE_ID ) );

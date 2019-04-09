@@ -5,11 +5,15 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.identity.MemberId;
+
 import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-public interface DiscoveryServerInfo extends CatchupServerAddress, ClientConnector, GroupedServer
+public interface DiscoveryMember
 {
-    Set<DatabaseId> getDatabaseIds();
+    MemberId id();
+
+    Set<DatabaseId> databaseIds();
 }

@@ -32,14 +32,22 @@ public class ReadReplicaInfoMarshal extends SafeChannelMarshal<ReadReplicaInfo>
     {
         ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
         AdvertisedSocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
+
         int groupsSize = channel.getInt();
         Set<String> groups = new HashSet<>( groupsSize );
         for ( int i = 0; i < groupsSize; i++ )
         {
             groups.add( StringMarshal.unmarshal( channel ) );
         }
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseId );
+
+        int databaseIdsSize = channel.getInt();
+        Set<DatabaseId> databaseIds = new HashSet<>( groupsSize );
+        for ( int i = 0; i < databaseIdsSize; i++ )
+        {
+            databaseIds.add( DatabaseIdMarshal.INSTANCE.unmarshal( channel ) );
+        }
+
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseIds );
     }
 
     @Override
@@ -47,11 +55,17 @@ public class ReadReplicaInfoMarshal extends SafeChannelMarshal<ReadReplicaInfo>
     {
         clientConnectorAddressesMarshal.marshal( readReplicaInfo.connectors(), channel );
         advertisedSocketAddressMarshal.marshal( readReplicaInfo.getCatchupServer(), channel );
+
         channel.putInt( readReplicaInfo.groups().size() );
         for ( String group : readReplicaInfo.groups() )
         {
             StringMarshal.marshal( channel, group );
         }
-        DatabaseIdMarshal.INSTANCE.marshal( readReplicaInfo.getDatabaseId(), channel );
+
+        channel.putInt( readReplicaInfo.getDatabaseIds().size() );
+        for ( DatabaseId databaseId : readReplicaInfo.getDatabaseIds() )
+        {
+            DatabaseIdMarshal.INSTANCE.marshal( databaseId, channel );
+        }
     }
 }

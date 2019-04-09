@@ -47,7 +47,7 @@ public interface Topology<T extends DiscoveryServerInfo>
 
     default Map<MemberId, T> filterHostsByDb( Map<MemberId,T> s, DatabaseId databaseId )
     {
-        return s.entrySet().stream().filter(e -> e.getValue().getDatabaseId().equals( databaseId ) )
+        return s.entrySet().stream().filter( e -> e.getValue().getDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
     }
 

@@ -10,14 +10,13 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.identity.ClusterId;
-import com.neo4j.causalclustering.identity.DatabaseName;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -46,7 +45,7 @@ public class ClusteringModule
     private final CoreTopologyService topologyService;
     private final ClusterBinder clusterBinder;
 
-    public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
+    public ClusteringModule( DatabaseId databaseId, DiscoveryServiceFactory discoveryServiceFactory, DiscoveryMember myself, GlobalModule globalModule,
             CoreStateStorageFactory storageFactory, ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager,
             TemporaryDatabaseFactory temporaryDatabaseFactory, SslPolicyLoader sslPolicyLoader, Function<DatabaseId,DatabaseInitializer> databaseInitializers )
     {
@@ -73,14 +72,12 @@ public class ClusteringModule
                 globalConfig, logProvider, pageCache, globalModule.getStorageEngineFactory() );
 
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
-        SimpleStorage<DatabaseName> dbNameStorage = storageFactory.createMultiClusteringDbNameStorage();
 
-        DatabaseId databaseId = new DatabaseId( globalConfig.get( CausalClusteringSettings.database ) );
         int minimumCoreHosts = globalConfig.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
 
         Duration clusterBindingTimeout = globalConfig.get( CausalClusteringSettings.cluster_binding_timeout );
-        clusterBinder = new ClusterBinder( clusterIdStorage, dbNameStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, coreBootstrapper, databaseId, minimumCoreHosts, globalMonitors );
+        clusterBinder = new ClusterBinder( databaseId, clusterIdStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ),
+                clusterBindingTimeout, coreBootstrapper, minimumCoreHosts, globalMonitors );
     }
 
     private static RetryStrategy resolveStrategy( Config config )

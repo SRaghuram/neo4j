@@ -9,6 +9,7 @@ import akka.remote.artery.tcp.SSLEngineProvider;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
@@ -16,15 +17,14 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -33,7 +33,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     @Override
-    public final CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
+    public final CoreTopologyService coreTopologyService( Config config, DiscoveryMember myself, JobScheduler jobScheduler, LogProvider logProvider,
             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
             SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
@@ -51,7 +51,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     }
 
     @Override
-    public final TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
+    public final TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, DiscoveryMember myself,
             RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
     {
         return new AkkaTopologyClient(

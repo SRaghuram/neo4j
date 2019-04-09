@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -27,7 +27,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isIn;
 
@@ -119,20 +118,20 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
         for ( MemberId memberId : memberIds )
         {
-            readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
+            readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( wanted ), DATABASE_ID ) );
+                    Set.copyOf( wanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;
         }
 
         for ( int i = 0; i < unwantedNumber; i++ )
         {
-            readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
+            readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( unwanted ), DATABASE_ID ) );
+                    Set.copyOf( unwanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;
         }

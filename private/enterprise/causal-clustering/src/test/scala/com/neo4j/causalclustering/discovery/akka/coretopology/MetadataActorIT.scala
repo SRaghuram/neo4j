@@ -11,8 +11,8 @@ import akka.actor.Address
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
-import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.logging.NullLogProvider
@@ -91,6 +91,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(myself, cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
+    val replicatedDataActorRef = system.actorOf(MetadataActor.props(
+      new TestDiscoveryMember(myself), cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
   }
 }

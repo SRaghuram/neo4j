@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -95,7 +96,7 @@ public class SharedDiscoveryServiceIT
         InitialDiscoveryMembersResolver remoteMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
-        CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, member,
+        CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, new TestDiscoveryMember( member ),
                 jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new NoRetriesStrategy(),
                 sslPolicyLoader, new Monitors(), Clocks.systemClock() );
         return sharedClientStarter( topologyService, expectedTargetSet );

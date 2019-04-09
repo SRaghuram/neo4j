@@ -16,6 +16,8 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.DefaultDiscoveryMember;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
@@ -50,6 +52,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -139,7 +142,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globaConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, myself, hostnameResolver,
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myself, (Supplier) globalDependencies.provideDependency( DatabaseManager.class ) );
+
+        topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, discoveryMember, hostnameResolver,
                 resolveStrategy( globaConfig ), sslPolicyLoader );
 
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );

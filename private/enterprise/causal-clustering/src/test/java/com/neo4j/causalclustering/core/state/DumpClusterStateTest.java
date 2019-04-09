@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.ClusterId;
-import com.neo4j.causalclustering.identity.DatabaseName;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,11 +62,10 @@ class DumpClusterStateTest
         // given
         int numClusterStateItems = 10;
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
-        DatabaseName nonDefaultClusterName = new DatabaseName( new DatabaseId( "foo" ) );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
         ClusterId nonDefaultClusterId = new ClusterId( UUID.randomUUID() );
-        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultClusterName, nonDefaultTermState );
+        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DATABASE_ID );
 
@@ -79,18 +77,15 @@ class DumpClusterStateTest
         assertThat( outStr, allOf(
                 containsString( nonDefaultMember.toString() ),
                 containsString( nonDefaultClusterId.toString() ),
-                containsString( nonDefaultClusterName.toString() ),
                 containsString( nonDefaultTermState.toString() ) ) );
         int lineCount = outStr.split( System.lineSeparator() ).length;
         assertEquals( numClusterStateItems, lineCount );
     }
 
-    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId,
-            DatabaseName nonDefaultClusterName, TermState nonDefaultTermState ) throws IOException
+    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId, TermState nonDefaultTermState ) throws IOException
     {
         // We're writing to 4 pieces of cluster state
         SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
-        SimpleStorage<DatabaseName> clusterNameStorage = storageFactory.createMultiClusteringDbNameStorage();
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
 
         StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life );
@@ -104,7 +99,6 @@ class DumpClusterStateTest
         storageFactory.createRaftVoteStorage( DATABASE_ID, life );
 
         memberIdStorage.writeState( nonDefaultMember );
-        clusterNameStorage.writeState( nonDefaultClusterName );
         termStateStateStorage.persistStoreData( nonDefaultTermState );
         clusterIdStorage.writeState( nonDefaultClusterId );
     }
