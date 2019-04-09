@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -737,7 +739,7 @@ class BoltCausalClusteringIT
     {
         long deadline = System.currentTimeMillis() + (30 * 1000);
 
-        Role role = initialLeader.database().getRole();
+        Role role = getCurrentCoreRole( initialLeader.database() );
         while ( role != Role.FOLLOWER )
         {
             if ( System.currentTimeMillis() > deadline )
@@ -755,10 +757,15 @@ class BoltCausalClusteringIT
             }
             finally
             {
-                role = initialLeader.database().getRole();
+                role = getCurrentCoreRole( initialLeader.database() );
                 Thread.sleep( 100 );
             }
         }
+    }
+
+    private static Role getCurrentCoreRole( CoreGraphDatabase database )
+    {
+        return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     private void triggerElection( CoreClusterMember initialLeader ) throws IOException, TimeoutException

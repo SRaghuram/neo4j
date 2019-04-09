@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 
 import java.io.File;
@@ -38,14 +37,6 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
                 .initFacade( storeDir, config, dependencies, this );
     }
 
-    public Role getRole()
-    {
-        return editionModule
-                .consensusModule()
-                .raftMachine()
-                .currentRole();
-    }
-
     private AbstractEditionModule cachingFactory( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory )
     {
         if ( editionModule == null )
@@ -53,10 +44,5 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
             editionModule = editionModuleFactory.create( globalModule, discoveryServiceFactory );
         }
         return editionModule;
-    }
-
-    public void disableCatchupServer() throws Throwable
-    {
-        editionModule.disableCatchupServer();
     }
 }

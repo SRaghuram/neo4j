@@ -37,11 +37,11 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.Health;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
@@ -107,7 +107,7 @@ public class CoreStatusTest
     public void testAnswersWhenLeader()
     {
         // given
-        when( db.getRole() ).thenReturn( Role.LEADER );
+        when( raftMachine.currentRole() ).thenReturn( Role.LEADER );
 
         // when
         Response available = status.available();
@@ -129,7 +129,7 @@ public class CoreStatusTest
     public void testAnswersWhenCandidate()
     {
         // given
-        when( db.getRole() ).thenReturn( Role.CANDIDATE );
+        when( raftMachine.currentRole() ).thenReturn( Role.CANDIDATE );
 
         // when
         Response available = status.available();
@@ -151,7 +151,7 @@ public class CoreStatusTest
     public void testAnswersWhenFollower()
     {
         // given
-        when( db.getRole() ).thenReturn( Role.FOLLOWER );
+        when( raftMachine.currentRole() ).thenReturn( Role.FOLLOWER );
 
         // when
         Response available = status.available();

@@ -119,6 +119,7 @@ public class ConsensusModule
                 outbound, logProvider, raftMembershipManager, logShipping, inFlightCache,
                 globalConfig.get( refuse_to_be_leader ),
                 supportsPreVoting, globalMonitors );
+        globalDependencies.satisfyDependency( raftMachine );
 
         DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( globalModule.getGlobalClock() );
         globalMonitors.addMonitorListener( durationSinceLastMessageMonitor );
@@ -131,15 +132,14 @@ public class ConsensusModule
         globalLife.add( logShipping );
     }
 
-    private LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )
+    private static LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )
     {
         Duration electionTimeout = config.get( CausalClusteringSettings.leader_election_timeout );
         return new LeaderAvailabilityTimers( electionTimeout, electionTimeout.dividedBy( 3 ), systemClock(), timerService, logProvider );
     }
 
-    private RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
-            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider,
-            JobScheduler scheduler, String defaultDatabaseName )
+    private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
+            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, String defaultDatabaseName )
     {
         RaftLogImplementation raftLogImplementation =
                 RaftLogImplementation

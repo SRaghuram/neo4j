@@ -7,6 +7,7 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -22,6 +23,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
@@ -68,9 +70,14 @@ class CausalClusterStatusEndpointHelpers
     {
         return cluster.getCoreNeo4j()
                 .stream()
-                .filter( core -> Role.LEADER.equals( ((CoreGraphDatabase) core.graph()).getRole() ) )
+                .filter( core -> Role.LEADER.equals( getCurrentCoreRole( core ) ) )
                 .findAny()
                 .orElseThrow( () -> new IllegalStateException( "Leader does not exist" ) );
+    }
+
+    private static Role getCurrentCoreRole( InProcessNeo4j core )
+    {
+        return ((CoreGraphDatabase) core.graph()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     static Boolean[] availabilityStatuses( URI server )

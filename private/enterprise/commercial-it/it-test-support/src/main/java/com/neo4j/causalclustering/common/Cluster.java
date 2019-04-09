@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.LeaderCanWrite;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.state.machines.id.IdGenerationException;
 import com.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -62,8 +63,8 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.lock.AcquireLockTimeoutException;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
@@ -410,13 +411,18 @@ public class Cluster
 
             if ( m.dbName().equals( dbName ) )
             {
-                if ( roleSet.contains( database.getRole() ) )
+                if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
                 {
                     list.add( m );
                 }
             }
         }
         return list;
+    }
+
+    private static Role getCurrentDatabaseRole( CoreGraphDatabase database )
+    {
+        return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     public CoreClusterMember awaitLeader() throws TimeoutException

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.server;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
+import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
@@ -49,7 +50,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class CoreServerModule
+public class CoreServerModule implements CatchupServerProvider
 {
     private final MembershipWaiterLifecycle membershipWaiterLifecycle;
     private final IdentityModule identityModule;
@@ -144,6 +145,7 @@ public class CoreServerModule
         return catchupComponentsRepository;
     }
 
+    @Override
     public Server catchupServer()
     {
         return catchupServer;

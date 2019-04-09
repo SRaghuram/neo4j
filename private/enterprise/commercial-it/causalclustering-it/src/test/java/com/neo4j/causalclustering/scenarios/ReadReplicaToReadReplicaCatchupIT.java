@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -67,7 +68,7 @@ public class ReadReplicaToReadReplicaCatchupIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            coreClusterMember.disableCatchupServer();
+            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().disable();
         }
 
         // when

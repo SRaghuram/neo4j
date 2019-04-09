@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -33,7 +34,6 @@ import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BAS
 class CoreStatus extends BaseStatus
 {
     private final OutputFormat output;
-    private final CoreGraphDatabase db;
 
     // Dependency resolved
     private final RaftMembershipManager raftMembershipManager;
@@ -43,12 +43,12 @@ class CoreStatus extends BaseStatus
     private final RaftMachine raftMachine;
     private final CommandIndexTracker commandIndexTracker;
     private final ThroughputMonitor throughputMonitor;
+    private final RoleProvider roleProvider;
 
     CoreStatus( OutputFormat output, CoreGraphDatabase db )
     {
         super( output );
         this.output = output;
-        this.db = db;
 
         DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
@@ -56,8 +56,9 @@ class CoreStatus extends BaseStatus
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.raftMachine = dependencyResolver.resolveDependency( RaftMachine.class );
         this.raftMessageTimerResetMonitor = dependencyResolver.resolveDependency( DurationSinceLastMessageMonitor.class );
-        commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
-        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
+        this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
+        this.throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
+        this.roleProvider = dependencyResolver.resolveDependency( RoleProvider.class );
     }
 
     @Override
@@ -75,14 +76,14 @@ class CoreStatus extends BaseStatus
     @Override
     public Response readonly()
     {
-        Role role = db.getRole();
+        Role role = roleProvider.currentRole();
         return Arrays.asList( Role.FOLLOWER, Role.CANDIDATE ).contains( role ) ? positiveResponse() : negativeResponse();
     }
 
     @Override
     public Response writable()
     {
-        return db.getRole() == Role.LEADER ? positiveResponse() : negativeResponse();
+        return roleProvider.currentRole() == Role.LEADER ? positiveResponse() : negativeResponse();
     }
 
     @Override

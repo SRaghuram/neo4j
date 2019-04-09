@@ -276,21 +276,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    ConsensusModule consensusModule()
-    {
-        return consensusModule;
-    }
-
-    @Override
     CoreStateService coreStateComponents()
     {
         return coreStateService;
-    }
-
-    @Override
-    void disableCatchupServer() throws Throwable
-    {
-        coreServerModule.catchupServer().disable();
     }
 
     public boolean isLeader()
@@ -419,6 +407,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
                 replicationModule, databaseManager, globalHealth, catchupComponentsProvider, serverInstalledProtocolHandler,
                 handlerFactory, panicService );
+        globalModule.getGlobalDependencies().satisfyDependency( coreServerModule );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, globalConfig, logProvider, identityModule.myself() );

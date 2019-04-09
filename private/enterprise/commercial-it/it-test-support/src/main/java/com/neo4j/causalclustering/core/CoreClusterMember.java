@@ -310,11 +310,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return clusterStateLayout.raftLogDirectory( defaultDatabaseName );
     }
 
-    public void disableCatchupServer() throws Throwable
-    {
-        database.disableCatchupServer();
-    }
-
     public int discoveryPort()
     {
         return discoveryPort;

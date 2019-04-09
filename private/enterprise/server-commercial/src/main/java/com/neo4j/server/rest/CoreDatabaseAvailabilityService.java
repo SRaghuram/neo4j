@@ -5,6 +5,9 @@
  */
 package com.neo4j.server.rest;
 
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.server.rest.causalclustering.CausalClusteringService;
 
 import javax.ws.rs.GET;
@@ -12,8 +15,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -30,31 +31,28 @@ import static javax.ws.rs.core.Response.status;
 @Path( CoreDatabaseAvailabilityService.BASE_PATH )
 public class CoreDatabaseAvailabilityService implements AdvertisableService
 {
+    private static final RoleProvider EMPTY_PROVIDER = () -> null;
     public static final String BASE_PATH = "server/core";
     public static final String IS_WRITABLE_PATH = "/writable";
     public static final String IS_AVAILABLE_PATH = "/available";
     public static final String IS_READ_ONLY_PATH = "/read-only";
 
     private final OutputFormat output;
-    private final CoreGraphDatabase coreDatabase;
+    private final boolean notCoreDatabaseType;
+    private final RoleProvider roleProvider;
 
     public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context GraphDatabaseService db )
     {
         this.output = output;
-        if ( db instanceof CoreGraphDatabase )
-        {
-            this.coreDatabase = (CoreGraphDatabase) db;
-        }
-        else
-        {
-            this.coreDatabase = null;
-        }
+        this.roleProvider = db instanceof CoreGraphDatabase ? ((CoreGraphDatabase) db).getDependencyResolver().resolveDependency( RoleProvider.class ) :
+                                                              EMPTY_PROVIDER;
+        this.notCoreDatabaseType = true;
     }
 
     @GET
     public Response discover()
     {
-        if ( coreDatabase == null )
+        if ( notCoreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
@@ -66,12 +64,12 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     @Path( IS_WRITABLE_PATH )
     public Response isWritable()
     {
-        if ( coreDatabase == null )
+        if ( notCoreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
 
-        if ( coreDatabase.getRole() == Role.LEADER )
+        if ( roleProvider.currentRole() == Role.LEADER )
         {
             return positiveResponse();
         }
@@ -83,12 +81,13 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     @Path( IS_READ_ONLY_PATH )
     public Response isReadOnly()
     {
-        if ( coreDatabase == null )
+        if ( notCoreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
 
-        if ( coreDatabase.getRole() == Role.FOLLOWER || coreDatabase.getRole() == Role.CANDIDATE )
+        Role currentRole = roleProvider.currentRole();
+        if ( currentRole == Role.FOLLOWER || currentRole == Role.CANDIDATE )
         {
             return positiveResponse();
         }
@@ -100,27 +99,12 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     @Path( IS_AVAILABLE_PATH )
     public Response isAvailable()
     {
-        if ( coreDatabase == null )
+        if ( notCoreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
 
         return positiveResponse();
-    }
-
-    private Response negativeResponse()
-    {
-        return plainTextResponse( NOT_FOUND, "false" );
-    }
-
-    private Response positiveResponse()
-    {
-        return plainTextResponse( OK, "true" );
-    }
-
-    private Response plainTextResponse( Response.Status status, String entityBody )
-    {
-        return status( status ).type( TEXT_PLAIN_TYPE ).entity( entityBody ).build();
     }
 
     @Override
@@ -133,5 +117,20 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     public String getServerPath()
     {
         return BASE_PATH;
+    }
+
+    private static Response negativeResponse()
+    {
+        return plainTextResponse( NOT_FOUND, "false" );
+    }
+
+    private static Response positiveResponse()
+    {
+        return plainTextResponse( OK, "true" );
+    }
+
+    private static Response plainTextResponse( Response.Status status, String entityBody )
+    {
+        return status( status ).type( TEXT_PLAIN_TYPE ).entity( entityBody ).build();
     }
 }

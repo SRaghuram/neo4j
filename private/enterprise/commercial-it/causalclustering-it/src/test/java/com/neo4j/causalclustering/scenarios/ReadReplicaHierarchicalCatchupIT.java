@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -12,11 +13,9 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,21 +25,7 @@ import static org.neo4j.graphdb.Label.label;
 
 public class ReadReplicaHierarchicalCatchupIT
 {
-    private Map<Integer,String> serverGroups = new HashMap<>();
-
-    @Before
-    public void setup()
-    {
-        serverGroups.put( 0, "NORTH" );
-        serverGroups.put( 1, "NORTH" );
-        serverGroups.put( 2, "NORTH" );
-
-        serverGroups.put( 3, "EAST" );
-        serverGroups.put( 5, "EAST" );
-
-        serverGroups.put( 4, "WEST" );
-        serverGroups.put( 6, "WEST" );
-    }
+    private static final Map<Integer,String> serverGroups = Map.of( 0, "NORTH", 1, "NORTH", 2, "NORTH", 3, "EAST", 5, "EAST", 4, "WEST", 6, "WEST" );
 
     @Rule
     public ClusterRule clusterRule =
@@ -54,8 +39,8 @@ public class ReadReplicaHierarchicalCatchupIT
     public void shouldCatchupThroughHierarchy() throws Throwable
     {
         clusterRule = clusterRule
-                .withInstanceReadReplicaParam( CausalClusteringSettings.server_groups, id -> serverGroups.get( id ) )
-                .withInstanceCoreParam( CausalClusteringSettings.server_groups, id -> serverGroups.get( id ) );
+                .withInstanceReadReplicaParam( CausalClusteringSettings.server_groups, serverGroups::get )
+                .withInstanceCoreParam( CausalClusteringSettings.server_groups, serverGroups::get );
 
         // given
         Cluster cluster = clusterRule.startCluster();
@@ -81,7 +66,7 @@ public class ReadReplicaHierarchicalCatchupIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            coreClusterMember.disableCatchupServer();
+            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().disable();
         }
 
         // 5, 6 are other DCs
