@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import javax.ws.rs.core.Response;
@@ -77,7 +76,7 @@ class CoreStatus extends BaseStatus
     public Response readonly()
     {
         Role role = roleProvider.currentRole();
-        return Arrays.asList( Role.FOLLOWER, Role.CANDIDATE ).contains( role ) ? positiveResponse() : negativeResponse();
+        return ((Role.FOLLOWER == role) || (Role.CANDIDATE == role)) ? positiveResponse() : negativeResponse();
     }
 
     @Override
