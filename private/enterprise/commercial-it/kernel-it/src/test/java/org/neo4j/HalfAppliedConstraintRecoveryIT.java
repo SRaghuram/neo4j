@@ -323,7 +323,8 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors ).newImpermanentService();
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs )
+                .setMonitors( monitors ).newImpermanentService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
