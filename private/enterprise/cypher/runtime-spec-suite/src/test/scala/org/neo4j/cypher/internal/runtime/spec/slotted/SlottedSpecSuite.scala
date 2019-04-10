@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ArgumentTestBase, DistinctTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, LimitTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase, OrderedDistinctTestBase, PartialSortTestBase, PartialTop1TestBase, PartialTopNTestBase, ProjectionTestBase, UnwindTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ArgumentTestBase, DistinctTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, LimitTestBase, NodeHashJoinTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase, OrderedDistinctTestBase, PartialSortTestBase, PartialTop1TestBase, PartialTopNTestBase, ProjectionTestBase, SortTestBase, UnwindTestBase}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
 
 object SlottedSpecSuite {
@@ -26,6 +26,7 @@ class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.SINGLE_T
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
 class SlottedInputTest extends InputTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialSortTest extends PartialSortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedSortTest extends SortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialTopNTest extends PartialTopNTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialTop1Test extends PartialTop1TestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedFilterTest extends FilterTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)

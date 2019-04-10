@@ -255,4 +255,7 @@ class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime
 //    } yield Array(a, b, c)
 //    runtimeResult should beColumns("a", "b", "c").withRows(expected)
 //  }
+
+  // SORT
+  class MorselSortTest extends SortTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 }

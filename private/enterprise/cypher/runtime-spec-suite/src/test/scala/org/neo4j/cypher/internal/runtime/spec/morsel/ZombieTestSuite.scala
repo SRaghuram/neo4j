@@ -10,8 +10,7 @@ import java.util.concurrent.{Callable, Executors, TimeUnit}
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.runtime.spec.tests.{ExpandAllTestBase, LimitTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{ExpandAllTestBase, LimitTestBase, SortTestBase, _}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.result.RuntimeResult
 
@@ -78,6 +77,10 @@ class ZombieLimitNoFusingTest extends LimitTestBase(ENTERPRISE.PARALLEL_NO_FUSIN
 class ZombieUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 class ZombieUnwindNoFusingTest extends UnwindTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieUnwindStressTest extends UnwindStressTestBase(ZombieRuntime)
+
+// SORT
+class ZombieSortTest extends SortTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
+class ZombieSortNoFusingTest extends SortTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, 1000)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
