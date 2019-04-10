@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
@@ -34,7 +35,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
             DiscoveryMember myself, LogProvider logProvider, Config config )
     {
         super( config, myself, logProvider, logProvider );
-        this.localDatabaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) ) ;
+        this.localDatabaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         this.sharedDiscoveryService = sharedDiscoveryService;
         this.coreServerInfo = new CoreServerInfo( config, Set.of( localDatabaseId ) ); // todo: no db name like this!
         this.refusesToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );

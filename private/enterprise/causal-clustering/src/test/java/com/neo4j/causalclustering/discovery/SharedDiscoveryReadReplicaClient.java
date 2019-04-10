@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -34,7 +35,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
             LogProvider logProvider )
     {
         this.sharedDiscoveryService = sharedDiscoveryService;
-        this.databaseId = new DatabaseId( config.get( CausalClusteringSettings.database ) );
+        this.databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         this.addresses = new ReadReplicaInfo( ClientConnectorAddresses.extractFromConfig( config ),
                 socketAddress( config.get( CausalClusteringSettings.transaction_advertised_address ).toString(),
                         AdvertisedSocketAddress::new ), Set.of(), Set.of( databaseId ) ); // todo: no dbName like this!

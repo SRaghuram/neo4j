@@ -125,10 +125,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
-        // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
-        //  also an exception needs to be thrown when topology for the specified database is empty
-        // return topologyService.allCoreServers().filterTopologyByDb( databaseId );
-        return topologyService.allCoreServers();
+        return topologyService.coreServersForDatabase( databaseId.name() );
     }
 
     private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )

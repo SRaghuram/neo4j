@@ -14,6 +14,8 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
+// todo: use DatabaseId instead of String
+
 /**
  * Provides a read-only service for the eventually consistent topology information.
  */

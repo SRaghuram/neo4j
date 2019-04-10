@@ -34,6 +34,7 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
@@ -67,7 +68,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
-    private final DatabaseId databaseId;
     private final File databasesDirectory;
     private final CoreGraphDatabaseFactory dbFactory;
     private volatile boolean hasPanicked;
@@ -144,7 +144,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         databasesDirectory = new File( dataDir, "databases" );
         memberConfig = Config.defaults( config );
 
-        this.databaseId = new DatabaseId( memberConfig.get( CausalClusteringSettings.database ) );
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
         this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
@@ -264,7 +263,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
     public DatabaseId databaseId()
     {
-        return databaseId;
+        return database.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
     }
 
     @Override

@@ -97,6 +97,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
+    public CoreTopology coreServersForDatabase( String databaseName )
+    {
+        return globalTopologyState.coreTopologyForDatabase( databaseName );
+    }
+
+    @Override
     public ReadReplicaTopology allReadReplicas()
     {
         return globalTopologyState.readReplicaTopology();

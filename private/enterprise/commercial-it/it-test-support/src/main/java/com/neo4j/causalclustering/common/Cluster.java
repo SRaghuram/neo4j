@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -30,7 +29,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,6 +49,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
@@ -93,7 +92,6 @@ public class Cluster
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final String listenAddress;
     private final String advertisedAddress;
-    private final Set<DatabaseId> databaseIds;
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
@@ -105,17 +103,6 @@ public class Cluster
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard )
-    {
-        this( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
-                instanceReadReplicaParams, recordFormat, ipFamily, useWildcard,
-                Collections.singleton( new DatabaseId( CausalClusteringSettings.database.getDefaultValue() ) ) );
-    }
-
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
-            Map<String,String> coreParams,
-            Map<String,IntFunction<String>> instanceCoreParams,
-            Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard, Set<DatabaseId> databaseIds )
     {
         this.discoveryServiceFactory = discoveryServiceFactory;
         this.parentDir = parentDir;
@@ -129,7 +116,6 @@ public class Cluster
         List<AdvertisedSocketAddress> initialHosts = initialHosts( noOfCoreMembers );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
-        this.databaseIds = databaseIds;
     }
 
     private List<AdvertisedSocketAddress> initialHosts( int noOfCoreMembers )
@@ -357,14 +343,6 @@ public class Cluster
         return firstOrNull( readReplicas.values() );
     }
 
-    private void ensureDBName( DatabaseId databaseId ) throws IllegalArgumentException
-    {
-        if ( !databaseIds.contains( databaseId ) )
-        {
-            throw new IllegalArgumentException( "Database name " + databaseId + " does not exist in this cluster." );
-        }
-    }
-
     private CoreClusterMember getMemberWithRole( Role role )
     {
         return getMemberWithAnyRole( role );
@@ -382,14 +360,16 @@ public class Cluster
 
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        var dbName = new DatabaseId( CausalClusteringSettings.database.getDefaultValue() );
-        return getMemberWithAnyRole( dbName, roles );
+        // todo: do not use default DB name like this, callers should always specify the database instead
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        return getMemberWithAnyRole( databaseId, roles );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
     {
-        var dbName = new DatabaseId( CausalClusteringSettings.database.getDefaultValue() );
-        return getAllMembersWithAnyRole( dbName, roles );
+        // todo: do not use default DB name like this, callers should always specify the database instead
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        return getAllMembersWithAnyRole( databaseId, roles );
     }
 
     public CoreClusterMember getMemberWithAnyRole( DatabaseId databaseId, Role... roles )
@@ -399,7 +379,6 @@ public class Cluster
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( DatabaseId databaseId, Role... roles )
     {
-        ensureDBName( databaseId );
         Set<Role> roleSet = Arrays.stream( roles ).collect( toSet() );
 
         List<CoreClusterMember> list = new ArrayList<>();
@@ -465,12 +444,14 @@ public class Cluster
 
     public int numberOfCoreMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( service -> service.coreServersForDatabase( databaseName ) );
+        DatabaseId databaseId = new DatabaseId( databaseName );
+        return numberOfMembersReportedByCoreTopology( service -> service.coreServersForDatabase( databaseId ) );
     }
 
     public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( service -> service.readReplicasForDatabase( databaseName ) );
+        DatabaseId databaseId = new DatabaseId( databaseName );
+        return numberOfMembersReportedByCoreTopology( service -> service.readReplicasForDatabase( databaseId ) );
     }
 
     private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology> topologySelector )
@@ -495,7 +476,8 @@ public class Cluster
      */
     public CoreClusterMember coreTx( BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
     {
-        var databaseId = new DatabaseId( CausalClusteringSettings.database.getDefaultValue() );
+        // todo: do not use default DB name like this, callers should always specify the database instead
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return coreTx( databaseId, op );
     }
 
@@ -504,7 +486,6 @@ public class Cluster
      */
     public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
     {
-        ensureDBName( databaseId );
         return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -133,10 +132,7 @@ public class ReadReplicaStartupProcessTest
     private UpstreamDatabaseStrategySelector chooseFirstMember()
     {
         AlwaysChooseFirstMember firstMember = new AlwaysChooseFirstMember();
-        Config config = mock( Config.class );
-        when( config.get( CausalClusteringSettings.database ) ).thenReturn( "default" );
-        firstMember.inject( topologyService, config, NullLogProvider.getInstance(), null);
-
+        firstMember.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
         return new UpstreamDatabaseStrategySelector( firstMember );
     }
 

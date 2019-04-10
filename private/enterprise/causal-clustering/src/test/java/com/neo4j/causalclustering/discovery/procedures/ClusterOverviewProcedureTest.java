@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -38,7 +37,6 @@ import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewProcedureTest
@@ -80,16 +78,17 @@ public class ClusterOverviewProcedureTest
         // when
         final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
 
-        assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, asSet( "core", "core0" ) ) );
+        // todo: test with multiple databases
+        assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, Set.of( "core", "core0" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( follower1.getUuid(), 5001, RoleInfo.FOLLOWER, asSet( "core", "core1" ) ) );
+                new IsRecord( follower1.getUuid(), 5001, RoleInfo.FOLLOWER, Set.of( "core", "core1" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( follower2.getUuid(), 5002, RoleInfo.FOLLOWER, asSet( "core", "core2" ) ) );
+                new IsRecord( follower2.getUuid(), 5002, RoleInfo.FOLLOWER, Set.of( "core", "core2" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
 
         assertThat( members.next(),
-                new IsRecord( replica4.getUuid(), 6004, RoleInfo.READ_REPLICA, asSet( "replica", "replica4" ) ) );
+                new IsRecord( replica4.getUuid(), 6004, RoleInfo.READ_REPLICA, Set.of( "replica", "replica4" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( replica5.getUuid(), 6005, RoleInfo.READ_REPLICA, asSet( "replica", "replica5" ) ) );
+                new IsRecord( replica5.getUuid(), 6005, RoleInfo.READ_REPLICA, Set.of( "replica", "replica5" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
 
         assertFalse( members.hasNext() );
     }
@@ -100,15 +99,15 @@ public class ClusterOverviewProcedureTest
         private final int boltPort;
         private final RoleInfo role;
         private final Set<String> groups;
-        private final String dbName;
+        private final Set<String> databaseNames;
 
-        IsRecord( UUID memberId, int boltPort, RoleInfo role, Set<String> groups )
+        IsRecord( UUID memberId, int boltPort, RoleInfo role, Set<String> groups, Set<String> databaseNames )
         {
             this.memberId = memberId;
             this.boltPort = boltPort;
             this.role = role;
             this.groups = groups;
-            this.dbName = CausalClusteringSettings.database.getDefaultValue();
+            this.databaseNames = databaseNames;
         }
 
         @Override
@@ -146,7 +145,17 @@ public class ClusterOverviewProcedureTest
                 return false;
             }
 
-            return stringValue( dbName ).equals( record[4] );
+            Set<String> recordDatabaseNames = new HashSet<>();
+            for ( AnyValue value : (ListValue) record[4] )
+            {
+                recordDatabaseNames.add( ((TextValue) value).stringValue() );
+            }
+            if ( !databaseNames.equals( recordDatabaseNames ) )
+            {
+                return false;
+            }
+
+            return true;
         }
 
         @Override
@@ -157,7 +166,7 @@ public class ClusterOverviewProcedureTest
                     ", boltPort=" + boltPort +
                     ", role=" + role +
                     ", groups=" + groups +
-                    ", database=" + dbName +
+                    ", databaseNames=" + databaseNames +
                     '}' );
         }
     }

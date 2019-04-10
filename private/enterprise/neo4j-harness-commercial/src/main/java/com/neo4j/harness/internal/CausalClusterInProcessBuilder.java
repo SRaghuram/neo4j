@@ -14,13 +14,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
@@ -46,7 +43,7 @@ public class CausalClusterInProcessBuilder
      * Step Builder to ensure that Cluster has all the required pieces
      * TODO: Add mapping methods to allow for core hosts and replicas to be unevenly distributed between databases
      */
-    public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalDatabasesAndPorts
+    public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalPorts
     {
 
         private BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
@@ -56,7 +53,6 @@ public class CausalClusterInProcessBuilder
         private Path path;
         private PortPickingFactory portFactory = PortPickingFactory.DEFAULT;
         private final Map<String, String> config = new HashMap<>();
-        private List<String> databases = new ArrayList<>( Collections.singletonList( "default" ) );
 
         @Override
         public WithCores withBuilder( BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder )
@@ -106,25 +102,8 @@ public class CausalClusterInProcessBuilder
             return this;
         }
 
-        @Override
-        public Builder withOptionalDatabases( List<String> databaseNames )
-        {
-            if ( !databaseNames.isEmpty() )
-            {
-                databases = databaseNames;
-            }
-            return this;
-        }
-
         public CausalCluster build()
         {
-            int nDatabases = databases.size();
-            if ( nDatabases > numCoreHosts )
-            {
-                throw new IllegalArgumentException(
-                        "You cannot have more databases than core hosts. Each database in the cluster must have at least 1 core " + "host. You have provided " +
-                                nDatabases + " databases and " + numCoreHosts + " core hosts." );
-            }
             return new CausalCluster( this );
         }
     }
@@ -157,11 +136,9 @@ public class CausalClusterInProcessBuilder
         Builder atPath( Path p );
     }
 
-    public interface WithOptionalDatabasesAndPorts
+    public interface WithOptionalPorts
     {
         Builder withOptionalPortsStrategy( PortPickingStrategy s );
-
-        Builder withOptionalDatabases( List<String> databaseNames );
     }
 
     /**
@@ -244,7 +221,6 @@ public class CausalClusterInProcessBuilder
     {
         private final int nCores;
         private final int nReplicas;
-        private final List<String> databaseNames;
         private final Path clusterPath;
         private final Log log;
         private final PortPickingFactory portFactory;
@@ -261,34 +237,13 @@ public class CausalClusterInProcessBuilder
             this.clusterPath = builder.path;
             this.log = builder.log;
             this.portFactory = builder.portFactory;
-            this.databaseNames = builder.databases;
             this.config = builder.config;
             this.serverBuilder = builder.serverBuilder;
-        }
-
-        private Map<Integer,String> distributeHostsBetweenDatabases( int nHosts, List<String> databases )
-        {
-            //Max number of hosts per database is (nHosts / nDatabases) or (nHosts / nDatabases) + 1
-            int nDatabases = databases.size();
-            int maxCapacity = ( nHosts % nDatabases == 0 ) ? (nHosts / nDatabases) : (nHosts / nDatabases) + 1;
-
-            List<String> repeated =
-                    databases.stream().flatMap( db -> IntStream.range( 0, maxCapacity ).mapToObj( ignored -> db ) ).collect( Collectors.toList() );
-
-            Map<Integer,String> mapping = new HashMap<>( nHosts );
-
-            for ( int hostId = 0; hostId < nHosts; hostId++ )
-            {
-                mapping.put( hostId, repeated.get( hostId ) );
-            }
-            return mapping;
         }
 
         public void boot() throws InterruptedException
         {
             List<String> initialMembers = new ArrayList<>( nCores );
-
-            Map<Integer,String> initialMembersToDatabase = distributeHostsBetweenDatabases( nCores, databaseNames );
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
@@ -324,8 +279,6 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
                 builder.withConfig( CausalClusteringSettings.raft_listen_address.name(), specifyPortOnly( raftPort ) );
 
-                builder.withConfig( CausalClusteringSettings.database.name(), initialMembersToDatabase.get( coreId ) );
-
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), String.valueOf( nCores ) );
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), String.valueOf( nCores ) );
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "core," + "core" + coreId );
@@ -352,8 +305,6 @@ public class CausalClusterInProcessBuilder
                 coreThread.join();
             }
 
-            Map<Integer,String> replicasToDatabase = distributeHostsBetweenDatabases( nReplicas, databaseNames );
-
             for ( int replicaId = 0; replicaId < nReplicas; replicaId++ )
             {
                 int txPort = portFactory.txReadReplicaPort( replicaId );
@@ -371,8 +322,6 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.READ_REPLICA.name() );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
-
-                builder.withConfig( CausalClusteringSettings.database.name(), replicasToDatabase.get( replicaId ) );
 
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "replica," + "replica" + replicaId );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );

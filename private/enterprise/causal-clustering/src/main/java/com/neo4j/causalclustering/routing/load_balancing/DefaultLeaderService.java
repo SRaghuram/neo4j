@@ -67,9 +67,7 @@ public class DefaultLeaderService implements LeaderService
     private Optional<MemberId> getLeaderIdFromTopologyService( DatabaseId databaseId )
     {
         var coreRoles = topologyService.allCoreRoles();
-        var coreServerInfos = topologyService.allCoreServers()
-                // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
-                // .filterTopologyByDb( databaseName )
+        var coreServerInfos = topologyService.coreServersForDatabase( databaseName )
                 .members();
 
         return coreServerInfos.keySet()

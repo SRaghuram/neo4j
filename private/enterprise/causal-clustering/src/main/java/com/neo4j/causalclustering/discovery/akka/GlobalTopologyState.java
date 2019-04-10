@@ -98,6 +98,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
+    public CoreTopology coreTopologyForDatabase( String databaseName )
+    {
+        return coreTopologiesByDatabaseName.getOrDefault( databaseName, CoreTopology.EMPTY );
+    }
+
     public CoreTopology coreTopology()
     {
         // todo: do not return default topology like this!

@@ -6,26 +6,19 @@
 package com.neo4j.test.causalclustering;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.junit.rules.ExternalResource;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
-import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.VerboseTimeout;
@@ -53,7 +46,6 @@ public class ClusterRule extends ExternalResource
     private IpFamily ipFamily = IpFamily.IPV4;
     private boolean useWildcard;
     private VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
-    private Set<DatabaseId> databaseIds = Collections.singleton( new DatabaseId( CausalClusteringSettings.database.getDefaultValue() ) );
 
     public ClusterRule()
     {
@@ -108,10 +100,7 @@ public class ClusterRule extends ExternalResource
     {
         createCluster();
         cluster.start();
-        for ( DatabaseId databaseId : databaseIds )
-        {
-            cluster.awaitLeader( databaseId );
-        }
+        cluster.awaitLeader();
         return cluster;
     }
 
@@ -120,7 +109,7 @@ public class ClusterRule extends ExternalResource
         if ( cluster == null )
         {
             cluster = new Cluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
-                    instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, databaseIds );
+                    instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
         }
 
         return cluster;
@@ -134,29 +123,6 @@ public class ClusterRule extends ExternalResource
     public File clusterDirectory()
     {
         return clusterDirectory;
-    }
-
-    public ClusterRule withDatabaseNames( Set<DatabaseId> dbNames )
-    {
-        this.databaseIds = dbNames;
-        Map<Integer,DatabaseId> coreDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noCoreMembers, dbNames );
-        Map<Integer,DatabaseId> rrDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noReadReplicas, dbNames );
-
-        Map<DatabaseId,Long> minCoresPerDb = coreDBMap.entrySet().stream()
-                .collect( Collectors.groupingBy( Map.Entry::getValue, Collectors.counting() ) );
-
-        Map<Integer,String> minCoresSettingsMap = new HashMap<>();
-
-        for ( var entry: coreDBMap.entrySet() )
-        {
-            Optional<Long> minNumCores = Optional.ofNullable( minCoresPerDb.get( entry.getValue() ) );
-            minNumCores.ifPresent( n -> minCoresSettingsMap.put( entry.getKey(), n.toString() ) );
-        }
-
-        withInstanceCoreParam( CausalClusteringSettings.database, idx -> coreDBMap.get( idx ).name() );
-        withInstanceCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, minCoresSettingsMap::get );
-        withInstanceReadReplicaParam( CausalClusteringSettings.database, idx -> rrDBMap.get( idx ).name() );
-        return this;
     }
 
     public ClusterRule withNumberOfCoreMembers( int noCoreMembers )

@@ -117,7 +117,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                         entry.getValue().groups() ) )
                 .collect( Collectors.toSet() );
 
-        if ( allowReadsOnFollowers || possibleReaders.size() == 0 )
+        if ( allowReadsOnFollowers || possibleReaders.isEmpty() )
         {
             Set<MemberId> validCores = coreTopology.members().keySet();
 
@@ -144,10 +144,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
     private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
-        // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
-        //  also an exception needs to be thrown when topology for the specified database is empty
-        // return topologyService.allCoreServers().filterTopologyByDb( databaseName );
-        return topologyService.allCoreServers();
+        return topologyService.coreServersForDatabase( databaseName );
     }
 
     private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )

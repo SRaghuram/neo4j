@@ -87,15 +87,6 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Boolean> refuse_to_be_leader =
             setting( "causal_clustering.refuse_to_be_leader", BOOLEAN, FALSE );
 
-    @Description( "The name of the database being hosted by this server instance. This configuration setting may be safely ignored " +
-            "unless deploying a multicluster. Instances may be allocated to distinct sub-clusters by assigning them distinct database " +
-            "names using this setting. For instance if you had 6 instances you could form 2 sub-clusters by assigning half " +
-            "the database name \"foo\", half the name \"bar\". The setting value must match exactly between members of the same sub-cluster. " +
-            "This setting is a one-off: once an instance is configured with a database name it may not be changed in future without using " +
-            "neo4j-admin unbind." )
-    public static final Setting<String> database =
-            setting( "causal_clustering.database", STRING, "default" );
-
     @Description( "Enable pre-voting extension to the Raft protocol (this is breaking and must match between the core cluster members)" )
     public static final Setting<Boolean> enable_pre_voting =
             setting( "causal_clustering.enable_pre_voting", BOOLEAN, TRUE );
