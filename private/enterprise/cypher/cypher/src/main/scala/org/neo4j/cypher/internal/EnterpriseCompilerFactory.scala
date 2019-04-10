@@ -22,8 +22,7 @@ import org.neo4j.logging.{Log, LogProvider}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.scheduler.JobScheduler
 
-class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
-                                graph: GraphDatabaseQueryService,
+class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                                 kernelMonitors: Monitors,
                                 logProvider: LogProvider,
                                 plannerConfig: CypherPlannerConfiguration,
@@ -42,13 +41,14 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
     RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), txBridge)
   }
 
+  private val log: Log = logProvider.getLog(getClass)
+
   override def createCompiler(cypherVersion: CypherVersion,
                               cypherPlanner: CypherPlannerOption,
                               cypherRuntime: CypherRuntimeOption,
                               cypherUpdateStrategy: CypherUpdateStrategy,
                               executionEngineProvider: () => ExecutionEngine): Compiler = {
 
-    val log = logProvider.getLog(getClass)
     val planner = cypherVersion match {
       case CypherVersion.`v3_5` =>
         Cypher3_5Planner(

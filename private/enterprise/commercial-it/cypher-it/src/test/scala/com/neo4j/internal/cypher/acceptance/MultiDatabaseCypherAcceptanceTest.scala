@@ -5,13 +5,16 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.util.Optional
+import java.util.{Collections, Optional}
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.server.security.enterprise.auth.SecureHasher
+import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.logging.Log
 
 class MultiDatabaseCypherAcceptanceTest
   extends ExecutionEngineFunSuite
@@ -36,7 +39,8 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toList should be(List(Map("name" -> "system", "status" -> "online"), Map("name" -> "neo4j", "status" -> "online")))
+    val databaseNames: Set[String] = result.columnAs("name").toSet
+    databaseNames should contain allOf("system", "neo4j")
   }
 
   test("should create database in systemdb") {
@@ -49,7 +53,7 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
   test("should create and delete databases") {
@@ -65,9 +69,9 @@ class MultiDatabaseCypherAcceptanceTest
 
     // THEN
     result.toList should contain allOf(
-      Map("name" -> "foo", "status" -> "created"),
-      Map("name" -> "bar", "status" -> "created"),
-      Map("name" -> "baz", "status" -> "created")
+      Map("name" -> "foo", "status" -> "online"),
+      Map("name" -> "bar", "status" -> "online"),
+      Map("name" -> "baz", "status" -> "online")
     )
 
     // GIVEN
@@ -80,10 +84,9 @@ class MultiDatabaseCypherAcceptanceTest
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should contain allOf("foo", "baz")
     databaseNames should not contain "bar"
-
   }
 
-  test("should start database") {
+  test("should start database on create") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // GIVEN
@@ -93,14 +96,7 @@ class MultiDatabaseCypherAcceptanceTest
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
-
-    // WHEN
-    execute("START DATABASE foo")
-    val result2 = execute("SHOW DATABASE foo")
-
-    // THEN
-    result2.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
   test("should stop database") {
@@ -110,7 +106,6 @@ class MultiDatabaseCypherAcceptanceTest
     execute("CREATE DATABASE foo")
 
     // WHEN
-    execute("START DATABASE foo")
     val result = execute("SHOW DATABASE foo")
 
     // THEN
@@ -127,7 +122,6 @@ class MultiDatabaseCypherAcceptanceTest
 
     // GIVEN
     execute("CREATE DATABASE foo")
-    execute("START DATABASE foo")
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> "online"))) // make sure it was started
     execute("STOP DATABASE foo")
@@ -164,20 +158,6 @@ class MultiDatabaseCypherAcceptanceTest
     result.toList should be(List.empty)
   }
 
-  test("should not be able to stop a database that is not started") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // GIVEN
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
-
-    // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> "created")))
-  }
-
   test("should not be able to start a dropped database") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -190,7 +170,7 @@ class MultiDatabaseCypherAcceptanceTest
 
     // THEN
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty) //TODO: Or should it state deleted?
+    result.toList should be(List.empty)
   }
 
   test("should not be able to stop a dropped database") {
@@ -205,13 +185,24 @@ class MultiDatabaseCypherAcceptanceTest
 
     // THEN
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty) //TODO: Or should it state deleted?
+    result.toList should be(List.empty)
+  }
+
+  protected override def initTest(): Unit = {
+    super.initTest()
+    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "impermanent-db")
+    val secureHasher: SecureHasher = new SecureHasher
+    val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
+    val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
+    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
+    systemGraphInitializer.initializeSystemGraph()
   }
 
   private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
 
   private def selectDatabase(name: String): Unit = {
-    val maybeCtx: Optional[DatabaseContext] = databaseManager().getDatabaseContext(name)
+    val manager = databaseManager()
+    val maybeCtx: Optional[DatabaseContext] = manager.getDatabaseContext(name)
     val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)

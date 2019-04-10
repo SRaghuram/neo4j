@@ -262,7 +262,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
     {
         SystemGraphOperations.assertValidDbName( dbName );
 
-        String query = "CREATE (db:Database {name: $dbName})";
+        String query = "CREATE (db:Database {name: $dbName, status: 'online'})";
         Map<String,Object> params = Collections.singletonMap( "dbName", dbName );
 
         queryExecutor.executeQueryWithConstraint( query, params, "The specified database '" + dbName + "' already exists." );
