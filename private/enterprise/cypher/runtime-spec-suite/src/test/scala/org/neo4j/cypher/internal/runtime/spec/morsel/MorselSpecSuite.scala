@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
 
 object MorselSpecSuite {
   val SIZE_HINT = 1000
@@ -18,162 +18,30 @@ class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
 
 // ALL NODE SCAN
 class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselAllNodeScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.allNodeScan(variable),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes
-        } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.allNodeScan(variable),
-      () => nodes.map(Array(_))
-    )
-}
+class MorselAllNodeScanStressTest extends AllNodeScanStressTestBase(MorselRuntime)
 
 // INDEX SEEK
 class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
 
-
-class MorselIndexSeekRangeStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop > ???)", paramExpr = Some(varFor(propArgument)), argumentIds = Set(propArgument)),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(_.getProperty("prop").asInstanceOf[Int] > x.getId)
-        } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop > 10)"),
-      () => nodes.filter(_.getProperty("prop").asInstanceOf[Int] > 10).map(Array(_))
-    )
-}
-
-class MorselIndexSeekExactStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop = ???)", paramExpr = Some(varFor(propArgument)), argumentIds = Set(propArgument)),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(_.getProperty("prop").asInstanceOf[Int] == x.getId)
-        } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop = 10)"),
-      () => nodes.filter(_.getProperty("prop").asInstanceOf[Int] == 10).map(Array(_))
-    )
-}
+class MorselIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(MorselRuntime)
+class MorselIndexSeekExactStressTest extends IndexSeekExactStressTest(MorselRuntime)
 
 // LABEL SCAN
 class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselLabelScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.nodeByLabelScan(variable, "Label"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes
-        } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeByLabelScan(variable, "Label"),
-      () => nodes.map(Array(_))
-    )
-
-}
+class MorselLabelScanStressTest extends LabelScanStressTestBase(MorselRuntime)
 
 // INDEX SCAN
 class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselIndexScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes
-        } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop)"),
-      () => nodes.map(Array(_))
-    )
-}
+class MorselIndexScanStressTest extends IndexScanStressTestBase(MorselRuntime)
 
 // INDEX CONTAINS SCAN
 class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselIndexContainsScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(_.getProperty("text").asInstanceOf[String].contains(x.getId.toString))
-        } yield Array(x, y)
-    )
-}
+class MorselIndexContainsScanStressTest extends IndexContainsScanStressTestBase(MorselRuntime)
 
 // EXPAND
 class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselExpandStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite with OnTopOfParallelInputStressTest {
-
-  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
-    OnTopOfParallelInputTD(
-      _.expand(s"($variable)-[:NEXT]->(next)"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          next <- (1 to 5).map(i => nodes((x.getId.toInt + i) % nodes.length))
-        } yield Array(x, next),
-      Seq("x", "next")
-    )
-
-  override def rhsOfApplyOperator(variable: String) =
-    RHSOfApplyOneChildTD(
-      _.expand(s"($variable)-[:NEXT]->(next)"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x, y) <- rowsComingIntoTheOperator
-          next <- (1 to 5).map(i => nodes((y.getId.toInt + i) % nodes.length))
-        } yield Array(x, y, next),
-      Seq("x", "y", "next")
-    )
-
-  override def rhsOfCartesianOperator(variable: String) =
-    RHSOfCartesianOneChildTD(
-      _.expand(s"($variable)-[:NEXT]->(next)"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(y) <- rowsComingIntoTheOperator
-          next <- (1 to 5).map(i => nodes((y.getId.toInt + i) % nodes.length))
-        } yield Array(y, next),
-      Seq("y", "next")
-    )
-}
+class MorselExpandStressTest extends ExpandStressTestBase(MorselRuntime)
 
 // EAGER AGGREGATION
 
@@ -288,19 +156,7 @@ class MorselAggregationStressTest extends ParallelStressSuite(MorselRuntime) /*w
 // FILTER
 
 class MorselFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselFilterStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
-
-  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
-    OnTopOfParallelInputTD(
-      _.filter(Seq(lessThan(varFor("prop"), literalInt(10)))),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator if x.getId < 10
-        } yield Array(x),
-      Seq("x")
-    )
-}
+class MorselFilterStressTest extends FilterStressTestBase(MorselRuntime)
 
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
@@ -353,55 +209,11 @@ class MorselUnwindStressTest extends ParallelStressSuite(MorselRuntime) with OnT
 
 // INPUT
 
-class MorselInputTest extends InputTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT) {
-
-  test("should process input batches in parallel") {
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x")
-      .input(variables = Seq("x"))
-      .build()
-
-    val input = inputColumns(nBatches = SIZE_HINT, batchSize = 2, rowNumber => rowNumber)
-
-    // then
-    val result = execute(logicalQuery, runtime, input)
-    result should beColumns("x").withRows(input.flatten)
-
-    // and
-    executeAndAssertCondition(logicalQuery, input, ENTERPRISE.HAS_EVIDENCE_OF_PARALLELISM)
-  }
-}
+class MorselInputTest extends ParallelInputTestBase(MorselRuntime)
 
 // APPLY
 
-class MorselApplyStressTest extends ParallelStressSuite(MorselRuntime) {
-
-  test("should support nested Apply") {
-    // given
-    init()
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("a", "b", "c")
-      .apply()
-      .|.apply()
-      .|.|.nodeIndexOperator("c:Label(prop < ???)", paramExpr = Some(prop("b", "prop")), argumentIds = Set("a", "b"))
-      .|.nodeIndexOperator("b:Label(prop < ???)", paramExpr = Some(prop("a", "prop")), argumentIds = Set("a"))
-      .nodeIndexOperator("a:Label(prop <= 40)")
-      .build()
-
-    val runtimeResult = execute(logicalQuery, runtime)
-
-    // then
-    val expected = for {
-      a <- nodes if a.getId <= 40
-      b <- nodes if b.getId < a.getId
-      c <- nodes if c.getId < b.getId
-    } yield Array(a, b, c)
-    runtimeResult should beColumns("a", "b", "c").withRows(expected)
-  }
-}
+class MorselApplyStressTest extends ApplyStressTestBase(MorselRuntime)
 
 // CARTESIAN PRODUCT
 
