@@ -119,7 +119,6 @@ public class ConsensusModule
                 outbound, logProvider, raftMembershipManager, logShipping, inFlightCache,
                 globalConfig.get( refuse_to_be_leader ),
                 supportsPreVoting, globalMonitors );
-        globalDependencies.satisfyDependency( raftMachine );
 
         DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( globalModule.getGlobalClock() );
         globalMonitors.addMonitorListener( durationSinceLastMessageMonitor );
