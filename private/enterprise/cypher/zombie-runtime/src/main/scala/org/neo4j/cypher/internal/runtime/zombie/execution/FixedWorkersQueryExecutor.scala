@@ -42,7 +42,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   workerThreads.foreach(_.start())
 
   override def wakeAll(): Unit = {
-      var i = 0
+    var i = 0
     while (i < workers.length) {
       LockSupport.unpark(workerThreads(i))
       i += 1
@@ -66,7 +66,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 morselSize,
                                 queryIndexes,
                                 transactionBinder,
-                                numberOfWorkers = 1,
+                                numberOfWorkers,
                                 nExpressionSlots,
                                 inputDataStream)
 
