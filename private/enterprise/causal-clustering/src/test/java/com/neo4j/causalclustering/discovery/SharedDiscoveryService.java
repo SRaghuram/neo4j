@@ -76,7 +76,8 @@ public final class SharedDiscoveryService
 
     ReadReplicaTopology getReadReplicaTopology()
     {
-        return new ReadReplicaTopology( Collections.unmodifiableMap( readReplicas ) );
+        // todo: use read DB name here
+        return new ReadReplicaTopology( null, Collections.unmodifiableMap( readReplicas ) );
     }
 
     void registerCoreMember( SharedDiscoveryCoreClient client )

@@ -130,8 +130,6 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
-        // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
-        // return topologyService.allReadReplicas().filterTopologyByDb( databaseId );
-        return topologyService.allReadReplicas();
+        return topologyService.readReplicasForDatabase( databaseId.name() );
     }
 }

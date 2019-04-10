@@ -18,8 +18,10 @@ import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
 
 import static org.junit.Assert.assertThat;
@@ -56,14 +58,15 @@ public class ReadReplicaViewMessageTest extends TestKit
     @Test
     public void shouldReturnEmptyTopologyIfEmptyView()
     {
-        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology(), Matchers.equalTo( ReadReplicaTopology.EMPTY ) );
+        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( "no_such_database" ), Matchers.equalTo( ReadReplicaTopology.EMPTY ) );
     }
 
     @Test
     public void shouldReturnReadReplicaTopology()
     {
-        ReadReplicaTopology expected = new ReadReplicaTopology( MapUtil.genericMap( memberId, readReplicaInfo ) );
+        String databaseName = Iterables.single( readReplicaInfo.getDatabaseNames() );
+        ReadReplicaTopology expected = new ReadReplicaTopology( databaseName, Map.of( memberId, readReplicaInfo ) );
 
-        assertThat( readReplicaViewMessage.toReadReplicaTopology(), Matchers.equalTo( expected ) );
+        assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseName ), Matchers.equalTo( expected ) );
     }
 }

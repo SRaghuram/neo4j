@@ -109,7 +109,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     @Override
     public ReadReplicaTopology allReadReplicas()
     {
-        return new ReadReplicaTopology( replicaMembers );
+        return new ReadReplicaTopology( DEFAULT_DATABASE_NAME, replicaMembers );
     }
 
     @Override

@@ -71,12 +71,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
-        val newRRTopology = new ReadReplicaTopology(
-          Map(
-            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
-            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
-          ).asJava
-        )
+        val newRRTopology = new ReadReplicaTopology(DEFAULT_DATABASE_NAME, Map(
+                  new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
+                  new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
+                ).asJava)
 
         When("incoming topology")
         topologyActorRef ! newRRTopology

@@ -35,15 +35,23 @@ class ReadReplicaViewMessage
                 .map( ReadReplicaViewRecord::topologyClientActorRef );
     }
 
-    ReadReplicaTopology toReadReplicaTopology()
+    ReadReplicaTopology toReadReplicaTopology( String databaseName )
     {
         Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
                 .values()
                 .stream()
+                .filter( info -> info.readReplicaInfo().getDatabaseNames().contains( databaseName ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
                 .collect( CollectorsUtil.pairsToMap() );
 
-        return new ReadReplicaTopology( knownReadReplicas );
+        return new ReadReplicaTopology( databaseName, knownReadReplicas );
+    }
+
+    Stream<String> databaseNames()
+    {
+        return clusterClientReadReplicas.values().stream()
+                .map( ReadReplicaViewRecord::readReplicaInfo )
+                .flatMap( info -> info.getDatabaseNames().stream() );
     }
 
     @Override

@@ -109,6 +109,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
+    public ReadReplicaTopology readReplicasForDatabase( String databaseName )
+    {
+        return globalTopologyState.readReplicaTopologyForDatabase( databaseName );
+    }
+
+    @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         AdvertisedSocketAddress advertisedSocketAddress = globalTopologyState.retrieveSocketAddress( upstream );

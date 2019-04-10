@@ -210,15 +210,21 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public CoreTopology coreServersForDatabase( String databaseName )
+    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.coreTopologyForDatabase( databaseName );
+        return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
 
     @Override
     public ReadReplicaTopology allReadReplicas()
     {
         return globalTopologyState.readReplicaTopology();
+    }
+
+    @Override
+    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    {
+        return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }
 
     @Override

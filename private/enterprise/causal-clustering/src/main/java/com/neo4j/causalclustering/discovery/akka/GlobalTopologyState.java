@@ -36,7 +36,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private volatile Map<MemberId,AdvertisedSocketAddress> rrCatchupAddressMap;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
     private final Map<DatabaseId,CoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
-    private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
+    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologiesByDatabas = new ConcurrentHashMap<>();
 
     public GlobalTopologyState( LogProvider logProvider, Consumer<CoreTopology> listener )
     {
@@ -50,7 +50,8 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onTopologyUpdate( CoreTopology newCoreTopology )
     {
-        CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( newCoreTopology.databaseId(), newCoreTopology );
+        DatabaseId databaseId = newCoreTopology.databaseId();
+        CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
         if ( currentCoreTopology == null )
         {
             currentCoreTopology = CoreTopology.EMPTY;
@@ -60,7 +61,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         this.coreCatchupAddressMap = extractCatchupAddressesMap( newCoreTopology );
         if ( diff.hasChanges() )
         {
-            log.info( "Core topology changed %s", diff );
+            log.info( "Core topology for database %s changed %s", databaseId, diff );
             callback.accept( newCoreTopology );
         }
     }
@@ -68,12 +69,18 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onTopologyUpdate( ReadReplicaTopology newReadReplicaTopology )
     {
-        TopologyDifference diff = this.readReplicaTopology.difference( newReadReplicaTopology );
-        this.readReplicaTopology = newReadReplicaTopology;
+        DatabaseId databaseId = newReadReplicaTopology.databaseId();
+        ReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabas.put( databaseId, newReadReplicaTopology );
+        if ( currentReadReplicaTopology == null )
+        {
+            currentReadReplicaTopology = ReadReplicaTopology.EMPTY;
+        }
+
+        TopologyDifference diff = currentReadReplicaTopology.difference( newReadReplicaTopology );
         this.rrCatchupAddressMap = extractCatchupAddressesMap( newReadReplicaTopology );
         if ( diff.hasChanges() )
         {
-            log.info( "Read replica topology changed %s", diff );
+            log.info( "Read replica topology for database %s changed %s", databaseId, diff );
         }
     }
 
@@ -98,9 +105,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
-    public CoreTopology coreTopologyForDatabase( String databaseName )
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return coreTopologiesByDatabaseName.getOrDefault( databaseName, CoreTopology.EMPTY );
+        return coreTopologiesByDatabase.getOrDefault( databaseId, CoreTopology.EMPTY );
+    }
+
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    {
+        return readReplicaTopologiesByDatabas.getOrDefault( databaseId, ReadReplicaTopology.EMPTY );
     }
 
     public CoreTopology coreTopology()
@@ -111,7 +123,8 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     public ReadReplicaTopology readReplicaTopology()
     {
-        return readReplicaTopology;
+        // todo: do not return default topology like this!
+        return readReplicaTopologiesByDatabas.getOrDefault( new DatabaseId( DEFAULT_DATABASE_NAME ), ReadReplicaTopology.EMPTY );
     }
 
     private Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( Topology<?> topology )

@@ -17,13 +17,20 @@ import static java.util.Collections.emptyMap;
 // todo: consider renaming to DatabaseReadReplicaTopology
 public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
-    public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( emptyMap() );
+    public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( null, emptyMap() );
 
+    private final DatabaseId databaseId;
     private final Map<MemberId,ReadReplicaInfo> readReplicaMembers;
 
-    public ReadReplicaTopology( Map<MemberId,ReadReplicaInfo> readReplicaMembers )
+    public ReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
+        this.databaseId = databaseId;
         this.readReplicaMembers = readReplicaMembers;
+    }
+
+    public DatabaseId databaseId()
+    {
+        return databaseId;
     }
 
     @Override
@@ -33,17 +40,11 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
     }
 
     @Override
-    public String toString()
-    {
-        return String.format( "{readReplicas=%s}", readReplicaMembers );
-    }
-
-    @Override
     public ReadReplicaTopology filterTopologyByDb( DatabaseId databaseId )
     {
         Map<MemberId, ReadReplicaInfo> filteredMembers = filterHostsByDb( members(), databaseId );
 
-        return new ReadReplicaTopology( filteredMembers );
+        return new ReadReplicaTopology( databaseId, filteredMembers );
     }
 
     @Override
@@ -58,13 +59,22 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
             return false;
         }
         ReadReplicaTopology that = (ReadReplicaTopology) o;
-        return Objects.equals( readReplicaMembers, that.readReplicaMembers );
+        return Objects.equals( databaseId, that.databaseId ) &&
+               Objects.equals( readReplicaMembers, that.readReplicaMembers );
     }
 
     @Override
     public int hashCode()
     {
+        return Objects.hash( databaseId, readReplicaMembers );
+    }
 
-        return Objects.hash( readReplicaMembers );
+    @Override
+    public String toString()
+    {
+        return "ReadReplicaTopology{" +
+               "databaseId='" + databaseId + '\'' +
+               ", readReplicaMembers=" + readReplicaMembers +
+               '}';
     }
 }

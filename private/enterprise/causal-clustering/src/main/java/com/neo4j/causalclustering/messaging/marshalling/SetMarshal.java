@@ -30,6 +30,7 @@ public final class SetMarshal
         return set;
     }
 
+    // todo: make channel first arg as in other marshals
     public static void marshalSet( Set<String> set, WritableChannel channel ) throws IOException
     {
         channel.putInt( set.size() );

@@ -69,7 +69,7 @@ public class ClusterOverviewProcedureTest
         roleMap.put( follower2, RoleInfo.FOLLOWER );
 
         when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, null, false, coreMembers ) );
-        when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( replicaMembers ) );
+        when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( DEFAULT_DATABASE_NAME, replicaMembers ) );
         when( topologyService.allCoreRoles() ).thenReturn( roleMap );
 
         ClusterOverviewProcedure procedure =

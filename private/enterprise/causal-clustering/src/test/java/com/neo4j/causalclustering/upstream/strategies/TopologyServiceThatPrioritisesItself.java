@@ -65,7 +65,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         Map<MemberId,ReadReplicaInfo> readReplicaMembers = new HashMap<>();
         readReplicaMembers.put( myself, readReplicaInfo( matchingGroupName ) );
         readReplicaMembers.put( readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
-        return new ReadReplicaTopology( readReplicaMembers );
+        return new ReadReplicaTopology( DATABASE_NAME, readReplicaMembers );
     }
 
     @Override
