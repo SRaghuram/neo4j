@@ -101,15 +101,27 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return new CoreTopology( DEFAULT_DATABASE_NAME, clusterId, true, coreMembers );
+        return coreMembers;
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
     {
-        return new ReadReplicaTopology( DEFAULT_DATABASE_NAME, replicaMembers );
+        return new CoreTopology( databaseId, clusterId, true, coreMembers );
+    }
+
+    @Override
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    {
+        return replicaMembers;
+    }
+
+    @Override
+    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    {
+        return new ReadReplicaTopology( databaseId, replicaMembers );
     }
 
     @Override

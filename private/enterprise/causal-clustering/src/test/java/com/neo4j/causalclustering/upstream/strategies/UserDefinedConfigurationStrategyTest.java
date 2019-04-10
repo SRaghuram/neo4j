@@ -219,13 +219,25 @@ class UserDefinedConfigurationStrategyTest
             private Map<MemberId,AdvertisedSocketAddress> catchupAddresses = extractCatchupAddressesMap( coreTopology, readReplicaTopology );
 
             @Override
-            public CoreTopology allCoreServers()
+            public Map<MemberId,CoreServerInfo> allCoreServers()
+            {
+                return coreTopology.members();
+            }
+
+            @Override
+            public CoreTopology coreServersForDatabase( DatabaseId databaseId )
             {
                 return coreTopology;
             }
 
             @Override
-            public ReadReplicaTopology allReadReplicas()
+            public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+            {
+                return readReplicaTopology.members();
+            }
+
+            @Override
+            public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
             {
                 return readReplicaTopology;
             }

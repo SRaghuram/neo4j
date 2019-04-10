@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +22,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseId;
+
+import static java.util.Collections.unmodifiableMap;
 
 public final class SharedDiscoveryService
 {
@@ -71,13 +72,13 @@ public final class SharedDiscoveryService
     CoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped  )
     {
         return new CoreTopology( databaseId, clusterIdDbNames.get( databaseId ),
-                canBeBootstrapped, Collections.unmodifiableMap( coreMembers )  );
+                canBeBootstrapped, unmodifiableMap( coreMembers ) );
     }
 
     ReadReplicaTopology getReadReplicaTopology()
     {
         // todo: use read DB name here
-        return new ReadReplicaTopology( null, Collections.unmodifiableMap( readReplicas ) );
+        return new ReadReplicaTopology( null, unmodifiableMap( readReplicas ) );
     }
 
     void registerCoreMember( SharedDiscoveryCoreClient client )
@@ -149,6 +150,16 @@ public final class SharedDiscoveryService
             notifyCoreClients();
         }
         return success;
+    }
+
+    public Map<MemberId,CoreServerInfo> allCoreServers()
+    {
+        return unmodifiableMap( coreMembers );
+    }
+
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    {
+        return unmodifiableMap( readReplicas );
     }
 
     Map<MemberId,RoleInfo> getCoreRoles()

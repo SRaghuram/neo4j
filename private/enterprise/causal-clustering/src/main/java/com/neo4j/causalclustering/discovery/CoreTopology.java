@@ -66,14 +66,6 @@ public class CoreTopology implements Topology<CoreServerInfo>
     }
 
     @Override
-    public CoreTopology filterTopologyByDb( DatabaseId databaseId )
-    {
-        Map<MemberId, CoreServerInfo> filteredMembers = filterHostsByDb( members(), databaseId );
-
-        return new CoreTopology( databaseId, clusterId(), canBeBootstrapped(), filteredMembers );
-    }
-
-    @Override
     public boolean equals( Object o )
     {
         if ( this == o )

@@ -75,9 +75,8 @@ public class ReadReplicaStartupProcessTest
     @BeforeEach
     void commonMocking() throws CatchupAddressResolutionException
     {
-        Map<MemberId,CoreServerInfo> members = new HashMap<>();
-        members.put( memberId, mock( CoreServerInfo.class ) );
-        when( topologyService.allCoreServers() ).thenReturn( clusterTopology );
+        Map<MemberId,CoreServerInfo> members = Map.of( memberId, mock( CoreServerInfo.class ) );
+        when( topologyService.allCoreServers() ).thenReturn( members );
         when( clusterTopology.members() ).thenReturn( members );
         when( topologyService.findCatchupAddress( memberId ) ).thenReturn( fromAddress );
         //I know ... I'm sorry

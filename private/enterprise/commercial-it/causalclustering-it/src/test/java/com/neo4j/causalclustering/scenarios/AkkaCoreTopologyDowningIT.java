@@ -196,7 +196,7 @@ public class AkkaCoreTopologyDowningIT
 
     private void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
     {
-        assertEventually( () -> services.topologyService().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
+        assertEventually( () -> services.topologyService().allCoreServers().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
     }
 
     private TopologyServiceComponents createAndStartListResolver( int myPort, int... otherPorts ) throws Throwable

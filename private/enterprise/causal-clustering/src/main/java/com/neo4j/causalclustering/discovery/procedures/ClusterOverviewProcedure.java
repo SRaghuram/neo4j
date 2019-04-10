@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -18,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -76,26 +74,16 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         Map<MemberId,RoleInfo> roleMap = topologyService.allCoreRoles();
         List<ReadWriteEndPoint> endpoints = new ArrayList<>();
 
-        CoreTopology coreTopology = topologyService.allCoreServers();
-        Set<MemberId> coreMembers = coreTopology.members().keySet();
-
-        for ( MemberId memberId : coreMembers )
+        for ( Map.Entry<MemberId,CoreServerInfo> entry : topologyService.allCoreServers().entrySet() )
         {
-            Optional<CoreServerInfo> coreServerInfo = coreTopology.find( memberId );
-            if ( coreServerInfo.isPresent() )
-            {
-                CoreServerInfo info = coreServerInfo.get();
-                RoleInfo role = roleMap.getOrDefault( memberId, RoleInfo.UNKNOWN );
-                endpoints.add( new ReadWriteEndPoint( info.connectors(), role, memberId.getUuid(),
-                        info.groups(), info.getDatabaseIds() ) );
-            }
-            else
-            {
-                log.debug( "No Address found for " + memberId );
-            }
+            MemberId id = entry.getKey();
+            CoreServerInfo info = entry.getValue();
+
+            RoleInfo role = roleMap.getOrDefault( id, RoleInfo.UNKNOWN );
+            endpoints.add( new ReadWriteEndPoint( info.connectors(), role, id.getUuid(), info.groups(), info.getDatabaseIds() ) );
         }
 
-        for ( Map.Entry<MemberId,ReadReplicaInfo> readReplica : topologyService.allReadReplicas().members().entrySet() )
+        for ( Map.Entry<MemberId,ReadReplicaInfo> readReplica : topologyService.allReadReplicas().entrySet() )
         {
             ReadReplicaInfo readReplicaInfo = readReplica.getValue();
             endpoints.add( new ReadWriteEndPoint( readReplicaInfo.connectors(), RoleInfo.READ_REPLICA,

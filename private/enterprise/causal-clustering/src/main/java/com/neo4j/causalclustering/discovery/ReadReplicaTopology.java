@@ -40,14 +40,6 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
     }
 
     @Override
-    public ReadReplicaTopology filterTopologyByDb( DatabaseId databaseId )
-    {
-        Map<MemberId, ReadReplicaInfo> filteredMembers = filterHostsByDb( members(), databaseId );
-
-        return new ReadReplicaTopology( databaseId, filteredMembers );
-    }
-
-    @Override
     public boolean equals( Object o )
     {
         if ( this == o )

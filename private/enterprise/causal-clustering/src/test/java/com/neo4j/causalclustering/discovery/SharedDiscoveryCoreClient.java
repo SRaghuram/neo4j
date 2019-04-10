@@ -104,29 +104,43 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return coreTopology;
+        return sharedDiscoveryService.allCoreServers();
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
     {
-        return readReplicaTopology;
+        return coreTopology; // todo: this is not correct
+    }
+
+    @Override
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    {
+        return sharedDiscoveryService.allReadReplicas();
+    }
+
+    @Override
+    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    {
+        return readReplicaTopology; // todo: this is not correct
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        Optional<AdvertisedSocketAddress> coreAdvertisedSocketAddress = allCoreServers().find( upstream ).map( CoreServerInfo::getCatchupServer );
-        if ( coreAdvertisedSocketAddress.isPresent() )
+        CoreServerInfo coreServerInfo = allCoreServers().get( upstream );
+        if ( coreServerInfo != null )
         {
-            return coreAdvertisedSocketAddress.get();
+            return coreServerInfo.getCatchupServer();
         }
-        return readReplicaTopology
-                .find( upstream )
-                .map( ReadReplicaInfo::getCatchupServer )
-                .orElseThrow( () -> new CatchupAddressResolutionException( upstream ) );
+        ReadReplicaInfo readReplicaInfo = allReadReplicas().get( upstream );
+        if ( readReplicaInfo != null )
+        {
+            return readReplicaInfo.getCatchupServer();
+        }
+        throw new CatchupAddressResolutionException( upstream );
     }
 
     @Override

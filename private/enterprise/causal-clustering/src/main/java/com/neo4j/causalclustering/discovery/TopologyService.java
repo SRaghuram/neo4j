@@ -23,27 +23,17 @@ public interface TopologyService extends Lifecycle
 {
     DatabaseId localDatabaseId();
 
-    // It is perhaps confusing (Or even error inducing) that this core Topology will always contain the cluster id
-    // for the database local to the host upon which this method is called.
-    // TODO: evaluate returning clusterId = null for global Topologies returned by allCoreServers()
-    CoreTopology allCoreServers();
+    Map<MemberId,CoreServerInfo> allCoreServers();
 
-    default CoreTopology coreServersForDatabase( DatabaseId databaseId )
-    {
-        return allCoreServers().filterTopologyByDb( databaseId );
-    }
+    CoreTopology coreServersForDatabase( DatabaseId databaseId );
 
-    ReadReplicaTopology allReadReplicas();
+    Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
-    default ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
-    {
-        return allReadReplicas().filterTopologyByDb( databaseId );
-    }
+    ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId );
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
     Map<MemberId,RoleInfo> allCoreRoles();
 
-    // todo: rename to myId?
     MemberId myself();
 }

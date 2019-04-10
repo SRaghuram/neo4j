@@ -14,8 +14,10 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -204,9 +206,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return globalTopologyState.coreTopology();
+        return globalTopologyState.allCoreServers();
     }
 
     @Override
@@ -216,9 +218,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return globalTopologyState.readReplicaTopology();
+        return globalTopologyState.allReadReplicas();
     }
 
     @Override
@@ -232,7 +234,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         try
         {
-            return retryStrategy.apply( () -> globalTopologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
+            return retryStrategy.apply( () -> globalTopologyState.retrieveCatchupServerAddress( upstream ), Objects::nonNull );
         }
         catch ( TimeoutException e )
         {

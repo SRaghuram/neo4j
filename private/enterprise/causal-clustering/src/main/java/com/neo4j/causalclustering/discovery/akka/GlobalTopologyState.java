@@ -6,13 +6,17 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.TopologyDifference;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,23 +30,23 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptyMap;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static java.util.Collections.unmodifiableMap;
 
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink
 {
     private final Log log;
     private final Consumer<CoreTopology> callback;
-    private volatile Map<MemberId,AdvertisedSocketAddress> coreCatchupAddressMap;
-    private volatile Map<MemberId,AdvertisedSocketAddress> rrCatchupAddressMap;
+    private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
+    private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
     private final Map<DatabaseId,CoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
-    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologiesByDatabas = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
 
     public GlobalTopologyState( LogProvider logProvider, Consumer<CoreTopology> listener )
     {
         this.log = logProvider.getLog( getClass() );
-        this.coreCatchupAddressMap = emptyMap();
-        this.rrCatchupAddressMap = emptyMap();
+        this.coresByMemberId = emptyMap();
+        this.readReplicasByMemberId = emptyMap();
         this.remoteDbLeaderMap = emptyMap();
         this.callback = listener;
     }
@@ -58,7 +62,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         }
 
         TopologyDifference diff = currentCoreTopology.difference( newCoreTopology );
-        this.coreCatchupAddressMap = extractCatchupAddressesMap( newCoreTopology );
+        this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
         if ( diff.hasChanges() )
         {
             log.info( "Core topology for database %s changed %s", databaseId, diff );
@@ -70,14 +74,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     public void onTopologyUpdate( ReadReplicaTopology newReadReplicaTopology )
     {
         DatabaseId databaseId = newReadReplicaTopology.databaseId();
-        ReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabas.put( databaseId, newReadReplicaTopology );
+        ReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabase.put( databaseId, newReadReplicaTopology );
         if ( currentReadReplicaTopology == null )
         {
             currentReadReplicaTopology = ReadReplicaTopology.EMPTY;
         }
 
         TopologyDifference diff = currentReadReplicaTopology.difference( newReadReplicaTopology );
-        this.rrCatchupAddressMap = extractCatchupAddressesMap( newReadReplicaTopology );
+        this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
         if ( diff.hasChanges() )
         {
             log.info( "Read replica topology for database %s changed %s", databaseId, diff );
@@ -105,6 +109,16 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
+    public Map<MemberId,CoreServerInfo> allCoreServers()
+    {
+        return coresByMemberId;
+    }
+
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    {
+        return readReplicasByMemberId;
+    }
+
     public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return coreTopologiesByDatabase.getOrDefault( databaseId, CoreTopology.EMPTY );
@@ -112,31 +126,39 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return readReplicaTopologiesByDatabas.getOrDefault( databaseId, ReadReplicaTopology.EMPTY );
+        return readReplicaTopologiesByDatabase.getOrDefault( databaseId, ReadReplicaTopology.EMPTY );
     }
 
-    public CoreTopology coreTopology()
+    public AdvertisedSocketAddress retrieveCatchupServerAddress( MemberId memberId )
     {
-        // todo: do not return default topology like this!
-        return coreTopologiesByDatabase.getOrDefault( new DatabaseId( DEFAULT_DATABASE_NAME ), CoreTopology.EMPTY );
+        CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );
+        if ( coreServerInfo != null )
+        {
+            AdvertisedSocketAddress address = coreServerInfo.getCatchupServer();
+            log.debug( "Catchup address for core %s was %s", memberId, address );
+            return coreServerInfo.getCatchupServer();
+        }
+        ReadReplicaInfo readReplicaInfo = readReplicasByMemberId.get( memberId );
+        if ( readReplicaInfo != null )
+        {
+            AdvertisedSocketAddress address = readReplicaInfo.getCatchupServer();
+            log.debug( "Catchup address for read replica %s was %s", memberId, address );
+            return address;
+        }
+        log.debug( "Catchup address for member %s not found", memberId );
+        return null;
     }
 
-    public ReadReplicaTopology readReplicaTopology()
+    private static <T extends DiscoveryServerInfo> Map<MemberId,T> extractServerInfos( Map<DatabaseId,? extends Topology<T>> topologies )
     {
-        // todo: do not return default topology like this!
-        return readReplicaTopologiesByDatabas.getOrDefault( new DatabaseId( DEFAULT_DATABASE_NAME ), ReadReplicaTopology.EMPTY );
-    }
-
-    private Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( Topology<?> topology )
-    {
-        return topology.members().entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().getCatchupServer() ) );
-    }
-
-    public AdvertisedSocketAddress retrieveSocketAddress( MemberId memberId )
-    {
-        AdvertisedSocketAddress coreAddress = coreCatchupAddressMap.get( memberId );
-        log.debug( "Catchup address for core %s was %s", memberId, coreAddress );
-        return coreAddress != null ? coreAddress : rrCatchupAddressMap.get( memberId );
+        Map<MemberId,T> result = new HashMap<>();
+        for ( Topology<T> topology : topologies.values() )
+        {
+            for ( Map.Entry<MemberId,T> entry : topology.members().entrySet() )
+            {
+                result.put( entry.getKey(), entry.getValue() );
+            }
+        }
+        return unmodifiableMap( result );
     }
 }

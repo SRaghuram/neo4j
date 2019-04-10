@@ -12,8 +12,10 @@ import akka.cluster.client.ClusterClientSettings;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -91,33 +93,33 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return globalTopologyState.coreTopology();
+        return globalTopologyState.allCoreServers();
     }
 
     @Override
-    public CoreTopology coreServersForDatabase( String databaseName )
+    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.coreTopologyForDatabase( databaseName );
+        return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return globalTopologyState.readReplicaTopology();
+        return globalTopologyState.allReadReplicas();
     }
 
     @Override
-    public ReadReplicaTopology readReplicasForDatabase( String databaseName )
+    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.readReplicaTopologyForDatabase( databaseName );
+        return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        AdvertisedSocketAddress advertisedSocketAddress = globalTopologyState.retrieveSocketAddress( upstream );
+        AdvertisedSocketAddress advertisedSocketAddress = globalTopologyState.retrieveCatchupServerAddress( upstream );
         if ( advertisedSocketAddress == null )
         {
             throw new CatchupAddressResolutionException( upstream );

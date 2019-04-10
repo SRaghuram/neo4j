@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.routing.load_balancing;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.ClientConnector;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -78,7 +80,8 @@ public class DefaultLeaderService implements LeaderService
 
     private Optional<AdvertisedSocketAddress> resolveBoltAddress( MemberId memberId )
     {
-        return topologyService.allCoreServers().find( memberId ).map( ClientConnector::boltAddress );
+        Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
+        return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );
     }
 
     private LeaderLocator leaderLocatorForDatabase( DatabaseId databaseId )

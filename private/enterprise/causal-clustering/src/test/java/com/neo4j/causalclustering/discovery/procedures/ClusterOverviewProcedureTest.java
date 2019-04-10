@@ -36,11 +36,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewProcedureTest
 {
+    private static final String DATABASE_NAME = "customers";
+
     @Test
     public void shouldProvideOverviewOfCoreServersAndReadReplicas() throws Exception
     {
@@ -68,8 +69,8 @@ public class ClusterOverviewProcedureTest
         roleMap.put( follower1, RoleInfo.FOLLOWER );
         roleMap.put( follower2, RoleInfo.FOLLOWER );
 
-        when( topologyService.allCoreServers() ).thenReturn( new CoreTopology( DEFAULT_DATABASE_NAME, null, false, coreMembers ) );
-        when( topologyService.allReadReplicas() ).thenReturn( new ReadReplicaTopology( DEFAULT_DATABASE_NAME, replicaMembers ) );
+        when( topologyService.coreServersForDatabase( DATABASE_NAME ) ).thenReturn( new CoreTopology( DATABASE_NAME, null, false, coreMembers ) );
+        when( topologyService.readReplicasForDatabase( DATABASE_NAME ) ).thenReturn( new ReadReplicaTopology( DATABASE_NAME, replicaMembers ) );
         when( topologyService.allCoreRoles() ).thenReturn( roleMap );
 
         ClusterOverviewProcedure procedure =
@@ -79,16 +80,16 @@ public class ClusterOverviewProcedureTest
         final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
 
         // todo: test with multiple databases
-        assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, Set.of( "core", "core0" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
+        assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, Set.of( "core", "core0" ), Set.of( DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( follower1.getUuid(), 5001, RoleInfo.FOLLOWER, Set.of( "core", "core1" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
+                new IsRecord( follower1.getUuid(), 5001, RoleInfo.FOLLOWER, Set.of( "core", "core1" ), Set.of( DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( follower2.getUuid(), 5002, RoleInfo.FOLLOWER, Set.of( "core", "core2" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
+                new IsRecord( follower2.getUuid(), 5002, RoleInfo.FOLLOWER, Set.of( "core", "core2" ), Set.of( DATABASE_NAME ) ) );
 
         assertThat( members.next(),
-                new IsRecord( replica4.getUuid(), 6004, RoleInfo.READ_REPLICA, Set.of( "replica", "replica4" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
+                new IsRecord( replica4.getUuid(), 6004, RoleInfo.READ_REPLICA, Set.of( "replica", "replica4" ), Set.of( DATABASE_NAME ) ) );
         assertThat( members.next(),
-                new IsRecord( replica5.getUuid(), 6005, RoleInfo.READ_REPLICA, Set.of( "replica", "replica5" ), Set.of( DEFAULT_DATABASE_NAME ) ) );
+                new IsRecord( replica5.getUuid(), 6005, RoleInfo.READ_REPLICA, Set.of( "replica", "replica5" ), Set.of( DATABASE_NAME ) ) );
 
         assertFalse( members.hasNext() );
     }
