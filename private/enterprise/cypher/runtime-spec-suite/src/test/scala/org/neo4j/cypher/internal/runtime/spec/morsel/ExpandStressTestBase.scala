@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, Morse
 abstract class ExpandStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime)
     with RHSOfApplyOneChildStressSuite
-    with RHSOfCartesianOneChildStressSuite
     with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
@@ -33,16 +32,5 @@ abstract class ExpandStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeCont
           next <- (1 to 5).map(i => nodes((y.getId.toInt + i) % nodes.length))
         } yield Array(x, y, next),
       Seq("x", "y", "next")
-    )
-
-  override def rhsOfCartesianOperator(variable: String) =
-    RHSOfCartesianOneChildTD(
-      _.expand(s"($variable)-[:NEXT]->(next)"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(y) <- rowsComingIntoTheOperator
-          next <- (1 to 5).map(i => nodes((y.getId.toInt + i) % nodes.length))
-        } yield Array(y, next),
-      Seq("y", "next")
     )
 }

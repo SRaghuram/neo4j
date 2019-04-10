@@ -22,10 +22,4 @@ abstract class IndexSeekExactStressTest(runtime: CypherRuntime[EnterpriseRuntime
           y <- nodes.filter(_.getProperty("prop").asInstanceOf[Int] == x.getId)
         } yield Array(x, y)
     )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop = 10)"),
-      () => nodes.filter(_.getProperty("prop").asInstanceOf[Int] == 10).map(Array(_))
-    )
 }

@@ -217,6 +217,17 @@ class MorselApplyStressTest extends ApplyStressTestBase(MorselRuntime)
 
 // CARTESIAN PRODUCT
 
+class MorselLabelScanCartesianStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(runtime)
+    with RHSOfCartesianLeafStressSuite {
+
+  override def rhsOfCartesianLeaf(variable: String) =
+    RHSOfCartesianLeafTD(
+      _.nodeByLabelScan(variable, "Label"),
+      () => nodes.map(Array(_))
+    )
+}
+
 class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime) {
 
   test("should support nested Cartesian Product") {

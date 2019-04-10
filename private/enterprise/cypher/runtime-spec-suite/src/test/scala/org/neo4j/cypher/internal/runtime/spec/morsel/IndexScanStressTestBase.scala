@@ -9,8 +9,8 @@ import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class IndexScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime)
-  with RHSOfApplyLeafStressSuite
-  with RHSOfCartesianLeafStressSuite {
+  with RHSOfApplyLeafStressSuite {
+
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
@@ -19,11 +19,5 @@ abstract class IndexScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
           Array(x) <- rowsComingIntoTheOperator
           y <- nodes
         } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop)"),
-      () => nodes.map(Array(_))
     )
 }

@@ -9,8 +9,7 @@ import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, Morse
 
 abstract class AllNodeScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime)
-    with RHSOfApplyLeafStressSuite
-    with RHSOfCartesianLeafStressSuite {
+    with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
@@ -20,11 +19,5 @@ abstract class AllNodeScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
           Array(x) <- rowsComingIntoTheOperator
           y <- nodes
         } yield Array(x, y)
-    )
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.allNodeScan(variable),
-      () => nodes.map(Array(_))
     )
 }
