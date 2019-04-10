@@ -188,7 +188,8 @@ class CommercialSystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
-            databaseWithSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
+            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( disabledSystemDbDirectory );
+            databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );
         }

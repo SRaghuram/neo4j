@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -51,8 +53,10 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
-                .newEmbeddedDatabase( testDirectory.databaseLayout( CUSTOM_DATABASE_ID.name() ).databaseDirectory() );
+        DatabaseManagementService
+                managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
+                testDirectory.databaseLayout( CUSTOM_DATABASE_ID.name() ).databaseDirectory() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager();
     }
 

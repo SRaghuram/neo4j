@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
@@ -39,6 +40,7 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.of;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.Iterators.single;
 
@@ -56,7 +58,8 @@ class MultiDatabaseProcedureIT
     @BeforeEach
     void setUp()
     {
-        database = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.databaseDir() );
+        database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager();
     }
 

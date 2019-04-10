@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -31,6 +32,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseLockManagerIT
@@ -44,7 +46,8 @@ class MultiDatabaseLockManagerIT
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.databaseDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach

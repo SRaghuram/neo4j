@@ -65,7 +65,8 @@ class CommercialGraphDatabaseFactoryIT
     {
         File factoryDir = testDirectory.databaseDir();
 
-        GraphDatabaseService db = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( factoryDir );
+        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( factoryDir );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( factoryDir.getParent(), DEFAULT_DATABASE_NAME ) ) );

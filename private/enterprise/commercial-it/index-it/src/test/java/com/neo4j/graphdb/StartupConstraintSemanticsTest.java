@@ -85,7 +85,8 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommunityDatabase()
     {
-        return new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.databaseDir() );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.databaseDir() );
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )

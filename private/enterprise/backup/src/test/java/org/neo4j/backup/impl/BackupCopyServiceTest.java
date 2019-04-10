@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.com.storecopy.FileMoveAction;
 import org.neo4j.com.storecopy.FileMoveProvider;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -39,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 
 @PageCacheExtension
@@ -165,7 +167,8 @@ class BackupCopyServiceTest
 
     private void startAndStopDb( File databaseDir )
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( databaseDir );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( label( "Cat" ) ).setProperty( "name", "Tom" );

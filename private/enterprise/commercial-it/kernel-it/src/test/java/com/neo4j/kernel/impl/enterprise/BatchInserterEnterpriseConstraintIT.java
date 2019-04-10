@@ -13,12 +13,15 @@ import java.io.IOException;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BatchInserterEnterpriseConstraintIT
@@ -30,7 +33,9 @@ class BatchInserterEnterpriseConstraintIT
     void startBatchInserterOnTopOfEnterpriseDatabase() throws IOException
     {
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseLayout.databaseDirectory() );
+        DatabaseManagementService
+                managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( databaseLayout.databaseDirectory() );
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY" );

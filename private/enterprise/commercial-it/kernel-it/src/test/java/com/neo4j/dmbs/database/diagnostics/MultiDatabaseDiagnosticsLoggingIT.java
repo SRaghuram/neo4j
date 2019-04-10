@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.database.DatabaseId;
@@ -21,6 +22,8 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseDiagnosticsLoggingIT
@@ -33,7 +36,9 @@ class MultiDatabaseDiagnosticsLoggingIT
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( provider ).newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( provider ).newDatabaseManagementService(
+                testDirectory.databaseDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach

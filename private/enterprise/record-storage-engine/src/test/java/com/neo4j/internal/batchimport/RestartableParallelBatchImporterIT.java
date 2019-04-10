@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
@@ -45,6 +46,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
@@ -252,7 +254,8 @@ class RestartableParallelBatchImporterIT
         importer( invisible() ).doImport( input );
 
         // then
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.databaseDir() );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( directory.databaseDir() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             input.verify( db );

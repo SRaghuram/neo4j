@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.id.IdController;
@@ -32,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseIdGeneratorIT
@@ -47,7 +49,8 @@ class MultiDatabaseIdGeneratorIT
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.databaseDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );
         secondDatabase = startSecondDatabase( databaseManager );

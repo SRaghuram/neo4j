@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotInTransactionException;
@@ -24,6 +25,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseCompositeAvailabilityGuardIT
@@ -35,7 +37,8 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach

@@ -947,7 +947,7 @@ order by a.COL1""".format(a, b))
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
     FileUtils.deleteRecursively(new File("target/readonly"))
-    val old = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( "target/readonly" ) )
+    val old = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( new File( "target/readonly" ) )
     old.shutdown()
     val managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ))
       .setConfig(GraphDatabaseSettings.read_only, "true")

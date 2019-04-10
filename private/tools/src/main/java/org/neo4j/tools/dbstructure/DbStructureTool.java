@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureArgumentFormatter;
@@ -19,6 +20,7 @@ import org.neo4j.kernel.impl.util.dbstructure.GraphDbStructureGuide;
 import org.neo4j.kernel.impl.util.dbstructure.InvocationTracer;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class DbStructureTool
 {
@@ -80,7 +82,8 @@ public class DbStructureTool
 
     protected GraphDatabaseService instantiateGraphDatabase( String dbDir )
     {
-        return new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( dbDir ) );
+        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( new File( dbDir ) );
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void traceDb( String generator,

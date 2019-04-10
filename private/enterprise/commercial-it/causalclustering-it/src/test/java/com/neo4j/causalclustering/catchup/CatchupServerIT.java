@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -91,7 +92,9 @@ class CatchupServerIT
     void startDb() throws Throwable
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService
+                managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.databaseDir() );
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );
 

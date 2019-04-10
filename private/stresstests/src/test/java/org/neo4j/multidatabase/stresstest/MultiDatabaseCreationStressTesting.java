@@ -17,8 +17,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -27,6 +27,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
@@ -48,7 +49,8 @@ class MultiDatabaseCreationStressTesting
         deleteRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
-        GraphDatabaseService databaseService = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( storeDirectory );
+        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( storeDirectory );
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );
 

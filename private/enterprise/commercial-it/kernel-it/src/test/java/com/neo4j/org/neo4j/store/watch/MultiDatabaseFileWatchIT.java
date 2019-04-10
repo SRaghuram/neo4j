@@ -19,6 +19,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;
@@ -32,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.time.Duration.ofSeconds;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteFile;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -49,7 +51,10 @@ class MultiDatabaseFileWatchIT
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.storeDir() );
+        DatabaseManagementService
+                managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
+                testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstContext = databaseManager.createDatabase( new DatabaseId( "first" ) );
         secondContext = databaseManager.createDatabase( new DatabaseId( "second" ) );

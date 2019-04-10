@@ -21,6 +21,7 @@ import java.util.Set;
 
 import org.neo4j.consistency.checking.InconsistentStoreException;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterable;
@@ -39,6 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @RunWith( Parameterized.class )
@@ -139,7 +141,8 @@ public class RebuildFromLogsTest
 
     private static GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseLayout.databaseDirectory() );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( databaseLayout.databaseDirectory() );
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     enum Transaction
