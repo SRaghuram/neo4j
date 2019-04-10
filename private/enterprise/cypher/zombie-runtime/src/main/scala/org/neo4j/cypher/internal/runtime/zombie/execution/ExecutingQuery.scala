@@ -17,12 +17,11 @@ class ExecutingQuery(val pipelineExecutions: PipelineExecutions,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer) extends QueryExecutionHandle {
 
-  override def await(): Option[Throwable] = {
+  override def await(): Unit = {
     try{
       executionState.awaitCompletion()
     } finally {
       queryExecutionTracer.stopQuery()
     }
-    None
   }
 }
