@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.graphdb.Node
@@ -22,13 +22,13 @@ object ParallelStressSuite {
   *
   * To use this, implement a StressTest that extends this class and mixes in all the traits that makes sense, while overriding the required methods.
   */
-abstract class ParallelStressSuite()
+abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     ENTERPRISE.PARALLEL.copyWith(
       GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free",
       GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
       GraphDatabaseSettings.cypher_worker_count -> WORKERS.toString),
-    MorselRuntime) {
+    runtime) {
 
   private val morselsPerGraph = 10
   private val graphSize = morselsPerGraph * MORSEL_SIZE

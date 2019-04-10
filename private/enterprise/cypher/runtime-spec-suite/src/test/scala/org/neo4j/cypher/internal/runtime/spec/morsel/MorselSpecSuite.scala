@@ -17,9 +17,9 @@ object MorselSpecSuite {
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
 
 // ALL NODE SCAN
-class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT) //with MorselSpecSuite
+class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselAllNodeScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
+class MorselAllNodeScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.allNodeScan(variable),
@@ -42,7 +42,7 @@ class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL,
                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
 
 
-class MorselIndexSeekRangeStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
+class MorselIndexSeekRangeStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop > ???)", paramExpr = Some(varFor(propArgument)), argumentIds = Set(propArgument)),
@@ -60,7 +60,7 @@ class MorselIndexSeekRangeStressTest extends ParallelStressSuite with RHSOfApply
     )
 }
 
-class MorselIndexSeekExactStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
+class MorselIndexSeekExactStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop = ???)", paramExpr = Some(varFor(propArgument)), argumentIds = Set(propArgument)),
@@ -81,7 +81,7 @@ class MorselIndexSeekExactStressTest extends ParallelStressSuite with RHSOfApply
 // LABEL SCAN
 class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselLabelScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
+class MorselLabelScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeByLabelScan(variable, "Label"),
@@ -103,7 +103,7 @@ class MorselLabelScanStressTest extends ParallelStressSuite with RHSOfApplyLeafS
 // INDEX SCAN
 class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
+class MorselIndexScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
@@ -124,7 +124,7 @@ class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafS
 // INDEX CONTAINS SCAN
 class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
+class MorselIndexContainsScanStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
@@ -139,7 +139,7 @@ class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfAp
 // EXPAND
 class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselExpandStressTest extends ParallelStressSuite with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite with OnTopOfParallelInputStressTest {
+class MorselExpandStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -179,7 +179,7 @@ class MorselExpandStressTest extends ParallelStressSuite with RHSOfApplyOneChild
 
 class MorselAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselAggregationStressTest extends ParallelStressSuite /*with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite*/ with OnTopOfParallelInputStressTest {
+class MorselAggregationStressTest extends ParallelStressSuite(MorselRuntime) /*with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite*/ with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -289,7 +289,7 @@ class MorselAggregationStressTest extends ParallelStressSuite /*with RHSOfApplyO
 
 class MorselFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
+class MorselFilterStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -305,7 +305,7 @@ class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInp
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
+class MorselProjectionStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -321,7 +321,7 @@ class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParalle
 // UNWIND
 class MorselUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 
-class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
+class MorselUnwindStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -340,7 +340,7 @@ class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInp
 // FIXME broken in Morsel
 //class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
-//class MorselArgumentStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
+//class MorselArgumentStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite {
 //  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
 //    RHSOfApplyLeafTD(
 //      _.projection(s"$nodeArgument AS $variable").|.argument(variable),
@@ -375,7 +375,7 @@ class MorselInputTest extends InputTestBase(ENTERPRISE.PARALLEL, MorselRuntime, 
 
 // APPLY
 
-class MorselApplyStressTest extends ParallelStressSuite {
+class MorselApplyStressTest extends ParallelStressSuite(MorselRuntime) {
 
   test("should support nested Apply") {
     // given
@@ -405,7 +405,7 @@ class MorselApplyStressTest extends ParallelStressSuite {
 
 // CARTESIAN PRODUCT
 
-class MorselCartesianProductStressTest extends ParallelStressSuite {
+class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime) {
 
   test("should support nested Cartesian Product") {
     // given
