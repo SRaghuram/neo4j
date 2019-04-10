@@ -194,6 +194,63 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     runtimeResult should beColumns("x", "y").withRows(sortedDesc("y"))
   }
 
+  test("should reduce twice in a row") {
+    // given
+    val nodes = nodeGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .sort(sortItems = Seq(Ascending("x")))
+      .sort(sortItems = Seq(Descending("x")))
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("x").withRows(singleColumnInOrder(nodes))
+  }
+
+  test("should all node scan and sort on rhs of apply") {
+    // given
+    val nodes = nodeGraph(10)
+    val inputRows = inputValues(nodes.map(node => Array[Any](node)): _*)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .apply()
+      .|.sort(sortItems = Seq(Descending("x")))
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, inputRows)
+
+    runtimeResult should beColumns("x").withRows(rowCount(100))
+  }
+
+  // TODO  Sort-Apply-Sort-Bug: re-enable
+  ignore("should sort on top of apply with all node scan and sort on rhs of apply") {
+    // given
+    val nodes = nodeGraph(10)
+    val inputRows = inputValues(nodes.map(node => Array[Any](node)): _*)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .sort(sortItems = Seq(Descending("x")))
+      .apply()
+      .|.sort(sortItems = Seq(Descending("x")))
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, inputRows)
+
+    runtimeResult should beColumns("x").withRows(rowCount(100))
+  }
+
   test("should apply-sort") {
     // given
     circleGraph(1000)
