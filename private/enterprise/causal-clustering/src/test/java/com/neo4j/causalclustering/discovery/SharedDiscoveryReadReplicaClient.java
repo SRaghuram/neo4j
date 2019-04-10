@@ -106,12 +106,6 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        return databaseId;
-    }
-
-    @Override
     public Map<MemberId,RoleInfo> allCoreRoles()
     {
         return sharedDiscoveryService.getCoreRoles();

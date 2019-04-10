@@ -95,12 +95,6 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return coreMembers;

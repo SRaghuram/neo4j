@@ -179,7 +179,7 @@ class UserDefinedConfigurationStrategyTest
 
         Map<MemberId,ReadReplicaInfo> readReplicas = Stream.of( readReplicaIds ).collect( Collectors.toMap( Function.identity(), toReadReplicaInfo ) );
 
-        return new ReadReplicaTopology( DEFAULT_DATABASE_NAME, readReplicas );
+        return new ReadReplicaTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), readReplicas );
     }
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
@@ -214,8 +214,6 @@ class UserDefinedConfigurationStrategyTest
     {
         return new TopologyService()
         {
-            private final DatabaseId DATABASE_ID = new DatabaseId( "default" );
-
             private Map<MemberId,AdvertisedSocketAddress> catchupAddresses = extractCatchupAddressesMap( coreTopology, readReplicaTopology );
 
             @Override
@@ -263,12 +261,6 @@ class UserDefinedConfigurationStrategyTest
             public MemberId myself()
             {
                 return new MemberId( new UUID( 0, 0 ) );
-            }
-
-            @Override
-            public DatabaseId localDatabaseId()
-            {
-                return DATABASE_ID;
             }
 
             @Override

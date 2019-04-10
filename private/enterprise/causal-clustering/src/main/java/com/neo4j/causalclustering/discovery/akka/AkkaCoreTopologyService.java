@@ -200,12 +200,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();

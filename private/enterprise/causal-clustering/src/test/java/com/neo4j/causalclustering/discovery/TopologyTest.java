@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.mock;
@@ -112,15 +110,6 @@ public class TopologyTest
         public Map<MemberId,ReadReplicaInfo> members()
         {
             return members;
-        }
-
-        @Override
-        public Topology<ReadReplicaInfo> filterTopologyByDb( DatabaseId databaseId )
-        {
-            Map<MemberId, ReadReplicaInfo> newMembers = this.members.entrySet().stream()
-                    .filter( e -> e.getValue().getDatabaseIds().contains( databaseId ) )
-                    .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
-            return new TestTopology( newMembers );
         }
     }
 

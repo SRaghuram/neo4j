@@ -43,12 +43,6 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        throw new RuntimeException( "Unimplemented" );
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return Map.of( myself, coreServerInfo(),

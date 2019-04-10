@@ -87,12 +87,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();

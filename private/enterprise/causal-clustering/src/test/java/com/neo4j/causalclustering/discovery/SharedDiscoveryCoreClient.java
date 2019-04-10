@@ -98,12 +98,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public DatabaseId localDatabaseId()
-    {
-        return localDatabaseId;
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return sharedDiscoveryService.allCoreServers();
@@ -149,6 +143,12 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
         sharedDiscoveryService.casLeaders( steppingDown, databaseId );
     }
 
+    // todo: incorrect because single cluster member can host multiple databases
+    DatabaseId localDatabaseId()
+    {
+        return localDatabaseId;
+    }
+
     public CoreServerInfo getCoreServerInfo()
     {
         return coreServerInfo;
@@ -176,6 +176,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public String toString()
     {
         return "SharedDiscoveryCoreClient{" + "myself=" + myself + ", coreServerInfo=" + coreServerInfo + ", refusesToBeLeader=" + refusesToBeLeader +
-               ", localDBName='" + localDatabaseId + '\'' + ", coreTopology=" + coreTopology + '}';
+               ", localDatabaseId='" + localDatabaseId + '\'' + ", coreTopology=" + coreTopology + '}';
     }
 }
