@@ -50,10 +50,16 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
     executionState.initializeState()
 
     val worker = new Worker(1, null, LazyScheduling, resources)
-    val executingQuery = new ExecutingQuery(pipelineExecutions, executionState, queryContext, queryState, schedulerTracer.traceQuery())
+    val executingQuery = new ExecutingQuery(pipelineExecutions,
+                                            executionState,
+                                            queryContext,
+                                            queryState,
+                                            schedulerTracer.traceQuery())
     // TODO: currently busy looping until all work is done... this is a bad
     //       way to handle back-pressure with reactive results
-    while (worker.workOnQuery(executingQuery)) {}
+    while (!executingQuery.executionState.isCompleted) {
+      worker.workOnQuery(executingQuery)
+    }
     executingQuery
   }
 }
