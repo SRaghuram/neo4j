@@ -8,7 +8,6 @@ package com.neo4j.dbms.database;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
