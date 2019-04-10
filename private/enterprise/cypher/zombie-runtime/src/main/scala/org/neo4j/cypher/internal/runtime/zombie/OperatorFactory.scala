@@ -9,29 +9,34 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan, RefSlot, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{QueryIndexes, slotted}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.zombie.operators._
+import org.neo4j.cypher.internal.runtime.{QueryIndexes, slotted}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 import org.neo4j.internal.kernel
 
-class OperatorFactory(physicalPlan: PhysicalPlan,
+/**
+  * Responsible for a 1-to-1 mapping between LogicalPlans and Operators.
+  */
+class OperatorFactory(stateDefinition: StateDefinition,
                       converters: ExpressionConverters,
                       readOnly: Boolean,
                       queryIndexes: QueryIndexes) {
+  private val physicalPlan = stateDefinition.physicalPlan
 
-  def create(plan: LogicalPlan): Operator = {
+  def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     generateSlotAccessorFunctions(slots)
 
     plan match {
-      case plans.Input(nodes, variables, _) =>
+      case plans.Input(nodes, variables, nullable) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
                           nodes.map(v => slots.getLongOffsetFor(v)),
                           variables.map(v => slots.getReferenceOffsetFor(v)))
@@ -107,6 +112,47 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                               dir,
                               lazyTypes)
 
+      case joinPlan:plans.NodeHashJoin =>
+
+        val slotConfigs = physicalPlan.slotConfigurations
+        val argumentSize = physicalPlan.argumentSizes(plan.id)
+        val lhsOffsets: Array[Int] = joinPlan.nodes.map(k => slots.getLongOffsetFor(k)).toArray
+        val rhsSlots = slotConfigs(joinPlan.right.id)
+        val rhsOffsets: Array[Int] = joinPlan.nodes.map(k => rhsSlots.getLongOffsetFor(k)).toArray
+        val copyLongsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+        val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+        val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+
+        // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
+        // part of the join comparison
+        rhsSlots.foreachSlotOrdered({
+          case (key, LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+            copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
+          case (key, RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+            copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
+          case _ => // do nothing, already added by lhs
+        }, { cnp =>
+          val offset = rhsSlots.getCachedNodePropertyOffsetFor(cnp)
+          if (offset >= argumentSize.nReferences)
+            copyCachedPropertiesFromRHS += offset -> slots.getCachedNodePropertyOffsetFor(cnp)
+        })
+
+        val longsToCopy = copyLongsFromRHS.result().toArray
+        val refsToCopy = copyRefsFromRHS.result().toArray
+        val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result().toArray
+
+        val buffer = inputBuffer.asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
+        new NodeHashJoinOperator(
+          WorkIdentity.fromPlan(plan),
+          buffer.lhsargumentStateMapId,
+          buffer.rhsargumentStateMapId,
+          lhsOffsets,
+          rhsOffsets,
+          slots,
+          longsToCopy,
+          refsToCopy,
+          cachedPropertiesToCopy)
+
       case plans.UnwindCollection(src, variable, collection) =>
         val offset = slots.get(variable) match {
           case Some(RefSlot(idx, _, _)) => idx
@@ -120,7 +166,8 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
         val ordering = sortItems.map(translateColumnOrder(slots, _))
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
-        new SortMergeOperator(id,
+        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        new SortMergeOperator(argumentStateMapId,
                               WorkIdentity.fromPlan(plan),
                               ordering,
                               argumentSlot)
@@ -150,7 +197,8 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
         Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
       case plans.Limit(_, count, ties) =>
-        Some(new LimitOperator(plan.id, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
+        val argumentStateMapId = stateDefinition.findArgumentStateMapForPlan(id)
+        Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
       case plans.Projection(_, expressions) =>
         val projectionOps = expressions.map {

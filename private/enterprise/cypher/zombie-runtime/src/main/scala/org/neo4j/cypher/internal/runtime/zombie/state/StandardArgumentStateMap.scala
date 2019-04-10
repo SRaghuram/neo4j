@@ -5,23 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentState, ArgumentStateFactory, ArgumentStateMap}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.zombie.state.StandardArgumentStateMap.StandardStateController
 
 import scala.collection.mutable
 
 /**
   * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
   */
-class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
+class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[STATE]) extends ArgumentStateMap[STATE] {
-  private val controllers = mutable.Map[Long, Controller]()
+  private val controllers = mutable.Map[Long, StandardStateController[STATE]]()
 
   override def update(morsel: MorselExecutionContext,
-                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
+                      onState: (STATE, MorselExecutionContext) => Unit,
+                      takeLock: Boolean): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,
@@ -51,35 +53,79 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
                                               argumentRowId => isCancelled(controllers(argumentRowId).state))
   }
 
-  override def takeCompleted(): Iterable[STATE] = {
-    val complete = controllers.values.filter(_.count == 0)
-    complete.foreach(controller => controllers -= controller.state.argumentRowId)
-    complete.map(_.state)
+  override def takeOneCompleted(): STATE = {
+    val iterator = controllers.values.iterator
+
+    while(iterator.hasNext) {
+      val controller = iterator.next()
+      if (controller.isZero) {
+        controllers -= controller.state.argumentRowId
+        return controller.state
+      }
+    }
+    null.asInstanceOf[STATE]
+  }
+
+  override def peekCompleted(): Iterator[STATE] = {
+    controllers.values.iterator.filter(_.isZero).map(_.state)
+  }
+
+  override def peek(argumentId: Long): STATE = {
+    val controller = controllers(argumentId)
+    if (controller != null) {
+      controller.state
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def hasCompleted: Boolean = {
-    controllers.values.exists(_.count == 0)
+    controllers.values.exists(_.isZero)
+  }
+
+  override def hasCompleted(argument: Long): Boolean = {
+    controllers(argument).isZero
+  }
+
+  override def remove(argument: Long): Boolean = {
+    controllers.remove(argument).isDefined
   }
 
   override def initiate(argument: Long): Unit = {
-    controllers += argument -> new Controller(factory.newArgumentState(argument))
+    controllers += argument -> new StandardStateController(factory.newArgumentState(argument))
   }
 
   override def increment(argument: Long): Unit = {
     val controller = controllers(argument)
-    controller.count += 1
-    debug("plan %s incr %03d to %s".format(owningPlanId, argument, controller.count))
+    controller.increment()
+    debug("ASM %s incr %03d to %s".format(argumentStateMapId, argument, controller.count))
   }
 
-  override def decrement(argument: Long): Unit = {
+  override def decrement(argument: Long): Boolean = {
     val controller = controllers(argument)
-    if (controller.count == 0)
+    if (controller.isZero) {
       throw new IllegalStateException("Cannot have negative reference counts!")
-    controller.count -= 1
-    debug("plan %s decr %03d to %s".format(owningPlanId, argument, controller.count))
+    }
+    controller.decrement()
+    debug("ASM %s decr %03d to %s".format(argumentStateMapId, argument, controller.count))
+    controller.isZero
   }
+}
 
-  private class Controller(val state: STATE) {
-    var count: Long = 1
+object StandardArgumentStateMap {
+
+ /**
+  * Controller which knows when an [[ArgumentState]] is complete.
+  */
+  private[StandardArgumentStateMap] class StandardStateController[STATE <: ArgumentState](val state: STATE) {
+    private var _count: Long = 1
+
+    def isZero: Boolean = _count == 0
+
+    def increment(): Unit = _count += 1
+
+    def decrement(): Unit = _count -= 1
+
+    def count: Long = _count
   }
 }

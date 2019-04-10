@@ -3,39 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.zombie
+package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Id}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.ArgumentState
 
 import scala.collection.mutable.ArrayBuffer
-
-trait ArgumentState {
-  /**
-    * The ID of the argument row for this accumulator.
-    */
-  def argumentRowId: Long
-}
-
-trait WorkCanceller extends ArgumentState {
-  def isCancelled: Boolean
-}
-
-/**
-  * Accumulator of morsels. Has internal state which it updates using provided morsel.
-  */
-trait MorselAccumulator extends ArgumentState {
-
-  /**
-    * Update internal state using the provided morsel.
-    */
-  def update(morsel: MorselExecutionContext): Unit
-}
-
-trait ArgumentStateFactory[S <: ArgumentState] {
-  def newArgumentState(argumentRowId: Long): S
-}
 
 /**
   * Maps every argument to one `ArgumentState`/`S`.
@@ -45,8 +19,10 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
     * Update the [[ArgumentState]] related to `argument` and decrement
     * the argument counter.
+    *
+    * @param takeLock specifies if the state updates should be performed under a lock, defaults to true
     */
-  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit): Unit
+  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit, takeLock: Boolean = true): Unit
 
   /**
     * Filter the input morsel using the [[ArgumentState]] related to `argument`.
@@ -68,16 +44,38 @@ trait ArgumentStateMap[S <: ArgumentState] {
                                isCancelled: S => Boolean): Seq[Long]
 
   /**
-    * Take the [[ArgumentState]]s of all complete arguments. The [[ArgumentState]]s will
-    * be removed from the ArgumentStateMap and cannot be taken again or modified after this call.
+    * Take the [[ArgumentState]] of one complete arguments. The [[ArgumentState]] will
+    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
     */
-  def takeCompleted(): Iterable[S]
+  def takeOneCompleted(): S
+
+  /**
+    * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
+    */
+  def peekCompleted(): Iterator[S]
+
+  /**
+    * Returns the [[ArgumentState]] for the specified argumentId, but does not remove it from the [[ArgumentStateMap]].
+    * @return the [[ArgumentState]] for the provided argumentId, or null if none exists
+    */
+  def peek(argumentId: Long): S
 
   /**
     * Returns `true` iff there is a completed argument.
     * @return
     */
   def hasCompleted: Boolean
+
+  /**
+    * Returns `true` iff the argument is completed.
+    */
+  def hasCompleted(argument: Long): Boolean
+
+  /**
+    * Removes the state of this argument.
+    * @return `true` if the argument was removed, `false` if it had been removed earlier.
+    **/
+  def remove(argument: Long): Boolean
 
   /**
     * Initiate state and counting for a new argument.
@@ -91,13 +89,14 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
     * Decrement the argument counter for `argument`.
+    * @return true iff count has reached zero
     */
-  def decrement(argument: Long): Unit
+  def decrement(argument: Long): Boolean
 
   /**
-    * Plan which owns this argument state map.
+    * ID of this ArgumentStateMap
     */
-  def owningPlanId: Id
+  def argumentStateMapId: ArgumentStateMapId
 
   /**
     * Slot offset of the argument slot.
@@ -105,9 +104,56 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def argumentSlotOffset: Int
 }
 
-class ArgumentStateMaps() extends Attribute[LogicalPlan, ArgumentStateMap[_ <: ArgumentState]]
-
+/**
+  * Static methods and interfaces connected to ArgumentStateMap
+  */
 object ArgumentStateMap {
+
+  /**
+    * State that belongs to one argumentRowId and is kept in the [[ArgumentStateMap]]
+    */
+  trait ArgumentState {
+    /**
+      * The ID of the argument row for this state.
+      */
+    def argumentRowId: Long
+  }
+
+  /**
+    * A state that keeps track whether work related to the argument id is cancelled.
+    */
+  trait WorkCanceller extends ArgumentState {
+    def isCancelled: Boolean
+  }
+
+  /**
+    * Accumulator of morsels. Has internal state which it updates using provided morsel.
+    */
+  trait MorselAccumulator extends ArgumentState {
+
+    /**
+      * Update internal state using the provided morsel.
+      */
+    def update(morsel: MorselExecutionContext): Unit
+  }
+
+  /**
+    * Operators that use ArgumentStateMaps need to implement this to be able to instantiate
+    * the corresponding ArgumentStateMap. They will usually do this using a lambda function.
+    */
+  trait ArgumentStateFactory[S <: ArgumentState] {
+    def newArgumentState(argumentRowId: Long): S
+  }
+
+  /**
+    * Mapping of IDs to the corresponding ArgumentStateMap.
+    */
+  trait ArgumentStateMaps {
+    /**
+      * Get the argument state map for the given id.
+      */
+    def apply(argumentStateMapId: ArgumentStateMapId): ArgumentStateMap[_ <: ArgumentState]
+  }
 
   /**
     * For each argument row id at `argumentSlotOffset`, create a view over `morsel`

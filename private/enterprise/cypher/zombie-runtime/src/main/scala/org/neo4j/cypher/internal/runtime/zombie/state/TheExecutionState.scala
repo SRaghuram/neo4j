@@ -5,29 +5,35 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers}
 import org.neo4j.util.Preconditions
+
+
+object TheExecutionState {
+  def build(stateDefinition: StateDefinition,
+            executablePipelines: Seq[ExecutablePipeline],
+            stateFactory: StateFactory,
+            workerWaker: WorkerWaker): ExecutionState =
+    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.argumentStateMaps, stateDefinition.physicalPlan, stateFactory, workerWaker)
+}
 
 /**
   * Implementation of [[ExecutionState]].
   */
-object TheExecutionState {
-  def build(stateDefinition: StateDefinition, executablePipelines: Seq[ExecutablePipeline], stateFactory: StateFactory, workerWaker: WorkerWaker): ExecutionState =
-    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.physicalPlan, stateFactory, workerWaker)
-}
-
 class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
                         pipelines: Seq[ExecutablePipeline],
+                        argumentStateDefinitions: IndexedSeq[ArgumentStateDefinition],
                         physicalPlan: PhysicalPlan,
                         stateFactory: StateFactory,
                         workerWaker: WorkerWaker) extends ExecutionState {
 
   private val tracker = stateFactory.newTracker()
-  private val argumentStateMaps = new ArgumentStateMaps
 
   // Verify that IDs and offsets match
 
@@ -41,6 +47,7 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
 
   private var pipelineLocks: Array[Lock] = _
   private var buffers: Buffers = _
+  private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](argumentStateDefinitions.size)
   private var continuations: Array[Buffer[PipelineTask]] = _
 
   override def initializeState(): Unit = {
@@ -49,17 +56,21 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
         stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
       }
 
-    buffers = new Buffers(bufferDefinitions, tracker, argumentStateMaps, stateFactory)
-    continuations = new Array[Int](pipelines.size).map(_ => stateFactory.newBuffer[PipelineTask]())
+    val asms: ArgumentStateMaps = id => argumentStateMaps(id.x)
 
-    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
+    buffers = new Buffers(bufferDefinitions, tracker, asms, stateFactory)
+    continuations = pipelines.map(_ => stateFactory.newBuffer[PipelineTask]()).toArray
+
+    // Assumption: Buffer with ID 0 is the initual buffer
+    putMorsel(NO_PIPELINE, BufferId(0), MorselExecutionContext.createInitialRow())
   }
 
   // Methods
 
-  override def putMorsel(bufferId: BufferId,
+  override def putMorsel(fromPipeline: PipelineId,
+                         bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
-    buffers.sink(bufferId).put(output)
+    buffers.sink(fromPipeline, bufferId).put(output)
     workerWaker.wakeAll()
   }
 
@@ -67,8 +78,12 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.morselBuffer(bufferId).take()
   }
 
-  override def takeAccumulators[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): Iterable[ACC] = {
-    buffers.argumentStateBuffer(bufferId).take()
+  override def takeAccumulator[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): ACC = {
+    buffers.source[ACC](bufferId).take()
+  }
+
+  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): (ACC, MorselExecutionContext) = {
+    buffers.source[(ACC, MorselExecutionContext)](bufferId).take()
   }
 
   override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
@@ -82,9 +97,17 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
 
-  override def closeAccumulatorsTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulators: Iterable[ACC]): Unit = {
+  override def closeAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulator: ACC): Unit = {
     closeWorkUnit(pipeline)
-    buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulators)
+    buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulator)
+  }
+
+  override def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                       inputMorsel: MorselExecutionContext,
+                                                                       accumulator: ACC): Unit = {
+    closeWorkUnit(pipeline)
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+    buffer.close(accumulator, inputMorsel)
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
@@ -96,8 +119,18 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
   }
 
   override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                                  accumulators: Iterable[ACC]): Boolean = {
-    val isCancelled = buffers.argumentStateBuffer(pipeline.inputBuffer.id).filterCancelledArguments(accumulators)
+                                                                  accumulator: ACC): Boolean = {
+    val isCancelled = buffers.argumentStateBuffer[ACC](pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                  inputMorsel: MorselExecutionContext,
+                                                                  accumulator: ACC): Boolean = {
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+    val isCancelled = buffer.filterCancelledArguments(accumulator, inputMorsel)
     if (isCancelled)
       closeWorkUnit(pipeline)
     isCancelled
@@ -125,15 +158,11 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
   }
 
-  override final def createArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+  override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    val argumentSlotOffset =
-      physicalPlan
-        .slotConfigurations(reducePlanId)
-        .getArgumentLongOffsetFor(physicalPlan.applyPlans(reducePlanId))
-
-    val asm = stateFactory.newArgumentStateMap(reducePlanId, argumentSlotOffset, factory)
-    argumentStateMaps.set(reducePlanId, asm)
+    val argumentSlotOffset = argumentStateDefinitions(argumentStateMapId.x).argumentSlotOffset
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
+    argumentStateMaps(argumentStateMapId.x) = asm
     asm
   }
 
@@ -143,7 +172,10 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
 
   override def prettyString(pipeline: ExecutablePipeline): String = {
     s"""continuations: ${continuations(pipeline.id.x)}
-       |  inputBuffer: ${buffers.sink(pipeline.inputBuffer.id)}
        |""".stripMargin
   }
+
+  // used by join operator, to create thread-safe argument states in its RHS ASM
+  override def newBuffer[T <: AnyRef](): Buffer[T] =
+    stateFactory.newBuffer()
 }

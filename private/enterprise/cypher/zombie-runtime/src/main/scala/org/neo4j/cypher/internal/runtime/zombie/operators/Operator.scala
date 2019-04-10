@@ -7,8 +7,9 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
+import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.values.AnyValue
@@ -26,11 +27,18 @@ trait OperatorInput {
   def takeMorsel(): MorselParallelizer
 
   /**
-    * Take the next input accumulators
+    * Take the next input accumulator
     *
-    * @return the input accumulators, or `null` if no input is available
+    * @return the input accumulator, or `null` if no input is available
     */
-  def takeAccumulators[ACC <: MorselAccumulator](argumentStateMap: ArgumentStateMap[ACC]): Iterable[ACC]
+  def takeAccumulator[ACC <: MorselAccumulator](): ACC
+
+  /**
+    * Take the next input accumulator from the LHS and morsel from the RHS.
+    *
+    * @return the input accumulator and the morsel as a tuple, or `null` if no input is available
+    */
+  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): (ACC, MorselExecutionContext)
 }
 
 /**
@@ -46,7 +54,9 @@ trait OperatorCloser {
   /**
     * Close input accumulators.
     */
-  def closeAccumulators[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Unit
+  def closeAccumulator[ACC <: MorselAccumulator](accumulator: ACC): Unit
+
+  def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Unit
 
   /**
     * Remove all rows related to cancelled argumentRowIds from `morsel`.
@@ -56,11 +66,21 @@ trait OperatorCloser {
   def filterCancelledArguments(morsel: MorselExecutionContext): Boolean
 
   /**
-    * Remove all accumulators related to cancelled argumentRowIds from `accumulators`.
+    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
     *
-    * @return `true` if accumultors is completely empty after cancellations
+    * @return `true` if the accumulator was removed
     */
-  def filterCancelledArguments[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Boolean
+  def filterCancelledArguments[ACC <: MorselAccumulator](accumulator: ACC): Boolean
+
+  /**
+    * Remove all rows related to cancelled argumentRowIds from `morsel`.
+    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
+    *
+    * @param morsel the input morsel
+    * @param accumulator the accumulator
+    * @return `true` iff both the morsel and the accumulator are cancelled
+    */
+  def filterCancelledArguments[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Boolean
 }
 
 /**
@@ -74,7 +94,7 @@ trait Operator extends HasWorkIdentity {
     * @param argumentStateCreator creator used to construct a argumentStateMap for this operator state
     * @return the new execution state for this operator.
     */
-  def createState(argumentStateCreator: ArgumentStateCreator): OperatorState
+  def createState(argumentStateCreator: ArgumentStateMapCreator): OperatorState
 }
 
 /**
@@ -97,13 +117,11 @@ trait OperatorState {
   */
 trait ReduceOperatorState[ACC <: MorselAccumulator] extends OperatorState {
 
-  def argumentStateMap: ArgumentStateMap[ACC]
-
   final override def nextTasks(context: QueryContext,
                                state: QueryState,
                                operatorInput: OperatorInput,
-                               resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[ACC]] = {
-    val input = operatorInput.takeAccumulators(argumentStateMap)
+                               resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[ACC]] = {
+    val input = operatorInput.takeAccumulator[ACC]()
     if (input != null) {
       nextTasks(context, state, input, resources)
     } else {
@@ -116,8 +134,8 @@ trait ReduceOperatorState[ACC <: MorselAccumulator] extends OperatorState {
     */
   def nextTasks(context: QueryContext,
                 state: QueryState,
-                input: Iterable[ACC],
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[ACC]]
+                input: ACC,
+                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[ACC]]
 }
 
 /**
@@ -146,7 +164,7 @@ trait StreamingOperator extends Operator with OperatorState {
                           inputMorsel: MorselParallelizer,
                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
-  override final def createState(argumentStateCreator: ArgumentStateCreator): OperatorState = this
+  override final def createState(argumentStateCreator: ArgumentStateMapCreator): OperatorState = this
 }
 
 /**
@@ -159,17 +177,17 @@ trait ContinuableOperator extends HasWorkIdentity {
 }
 
 trait MiddleOperator extends HasWorkIdentity {
-  def createState(argumentStateCreator: ArgumentStateCreator,
-                  queryContext: QueryContext,
-                  state: QueryState,
-                  resources: QueryResources): OperatorTask
+  def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                 queryContext: QueryContext,
+                 state: QueryState,
+                 resources: QueryResources): OperatorTask
 }
 
 trait StatelessOperator extends MiddleOperator with OperatorTask {
-  final override def createState(argumentStateCreator: ArgumentStateCreator,
-                                 queryContext: QueryContext,
-                                 state: QueryState,
-                                 resources: QueryResources): OperatorTask = this
+  final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                                queryContext: QueryContext,
+                                state: QueryState,
+                                resources: QueryResources): OperatorTask = this
 }
 
 /**
@@ -189,21 +207,53 @@ trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
   def close(operatorCloser: OperatorCloser): Unit
   def producingWorkUnitEvent: WorkUnitEvent
+
+  /**
+    * Remove everything related to cancelled argumentRowIds from to the task's input.
+    *
+    * @return `true` if the task has become obsolete.
+    */
   def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
 }
 
-/**
-  * ContinuableOperatorTask with a morsel as input.
-  */
 trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
   val inputMorsel: MorselExecutionContext
 
-  override final def close(operatorCloser: OperatorCloser): Unit = {
+  override def close(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorsel(inputMorsel)
   }
 
-  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
+  override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
     operatorCloser.filterCancelledArguments(inputMorsel)
+  }
+
+  override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
+}
+
+trait ContinuableOperatorTaskWithAccumulator[ACC <: MorselAccumulator] extends ContinuableOperatorTask {
+  val accumulator: ACC
+
+  override def close(operatorCloser: OperatorCloser): Unit = {
+    operatorCloser.closeAccumulator(accumulator)
+  }
+
+  override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
+    operatorCloser.filterCancelledArguments(accumulator)
+  }
+
+  override def producingWorkUnitEvent: WorkUnitEvent = null
+}
+
+trait ContinuableOperatorTaskWithMorselAndAccumulator[ACC <: MorselAccumulator]
+  extends ContinuableOperatorTaskWithMorsel
+  with ContinuableOperatorTaskWithAccumulator[ACC] {
+
+  override def close(operatorCloser: OperatorCloser): Unit = {
+    operatorCloser.closeMorselAndAccumulatorTask(inputMorsel, accumulator)
+  }
+
+  override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
+    operatorCloser.filterCancelledArguments(inputMorsel, accumulator)
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
@@ -253,21 +303,4 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
                                       expressionVariables: Array[AnyValue],
                                       cursorPools: CursorPools,
                                       resultVisitor: QueryResultVisitor[E]): Unit
-}
-
-/**
-  * ContinuableOperatorTask with a morsel as input.
-  */
-trait ContinuableOperatorTaskWithAccumulators[ACC <: MorselAccumulator] extends ContinuableOperatorTask {
-  val accumulators: Iterable[ACC]
-
-  override final def close(operatorCloser: OperatorCloser): Unit = {
-    operatorCloser.closeAccumulators(accumulators)
-  }
-
-  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
-    operatorCloser.filterCancelledArguments(accumulators)
-  }
-
-  override def producingWorkUnitEvent: WorkUnitEvent = null
 }

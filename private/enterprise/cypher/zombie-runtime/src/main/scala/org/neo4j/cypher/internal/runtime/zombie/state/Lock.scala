@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import org.neo4j.cypher.internal.runtime.zombie.Zombie
+
 /**
   * Basic lock.
   */
@@ -65,15 +67,20 @@ class NoLock(val id: String) extends Lock {
 class ConcurrentLock(val id: String) extends Lock {
   private val isLocked = new AtomicBoolean(false)
 
-  override def tryLock(): Boolean =
-    isLocked.compareAndSet(false, true)
+  override def tryLock(): Boolean = {
+    val success = isLocked.compareAndSet(false, true)
+    Zombie.debug(s"${Thread.currentThread().getId} tried locking $name. Success: $success")
+    success
+  }
 
   override def lock(): Unit =
     while (!isLocked.compareAndSet(false, true)) {}
 
   override def unlock(): Unit = {
     if (!isLocked.compareAndSet(true, false)) {
-      throw new IllegalStateException(s"Tried to release $name that was not acquired")
+      throw new IllegalStateException(s"${Thread.currentThread().getId} tried to release $name that was not acquired.")
+    } else {
+      Zombie.debug(s"${Thread.currentThread().getId} unlocked $name.")
     }
   }
 

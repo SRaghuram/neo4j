@@ -7,15 +7,16 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import java.util.{Comparator, PriorityQueue}
 
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.zombie.operators.SortMergeOperator.UnsortedBuffer
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -25,11 +26,11 @@ import scala.collection.mutable.ArrayBuffer
   * sorted order. Like all reducing operators, [[SortMergeOperator]]
   * collects and streams grouped by argument rows ids.
   */
-class SortMergeOperator(val planId: Id,
+class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
                         orderBy: Seq[ColumnOrder],
                         argumentSlotOffset: Int,
-                        countExpression: Option[Expression] = None) extends Operator {
+                        countExpression: Option[Expression] = None) extends Operator with ReduceOperatorState[UnsortedBuffer] {
 
   override def toString: String = "SortMerge"
 
@@ -38,19 +39,17 @@ class SortMergeOperator(val planId: Id,
     .map(MorselSorting.createMorselComparator)
     .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
 
-  override def createState(argumentStateCreator: ArgumentStateCreator): ReduceOperatorState[UnsortedBuffer] = {
-    new State(argumentStateCreator.createArgumentStateMap(planId, argumentRowId => new UnsortedBuffer(argumentRowId)))
+  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[UnsortedBuffer] = {
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, argumentRowId => new UnsortedBuffer(argumentRowId))
+    this
   }
 
-  class State(override val argumentStateMap: ArgumentStateMap[UnsortedBuffer]) extends ReduceOperatorState[UnsortedBuffer] {
-
-    override def nextTasks(queryContext: QueryContext,
-                           state: QueryState,
-                           input: Iterable[UnsortedBuffer],
-                           resources: QueryResources
-                     ): IndexedSeq[ContinuableOperatorTaskWithAccumulators[UnsortedBuffer]] = {
-      Array(new OTask(input))
-    }
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         input: UnsortedBuffer,
+                         resources: QueryResources
+                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[UnsortedBuffer]] = {
+    Array(new OTask(input))
   }
 
   /*
@@ -58,12 +57,16 @@ class SortMergeOperator(val planId: Id,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulators: Iterable[UnsortedBuffer]) extends ContinuableOperatorTaskWithAccumulators[UnsortedBuffer] {
-    private val accIterator = accumulators.toIterator
+  class OTask(override val accumulator: UnsortedBuffer) extends ContinuableOperatorTaskWithAccumulator[UnsortedBuffer] {
 
     override def toString: String = "SortMergeTask"
 
-    var sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
+    val sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
+    accumulator.data.foreach { morsel =>
+      if (morsel.hasData) {
+        sortedInputPerArgument.add(morsel)
+      }
+    }
 
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
@@ -81,19 +84,12 @@ class SortMergeOperator(val planId: Id,
             sortedInputPerArgument.add(nextRow)
           }
         }
-
-        if (sortedInputPerArgument.isEmpty && accIterator.hasNext) {
-          val inputs = accIterator.next()
-          inputs.data.foreach { morsel =>
-            if (morsel.hasData) sortedInputPerArgument.add(morsel)
-          }
-        }
       }
 
       outputRow.finishedWriting()
     }
 
-    override def canContinue: Boolean = !sortedInputPerArgument.isEmpty || accIterator.hasNext
+    override def canContinue: Boolean = !sortedInputPerArgument.isEmpty
   }
 }
 

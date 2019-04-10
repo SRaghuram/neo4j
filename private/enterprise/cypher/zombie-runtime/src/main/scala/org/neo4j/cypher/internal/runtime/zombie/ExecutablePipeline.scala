@@ -16,7 +16,7 @@ import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
-                              middleOperators: Seq[MiddleOperator],
+                              middleOperators: Array[MiddleOperator],
                               produceResult: Option[ProduceResultOperator],
                               serial: Boolean,
                               slots: SlotConfiguration,
@@ -30,7 +30,7 @@ case class ExecutablePipeline(id: PipelineId,
 
     new PipelineState(this,
                       start.createState(executionState),
-                      middleOperators.map(_.createState(executionState, queryContext, queryState, resources)),
+                      middleOperators.map(_.createTask(executionState, queryContext, queryState, resources)),
                       executionState)
 
   override val workId: Int = start.workIdentity.workId
@@ -46,7 +46,7 @@ case class ExecutablePipeline(id: PipelineId,
 
 class PipelineState(val pipeline: ExecutablePipeline,
                     startState: OperatorState,
-                    middleTasks: Seq[OperatorTask],
+                    middleTasks: Array[OperatorTask],
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
@@ -107,9 +107,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
   }
 
+  /**
+    * Put the result of an execution of this pipeline into the corresponding output buffer.
+    * @param morsel the output morsel
+    */
   def produce(morsel: MorselExecutionContext): Unit = {
     if (pipeline.outputBuffer != null) {
-      executionState.putMorsel(pipeline.outputBuffer.id, morsel)
+      executionState.putMorsel(pipeline.id, pipeline.outputBuffer.id, morsel)
     }
   }
 
@@ -138,8 +142,12 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeMorsel(pipeline.inputBuffer.id, pipeline)
   }
 
-  override def takeAccumulators[ACC <: MorselAccumulator](argumentStateMap: ArgumentStateMap[ACC]): Iterable[ACC] = {
-    executionState.takeAccumulators(pipeline.inputBuffer.id, pipeline)
+  override def takeAccumulator[ACC <: MorselAccumulator](): ACC = {
+    executionState.takeAccumulator(pipeline.inputBuffer.id, pipeline)
+  }
+
+  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): (ACC, MorselExecutionContext) = {
+    executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id, pipeline)
   }
 
   /* OperatorCloser */
@@ -148,15 +156,23 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.closeMorselTask(pipeline, morsel)
   }
 
-  override def closeAccumulators[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Unit = {
-    executionState.closeAccumulatorsTask(pipeline, accumulators)
+  override def closeAccumulator[ACC <: MorselAccumulator](accumulator: ACC): Unit = {
+    executionState.closeAccumulatorTask(pipeline, accumulator)
+  }
+
+  override def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Unit = {
+    executionState.closeMorselAndAccumulatorTask(pipeline, morsel, accumulator)
   }
 
   override def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel)
   }
 
-  override def filterCancelledArguments[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Boolean = {
-    executionState.filterCancelledArguments(pipeline, accumulators)
+  override def filterCancelledArguments[ACC <: MorselAccumulator](accumulator: ACC): Boolean = {
+    executionState.filterCancelledArguments(pipeline, accumulator)
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Boolean = {
+    executionState.filterCancelledArguments(pipeline, morsel, accumulator)
   }
 }

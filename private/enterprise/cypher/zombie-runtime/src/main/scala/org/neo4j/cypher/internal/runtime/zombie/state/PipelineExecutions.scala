@@ -5,12 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, ExecutionState, PipelineState}
 import org.neo4j.util.Preconditions
 
+/**
+  * Grouping of all pipelines of an execution.
+  * Used to compute their states before initializing the [[ExecutionState]].
+  */
 class PipelineExecutions(pipelines: IndexedSeq[ExecutablePipeline],
                          executionState: ExecutionState,
                          queryContext: QueryContext,
@@ -27,8 +30,6 @@ class PipelineExecutions(pipelines: IndexedSeq[ExecutablePipeline],
     }
     states
   }
-
-  def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
 
   def reverseIterator: Iterator[PipelineState] = pipelineStates.reverseIterator
 }

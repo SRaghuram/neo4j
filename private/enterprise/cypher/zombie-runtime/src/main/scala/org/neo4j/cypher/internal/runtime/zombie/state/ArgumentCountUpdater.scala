@@ -6,60 +6,66 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatingBuffer
 
 /**
   * Helper class for updating argument counts.
-  *
-  * @param tracker tracker of the progress for this query
-  * @param argumentStateMaps the ArgumentStateMap attribute for all logical plans
   */
-abstract class ArgumentCountUpdater(tracker: QueryCompletionTracker,
-                                    argumentStateMaps: ArgumentStateMaps) {
+abstract class ArgumentCountUpdater {
 
-  protected def initiateArgumentStates(argumentStatePlans: Seq[Id],
+  private def morselLoop(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+                         morsel: MorselExecutionContext,
+                         operation: (AccumulatingBuffer, Long) => Unit): Unit = {
+    var i = 0
+    while (i < downstreamAccumulatingBuffers.length) {
+      val buffer = downstreamAccumulatingBuffers(i)
+      val argumentRowIds = morsel.allArgumentRowIdsFor(buffer.argumentSlotOffset)
+      var j = 0
+      while (j < argumentRowIds.size) {
+        operation(buffer, argumentRowIds(j))
+        j += 1
+      }
+      i += 1
+    }
+  }
+
+  private def argumentCountLoop(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+                                argumentRowIds: Seq[Long],
+                                operation: (AccumulatingBuffer, Long) => Unit): Unit = {
+    var i = 0
+    while (i < downstreamAccumulatingBuffers.length) {
+      val buffer = downstreamAccumulatingBuffers(i)
+      var j = 0
+      while (j < argumentRowIds.size) {
+        operation(buffer, argumentRowIds(j))
+        j += 1
+      }
+      i += 1
+    }
+  }
+
+  protected def initiateArgumentStates(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
                                        morsel: MorselExecutionContext): Unit = {
-    for {
-      planId <- argumentStatePlans
-      asm = argumentStateMaps(planId)
-      argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-    } asm.initiate(argumentId)
+    morselLoop(downstreamAccumulatingBuffers, morsel, _.initiate(_))
   }
 
-  protected def incrementArgumentCounts(argumentStatePlans: Seq[Id],
-                                        argumentRowIds: Iterable[Long]): Unit = {
-    for {
-      reducePlanId <- argumentStatePlans
-      asm = argumentStateMaps(reducePlanId)
-      argumentId <- argumentRowIds
-    } asm.increment(argumentId)
-  }
-
-  protected def decrementArgumentCounts(argumentStatePlans: Seq[Id],
-                                        argumentRowIds: Iterable[Long]): Unit = {
-    for {
-      reducePlanId <- argumentStatePlans
-      asm = argumentStateMaps(reducePlanId)
-      argumentId <- argumentRowIds
-    } asm.decrement(argumentId)
-  }
-
-  protected def incrementArgumentCounts(argumentStatePlans: Seq[Id],
+  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
-    for {
-      reducePlanId <- argumentStatePlans
-      asm = argumentStateMaps(reducePlanId)
-      argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-    } asm.increment(argumentId)
+    morselLoop(downstreamAccumulatingBuffers, morsel, _.increment(_))
   }
 
-  protected def decrementArgumentCounts(argumentStatePlans: Seq[Id],
+  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
-    for {
-      reducePlanId <- argumentStatePlans
-      asm = argumentStateMaps(reducePlanId)
-      argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-    } asm.decrement(argumentId)
+    morselLoop(downstreamAccumulatingBuffers, morsel, _.decrement(_))
+  }
+
+  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+                                        argumentRowIds: Seq[Long]): Unit = {
+    argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.increment(_))
+  }
+
+  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+                                        argumentRowIds: Seq[Long]): Unit = {
+    argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.decrement(_))
   }
 }

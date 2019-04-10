@@ -7,36 +7,44 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.zombie.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 
 /**
   * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
   */
-class ConcurrentArgumentStateMap[S <: ArgumentState](val owningPlanId: Id,
-                                                     val argumentSlotOffset: Int,
-                                                     factory: ArgumentStateFactory[S]) extends ArgumentStateMap[S] {
+class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
+                                                         val argumentSlotOffset: Int,
+                                                         factory: ArgumentStateFactory[STATE]) extends ArgumentStateMap[STATE] {
 
-  private val controllers = new java.util.concurrent.ConcurrentHashMap[Long, StateController[S]]()
+  private val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
 
   override def update(morsel: MorselExecutionContext,
-                      onState: (S, MorselExecutionContext) => Unit): Unit = {
+                      onState: (STATE, MorselExecutionContext) => Unit,
+                      takeLock: Boolean): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,
       (argumentRowId, morselView) => {
         val controller = controllers.get(argumentRowId)
-        controller.update(morselView, onState)
+        if (takeLock) {
+          controller.update(morselView, onState)
+        } else {
+          // used from call sights that know they have thread-safe argument states
+          onState(controller.state, morselView)
+        }
       }
     )
   }
 
   override def filter[U](readingRow: MorselExecutionContext,
-                         onArgument: (S, Long) => U,
+                         onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
     ArgumentStateMap.filter(
       argumentSlotOffset,
@@ -49,49 +57,80 @@ class ConcurrentArgumentStateMap[S <: ArgumentState](val owningPlanId: Id,
   }
 
   override def filterCancelledArguments(morsel: MorselExecutionContext,
-                                        isCancelled: S => Boolean): Seq[Long] = {
+                                        isCancelled: STATE => Boolean): Seq[Long] = {
     ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
                                               morsel,
                                               argumentRowId => controllers.get(argumentRowId).compute(isCancelled))
   }
 
-  override def takeCompleted(): Iterable[S] = {
-    val completeStates = new ArrayBuffer[S]
-    controllers.forEach((argument: Long, controller: StateController[S]) => {
+  override def takeOneCompleted(): STATE = {
+    val iterator = controllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller: ConcurrentStateController[STATE] = iterator.next()
       if (controller.take) {
-        completeStates += controller.state
+        controllers.remove(controller.state.argumentRowId)
+        debug("ASM %s take %03d".format(argumentStateMapId, controller.state.argumentRowId))
+        return controller.state
       }
-    })
-    completeStates.foreach(acc => controllers.remove(acc.argumentRowId))
-    completeStates
+    }
+    null.asInstanceOf[STATE]
+  }
+
+  override def peekCompleted(): Iterator[STATE] = {
+    controllers.values().stream().filter(_.isZero).map[STATE](_.state).iterator().asScala
+  }
+
+  override def peek(argumentId: Long): STATE = {
+    val controller = controllers.get(argumentId)
+    if (controller != null) {
+      controller.state
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def hasCompleted: Boolean = {
     val iterator = controllers.values().iterator()
 
     while(iterator.hasNext) {
-      val controller: StateController[S] = iterator.next()
+      val controller: ConcurrentStateController[STATE] = iterator.next()
       if (controller.isZero)
         return true
     }
     false
   }
 
+  override def hasCompleted(argument: Long): Boolean = {
+    val controller = controllers.get(argument)
+    if (controller == null) {
+      return false
+    }
+    controller.isZero
+  }
+
+  override def remove(argument: Long): Boolean = {
+    debug("ASM %s rem %03d".format(argumentStateMapId, argument))
+    controllers.remove(argument) != null
+  }
+
   override def initiate(argument: Long): Unit = {
-    val id = if (Zombie.DEBUG) s"ArgumentState[plan=$owningPlanId, rowId=$argument]" else "ArgumentState[...]"
-    val newController = new StateController(id, factory.newArgumentState(argument))
+    val id = if (Zombie.DEBUG) s"ArgumentState[id=$argumentStateMapId, rowId=$argument]" else "ArgumentState[...]"
+    debug("ASM %s init %03d".format(argumentStateMapId, argument))
+    val newController = new ConcurrentStateController(id, factory.newArgumentState(argument))
     controllers.put(argument, newController)
   }
 
   override def increment(argument: Long): Unit = {
     val controller = controllers.get(argument)
     val newCount = controller.increment()
-    debug("plan %s incr %03d to %d".format(owningPlanId, argument, newCount))
+    debug("ASM %s incr %03d to %d".format(argumentStateMapId, argument, newCount))
   }
 
-  override def decrement(argument: Long): Unit = {
+  override def decrement(argument: Long): Boolean = {
     val newCount = controllers.get(argument).decrement()
-    debug("plan %s decr %03d to %d".format(owningPlanId, argument, newCount))
+    debug("ASM %s decr %03d to %d".format(argumentStateMapId, argument, newCount))
+    newCount == 0
   }
 
   override def toString: String = {
@@ -105,38 +144,45 @@ class ConcurrentArgumentStateMap[S <: ArgumentState](val owningPlanId: Id,
   }
 }
 
-/**
-  * Controller which knows when a [[ArgumentState]] has is complete,
-  * and protects it from concurrent access.
-  */
-class StateController[STATE <: ArgumentState](id: String, val state: STATE) {
-  private val count = new AtomicLong(1)
-  private val lock = new ConcurrentLock(id)
 
-  def increment(): Long = count.incrementAndGet()
-  def decrement(): Long = count.decrementAndGet()
-  def take: Boolean = count.compareAndSet(0, -1000000)
-  def isZero: Boolean = count.get() == 0
+object ConcurrentArgumentStateMap {
 
-  def update(morsel: MorselExecutionContext, onState: (STATE, MorselExecutionContext) => Unit): Unit = {
-    lock.lock()
-    try {
-      onState(state, morsel)
-    } finally {
-      lock.unlock()
+  /**
+    * Controller which knows when an [[ArgumentState]] is complete,
+    * and protects it from concurrent access.
+    */
+  private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](id: String, val state: STATE) {
+    private val count = new AtomicLong(1)
+    private val lock = new ConcurrentLock(id)
+
+    def increment(): Long = count.incrementAndGet()
+
+    def decrement(): Long = count.decrementAndGet()
+
+    def take: Boolean = count.compareAndSet(0, -1000000)
+
+    def isZero: Boolean = count.get() == 0
+
+    def update(morsel: MorselExecutionContext, onState: (STATE, MorselExecutionContext) => Unit): Unit = {
+      lock.lock()
+      try {
+        onState(state, morsel)
+      } finally {
+        lock.unlock()
+      }
     }
-  }
 
-  def compute[U](onArgument: STATE => U): U = {
-    lock.lock()
-    try {
-      onArgument(state)
-    } finally {
-      lock.unlock()
+    def compute[U](onArgument: STATE => U): U = {
+      lock.lock()
+      try {
+        onArgument(state)
+      } finally {
+        lock.unlock()
+      }
     }
-  }
 
-  override def toString: String = {
-    s"[count: ${count.get()}, lock: $lock, state: $state]"
+    override def toString: String = {
+      s"[count: ${count.get()}, lock: $lock, state: $state]"
+    }
   }
 }

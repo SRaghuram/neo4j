@@ -10,13 +10,13 @@ import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryRe
 import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask}
 
 /**
-  * The [[Task]] of executing a [[ExecutablePipeline]] once.
+  * The [[Task]] of executing an [[ExecutablePipeline]] once.
   *
   * @param startTask  task for executing the start operator
   * @param state  the current QueryState
   */
 case class PipelineTask(startTask: ContinuableOperatorTask,
-                        middleTasks: Seq[OperatorTask],
+                        middleTasks: Array[OperatorTask],
                         produceResult: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
@@ -45,10 +45,18 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     }
   }
 
+  /**
+    * Remove everything related to cancelled argumentRowIds from to the task's input.
+    *
+    * @return `true` if the task has become obsolete.
+    */
   def filterCancelledArguments(): Boolean = {
     startTask.filterCancelledArguments(pipelineState)
   }
 
+  /**
+    * Close resources related to this task and update relevant counts.
+    */
   def close(): Unit = {
     startTask.close(pipelineState)
   }

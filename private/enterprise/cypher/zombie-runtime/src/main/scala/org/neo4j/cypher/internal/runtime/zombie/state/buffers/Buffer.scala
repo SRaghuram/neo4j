@@ -3,10 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.zombie.state
+package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 
 /**
-  * Basic buffer (put things and then take the in FIFO order).
+  * Basic buffer (put things and then take them in FIFO order).
   */
 trait Buffer[T <: AnyRef] extends Sink[T] with Source[T]
 
@@ -27,12 +27,14 @@ trait Sink[-T <: AnyRef] {
 trait Source[+T <: AnyRef] {
 
   /**
-    * True if this source has data
+    * @return `true` if this source has data
     */
   def hasData: Boolean
 
   /**
-    * Return the T to take, or `null` is available
+    * This modifies the source and removes the returned element.
+    *
+    * @return the T to take, or `null` if nothing is available
     */
   def take(): T
 }

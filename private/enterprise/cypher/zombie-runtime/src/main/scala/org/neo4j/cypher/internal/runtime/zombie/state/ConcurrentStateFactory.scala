@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentState, ArgumentStateFactory, ArgumentStateMap}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer}
 
 /**
   * Implementation of [[StateFactory]] which constructs concurrent state management classes.
@@ -20,9 +21,9 @@ object ConcurrentStateFactory extends StateFactory {
 
   override def newLock(id: String): Lock = new ConcurrentLock(id)
 
-  override def newArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+  override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    new ConcurrentArgumentStateMap[S](reducePlanId, argumentSlotOffset, factory)
+    new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
   }
 }

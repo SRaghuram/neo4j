@@ -8,6 +8,8 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.cypher.internal.runtime.zombie.Zombie
+
 /**
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
   * count of events. When the count is zero the query has completed.
@@ -49,12 +51,16 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
 
   override def decrement(): Long = {
     count -= 1
+    if (count < 0) {
+      throw new IllegalStateException(s"Should not decrement below zero: $count")
+    }
     count
   }
 
   override def await(): Unit = {
-    if (count != 0)
+    if (count != 0) {
       throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
+    }
   }
 
   override def isCompleted: Boolean = count == 0
@@ -71,14 +77,16 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
+    Zombie.debug(s"Incremented ${getClass.getSimpleName}. New count: $newCount")
     newCount
   }
 
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
+    Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0)
       latch.countDown()
-    if (newCount < 0)
+    else if (newCount < 0)
       throw new IllegalStateException("Cannot count below 0")
     newCount
   }

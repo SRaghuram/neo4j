@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselUnitTest
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap
 
 class ArgumentStateMapTest extends MorselUnitTest {
 
