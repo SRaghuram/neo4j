@@ -36,3 +36,4 @@ class SlottedUnwindTest extends UnwindTestBase(ENTERPRISE.SINGLE_THREADED, Slott
 class SlottedDistinctTest extends DistinctTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedOrderedDistinctTest extends OrderedDistinctTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedLimitTest extends LimitTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
