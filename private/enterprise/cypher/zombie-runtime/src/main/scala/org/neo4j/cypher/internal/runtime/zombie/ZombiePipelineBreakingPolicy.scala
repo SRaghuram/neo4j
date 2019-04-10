@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
 object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
 
@@ -37,7 +37,8 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
         => false
 
       // 2 child operators
-      case _: Apply
+      case _: Apply |
+           _: NodeHashJoin
       => true
 
       case plan =>

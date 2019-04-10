@@ -13,7 +13,7 @@ The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No o
  should only operate on Morsels provided to them
  */
 class Morsel(val longs: Array[Long], val refs: Array[AnyValue]) {
-  override def toString = s"Morsel[0x${System.identityHashCode(this).toHexString}](longs:${longs.length}, refs:${refs.length})"
+  override def toString = s"Morsel[0x${System.identityHashCode(this).toHexString}](longs:${longs.mkString(", ")}, refs:${refs.mkString(", ")})"
 }
 
 object Morsel {

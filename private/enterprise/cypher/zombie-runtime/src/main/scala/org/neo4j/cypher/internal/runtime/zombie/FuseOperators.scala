@@ -32,8 +32,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
       if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
       else (None, p.middlePlans, p.produceResults)
 
-    val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan))
-    val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle)
+    val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
+    val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle).toArray
     val produceResultOperator = unhandledProduceResult.map(operatorFactory.createProduceResults)
     ExecutablePipeline(p.id,
       headOperator,

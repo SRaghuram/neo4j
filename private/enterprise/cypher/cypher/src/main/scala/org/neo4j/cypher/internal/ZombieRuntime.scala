@@ -57,7 +57,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, stateDefinition, physicalPlan.slotConfigurations)
 
     pipelineBuilder.build(physicalPlan.logicalPlan)
-    val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
+    val operatorFactory = new OperatorFactory(stateDefinition, converters, true, queryIndexes)
 
     //=======================================================
     val fuseOperators = new FuseOperators(operatorFactory, physicalPlan, converters, true, queryIndexes,
