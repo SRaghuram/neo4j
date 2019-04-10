@@ -8,6 +8,7 @@ package org.neo4j.cypher
 import java.util
 
 import org.neo4j.collection.RawIterator
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
@@ -28,7 +29,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
   test("should be possible to close compiled result after it is consumed") {
     // given
-    val db = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    val db = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
 
     // when
     val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")

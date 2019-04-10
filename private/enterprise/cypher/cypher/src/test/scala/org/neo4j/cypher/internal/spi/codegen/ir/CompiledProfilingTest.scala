@@ -7,16 +7,19 @@ package org.neo4j.cypher.internal.spi.codegen.ir
 
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, NodeHashJoin}
 import org.neo4j.cypher.internal.planner.spi.KernelStatisticProvider
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
-import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, NodeHashJoin}
-import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}
@@ -24,8 +27,6 @@ import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
 import org.neo4j.test.TestGraphDatabaseFactory
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
 
@@ -67,7 +68,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
 
   test("should profile hash join") {
     //given
-    val database = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    val database = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
     try {
       val graphDb = new GraphDatabaseCypherService(database)
       val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.write())

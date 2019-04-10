@@ -8,6 +8,7 @@ package org.neo4j.cypher
 import java.util
 
 import org.neo4j.collection.RawIterator
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -37,7 +38,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   override protected def initTest(): Unit = {
     super.initTest()
-    db = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    db = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
   }
 
   override protected def stopTest(): Unit = {

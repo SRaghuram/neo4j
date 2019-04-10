@@ -6,12 +6,13 @@
 package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
-import org.neo4j.cypher.internal.compiler.{CypherPlanner, CypherPlannerConfiguration, StatsDivergenceCalculator, defaultUpdateStrategy}
 import org.neo4j.cypher.internal.compiler.phases.{LogicalPlanState, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
 import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
+import org.neo4j.cypher.internal.compiler.{CypherPlanner, CypherPlannerConfiguration, StatsDivergenceCalculator, defaultUpdateStrategy}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
@@ -19,8 +20,8 @@ import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted._
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticState}
@@ -81,7 +82,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
   override protected def initTest() {
     super.initTest()
-    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase())
+    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME))
     contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }
 
