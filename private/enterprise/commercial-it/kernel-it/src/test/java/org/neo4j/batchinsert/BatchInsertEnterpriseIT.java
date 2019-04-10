@@ -89,7 +89,7 @@ public class BatchInsertEnterpriseIT
 
         // THEN
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( directory.databaseDir() ).newDatabaseManagementService();
+                .newEmbeddedDatabaseBuilder( directory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
@@ -112,7 +112,7 @@ public class BatchInsertEnterpriseIT
     @Test
     public void insertIntoExistingDatabase() throws IOException
     {
-        File storeDir = directory.databaseDir();
+        File storeDir = directory.storeDir();
 
         GraphDatabaseService db = newDb( storeDir, recordFormat );
         try

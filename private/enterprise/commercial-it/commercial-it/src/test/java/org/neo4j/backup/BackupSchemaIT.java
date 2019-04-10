@@ -129,7 +129,7 @@ class BackupSchemaIT
 
     private void testBackup( SchemaElement schemaElement ) throws Exception
     {
-        db = startDb( testDirectory.databaseDir(), true );
+        db = startDb( testDirectory.storeDir(), true );
 
         schemaElement.create( db );
         awaitIndexesOnline();

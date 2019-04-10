@@ -159,10 +159,10 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
+            File databaseDirectory = store.prepareDirectory( testDir.storeDir() );
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -227,7 +227,7 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.databaseDir();
+            File databaseDir = testDir.storeDir();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
 
@@ -252,7 +252,7 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.databaseDir();
+            File databaseDir = testDir.storeDir();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
@@ -328,10 +328,10 @@ public class StoreUpgradeIT
         public void migrationShouldFail() throws Throwable
         {
             // migrate the store using a single instance
-            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
+            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.storeDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -368,7 +368,7 @@ public class StoreUpgradeIT
         @Test
         public void shouldBeAbleToUpgradeAStoreWithoutIdFilesAsBackups() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
+            File databaseDirectory = store.prepareDirectory( testDir.storeDir() );
 
             // remove id files
             for ( File idFile : DatabaseLayout.of( databaseDirectory ).idFiles() )
@@ -380,7 +380,7 @@ public class StoreUpgradeIT
             }
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();

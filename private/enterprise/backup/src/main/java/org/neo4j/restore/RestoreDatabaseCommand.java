@@ -28,7 +28,7 @@ public class RestoreDatabaseCommand
     private FileSystemAbstraction fs;
     private final File fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
-    private boolean forceOverwrite;
+    private final boolean forceOverwrite;
 
     public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, DatabaseId databaseId, boolean forceOverwrite )
     {

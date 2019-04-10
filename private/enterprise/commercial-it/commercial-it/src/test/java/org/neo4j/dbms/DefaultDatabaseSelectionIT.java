@@ -170,7 +170,7 @@ class DefaultDatabaseSelectionIT
     private GraphDatabaseBuilder getDatabaseBuilder()
     {
         return new CommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 

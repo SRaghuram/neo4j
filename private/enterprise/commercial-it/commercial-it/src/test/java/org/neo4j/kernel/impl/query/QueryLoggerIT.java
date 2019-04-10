@@ -106,7 +106,7 @@ public class QueryLoggerIT
         databaseBuilder = new TestCommercialGraphDatabaseFactory()
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem.get() ) )
                 .setInternalLogProvider( inMemoryLog )
-                .newImpermanentDatabaseBuilder( testDirectory.databaseDir() );
+                .newImpermanentDatabaseBuilder( testDirectory.storeDir() );
     }
 
     @After

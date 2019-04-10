@@ -142,7 +142,7 @@ class BackupRetriesIT
 
     private GraphDatabaseAPI startDb()
     {
-        File databaseDirectory = testDirectory.databaseDir();
+        File databaseDirectory = testDirectory.storeDir();
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory( logProvider )
                 .newEmbeddedDatabaseBuilder( databaseDirectory )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE ).newDatabaseManagementService();

@@ -53,10 +53,10 @@ class CommercialGraphDatabaseBackupIT
     void shouldDoBackup() throws Exception
     {
         int nodeCount = 999;
-        db = newCommercialDb( testDirectory.databaseDir(), true );
+        db = newCommercialDb( testDirectory.storeDir(), true );
         createNodes( db, nodeCount );
 
-        File backupDir = performBackup( testDirectory.databaseDir() );
+        File backupDir = performBackup( testDirectory.storeDir() );
         db.shutdown();
 
         db = newCommercialBackupDb( backupDir, false );

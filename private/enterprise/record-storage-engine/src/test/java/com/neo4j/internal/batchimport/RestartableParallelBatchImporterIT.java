@@ -254,7 +254,7 @@ class RestartableParallelBatchImporterIT
         importer( invisible() ).doImport( input );
 
         // then
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( directory.databaseDir() );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( directory.storeDir() );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

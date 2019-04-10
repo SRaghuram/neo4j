@@ -55,7 +55,7 @@ class RotatableCsvOutputIT
     void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
                 .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
                 .setConfig( csvInterval, "100ms" )

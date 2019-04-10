@@ -38,7 +38,7 @@ class CommercialGraphDatabaseFactoryIT
     @Test
     void configuredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.databaseDir();
+        File factoryDir = testDirectory.storeDir();
         File databasesDir = testDirectory.directory( "my_databases" );
 
         DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
@@ -63,7 +63,7 @@ class CommercialGraphDatabaseFactoryIT
     @Test
     void notConfiguredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.databaseDir();
+        File factoryDir = testDirectory.storeDir();
 
         DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( factoryDir );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

@@ -77,7 +77,7 @@ class OnlineBackupIT
         defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( online_backup_enabled, TRUE ).newDatabaseManagementService();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 

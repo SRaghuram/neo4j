@@ -50,7 +50,7 @@ class PageCacheMetricsIT
     void setUp()
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( MetricsSettings.metricsEnabled, Settings.FALSE  )
                 .setConfig( MetricsSettings.neoPageCacheEnabled, Settings.TRUE  )
                 .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )

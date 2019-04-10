@@ -76,7 +76,7 @@ class FulltextIndexBackupIT
     void setUp()
     {
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( dir.databaseDir() )
+                    .newEmbeddedDatabaseBuilder( dir.storeDir() )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }

@@ -34,17 +34,17 @@ class StoreMigrationTest
     @BeforeEach
     void setUp() throws IOException
     {
-        Unzip.unzip( getClass(), "3.4-store.zip", directory.databaseDir() );
+        Unzip.unzip( getClass(), "3.4-store.zip", directory.storeDir() );
     }
 
     @Test
     void storeMigrationToolShouldBeAbleToMigrateOldStore() throws Exception
     {
-        StoreMigration.main( new String[]{directory.databaseDir().getAbsolutePath()} );
+        StoreMigration.main( new String[]{directory.storeDir().getAbsolutePath()} );
 
         // after migration we can open store and do something
         DatabaseManagementService managementService = new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( directory.databaseDir() )
+                .newEmbeddedDatabaseBuilder( directory.storeDir() )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, directory.storeDir().getAbsolutePath() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

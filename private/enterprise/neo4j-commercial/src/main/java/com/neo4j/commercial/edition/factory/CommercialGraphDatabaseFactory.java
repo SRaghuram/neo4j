@@ -11,7 +11,6 @@ import java.io.File;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -48,23 +47,8 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
         @Override
         public DatabaseManagementService newDatabase( Config config )
         {
-            File absoluteStoreDir = storeDir.getAbsoluteFile();
-            File databasesRoot;
-            if ( config.isConfigured( GraphDatabaseSettings.databases_root_path ) )
-            {
-                databasesRoot = config.get( GraphDatabaseSettings.databases_root_path );
-            }
-            else
-            {
-                databasesRoot = absoluteStoreDir.getParentFile();
-                if ( !config.isConfigured( GraphDatabaseSettings.default_database ) )
-                {
-                    config.augment( GraphDatabaseSettings.default_database, absoluteStoreDir.getName() );
-                }
-            }
-            config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
             return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
-                    .initFacade( databasesRoot, config, state.databaseDependencies(), new GraphDatabaseFacade() );
+                    .initFacade( storeDir, config, state.databaseDependencies(), new GraphDatabaseFacade() );
         }
     }
 }

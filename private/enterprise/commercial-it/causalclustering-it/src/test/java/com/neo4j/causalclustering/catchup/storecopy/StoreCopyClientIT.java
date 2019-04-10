@@ -260,7 +260,7 @@ public class StoreCopyClientIT
                     CatchupAddressProvider.fromSingleAddress( new AdvertisedSocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
             StoreId storeId = halfWayFailingServerHandler.getStoreId();
-            File databaseDir = testDirectory.databaseDir();
+            File databaseDir = testDirectory.storeDir();
             StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fsa, new Monitors() );
 
             // and

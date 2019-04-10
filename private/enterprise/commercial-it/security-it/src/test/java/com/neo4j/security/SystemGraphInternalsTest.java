@@ -57,7 +57,7 @@ class SystemGraphInternalsTest
     void setUp() throws Throwable
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        File storeDir = testDirectory.databaseDir();
+        File storeDir = testDirectory.storeDir();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         DatabaseManagementService managementService = builder.newDatabaseManagementService();

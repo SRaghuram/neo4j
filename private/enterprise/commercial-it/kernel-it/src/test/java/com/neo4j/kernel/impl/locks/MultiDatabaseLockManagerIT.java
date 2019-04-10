@@ -46,7 +46,7 @@ class MultiDatabaseLockManagerIT
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

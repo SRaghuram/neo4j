@@ -120,7 +120,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );

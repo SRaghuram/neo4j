@@ -159,7 +159,7 @@ class RecordFormatsMigrationIT
 
     private GraphDatabaseBuilder getGraphDatabaseBuilder()
     {
-        return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }

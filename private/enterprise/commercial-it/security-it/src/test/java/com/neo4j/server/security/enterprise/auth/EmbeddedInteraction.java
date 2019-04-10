@@ -43,7 +43,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         init( builder, config );
     }
 

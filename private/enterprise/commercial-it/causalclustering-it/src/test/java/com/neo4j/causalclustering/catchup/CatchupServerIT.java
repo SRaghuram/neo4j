@@ -93,7 +93,7 @@ class CatchupServerIT
     {
         temporaryDirectory = testDirectory.directory( "temp" );
         DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.databaseDir() );
+                managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );
@@ -251,14 +251,14 @@ class CatchupServerIT
 
     private File databaseFileToClientFile( File file ) throws IOException
     {
-        String relativePathToDatabaseDir = relativePath( testDirectory.databaseDir(), file );
+        String relativePathToDatabaseDir = relativePath( testDirectory.storeDir(), file );
         return new File( temporaryDirectory, relativePathToDatabaseDir );
     }
 
     private File clientFileToDatabaseFile( File file ) throws IOException
     {
         String relativePathToDatabaseDir = relativePath( temporaryDirectory, file );
-        return new File( testDirectory.databaseDir(), relativePathToDatabaseDir );
+        return new File( testDirectory.storeDir(), relativePathToDatabaseDir );
     }
 
     private void fileContentEquals( File fileA, File fileB ) throws IOException

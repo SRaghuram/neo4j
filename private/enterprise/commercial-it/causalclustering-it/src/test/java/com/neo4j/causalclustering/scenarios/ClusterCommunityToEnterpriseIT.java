@@ -67,7 +67,7 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.databaseDir() )
+        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).newDatabaseManagementService();
@@ -76,7 +76,7 @@ public class ClusterCommunityToEnterpriseIT
         database.shutdown();
         Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).withSetting(
                 GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() ).build();
-        DbRepresentation before = DbRepresentation.of( testDir.databaseDir(), config );
+        DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
 
         // when
         copyStoreToCore( databaseLayout, 0 );

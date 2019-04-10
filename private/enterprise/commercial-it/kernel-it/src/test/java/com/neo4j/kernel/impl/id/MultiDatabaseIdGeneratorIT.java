@@ -49,7 +49,7 @@ class MultiDatabaseIdGeneratorIT
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.databaseDir() );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );

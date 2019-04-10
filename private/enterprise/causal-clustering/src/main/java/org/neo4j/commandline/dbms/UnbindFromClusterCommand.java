@@ -32,9 +32,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 public class UnbindFromClusterCommand implements AdminCommand
 {
     private static final Arguments arguments = new Arguments().withDatabase();
-    private Path homeDir;
-    private Path configDir;
-    private OutsideWorld outsideWorld;
+    private final Path homeDir;
+    private final Path configDir;
+    private final OutsideWorld outsideWorld;
 
     UnbindFromClusterCommand( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {

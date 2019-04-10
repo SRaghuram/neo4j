@@ -42,19 +42,16 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     {
         return config ->
         {
-            File databasesRoot = storeDir.getParentFile();
-            augmentConfig( config, databasesRoot, storeDir );
+            augmentConfig( config );
             TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
             TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
-            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
+            return facadeFactory.newFacade( storeDir, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
 
-    private static void augmentConfig( Config config, File databasesRoot, File storeDir )
+    private static void augmentConfig( Config config )
     {
         config.augment( GraphDatabaseSettings.ephemeral, FALSE );
-        config.augment( GraphDatabaseSettings.default_database, storeDir.getName() );
-        config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
         config.augment( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
         if ( !config.isConfigured( OnlineBackupSettings.online_backup_enabled ) )
         {
@@ -68,7 +65,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     {
         return config ->
         {
-            augmentConfig( config, storeDir.getParentFile(), storeDir );
+            augmentConfig( config );
             return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
                     GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
@@ -85,12 +82,6 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         TestCommercialGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
             super( state, impermanent, DatabaseInfo.COMMERCIAL, CommercialEditionModule::new );
-        }
-
-        @Override
-        protected File configureAndGetDatabaseRoot( File storeDir, Config config )
-        {
-            return storeDir;
         }
     }
 }

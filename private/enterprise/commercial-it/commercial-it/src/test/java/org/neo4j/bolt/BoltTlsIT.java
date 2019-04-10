@@ -112,7 +112,7 @@ public class BoltTlsIT
     private void createAndStartDb()
     {
         DatabaseManagementService managementService = new TestGraphDatabaseFactory()
-                .newImpermanentDatabaseBuilder( testDirectory.databaseDir() )
+                .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )

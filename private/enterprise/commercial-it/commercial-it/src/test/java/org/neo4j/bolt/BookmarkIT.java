@@ -107,7 +107,7 @@ public class BookmarkIT
     {
         GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
         GraphDatabaseFacadeFactory facadeFactory = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        return (GraphDatabaseAPI) facadeFactory.newFacade( directory.databaseDir(), configWithBoltEnabled(), state.databaseDependencies() ).database(
+        return (GraphDatabaseAPI) facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), state.databaseDependencies() ).database(
                 GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 

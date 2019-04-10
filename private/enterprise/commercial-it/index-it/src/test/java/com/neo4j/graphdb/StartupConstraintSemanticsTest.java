@@ -85,7 +85,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommunityDatabase()
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.databaseDir() );
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.storeDir() );
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -126,7 +126,7 @@ class StartupConstraintSemanticsTest
     private GraphDatabaseService getCommercialDatabase()
     {
         DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.databaseDir() ).newDatabaseManagementService();
+                managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

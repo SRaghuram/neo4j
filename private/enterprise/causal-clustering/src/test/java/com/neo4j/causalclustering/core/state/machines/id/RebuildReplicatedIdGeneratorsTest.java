@@ -48,7 +48,7 @@ public class RebuildReplicatedIdGeneratorsTest
     public void rebuildReplicatedIdGeneratorsOnRecovery() throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = fileSystemRule.get();
-        File stickyGenerator = new File( testDirectory.databaseDir(), "stickyGenerator" );
+        File stickyGenerator = new File( testDirectory.storeDir(), "stickyGenerator" );
         File nodeStoreIdGenerator = testDirectory.databaseLayout().idNodeStore();
 
         StoreFactory storeFactory = new StoreFactory( testDirectory.databaseLayout(), Config.defaults(),

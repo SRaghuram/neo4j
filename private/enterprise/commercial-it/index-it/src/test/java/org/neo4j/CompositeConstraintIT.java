@@ -41,7 +41,7 @@ class CompositeConstraintIT
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() ).newDatabaseManagementService();
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
 
         Label label = Label.label( "label" );

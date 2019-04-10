@@ -64,7 +64,7 @@ class CommercialSystemDatabaseIT
     void setUp()
     {
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() ).newDatabaseManagementService();
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, new DatabaseId( DEFAULT_DATABASE_NAME ) );
