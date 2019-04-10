@@ -99,7 +99,7 @@ class InvalidTimeZoneConfigTest extends CypherFunSuite with GraphIcing {
   test("invalid timezone should fail startup") {
     val invalidConfig: Map[Setting[_], String] = Map(GraphDatabaseSettings.db_temporal_timezone -> "Europe/Satia")
     a[TemporalParseException] should be thrownBy {
-      new TestGraphDatabaseFactory().newImpermanentDatabase(invalidConfig.asJava)
+      new TestGraphDatabaseFactory().newImpermanentService(invalidConfig.asJava)
     }
   }
 }
