@@ -12,12 +12,12 @@ import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
-import org.neo4j.graphdb.security.URLAccessRule
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.scalatest.BeforeAndAfterAll
@@ -522,9 +522,10 @@ class LoadCsvAcceptanceTest
   }
 
   test("should fail for file urls if local file access disallowed") {
-    val db = acceptanceTestDatabaseBuilder
+    val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.allow_file_urls, "false")
-      .newGraphDatabase()
+      .newDatabaseManagementService()
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       intercept[QueryExecutionException] {
         db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
@@ -542,9 +543,11 @@ class LoadCsvAcceptanceTest
         writer.println("something")
     )
 
-    val db = acceptanceTestDatabaseBuilder
+    val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
-      .newGraphDatabase()
+      .newDatabaseManagementService()
+
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
 
     trackResources(db)
 
@@ -561,9 +564,10 @@ class LoadCsvAcceptanceTest
   test("should restrict file urls to be rooted within an authorized directory") {
     val dir = createTempDirectory("loadcsvroot")
 
-    val db = acceptanceTestDatabaseBuilder
+    val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
-      .newGraphDatabase()
+      .newDatabaseManagementService()
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
 
     trackResources(db)
 
@@ -593,10 +597,9 @@ class LoadCsvAcceptanceTest
           }
     })
 
-    val db = new TestGraphDatabaseFactory()
-      .addURLAccessRule( "testproto", new URLAccessRule {
-        override def validate(config: Configuration, url: URL): URL = url
-      }).newImpermanentDatabaseBuilder(acceptanceDbFolder).newGraphDatabase()
+    val managementService = new TestGraphDatabaseFactory().addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
+      .newImpermanentDatabaseBuilder(acceptanceDbFolder).newDatabaseManagementService()
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
 
     trackResources(db)
 

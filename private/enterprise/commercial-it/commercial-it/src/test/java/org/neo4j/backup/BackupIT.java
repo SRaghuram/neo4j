@@ -43,6 +43,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -1095,7 +1096,8 @@ class BackupIT
             builder.setConfig( entry.getKey(), entry.getValue() );
         }
 
-        GraphDatabaseService db = builder.newGraphDatabase();
+        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         databases.add( db );
         return db;
     }

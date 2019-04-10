@@ -21,6 +21,7 @@ import org.neo4j.commandline.admin.Usage;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -158,9 +159,9 @@ class RestoreDatabaseCommandIT
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
 
         // then
-        GraphDatabaseService copiedDb = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( toLayout.databaseDirectory() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( toLayout.databaseDirectory() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction ignored = copiedDb.beginTx() )
         {
@@ -275,18 +276,18 @@ class RestoreDatabaseCommandIT
 
     private GraphDatabaseService createDatabase( File path )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
+        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( transaction_logs_root_path, path.getParentFile().getAbsolutePath() )
-                .newGraphDatabase();
+                .setConfig( transaction_logs_root_path, path.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService createDatabase( File path, File transactionRootLocation )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
+        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( transaction_logs_root_path, transactionRootLocation.getAbsolutePath() )
-                .newGraphDatabase();
+                .setConfig( transaction_logs_root_path, transactionRootLocation.getAbsolutePath() ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static void createTestData( int nodesToCreate, GraphDatabaseService db )

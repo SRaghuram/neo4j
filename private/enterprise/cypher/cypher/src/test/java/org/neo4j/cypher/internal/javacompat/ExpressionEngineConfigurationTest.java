@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.Matchers.anyOf;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class ExpressionEngineConfigurationTest
@@ -98,12 +100,12 @@ class ExpressionEngineConfigurationTest
     private GraphDatabaseService withEngineAndLimit( String engine, int limit )
     {
 
-        return new TestGraphDatabaseFactory().
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().
                 setInternalLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )
-                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, Integer.toString( limit ) )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, Integer.toString( limit ) ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void assertUsingCompiled( GraphDatabaseService db, String query )

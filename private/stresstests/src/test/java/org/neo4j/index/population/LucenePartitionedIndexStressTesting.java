@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -38,6 +39,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import static org.apache.commons.lang3.SystemUtils.JAVA_IO_TMPDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
 
 public class LucenePartitionedIndexStressTesting
@@ -72,8 +74,8 @@ public class LucenePartitionedIndexStressTesting
         System.out.println( String.format( "Starting database at: %s", storeDir ) );
 
         populators = Executors.newFixedThreadPool( NUMBER_OF_POPULATORS );
-        db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                                           .newGraphDatabase();
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After

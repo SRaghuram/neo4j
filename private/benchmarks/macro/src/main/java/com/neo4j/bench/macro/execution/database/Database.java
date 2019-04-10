@@ -20,6 +20,7 @@ import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -29,6 +30,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Database implements AutoCloseable
 {
@@ -125,7 +127,8 @@ public class Database implements AutoCloseable
         {
             builder.loadPropertiesFromFile( neo4jConfig.toAbsolutePath().toString() );
         }
-        return builder.newGraphDatabase();
+        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static GraphDatabaseBuilder newBuilder( Store store, Edition edition )

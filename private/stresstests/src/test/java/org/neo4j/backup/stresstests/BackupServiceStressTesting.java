@@ -19,6 +19,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.helper.Workload;
@@ -78,11 +79,16 @@ class BackupServiceStressTesting
         ExecutorService executor = Executors.newCachedThreadPool( new DaemonThreadFactory() );
         try
         {
-            dbRef.set( graphDatabaseBuilder.newGraphDatabase() );
+            DatabaseManagementService managementService1 = graphDatabaseBuilder.newDatabaseManagementService();
+            dbRef.set( managementService1.database( DEFAULT_DATABASE_NAME ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
             BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
-            StartStop startStopWorkload = new StartStop( control, graphDatabaseBuilder::newGraphDatabase, dbRef );
+            StartStop startStopWorkload = new StartStop( control, () ->
+            {
+                DatabaseManagementService managementService = graphDatabaseBuilder.newDatabaseManagementService();
+                return managementService.database( DEFAULT_DATABASE_NAME );
+            }, dbRef );
 
             executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 

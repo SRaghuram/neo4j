@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -65,8 +65,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -91,8 +93,10 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        db = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
-                GraphDatabaseSettings.record_id_batch_size, "1" ).newGraphDatabase();
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
+                record_id_batch_size, "1" ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }
 
@@ -583,8 +587,11 @@ public class ProcedureIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         db.shutdown();
-        db = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder().setConfig(
-                plugin_dir, plugins.directory().getAbsolutePath() ).setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newGraphDatabase();
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
+                .setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder()
+                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
+                .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
         try ( Transaction ignore = db.beginTx() )

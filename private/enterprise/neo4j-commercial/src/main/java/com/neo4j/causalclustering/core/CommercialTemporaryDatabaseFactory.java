@@ -18,11 +18,13 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 
 public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFactory
@@ -39,12 +41,12 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( rootDirectory )
-                .setConfig( augmentConfig( originalConfig, rootDirectory ) )
-                .newGraphDatabase();
+                .setConfig( augmentConfig( originalConfig, rootDirectory ) ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         return new TemporaryDatabase( db );
     }

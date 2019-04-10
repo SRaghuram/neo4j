@@ -38,6 +38,7 @@ import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -75,6 +76,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -141,10 +143,10 @@ class BackupRetriesIT
     private GraphDatabaseAPI startDb()
     {
         File databaseDirectory = testDirectory.databaseDir();
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider )
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory( logProvider )
                 .newEmbeddedDatabaseBuilder( databaseDirectory )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         return db;
     }

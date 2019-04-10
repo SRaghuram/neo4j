@@ -17,6 +17,7 @@ import java.util.TreeMap;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.api.security.AuthToken;
@@ -32,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class SystemGraphRealmTestHelper
@@ -42,10 +44,10 @@ class SystemGraphRealmTestHelper
 
         TestDatabaseManager( TestDirectory testDir )
         {
-            testSystemDb = (GraphDatabaseFacade) new TestCommercialGraphDatabaseFactory()
+            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                     .newImpermanentDatabaseBuilder( testDir.databaseDir() )
-                    .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
-                    .newGraphDatabase();
+                    .setConfig( GraphDatabaseSettings.auth_enabled, "false" ).newDatabaseManagementService();
+            testSystemDb = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         }
 
         @Override

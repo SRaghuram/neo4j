@@ -14,6 +14,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.AdditionalInitialIds;
 import org.neo4j.internal.batchimport.Configuration;
@@ -34,6 +35,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.TRUE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -81,10 +83,10 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
-                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             TransactionIdStore transactionIdStore = getTransactionIdStore( (GraphDatabaseAPI) database );

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -33,6 +34,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -86,9 +88,9 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        GraphDatabaseService db = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( directory.databaseDir() ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -178,9 +180,9 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( GraphDatabaseSettings.record_format, recordFormat ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private enum Labels implements Label

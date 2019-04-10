@@ -32,6 +32,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -164,7 +165,8 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
-            GraphDatabaseService db = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
@@ -235,7 +237,8 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
-            GraphDatabaseService database = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
             database.shutdown();
 
@@ -262,7 +265,8 @@ public class StoreUpgradeIT
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
-            GraphDatabaseService database = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
             database.shutdown();
 
@@ -330,7 +334,8 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( pagecache_memory, "8m" );
-            GraphDatabaseService databaseService = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
                 DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) databaseService).getDependencyResolver().resolveDependency( DatabaseManager.class );
@@ -378,7 +383,8 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
-            GraphDatabaseService db = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {

@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.input.Collector;
@@ -39,6 +39,8 @@ import static java.lang.ProcessBuilder.Redirect.appendTo;
 import static java.time.Duration.ofSeconds;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
@@ -95,9 +97,10 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
-                    .newGraphDatabase();
+            DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory )
+                        .setConfig( transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
+                    .newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
                 input( random.seed() ).verify( db );

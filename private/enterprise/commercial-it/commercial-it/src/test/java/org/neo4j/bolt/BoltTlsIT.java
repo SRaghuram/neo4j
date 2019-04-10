@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -32,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
 import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
@@ -109,7 +111,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
@@ -119,8 +121,8 @@ public class BoltTlsIT
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
                 .setConfig( sslPolicy.client_auth, "none" )
-                .setConfig( sslPolicy.verify_hostname, "false" )
-                .newGraphDatabase();
+                .setConfig( sslPolicy.verify_hostname, "false" ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After

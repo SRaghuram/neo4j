@@ -9,6 +9,7 @@ import java.io.{File, PrintWriter}
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -418,10 +419,11 @@ order by a.COL1""".format(a, b))
   }
 
   test("createEngineWithSpecifiedParserVersion") {
-    val db: GraphDatabaseService = new TestGraphDatabaseFactory()
-                            .newImpermanentDatabaseBuilder(new File("target/engineWithSpecifiedParser"))
-                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
-                            .newGraphDatabase()
+    val managementService = new TestGraphDatabaseFactory()
+      .newImpermanentDatabaseBuilder()
+      .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
+      .newDatabaseManagementService()
+    val db: GraphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
     createEngine(db)
 
     try {
@@ -947,9 +949,10 @@ order by a.COL1""".format(a, b))
     FileUtils.deleteRecursively(new File("target/readonly"))
     val old = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( "target/readonly" ) )
     old.shutdown()
-    val db = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ) )
-      .setConfig( GraphDatabaseSettings.read_only, "true" )
-      .newGraphDatabase()
+    val managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ))
+      .setConfig(GraphDatabaseSettings.read_only, "true")
+      .newDatabaseManagementService()
+    val db = managementService.database("readonly")
     try {
       val engine = createEngine(db)
       run(engine)

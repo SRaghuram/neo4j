@@ -15,6 +15,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -30,6 +31,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class DefaultDatabaseSelectionIT
@@ -104,7 +106,8 @@ class DefaultDatabaseSelectionIT
     void startWithSystemAndLegacyConfiguredActiveDatabase()
     {
         String customDbName = "activeDb";
-        GraphDatabaseService database = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             checkDatabaseNames( database, customDbName );
@@ -120,7 +123,8 @@ class DefaultDatabaseSelectionIT
     {
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
         String customDbName = "legacyCustomDb";
-        GraphDatabaseService database = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             checkDatabaseNames( database, customDbName );
@@ -152,14 +156,15 @@ class DefaultDatabaseSelectionIT
 
     private GraphDatabaseService startDatabase()
     {
-        return getDatabaseBuilder().newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder().newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDatabase( String databaseName )
     {
-        return getDatabaseBuilder()
-               .setConfig( GraphDatabaseSettings.default_database, databaseName )
-               .newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder()
+               .setConfig( GraphDatabaseSettings.default_database, databaseName ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseBuilder getDatabaseBuilder()

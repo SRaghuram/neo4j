@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -80,15 +81,15 @@ class CommercialGraphDatabaseBackupIT
 
     private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
-        return (GraphDatabaseAPI) defaultCommercialBuilder( storeDir, backupEnabled )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseAPI newCommercialBackupDb( File storeDir, boolean backupEnabled )
     {
-        return (GraphDatabaseAPI) defaultCommercialBuilder( storeDir, backupEnabled )
-                .setConfig( transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled )
+                .setConfig( transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )

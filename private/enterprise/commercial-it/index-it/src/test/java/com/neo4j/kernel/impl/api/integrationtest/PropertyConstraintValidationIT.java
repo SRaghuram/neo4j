@@ -14,6 +14,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 import java.util.UUID;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -40,6 +41,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabel;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelType;
 import static org.neo4j.test.assertion.Assert.assertException;
@@ -308,9 +310,9 @@ public class PropertyConstraintValidationIT
         @Override
         protected GraphDatabaseService createGraphDatabase()
         {
-            return new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
-                    .newEmbeddedDatabaseBuilder( testDir.storeDir() )
-                    .newGraphDatabase();
+            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
+                        .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
+            return managementService.database( DEFAULT_DATABASE_NAME );
         }
 
         @Test

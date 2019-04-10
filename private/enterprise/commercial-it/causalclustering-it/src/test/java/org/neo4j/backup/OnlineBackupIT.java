@@ -18,6 +18,7 @@ import java.nio.file.Path;
 
 import org.neo4j.backup.impl.BackupExecutionException;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -75,10 +76,10 @@ class OnlineBackupIT
         backupsDir = testDirectory.directory( "backups" ).toPath();
         defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
-        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( online_backup_enabled, TRUE )
-                .newGraphDatabase();
+                .setConfig( online_backup_enabled, TRUE ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         backupAddress = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class ).getLocalAddress( BACKUP_SERVER_NAME );
 

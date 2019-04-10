@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
@@ -44,6 +45,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.function.Predicates.instanceOf;
 import static org.neo4j.graphdb.Label.label;
@@ -170,11 +172,11 @@ class BackupSchemaIT
 
     private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( dir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) )
-                .setConfig( transaction_logs_root_path, dir.getParent() )
-                .newGraphDatabase();
+                .setConfig( transaction_logs_root_path, dir.getParent() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static long countNodeIndexes( GraphDatabaseService db, String label, String... propertyKeys )

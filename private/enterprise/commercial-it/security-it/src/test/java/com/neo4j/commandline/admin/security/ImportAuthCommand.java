@@ -27,6 +27,7 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -41,6 +42,7 @@ import static com.neo4j.server.security.enterprise.CommercialSecurityModule.IMPO
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
@@ -198,7 +200,8 @@ public class ImportAuthCommand implements AdminCommand
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
         File systemDbStoreDir = new File( databaseDir, IMPORT_SYSTEM_DATABASE_NAME );
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        return factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
+        DatabaseManagementService managementService = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private RealmLifecycle createSystemGraphRealmForOfflineImport( GraphDatabaseService db, Config config,

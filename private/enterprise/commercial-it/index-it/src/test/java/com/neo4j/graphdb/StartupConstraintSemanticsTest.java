@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.Exceptions;
@@ -123,7 +124,8 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommercialDatabase()
     {
-        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.databaseDir() )
-                .newGraphDatabase();
+        DatabaseManagementService
+                managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.databaseDir() ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

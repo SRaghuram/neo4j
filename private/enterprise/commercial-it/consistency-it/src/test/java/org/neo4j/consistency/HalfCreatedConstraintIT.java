@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -36,6 +37,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -51,9 +53,9 @@ class HalfCreatedConstraintIT
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             createNodes( marker, property, database );

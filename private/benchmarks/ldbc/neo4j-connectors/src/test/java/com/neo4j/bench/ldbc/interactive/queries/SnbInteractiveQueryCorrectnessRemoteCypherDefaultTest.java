@@ -99,13 +99,15 @@ import java.io.File;
 import java.net.URI;
 import java.util.List;
 
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -147,12 +149,13 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
     {
         try
         {
-            GraphDatabaseService graphDatabase = Neo4jDb.newDbBuilderForBolt(
-                    new File( path ),
-                    getResource( "/neo4j/neo4j_sf001.conf" ),
-                    "localhost",
-                    0
-            ).newGraphDatabase();
+            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt(
+                        new File( path ),
+                        getResource( "/neo4j/neo4j_sf001.conf" ),
+                        "localhost",
+                        0
+                ).newDatabaseManagementService();
+            GraphDatabaseService graphDatabase = managementService.database( DEFAULT_DATABASE_NAME );
             ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
             return new Neo4jConnectionState(
                     graphDatabase,

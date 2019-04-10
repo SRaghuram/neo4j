@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -43,6 +43,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
@@ -74,9 +75,10 @@ class FulltextIndexBackupIT
     @BeforeEach
     void setUp()
     {
-        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                     .newEmbeddedDatabaseBuilder( dir.databaseDir() )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newGraphDatabase();
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -190,10 +192,10 @@ class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( backupDatabaseDir )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, backupDatabaseDir.getParentFile().getAbsolutePath() )
-                .newGraphDatabase();
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void verifyData( GraphDatabaseAPI db )

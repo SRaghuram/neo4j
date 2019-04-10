@@ -14,6 +14,7 @@ import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
@@ -35,6 +36,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.System.getProperty;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
@@ -79,12 +81,12 @@ public class CheckPointingLogRotationStressTesting
 
         System.out.println( "2/6\tStarting database..." );
         GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
-        GraphDatabaseService db = builder
+        DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )
                 .setConfig( GraphDatabaseSettings.check_point_interval_time, CHECK_POINT_INTERVAL_MINUTES + "m" )
-                .setConfig( GraphDatabaseSettings.tracer, "timer" )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.tracer, "timer" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         System.out.println("3/6\tWarm up db...");
         try ( Workload workload = new Workload( db, defaultRandomMutation( nodeCount, db ), threads ) )

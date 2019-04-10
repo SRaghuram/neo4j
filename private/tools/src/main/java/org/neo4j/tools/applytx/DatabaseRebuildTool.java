@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.Args;
@@ -32,6 +33,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.tools.console.input.ArgsCommand;
 import org.neo4j.tools.console.input.ConsoleInput;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 import static org.neo4j.tools.console.input.ConsoleUtil.NO_PROMPT;
 import static org.neo4j.tools.console.input.ConsoleUtil.oneCommand;
@@ -162,7 +164,8 @@ public class DatabaseRebuildTool
 
         Store( GraphDatabaseBuilder dbBuilder )
         {
-            this.db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+            DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+            this.db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             this.access = new StoreAccess( db.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
             this.databaseLayout = db.databaseLayout();

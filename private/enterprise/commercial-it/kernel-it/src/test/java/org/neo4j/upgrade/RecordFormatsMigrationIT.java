@@ -23,6 +23,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -145,14 +146,15 @@ class RecordFormatsMigrationIT
 
     private GraphDatabaseService startDb( String recordFormatName )
     {
-        return getGraphDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.record_format, recordFormatName )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = getGraphDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.record_format, recordFormatName ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDb()
     {
-        return getGraphDatabaseBuilder().newGraphDatabase();
+        DatabaseManagementService managementService = getGraphDatabaseBuilder().newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseBuilder getGraphDatabaseBuilder()

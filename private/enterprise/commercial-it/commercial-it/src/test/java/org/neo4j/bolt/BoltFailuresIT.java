@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -35,6 +36,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
@@ -185,13 +187,13 @@ public class BoltFailuresIT
 
     private GraphDatabaseService startDbWithBolt( GraphDatabaseFactory dbFactory )
     {
-        return dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
+        DatabaseManagementService managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
                 .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static TestCommercialGraphDatabaseFactory newDbFactory()

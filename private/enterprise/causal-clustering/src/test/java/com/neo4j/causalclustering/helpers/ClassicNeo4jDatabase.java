@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -129,13 +130,13 @@ public class ClassicNeo4jDatabase
         public ClassicNeo4jDatabase build() throws IOException
         {
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
-            GraphDatabaseService db = new TestGraphDatabaseFactory()
-                    .setFileSystem( fileSystem )
-                    .newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
-                    .newGraphDatabase();
+            DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+                        .setFileSystem( fileSystem )
+                        .newEmbeddedDatabaseBuilder( databaseDirectory )
+                        .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                        .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                        .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() ).newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( databaseId.name() );
 
             for ( int i = 0; i < (nrOfNodes / 2); i++ )
             {

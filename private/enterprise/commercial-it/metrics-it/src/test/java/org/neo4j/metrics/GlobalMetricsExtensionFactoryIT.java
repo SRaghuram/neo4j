@@ -25,6 +25,7 @@ import javax.management.MBeanServer;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -44,6 +45,7 @@ import org.neo4j.values.storable.TextValue;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.api.ResourceManager.EMPTY_RESOURCE_MANAGER;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
@@ -104,12 +106,13 @@ public class GlobalMetricsExtensionFactoryIT
         // Start the database
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
         GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
-        GraphDatabaseService nullTracerDatabase =
-                builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
+        DatabaseManagementService
+                managementService = builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
                         .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
                         .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
-                        .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                        .newGraphDatabase();
+                        .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        // key point!
+        GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = nullTracerDatabase.beginTx() )
         {
             Node node = nullTracerDatabase.createNode();

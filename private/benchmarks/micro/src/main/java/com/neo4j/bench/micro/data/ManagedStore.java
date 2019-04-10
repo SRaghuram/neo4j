@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
@@ -24,6 +25,7 @@ import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ManagedStore
 {
@@ -82,7 +84,8 @@ public class ManagedStore
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
         }
-        return builder.newGraphDatabase();
+        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     public void tearDownDb() throws IOException
