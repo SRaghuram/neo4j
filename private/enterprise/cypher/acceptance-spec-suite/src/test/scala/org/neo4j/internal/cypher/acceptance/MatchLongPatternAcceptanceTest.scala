@@ -5,7 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -18,7 +17,7 @@ import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.ImpermanentGraphDatabase
+import org.neo4j.test.TestGraphDatabaseFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -269,11 +268,8 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   }
 
   private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
-    val config: util.Map[String, String] = m.map {
-      case (setting, settingValue) => setting.name() -> settingValue
-    }.toMap.asJava
-
-    val graph = new GraphDatabaseCypherService(new ImpermanentGraphDatabase(new File("target/test-data/pattern-acceptance"), config))
+    val config: util.Map[Setting[_], String] = m.toMap.asJava
+    val graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase(config))
     try {
       val engine = ExecutionEngineHelper.createEngine(graph)
       run(engine, graph)
