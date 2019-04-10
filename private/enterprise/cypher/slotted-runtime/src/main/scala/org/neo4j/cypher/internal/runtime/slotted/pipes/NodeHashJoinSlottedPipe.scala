@@ -10,10 +10,10 @@ import java.util
 import org.eclipse.collections.api.multimap.list.MutableListMultimap
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.storable.{LongArray, Values}
 
@@ -99,29 +99,35 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
   private def fillKeyArray(current: ExecutionContext, key: Array[Long], offsets: Array[Int]): Unit = {
     // We use a while loop like this to be able to break out early
     var i = 0
-    var containsNull = false
     while (i < width) {
       val thisId = current.getLongAt(offsets(i))
       key(i) = thisId
-      if (thisId == -1 /*This is how we encode null nodes*/ ) {
-        i = width
-        containsNull = true
+      if (NullChecker.entityIsNull(thisId)) {
+        key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
+        return
       }
       i += 1
     }
-    if (containsNull)
-      key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
   }
 
   private def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit = {
-    longsToCopy foreach {
-      case (from, to) => newRow.setLongAt(to, rhs.getLongAt(from))
+    var i = 0
+    while (i < longsToCopy.length) {
+      val fromTo = longsToCopy(i)
+      newRow.setLongAt(fromTo._2, rhs.getLongAt(fromTo._1))
+      i += 1
     }
-    refsToCopy foreach {
-      case (from, to) => newRow.setRefAt(to, rhs.getRefAt(from))
+    i = 0
+    while (i < refsToCopy.length) {
+      val fromTo = refsToCopy(i)
+      newRow.setRefAt(fromTo._2, rhs.getRefAt(fromTo._1))
+      i += 1
     }
-    cachedPropertiesToCopy foreach {
-      case (from, to) => newRow.setCachedPropertyAt(to, rhs.getCachedPropertyAt(from))
+    i = 0
+    while (i < cachedPropertiesToCopy.length) {
+      val fromTo = cachedPropertiesToCopy(i)
+      newRow.setCachedPropertyAt(fromTo._2, rhs.getCachedPropertyAt(fromTo._1))
+      i += 1
     }
   }
 }
