@@ -5,27 +5,29 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 
 /**
   * Limit the number of rows to `countExpression` per argument.
   */
-class LimitOperator(val planId: Id,
+class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator {
 
-  override def createState(argumentStateCreator: ArgumentStateCreator,
-                           queryContext: QueryContext,
-                           state: QueryState,
-                           resources: QueryResources): OperatorTask = {
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                          queryContext: QueryContext,
+                          state: QueryState,
+                          resources: QueryResources): OperatorTask = {
 
     val queryState = new OldQueryState(queryContext,
                                        resources = null,
@@ -36,12 +38,12 @@ class LimitOperator(val planId: Id,
 
     val count = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
 
-    new LimitOperatorState(argumentStateCreator.createArgumentStateMap(planId,
-                                                                       argumentRowId => new LimitState(argumentRowId,
-                                                                                                       count)))
+    new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
+                                                                      argumentRowId => new LimitState(argumentRowId,
+                                                                                                      count)))
   }
 
-  class LimitOperatorState(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
+  class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
 
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,

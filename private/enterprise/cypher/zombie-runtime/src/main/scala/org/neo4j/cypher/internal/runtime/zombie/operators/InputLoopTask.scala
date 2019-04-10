@@ -37,7 +37,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
   private var innerLoop: Boolean = false
 
-  override def operate(outputRow: MorselExecutionContext,
+  override final def operate(outputRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
@@ -68,8 +68,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
           innerLoop = false
           inputMorsel.moveToNextRow()
         }
-      }
-      else {
+      } else {
         // Nothing to do for this input row, move to the next
         inputMorsel.moveToNextRow()
       }
