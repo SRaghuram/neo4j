@@ -71,9 +71,10 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.argumentStateBuffer(bufferId).take()
   }
 
-  private def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
-    if (pipeline.serial)
+  override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
+    if (pipeline.serial) {
       pipelineLocks(pipeline.id.x).unlock()
+    }
   }
 
   override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
@@ -103,11 +104,13 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
   }
 
   override def putContinuation(task: PipelineTask): Unit = {
-    // Put the continuation before unlocking, so that in serial pipelines we can guarantee that the continuation
-    // is the next thing which is picked up
     continuations(task.pipelineState.pipeline.id.x).put(task)
-    workerWaker.wakeAll()
-    closeWorkUnit(task.pipelineState.pipeline)
+    if (!task.pipelineState.pipeline.serial) {
+      // We only wake up other Threads if this pipeline is not serial.
+      // Otherwise they will all race to get this continuation while
+      // this Thread can just as well continue on its own.
+      workerWaker.wakeAll()
+    }
   }
 
   override def takeContinuation(pipeline: ExecutablePipeline): PipelineTask = {

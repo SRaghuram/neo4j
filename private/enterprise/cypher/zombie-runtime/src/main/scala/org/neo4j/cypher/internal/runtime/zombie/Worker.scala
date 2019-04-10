@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
@@ -13,9 +12,9 @@ import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext,
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, QueryManager, SchedulingPolicy}
 
+import scala.concurrent.duration.Duration
+
 /**
-  * Developers note: Migrated from Alex's scheduler PR
-  *
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
   * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
   * task to perform on that query.
@@ -53,6 +52,12 @@ class Worker(val workerId: Int,
     }
   }
 
+  /**
+    * Try to obtain a task for a given query and work on it.
+    *
+    * @param executingQuery the query
+    * @return if some work was performed
+    */
   def workOnQuery(executingQuery: ExecutingQuery): Boolean = {
     try {
       val task = schedulingPolicy.nextTask(executingQuery, resources)
@@ -66,13 +71,18 @@ class Worker(val workerId: Int,
         state.produce(output)
 
         if (task.canContinue) {
+          // Put the continuation before unlocking (closeWorkUnit)
+          // so that in serial pipelines we can guarantee that the continuation
+          // is the next thing which is picked up
           state.putContinuation(task)
+          state.closeWorkUnit()
         } else {
           task.close()
         }
         true
-      } else
+      } else {
         false
+      }
     } catch {
       case error: Throwable =>
         error.printStackTrace()

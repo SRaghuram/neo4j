@@ -113,8 +113,23 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
   }
 
+  /**
+    * If a task can continue, or multiple parallel tasks for a pipeline are obtained at once,
+    * this method it will be placed in the continuation queue for this pipeline.
+    * @param task the task that can be executed (again),
+    */
   def putContinuation(task: PipelineTask): Unit = {
     executionState.putContinuation(task)
+  }
+
+  /**
+    * When a task is done, whether it can continue or not,
+    * the work unit is done and needs to be closed.
+    *
+    * This will release a lock if the pipeline is serial. Otherwise this does nothing.
+    */
+  def closeWorkUnit(): Unit = {
+    executionState.closeWorkUnit(pipeline)
   }
 
   /* OperatorInput */

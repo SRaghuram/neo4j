@@ -55,6 +55,17 @@ trait ExecutionState extends ArgumentStateCreator {
   def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit
 
   /**
+    * Close the work unit of a pipeline. This will release a lock
+    * if the pipeline is serial. Otherwise this does nothing.
+    *
+    * This is called from all close... methods in [[ExecutionState]], so if your're calling these
+    * methods there is no need to call this method as well
+    *
+    * It as also called from [[filterCancelledArguments()]] if a task is filtered out completely.
+    */
+  def closeWorkUnit(pipeline: ExecutablePipeline): Unit
+
+  /**
     * Close a pipeline task which was executing over some input morsel accumulators.
     *
     * @param pipeline the executing pipeline
