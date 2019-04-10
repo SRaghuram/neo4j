@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, _}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.util.Preconditions
 
@@ -59,19 +60,25 @@ class PipelineState(val pipeline: ExecutablePipeline,
   def nextTask(context: QueryContext,
                state: QueryState,
                resources: QueryResources): PipelineTask = {
-
-    if (pipeline.serial) {
-      if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
-        val t = innerNextTask(context, state, resources)
-        if (t == null) // the data might have been taken while we took the lock
-          executionState.unlock(pipeline)
-        t
+    var task: PipelineTask = null
+    // Loop until we find a task that is not completely cancelled
+    do {
+      task = if (pipeline.serial) {
+        if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
+          val t = innerNextTask(context, state, resources)
+          if (t == null) {
+            // the data might have been taken while we took the lock
+            executionState.unlock(pipeline)
+          }
+          t
+        } else {
+           null
+        }
       } else {
-        null
+        innerNextTask(context, state, resources)
       }
-    } else {
-      innerNextTask(context, state, resources)
-    }
+    } while (task != null && task.filterCancelledArguments())
+    task
   }
 
   private def innerNextTask(context: QueryContext,
