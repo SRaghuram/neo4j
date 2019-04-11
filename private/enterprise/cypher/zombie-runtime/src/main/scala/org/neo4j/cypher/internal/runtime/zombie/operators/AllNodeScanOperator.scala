@@ -19,8 +19,6 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
                           argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override def toString: String = "AllNodeScan"
-
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,

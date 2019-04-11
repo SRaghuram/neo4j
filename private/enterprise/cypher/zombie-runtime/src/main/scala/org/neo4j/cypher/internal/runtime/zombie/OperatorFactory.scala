@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -26,7 +26,6 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
   def create(plan: LogicalPlan): Operator = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
-    val argumentSize = physicalPlan.argumentSizes(id)
     generateSlotAccessorFunctions(slots)
 
     plan match {
@@ -36,18 +35,46 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                           variables.map(v => slots.getReferenceOffsetFor(v)))
 
       case plans.AllNodesScan(column, _) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
         new AllNodeScanOperator(WorkIdentity.fromPlan(plan),
                                 slots.getLongOffsetFor(column),
                                 argumentSize)
 
       case plans.NodeByLabelScan(column, label, _) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
         queryIndexes.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
                               slots.getLongOffsetFor(column),
                               LazyLabel(label)(SemanticTable()),
                               argumentSize)
 
-      case plans.Expand(lhs, fromName, dir, types, to, relName, ExpandAll) =>
+      case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
+        new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
+                                  slots.getLongOffsetFor(column),
+                                  label,
+                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+                                  queryIndexes.registerQueryIndex(label, properties),
+                                  indexOrder,
+                                  argumentSize,
+                                  valueExpr.map(converters.toCommandExpression(id, _)),
+                                  indexSeekMode)
+
+      case plans.NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
+        new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
+                                  slots.getLongOffsetFor(column),
+                                  label,
+                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+                                  queryIndexes.registerQueryIndex(label, properties),
+                                  indexOrder,
+                                  argumentSize,
+                                  valueExpr.map(converters.toCommandExpression(id, _)),
+                                  indexSeekMode)
+
+      case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
@@ -105,7 +132,7 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
     }
   }
 
-  def createProduceResults(plan: ProduceResult): ProduceResultOperator = {
+  def createProduceResults(plan: plans.ProduceResult): ProduceResultOperator = {
     val slots = physicalPlan.slotConfigurations(plan.id)
     val runtimeColumns = createProjectionsForResult(plan.columns, slots)
     new ProduceResultOperator(WorkIdentity.fromPlan(plan),

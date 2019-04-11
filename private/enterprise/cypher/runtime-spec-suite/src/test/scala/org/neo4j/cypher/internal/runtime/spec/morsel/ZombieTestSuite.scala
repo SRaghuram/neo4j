@@ -25,12 +25,19 @@ class ZombieAllNodeScanStressTest extends AllNodeScanStressTestBase(ZombieRuntim
 class ZombieLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 class ZombieLabelScanStressTest extends LabelScanStressTestBase(ZombieRuntime)
 
+// INDEX SEEK
+class ZombieNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+  with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+
+class ZombieIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(ZombieRuntime)
+class ZombieIndexSeekExactStressTest extends IndexSeekExactStressTest(ZombieRuntime)
+
 // APPLY
-//class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
+class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
 
 // EXPAND
 class ZombieExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
-//class ZombieExpandStressTest extends ExpandStressTestBase(ZombieRuntime)
+class ZombieExpandStressTest extends ExpandStressTestBase(ZombieRuntime)
 
 // PROJECTION
 class ZombieProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)

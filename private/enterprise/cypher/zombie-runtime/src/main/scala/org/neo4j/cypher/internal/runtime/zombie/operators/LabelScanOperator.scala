@@ -17,7 +17,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
                         offset: Int,
                         label: LazyLabel,
                         argumentSize: SlotConfiguration.Size)
-  extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
+  extends StreamingOperator {
 
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
