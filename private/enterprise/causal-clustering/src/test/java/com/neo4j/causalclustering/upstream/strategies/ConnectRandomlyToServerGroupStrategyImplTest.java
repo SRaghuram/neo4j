@@ -136,6 +136,6 @@ class ConnectRandomlyToServerGroupStrategyImplTest
             offset++;
         }
 
-        return new ReadReplicaTopology( DATABASE_NAME, readReplicas );
+        return new ReadReplicaTopology( DATABASE_ID, readReplicas );
     }
 }

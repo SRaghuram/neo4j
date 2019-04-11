@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
@@ -38,18 +39,18 @@ class TxPuller
     private State currentState = State.NORMAL;
     private long highestTx;
 
-    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config, String databaseName )
+    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config, DatabaseId databaseId )
     {
         Clock clock = Clock.systemUTC();
         Duration inactivityTimeout = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout );
-        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock, databaseName );
+        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock, databaseId );
     }
 
     @VisibleForTesting
     TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock,
-            String databaseName )
+            DatabaseId databaseId )
     {
-        this.addressProvider = new StateBasedAddressProvider( databaseName, catchupAddressProvider );
+        this.addressProvider = new StateBasedAddressProvider( databaseId, catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );
         this.resettableCondition = noProgressHandler;
         this.connectionErrorLogger = new CappedLogger( log );
@@ -185,12 +186,12 @@ class TxPuller
 
     private static class StateBasedAddressProvider
     {
-        private final String databaseName;
+        private final DatabaseId databaseId;
         private final CatchupAddressProvider catchupAddressProvider;
 
-        private StateBasedAddressProvider( String databaseName, CatchupAddressProvider catchupAddressProvider )
+        private StateBasedAddressProvider( DatabaseId databaseId, CatchupAddressProvider catchupAddressProvider )
         {
-            this.databaseName = databaseName;
+            this.databaseId = databaseId;
             this.catchupAddressProvider = catchupAddressProvider;
         }
 
@@ -200,9 +201,9 @@ class TxPuller
             {
             case LAST_ATTEMPT:
             case COMPLETE:
-                return catchupAddressProvider.primary( databaseName );
+                return catchupAddressProvider.primary( databaseId );
             default:
-                return catchupAddressProvider.secondary( databaseName );
+                return catchupAddressProvider.secondary( databaseId );
             }
         }
     }

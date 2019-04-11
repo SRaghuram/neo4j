@@ -168,7 +168,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         AdvertisedSocketAddress address;
         try
         {
-            address = catchupAddressProvider.primary( databaseName );
+            address = catchupAddressProvider.primary( databaseId );
         }
         catch ( CatchupAddressResolutionException e )
         {

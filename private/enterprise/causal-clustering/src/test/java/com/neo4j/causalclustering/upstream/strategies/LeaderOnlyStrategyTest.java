@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -47,7 +48,7 @@ class LeaderOnlyStrategyTest
         leaderOnlyStrategy.inject( topologyServiceNoRetriesStrategy, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME );
+        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( new DatabaseId( DEFAULT_DATABASE_NAME ) );
 
         // then
         assertTrue( resolved.isPresent() );

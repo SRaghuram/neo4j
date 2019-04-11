@@ -19,6 +19,7 @@ import org.neo4j.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -46,11 +47,11 @@ public class RemoteStore
     private final CommitStateHelper commitStateHelper;
     private final StoreCopyClientMonitor storeCopyClientMonitor;
     private final StorageEngineFactory storageEngineFactory;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
-            String databaseName )
+            DatabaseId databaseId )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -63,7 +64,7 @@ public class RemoteStore
         this.monitors = monitors;
         this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         this.storageEngineFactory = storageEngineFactory;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
@@ -106,7 +107,7 @@ public class RemoteStore
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
-            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, databaseName );
+            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, databaseId );
 
             txPuller.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );

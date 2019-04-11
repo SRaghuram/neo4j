@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
@@ -27,10 +28,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TypicallyConnectToRandomReadReplicaStrategyTest
 {
+    private final DatabaseId databaseId = new DatabaseId( "my_orders" );
     private final MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
 
     @Test
@@ -51,7 +52,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         {
             for ( int j = 0; j < 2; j++ )
             {
-                responses.add( connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME ).get() );
+                responses.add( connectionStrategy.upstreamMemberForDatabase( databaseId ).get() );
             }
             assertThat( responses, hasItem( theCoreMemberId ) );
             responses.clear();
@@ -72,7 +73,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
                 NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME );
+        Optional<MemberId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamMemberForDatabase( databaseId );
 
         // then
         assertTrue( found.isPresent() );
@@ -92,7 +93,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME );
+        Optional<MemberId> found = connectionStrategy.upstreamMemberForDatabase( databaseId );
 
         // then
         assertTrue( found.isPresent() );
@@ -114,7 +115,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
 
         // when we collect enough results to feel confident of random values
         List<MemberId> found = IntStream.range( 0, 20 )
-                .mapToObj( i -> connectionStrategy.upstreamMemberForDatabase( DEFAULT_DATABASE_NAME ) )
+                .mapToObj( i -> connectionStrategy.upstreamMemberForDatabase( databaseId ) )
                 .filter( Optional::isPresent )
                 .map( Optional::get )
                 .collect( Collectors.toList() );

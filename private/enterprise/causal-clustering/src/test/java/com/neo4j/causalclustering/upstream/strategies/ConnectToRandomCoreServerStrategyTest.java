@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -34,7 +35,7 @@ import static org.mockito.Mockito.when;
 
 class ConnectToRandomCoreServerStrategyTest
 {
-    private static final String DATABASE_NAME = "hello";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "hello" );
 
     @Test
     void shouldConnectToRandomCoreServer() throws Exception
@@ -45,13 +46,13 @@ class ConnectToRandomCoreServerStrategyTest
         MemberId memberId3 = new MemberId( UUID.randomUUID() );
 
         TopologyService topologyService = mock( TopologyService.class );
-        when( topologyService.coreTopologyForDatabase( DATABASE_NAME ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
 
         ConnectToRandomCoreServerStrategy connectionStrategy = new ConnectToRandomCoreServerStrategy();
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
 
         // when
-        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( DATABASE_NAME );
+        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( memberId.isPresent() );
@@ -72,7 +73,7 @@ class ConnectToRandomCoreServerStrategyTest
                 myself );
 
         // when
-        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( DATABASE_NAME );
+        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( found.isPresent() );
@@ -94,6 +95,6 @@ class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new CoreTopology( DATABASE_NAME, clusterId, false, coreMembers );
+        return new CoreTopology( DATABASE_ID, clusterId, false, coreMembers );
     }
 }

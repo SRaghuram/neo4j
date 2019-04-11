@@ -103,7 +103,7 @@ public final class SharedDiscoveryService
     {
         listeningClients.remove( client );
         coreMembers.remove( client.myself() );
-        for ( DatabaseId databaseId : client.databaseIds() )
+        for ( DatabaseId databaseId : client.getDatabaseIds() )
         {
             notifyCoreClients( databaseId );
         }
@@ -112,7 +112,7 @@ public final class SharedDiscoveryService
     synchronized void unRegisterReadReplica( SharedDiscoveryReadReplicaClient client )
     {
         readReplicas.remove( client.myself() );
-        for ( DatabaseId databaseId : client.databaseIds() )
+        for ( DatabaseId databaseId : client.getDatabaseIds() )
         {
             notifyCoreClients( databaseId );
         }

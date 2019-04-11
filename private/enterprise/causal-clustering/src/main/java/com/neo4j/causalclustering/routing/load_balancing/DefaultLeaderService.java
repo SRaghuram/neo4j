@@ -69,7 +69,7 @@ public class DefaultLeaderService implements LeaderService
     private Optional<MemberId> getLeaderIdFromTopologyService( DatabaseId databaseId )
     {
         var coreRoles = topologyService.allCoreRoles();
-        var coreServerInfos = topologyService.coreTopologyForDatabase( databaseName )
+        var coreServerInfos = topologyService.coreTopologyForDatabase( databaseId )
                 .members();
 
         return coreServerInfos.keySet()

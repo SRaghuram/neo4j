@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.time.Clock;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -41,7 +42,7 @@ import static org.mockito.Mockito.when;
 
 class TxPullerTest
 {
-    private static final String DATABASE_NAME = "parts";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "parts" );
 
     private static final int MAX_FAILED_TX_PULL_REQUESTS = 5;
     private final LogProvider logProvider = NullLogProvider.getInstance();
@@ -59,7 +60,7 @@ class TxPullerTest
         when( writer.lastTx() ).thenAnswer( i -> lastTxTracker.getLastTx() );
         addressProvider = mock( CatchupAddressProvider.class );
         client = mock( TxPullClient.class );
-        executor = new TxPuller( addressProvider, logProvider, new MaxCount(), Clock.systemUTC(), DATABASE_NAME );
+        executor = new TxPuller( addressProvider, logProvider, new MaxCount(), Clock.systemUTC(), DATABASE_ID );
     }
 
     @Test
@@ -112,8 +113,8 @@ class TxPullerTest
         executor.pullTransactions( context, writer, client );
 
         InOrder inOrder = inOrder( addressProvider );
-        inOrder.verify( addressProvider, times( 2 ) ).secondary( DATABASE_NAME );
-        inOrder.verify( addressProvider ).primary( DATABASE_NAME );
+        inOrder.verify( addressProvider, times( 2 ) ).secondary( DATABASE_ID );
+        inOrder.verify( addressProvider ).primary( DATABASE_ID );
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -133,13 +134,13 @@ class TxPullerTest
 
         InOrder inOrder = inOrder( addressProvider );
         // choose secondary until one change left
-        inOrder.verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_NAME );
+        inOrder.verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_ID );
         // last change chooses primary
-        inOrder.verify( addressProvider ).primary( DATABASE_NAME );
+        inOrder.verify( addressProvider ).primary( DATABASE_ID );
         // since last was successful, go back to secondary
-        inOrder.verify( addressProvider ).secondary( DATABASE_NAME );
+        inOrder.verify( addressProvider ).secondary( DATABASE_ID );
         // complete state, do one last on primary
-        inOrder.verify( addressProvider ).primary( DATABASE_NAME );
+        inOrder.verify( addressProvider ).primary( DATABASE_ID );
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -173,8 +174,8 @@ class TxPullerTest
         assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
 
         verify( client, times( 2 ) ).pullTransactions( any(), any(), anyLong(), any() );
-        verify( addressProvider, times( 1 ) ).secondary( DATABASE_NAME );
-        verify( addressProvider, times( 1 ) ).primary( DATABASE_NAME );
+        verify( addressProvider, times( 1 ) ).secondary( DATABASE_ID );
+        verify( addressProvider, times( 1 ) ).primary( DATABASE_ID );
     }
 
     @Test
@@ -187,8 +188,8 @@ class TxPullerTest
         assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
 
         verify( client, times( 2 ) ).pullTransactions( any(), any(), anyLong(), any() );
-        verify( addressProvider, times( 1 ) ).secondary( DATABASE_NAME );
-        verify( addressProvider, times( 1 ) ).primary( DATABASE_NAME );
+        verify( addressProvider, times( 1 ) ).secondary( DATABASE_ID );
+        verify( addressProvider, times( 1 ) ).primary( DATABASE_ID );
     }
 
     @Test
@@ -201,8 +202,8 @@ class TxPullerTest
         assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
 
         verify( client, times( MAX_FAILED_TX_PULL_REQUESTS ) ).pullTransactions( any(), any(), anyLong(), any() );
-        verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_NAME );
-        verify( addressProvider, times( 1 ) ).primary( DATABASE_NAME );
+        verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_ID );
+        verify( addressProvider, times( 1 ) ).primary( DATABASE_ID );
     }
 
     @Test
@@ -211,13 +212,13 @@ class TxPullerTest
         RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
-        when( addressProvider.primary( DATABASE_NAME ) ).thenThrow( CatchupAddressResolutionException.class );
-        when( addressProvider.secondary( DATABASE_NAME ) ).thenThrow( CatchupAddressResolutionException.class );
+        when( addressProvider.primary( DATABASE_ID ) ).thenThrow( CatchupAddressResolutionException.class );
+        when( addressProvider.secondary( DATABASE_ID ) ).thenThrow( CatchupAddressResolutionException.class );
 
         assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
 
-        verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_NAME );
-        verify( addressProvider, times( 1 ) ).primary( DATABASE_NAME );
+        verify( addressProvider, times( MAX_FAILED_TX_PULL_REQUESTS - 1 ) ).secondary( DATABASE_ID );
+        verify( addressProvider, times( 1 ) ).primary( DATABASE_ID );
         verify( client, never() ).pullTransactions( any(), any(), anyLong(), any() );
     }
 

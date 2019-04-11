@@ -38,7 +38,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
         sharedDiscoveryService.registerCoreMember( this );
         log.info( "Registered core server %s", myself );
 
-        for ( DatabaseId databaseId : databaseIds() )
+        for ( DatabaseId databaseId : getDatabaseIds() )
         {
             sharedDiscoveryService.waitForClusterFormation( databaseId );
         }
@@ -106,14 +106,14 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
         sharedDiscoveryService.casLeaders( steppingDown, databaseId );
     }
 
-    Set<DatabaseId> databaseIds()
+    Set<DatabaseId> getDatabaseIds()
     {
         return myself.databaseIds();
     }
 
     CoreServerInfo getCoreServerInfo()
     {
-        return new CoreServerInfo( config, databaseIds() );
+        return new CoreServerInfo( config, getDatabaseIds() );
     }
 
     boolean refusesToBeLeader()

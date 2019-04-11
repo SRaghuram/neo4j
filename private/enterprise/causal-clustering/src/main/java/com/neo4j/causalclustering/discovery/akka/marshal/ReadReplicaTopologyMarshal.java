@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,6 +19,7 @@ import java.util.Map;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<ReadReplicaTopology>
 {
@@ -28,7 +29,7 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<ReadReplicaTo
     @Override
     protected ReadReplicaTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         int size = channel.getInt();
         HashMap<MemberId,ReadReplicaInfo> replicas = new HashMap<>( size );
         for ( int i = 0; i < size; i++ )
@@ -37,13 +38,13 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<ReadReplicaTo
             ReadReplicaInfo readReplicaInfo = readReplicaInfoMarshal.unmarshal( channel );
             replicas.put( memberId, readReplicaInfo );
         }
-        return new ReadReplicaTopology( databaseName, replicas );
+        return new ReadReplicaTopology( databaseId, replicas );
     }
 
     @Override
     public void marshal( ReadReplicaTopology readReplicaTopology, WritableChannel channel ) throws IOException
     {
-        StringMarshal.marshal( channel, readReplicaTopology.databaseId() );
+        DatabaseIdMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
         channel.putInt( readReplicaTopology.members().size() );
         for ( Map.Entry<MemberId,ReadReplicaInfo> entry : readReplicaTopology.members().entrySet() )
         {

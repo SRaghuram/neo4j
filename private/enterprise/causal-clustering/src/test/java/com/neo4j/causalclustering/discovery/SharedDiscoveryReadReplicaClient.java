@@ -89,14 +89,14 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
         return myself.id();
     }
 
-    Set<DatabaseId> databaseIds()
+    Set<DatabaseId> getDatabaseIds()
     {
         return myself.databaseIds();
     }
 
     ReadReplicaInfo getReadReplicaInfo()
     {
-        return new ReadReplicaInfo( config, databaseIds() );
+        return new ReadReplicaInfo( config, getDatabaseIds() );
     }
 
     @Override

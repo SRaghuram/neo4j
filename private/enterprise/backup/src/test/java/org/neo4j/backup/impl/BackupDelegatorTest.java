@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -119,6 +120,6 @@ class BackupDelegatorTest
         verify( remoteStore ).copy( argumentCaptor.capture(), eq( storeId ), eq( databaseLayout ), eq( true ) );
 
         //and
-        assertEquals( anyAddress, argumentCaptor.getValue().primary( DEFAULT_DATABASE_NAME ) );
+        assertEquals( anyAddress, argumentCaptor.getValue().primary( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
     }
 }

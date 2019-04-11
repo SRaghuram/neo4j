@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.neo4j.configuration.Config
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mock.MockitoSugar
@@ -38,42 +39,42 @@ class TopologyBuilderTest
     "return an empty topology" when {
 
       "missing all member metadata" in new Fixture {
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(3), MetadataMessage.EMPTY)
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), MetadataMessage.EMPTY)
         topology.members() shouldBe empty
       }
 
       "missing all members" in new Fixture {
         val emptyClusterState = ClusterViewMessage.EMPTY
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, emptyClusterState, memberMetaData(3))
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, emptyClusterState, memberMetaData(3))
         topology.members() shouldBe empty
       }
 
       "all members unreachable" in new Fixture {
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(3, 3), memberMetaData(3))
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3, 3), memberMetaData(3))
         topology.members() shouldBe empty
       }
     }
 
     "return a topology with members only in both metadata and cluster" when {
       "cluster has more members that metadata" in new Fixture {
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(4), memberMetaData(3))
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(4), memberMetaData(3))
         topology.members() should have size 3
       }
 
       "metadata has more members than cluster" in new Fixture {
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(3), memberMetaData(4))
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), memberMetaData(4))
         topology.members() should have size 3
       }
     }
 
     "return a topology without unreachable members" in new Fixture {
-      val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(4, 1), memberMetaData(4))
+      val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(4, 1), memberMetaData(4))
       topology.members() should have size 3
     }
 
     "return a topology with all members from cluster and metadata if have same number and none unreachable" in new Fixture {
       val clusterSize = 7
-      val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(clusterSize), memberMetaData(clusterSize))
+      val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(clusterSize), memberMetaData(clusterSize))
       topology.members() should have size clusterSize
     }
 
@@ -81,7 +82,7 @@ class TopologyBuilderTest
 
       "none refuse to be leader and this server is the first member" in new Fixture {
         val memberData = memberMetaData(3)
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(3), memberData)
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
         topology.canBeBootstrapped shouldBe true
       }
 
@@ -89,7 +90,7 @@ class TopologyBuilderTest
         val thisServerId = 1
         val thisServerUniqueAddress = uniqueAddressStream.drop(thisServerId).head
         val memberData = memberMetaData(3)
-        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseName, clusterId, clusterState(3), memberData)
+        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
         topology.canBeBootstrapped shouldBe false
       }
 
@@ -98,7 +99,7 @@ class TopologyBuilderTest
         val thisServerUniqueAddress = uniqueAddressStream.drop(thisServerId).head
         val whichRefuse: Int => Boolean = id => id < thisServerId
         val memberData = memberMetaData(5, refusesToBeLeader = whichRefuse)
-        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseName, clusterId, clusterState(5), memberData)
+        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseId, clusterId, clusterState(5), memberData)
         topology.canBeBootstrapped shouldBe true
       }
 
@@ -106,7 +107,7 @@ class TopologyBuilderTest
         val thisServerId = 0
         val whichRefuse: Int => Boolean = id => id == thisServerId
         val memberData = memberMetaData(3, refusesToBeLeader = whichRefuse)
-        val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterState(3), memberData)
+        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
         topology.canBeBootstrapped shouldBe false
       }
     }
@@ -115,7 +116,7 @@ class TopologyBuilderTest
       val clusterMembers = clusterState(4)
       val metadata = memberMetaData(4, 2)
       val expected = clusterMembers.members.asScala.flatMap(m => metadata.getOpt(m.uniqueAddress).asScala ).map(_.memberId)
-      val topology = topologyBuilder().buildCoreTopology(databaseName, clusterId, clusterMembers, metadata)
+      val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterMembers, metadata)
       topology.members().keySet() should contain theSameElementsAs expected
     }
   }
@@ -126,7 +127,7 @@ class TopologyBuilderTest
     type LeaderMap = LWWMap[String,LeaderInfo]
 
     implicit val cluster = mock[Cluster]
-    val databaseName = "default"
+    val databaseId = new DatabaseId("my_database")
     val clusterId = new ClusterId(UUID.randomUUID)
     
     def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head, config: Config = Config.defaults) =

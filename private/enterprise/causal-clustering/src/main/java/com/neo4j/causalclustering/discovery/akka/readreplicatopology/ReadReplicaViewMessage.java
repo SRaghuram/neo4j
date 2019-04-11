@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.database.DatabaseId;
 
 class ReadReplicaViewMessage
 {
@@ -35,23 +36,23 @@ class ReadReplicaViewMessage
                 .map( ReadReplicaViewRecord::topologyClientActorRef );
     }
 
-    ReadReplicaTopology toReadReplicaTopology( String databaseName )
+    ReadReplicaTopology toReadReplicaTopology( DatabaseId databaseId )
     {
         Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
                 .values()
                 .stream()
-                .filter( info -> info.readReplicaInfo().getDatabaseNames().contains( databaseName ) )
+                .filter( info -> info.readReplicaInfo().getDatabaseIds().contains( databaseId ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
                 .collect( CollectorsUtil.pairsToMap() );
 
-        return new ReadReplicaTopology( databaseName, knownReadReplicas );
+        return new ReadReplicaTopology( databaseId, knownReadReplicas );
     }
 
-    Stream<String> databaseNames()
+    Stream<DatabaseId> databaseIds()
     {
         return clusterClientReadReplicas.values().stream()
                 .map( ReadReplicaViewRecord::readReplicaInfo )
-                .flatMap( info -> info.getDatabaseNames().stream() );
+                .flatMap( info -> info.getDatabaseIds().stream() );
     }
 
     @Override

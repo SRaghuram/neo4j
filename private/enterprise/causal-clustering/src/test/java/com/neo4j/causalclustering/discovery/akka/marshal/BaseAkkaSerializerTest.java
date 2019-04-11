@@ -85,7 +85,7 @@ public class BaseAkkaSerializerTest
                     new MemberIdSerializer()},
             new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                     new ReadReplicaInfoSerializer()},
-                new Object[]{new CoreTopology( DEFAULT_DATABASE_NAME, new ClusterId( UUID.randomUUID() ), true,
+                new Object[]{new CoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new ClusterId( UUID.randomUUID() ), true,
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
             new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                     new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem)system )},

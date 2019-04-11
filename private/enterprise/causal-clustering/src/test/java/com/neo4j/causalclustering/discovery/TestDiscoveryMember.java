@@ -10,12 +10,14 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TestDiscoveryMember implements DiscoveryMember
 {
     private final MemberId id;
-    private final Set<String> databaseNames;
+    private final Set<DatabaseId> databaseIds;
 
     public TestDiscoveryMember()
     {
@@ -24,13 +26,13 @@ public class TestDiscoveryMember implements DiscoveryMember
 
     public TestDiscoveryMember( MemberId memberId )
     {
-        this( memberId, Set.of( DEFAULT_DATABASE_NAME ) );
+        this( memberId, Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
     }
 
-    public TestDiscoveryMember( MemberId id, Set<String> databaseNames )
+    public TestDiscoveryMember( MemberId id, Set<DatabaseId> databaseIds )
     {
         this.id = id;
-        this.databaseNames = databaseNames;
+        this.databaseIds = databaseIds;
     }
 
     @Override
@@ -40,8 +42,8 @@ public class TestDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<String> databaseNames()
+    public Set<DatabaseId> databaseIds()
     {
-        return databaseNames;
+        return databaseIds;
     }
 }

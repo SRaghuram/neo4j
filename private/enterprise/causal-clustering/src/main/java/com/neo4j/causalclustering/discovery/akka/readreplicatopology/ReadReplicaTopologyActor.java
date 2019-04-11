@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -34,8 +35,8 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private final Log log;
 
     // todo: these maps not good because 1) entries are never removed 2) they duplicate maps in GlobalTopologyState
-    private Map<String,CoreTopology> coreTopologies = new HashMap<>();
-    private Map<String,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
+    private Map<DatabaseId,CoreTopology> coreTopologies = new HashMap<>();
+    private Map<DatabaseId,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
@@ -123,7 +124,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void addCoreTopology( CoreTopology coreTopology )
     {
-        coreTopologies.put( coreTopology.databaseName(), coreTopology );
+        coreTopologies.put( coreTopology.databaseId(), coreTopology );
     }
 
     private void setDatabaseLeaderInfo( LeaderInfoDirectoryMessage leaderInfo )
@@ -133,17 +134,17 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void buildTopologies()
     {
-        readReplicaViewMessage.databaseNames().forEach( this::buildTopology );
+        readReplicaViewMessage.databaseIds().forEach( this::buildTopology );
     }
 
-    private void buildTopology( String databaseName )
+    private void buildTopology( DatabaseId databaseId )
     {
-        log.debug( "Building read replica topology for databse %s with read replicas: %s", databaseName, readReplicaViewMessage );
-        ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseName );
-        log.debug( "Built read replica topology for database %s: %s", databaseName, readReplicaTopology );
+        log.debug( "Building read replica topology for databse %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
+        ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
+        log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
 
         // todo: this method used to only execute the following two lines if new topology is different form the existing one -- do we need this now?
         topologySink.offer( readReplicaTopology );
-        readReplicaTopologies.put( databaseName, readReplicaTopology );
+        readReplicaTopologies.put( databaseId, readReplicaTopology );
     }
 }

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -60,7 +61,7 @@ public class CoreDownloader
     Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( db.databaseName(), addressProvider );
+        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( db.databaseId(), addressProvider );
         if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
@@ -81,11 +82,11 @@ public class CoreDownloader
         return coreSnapshot;
     }
 
-    private Optional<AdvertisedSocketAddress> lookupPrimary( String databaseName, CatchupAddressProvider addressProvider )
+    private Optional<AdvertisedSocketAddress> lookupPrimary( DatabaseId databaseId, CatchupAddressProvider addressProvider )
     {
         try
         {
-            return Optional.of( addressProvider.primary( databaseName ) );
+            return Optional.of( addressProvider.primary( databaseId ) );
         }
         catch ( CatchupAddressResolutionException e )
         {

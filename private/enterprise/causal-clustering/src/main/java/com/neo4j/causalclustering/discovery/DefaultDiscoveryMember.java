@@ -42,7 +42,7 @@ public class DefaultDiscoveryMember implements DiscoveryMember
     {
         return "DefaultDiscoveryMember{" +
                "id=" + id +
-               ", databaseNames=" + databaseNames() +
+               ", databaseIds=" + databaseIds() +
                '}';
     }
 }

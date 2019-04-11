@@ -165,7 +165,7 @@ public final class CatchupComponentsProvider
         TxPullClient txPullClient = new TxPullClient( catchupClient, clusteredDatabaseContext.databaseId(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
-                storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory, clusteredDatabaseContext.databaseName() );
+                storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory, clusteredDatabaseContext.databaseId() );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, logProvider );

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -23,7 +22,9 @@ import java.util.UUID;
 
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.database.DatabaseId;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 public class ReadReplicaViewMessageTest extends TestKit
@@ -58,15 +59,15 @@ public class ReadReplicaViewMessageTest extends TestKit
     @Test
     public void shouldReturnEmptyTopologyIfEmptyView()
     {
-        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( "no_such_database" ), Matchers.equalTo( ReadReplicaTopology.EMPTY ) );
+        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( new DatabaseId( "no_such_database" ) ), equalTo( ReadReplicaTopology.EMPTY ) );
     }
 
     @Test
     public void shouldReturnReadReplicaTopology()
     {
-        String databaseName = Iterables.single( readReplicaInfo.getDatabaseNames() );
-        ReadReplicaTopology expected = new ReadReplicaTopology( databaseName, Map.of( memberId, readReplicaInfo ) );
+        DatabaseId databaseId = Iterables.single( readReplicaInfo.getDatabaseIds() );
+        ReadReplicaTopology expected = new ReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
 
-        assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseName ), Matchers.equalTo( expected ) );
+        assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
     }
 }

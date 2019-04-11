@@ -26,6 +26,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -49,7 +50,7 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 class RemoteStoreTest
 {
-    private static final String DATABASE_NAME = "cars";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "cars" );
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
@@ -180,8 +181,8 @@ class RemoteStoreTest
         RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
-        when( catchupAddressProvider.primary( DATABASE_NAME ) ).thenReturn( localhost );
-        when( catchupAddressProvider.secondary( DATABASE_NAME ) ).thenReturn( localhost );
+        when( catchupAddressProvider.primary( DATABASE_ID ) ).thenReturn( localhost );
+        when( catchupAddressProvider.secondary( DATABASE_ID ) ).thenReturn( localhost );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(), any() ) ).thenReturn(
@@ -197,8 +198,8 @@ class RemoteStoreTest
 
         doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
 
-        verify( catchupAddressProvider, times( 3 ) ).secondary( DATABASE_NAME );
-        verify( catchupAddressProvider, times( 1 ) ).primary( DATABASE_NAME );
+        verify( catchupAddressProvider, times( 3 ) ).secondary( DATABASE_ID );
+        verify( catchupAddressProvider, times( 1 ) ).primary( DATABASE_ID );
     }
 
     @Test
@@ -207,8 +208,8 @@ class RemoteStoreTest
         RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider secondaryFailingAddressProvider = mock( CatchupAddressProvider.class );
-        when( secondaryFailingAddressProvider.secondary( DATABASE_NAME ) ).thenThrow( CatchupAddressResolutionException.class );
-        when( secondaryFailingAddressProvider.primary( DATABASE_NAME ) ).thenReturn( localhost );
+        when( secondaryFailingAddressProvider.secondary( DATABASE_ID ) ).thenThrow( CatchupAddressResolutionException.class );
+        when( secondaryFailingAddressProvider.primary( DATABASE_ID ) ).thenReturn( localhost );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( secondaryFailingAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
@@ -225,14 +226,14 @@ class RemoteStoreTest
         doStoreCopy( storeCopyClient, txPullClient, secondaryFailingAddressProvider,
                 Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() );
 
-        verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary( DATABASE_NAME );
+        verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary( DATABASE_ID );
     }
 
     private void doStoreCopy( StoreCopyClient storeCopyClient, TxPullClient txPullClient, CatchupAddressProvider catchupAddressProvider, Config config )
             throws IOException, StoreCopyFailedException
     {
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
-                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_NAME );
+                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }

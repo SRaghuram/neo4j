@@ -30,6 +30,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class UpstreamAddressLookupTest
 {
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
     private final MemberId firstMember = new MemberId( UUID.randomUUID() );
     private final MemberId secondMember = new MemberId( UUID.randomUUID() );
@@ -63,9 +64,9 @@ public class UpstreamAddressLookupTest
                 new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // when
-        AdvertisedSocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
-        AdvertisedSocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
-        AdvertisedSocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
+        AdvertisedSocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        AdvertisedSocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        AdvertisedSocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
 
         // then
         assertEquals( firstAddress, firstResult );
@@ -88,7 +89,7 @@ public class UpstreamAddressLookupTest
         expectedException.expect( CatchupAddressResolutionException.class );
 
         // when
-        upstreamAddressLookup.lookupAddressForDatabase( DEFAULT_DATABASE_NAME );
+        upstreamAddressLookup.lookupAddressForDatabase( databaseId );
     }
 
     private class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy

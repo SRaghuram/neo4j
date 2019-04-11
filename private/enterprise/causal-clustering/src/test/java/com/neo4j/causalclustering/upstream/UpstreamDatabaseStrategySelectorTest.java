@@ -30,27 +30,27 @@ import static org.neo4j.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {
-    private static final String DATABASE_NAME = "clients";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "clients" );
 
     @Test
     void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception
     {
         // given
         UpstreamDatabaseSelectionStrategy badOne = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( badOne.upstreamMemberForDatabase( DATABASE_NAME ) ).thenReturn( Optional.empty() );
+        when( badOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.empty() );
 
         UpstreamDatabaseSelectionStrategy anotherBadOne = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( anotherBadOne.upstreamMemberForDatabase( DATABASE_NAME ) ).thenReturn( Optional.empty() );
+        when( anotherBadOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.empty() );
 
         UpstreamDatabaseSelectionStrategy goodOne = mock( UpstreamDatabaseSelectionStrategy.class );
         MemberId theMemberId = new MemberId( UUID.randomUUID() );
-        when( goodOne.upstreamMemberForDatabase( DATABASE_NAME ) ).thenReturn( Optional.of( theMemberId ) );
+        when( goodOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.of( theMemberId ) );
 
         UpstreamDatabaseStrategySelector selector =
                 new UpstreamDatabaseStrategySelector( badOne, iterable( goodOne, anotherBadOne ), NullLogProvider.getInstance() );
 
         // when
-        MemberId result = selector.bestUpstreamMemberForDatabase( DATABASE_NAME );
+        MemberId result = selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertEquals( theMemberId, result );
@@ -62,8 +62,8 @@ public class UpstreamDatabaseStrategySelectorTest
         // given
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
-        when( topologyService.coreTopologyForDatabase( DATABASE_NAME ) ).thenReturn(
-                new CoreTopology( DATABASE_NAME, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
+                new CoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
         defaultStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
@@ -71,7 +71,7 @@ public class UpstreamDatabaseStrategySelectorTest
         UpstreamDatabaseStrategySelector selector = new UpstreamDatabaseStrategySelector( defaultStrategy );
 
         // when
-        MemberId instance = selector.bestUpstreamMemberForDatabase( DATABASE_NAME );
+        MemberId instance = selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertEquals( memberId, instance );
@@ -83,19 +83,19 @@ public class UpstreamDatabaseStrategySelectorTest
         // given
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
-        when( topologyService.coreTopologyForDatabase( DATABASE_NAME ) ).thenReturn(
-                new CoreTopology( DATABASE_NAME, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
+                new CoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy shouldNotUse = mock( ConnectToRandomCoreServerStrategy.class );
 
         UpstreamDatabaseSelectionStrategy mockStrategy = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( mockStrategy.upstreamMemberForDatabase( DATABASE_NAME ) ).thenReturn( Optional.of( new MemberId( UUID.randomUUID() ) ) );
+        when( mockStrategy.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.of( new MemberId( UUID.randomUUID() ) ) );
 
         UpstreamDatabaseStrategySelector selector =
                 new UpstreamDatabaseStrategySelector( shouldNotUse, iterable( mockStrategy ), NullLogProvider.getInstance() );
 
         // when
-        selector.bestUpstreamMemberForDatabase( DATABASE_NAME );
+        selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         verifyZeroInteractions( shouldNotUse );

@@ -50,7 +50,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
         val newCoreTopology = new CoreTopology(
-          DEFAULT_DATABASE_NAME,
+          new DatabaseId(DEFAULT_DATABASE_NAME),
           new ClusterId(UUID.randomUUID()),
           false,
           Map(
@@ -71,7 +71,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
-        val newRRTopology = new ReadReplicaTopology(DEFAULT_DATABASE_NAME, Map(
+        val newRRTopology = new ReadReplicaTopology(new DatabaseId(DEFAULT_DATABASE_NAME), Map(
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
                 ).asJava)

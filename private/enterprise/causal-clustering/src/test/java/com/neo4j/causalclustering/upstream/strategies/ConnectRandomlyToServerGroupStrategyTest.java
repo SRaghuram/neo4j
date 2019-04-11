@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -27,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyToServerGroupStrategyTest
 {
-    private static final String DATABASE_NAME = "managers";
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "managers" );
 
     @Test
     void shouldConnectToGroupDefinedInStrategySpecificConfig()
@@ -44,7 +45,7 @@ class ConnectRandomlyToServerGroupStrategyTest
         strategy.inject( topologyService, configWithTargetServerGroup, NullLogProvider.getInstance(), targetGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_NAME );
+        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( result, contains( isIn( targetGroupMemberIds ) ) );
@@ -65,7 +66,7 @@ class ConnectRandomlyToServerGroupStrategyTest
         connectRandomlyToServerGroupStrategy.inject( topologyService, config, logProvider, myself );
 
         // when
-        Optional<MemberId> found = connectRandomlyToServerGroupStrategy.upstreamMemberForDatabase( DATABASE_NAME );
+        Optional<MemberId> found = connectRandomlyToServerGroupStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( found.isPresent() );
