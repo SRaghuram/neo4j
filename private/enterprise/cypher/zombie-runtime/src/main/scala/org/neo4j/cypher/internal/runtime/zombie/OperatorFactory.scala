@@ -26,6 +26,7 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
   def create(plan: LogicalPlan): Operator = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
+    val argumentSize = physicalPlan.argumentSizes(id)
     generateSlotAccessorFunctions(slots)
 
     plan match {
@@ -35,10 +36,16 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                           variables.map(v => slots.getReferenceOffsetFor(v)))
 
       case plans.AllNodesScan(column, _) =>
-        val argumentSize = physicalPlan.argumentSizes(id)
         new AllNodeScanOperator(WorkIdentity.fromPlan(plan),
                                 slots.getLongOffsetFor(column),
                                 argumentSize)
+
+      case plans.NodeByLabelScan(column, label, _) =>
+        queryIndexes.registerLabelScan()
+        new LabelScanOperator(WorkIdentity.fromPlan(plan),
+                              slots.getLongOffsetFor(column),
+                              LazyLabel(label)(SemanticTable()),
+                              argumentSize)
 
       case plans.Expand(lhs, fromName, dir, types, to, relName, ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)

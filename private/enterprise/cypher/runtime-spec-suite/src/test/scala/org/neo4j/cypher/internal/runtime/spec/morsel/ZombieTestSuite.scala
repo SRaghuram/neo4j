@@ -21,6 +21,10 @@ class ZombieInputTest extends ParallelInputTestBase(ZombieRuntime)
 class ZombieAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 class ZombieAllNodeScanStressTest extends AllNodeScanStressTestBase(ZombieRuntime)
 
+// LABEL SCAN
+class ZombieLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieLabelScanStressTest extends LabelScanStressTestBase(ZombieRuntime)
+
 // APPLY
 //class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
 
