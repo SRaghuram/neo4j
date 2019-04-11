@@ -44,6 +44,6 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
     @Override
     protected RoutingResult invoke( DatabaseId databaseId, MapValue routingContext ) throws ProcedureException
     {
-        return loadBalancingProcessor.run( databaseId.name(), routingContext );
+        return loadBalancingProcessor.run( databaseId, routingContext );
     }
 }

@@ -142,7 +142,7 @@ public class DatabaseBootstrapper
         }
         catch ( Exception e )
         {
-            throw new BootstrapException( dbContext.databaseId().name(), e );
+            throw new BootstrapException( dbContext.databaseId(), e );
         }
     }
 

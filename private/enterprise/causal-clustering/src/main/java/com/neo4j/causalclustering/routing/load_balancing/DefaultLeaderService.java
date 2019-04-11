@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class DefaultLeaderService implements LeaderService
 {
@@ -28,9 +29,9 @@ public class DefaultLeaderService implements LeaderService
     }
 
     @Override
-    public Optional<MemberId> getLeaderId( String databaseName )
+    public Optional<MemberId> getLeaderId( DatabaseId databaseId )
     {
-        var leaderLocator = leaderLocatorForDatabase( databaseName );
+        var leaderLocator = leaderLocatorForDatabase( databaseId );
         if ( leaderLocator != null )
         {
             // this cluster member is part of the Raft group for the specified database
@@ -41,14 +42,14 @@ public class DefaultLeaderService implements LeaderService
         {
             // this cluster member does not participate in the Raft group for the specified database
             // lookup the leader ID using the discovery service
-            return getLeaderIdFromTopologyService( databaseName );
+            return getLeaderIdFromTopologyService( databaseId );
         }
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> getLeaderBoltAddress( String databaseName )
+    public Optional<AdvertisedSocketAddress> getLeaderBoltAddress( DatabaseId databaseId )
     {
-        return getLeaderId( databaseName ).flatMap( this::resolveBoltAddress );
+        return getLeaderId( databaseId ).flatMap( this::resolveBoltAddress );
     }
 
     private static Optional<MemberId> getLeaderIdFromLeaderLocator( LeaderLocator leaderLocator )
@@ -63,7 +64,7 @@ public class DefaultLeaderService implements LeaderService
         }
     }
 
-    private Optional<MemberId> getLeaderIdFromTopologyService( String databaseName )
+    private Optional<MemberId> getLeaderIdFromTopologyService( DatabaseId databaseId )
     {
         var coreRoles = topologyService.allCoreRoles();
         var coreServerInfos = topologyService.allCoreServers()
@@ -82,7 +83,7 @@ public class DefaultLeaderService implements LeaderService
         return topologyService.allCoreServers().find( memberId ).map( ClientConnector::boltAddress );
     }
 
-    private LeaderLocator leaderLocatorForDatabase( String databaseName )
+    private LeaderLocator leaderLocatorForDatabase( DatabaseId databaseId )
     {
         // todo: lookup the correct LeaderLocator for the given database name (maybe use DatabaseManager for this)
         return leaderLocator;

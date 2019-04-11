@@ -15,6 +15,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
@@ -22,7 +23,6 @@ import org.neo4j.values.virtual.MapValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,7 +61,7 @@ class GetRoutingTableProcedureForMultiDCTest
         LoadBalancingPlugin plugin = mock( LoadBalancingPlugin.class );
         List<AdvertisedSocketAddress> addresses = List.of( new AdvertisedSocketAddress( "localhost", 12345 ) );
         RoutingResult result = new RoutingResult( addresses, addresses, addresses, 100 );
-        when( plugin.run( anyString(), any( MapValue.class ) ) ).thenReturn( result );
+        when( plugin.run( any( DatabaseId.class ), any( MapValue.class ) ) ).thenReturn( result );
         GetRoutingTableProcedureForMultiDC proc = newProcedure( plugin );
         MapValue clientContext = ValueUtils.asMapValue( map( "key", "value", "key2", "value2" ) );
 
@@ -69,7 +69,7 @@ class GetRoutingTableProcedureForMultiDCTest
         proc.apply( null, new AnyValue[]{clientContext, stringValue( "my_database" )}, null );
 
         // then
-        verify( plugin ).run( "my_database", clientContext );
+        verify( plugin ).run( new DatabaseId( "my_database" ), clientContext );
     }
 
     @Test

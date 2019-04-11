@@ -26,6 +26,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -82,15 +83,15 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
+    public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
     {
         Policy policy = policies.selectFor( context );
 
-        CoreTopology coreTopology = coreTopologyFor( databaseName );
-        ReadReplicaTopology rrTopology = readReplicaTopology( databaseName );
+        CoreTopology coreTopology = coreTopologyFor( databaseId );
+        ReadReplicaTopology rrTopology = readReplicaTopology( databaseId );
 
-        return new RoutingResult( routeEndpoints( coreTopology ), writeEndpoints( databaseName ),
-                readEndpoints( coreTopology, rrTopology, policy, databaseName ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology ), writeEndpoints( databaseId ),
+                readEndpoints( coreTopology, rrTopology, policy, databaseId ), timeToLive );
     }
 
     private static List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology )
@@ -102,12 +103,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                 .collect( toList() );
     }
 
-    private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
+    private List<AdvertisedSocketAddress> writeEndpoints( DatabaseId databaseId )
     {
-        return leaderService.getLeaderBoltAddress( databaseName ).map( List::of ).orElse( emptyList() );
+        return leaderService.getLeaderBoltAddress( databaseId ).map( List::of ).orElse( emptyList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, String databaseName )
+    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, DatabaseId databaseId )
     {
 
         Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
@@ -119,7 +120,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         {
             Set<MemberId> validCores = coreTopology.members().keySet();
 
-            Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseName );
+            Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseId );
             if ( optionalLeaderId.isPresent() )
             {
                 MemberId leaderId = optionalLeaderId.get();
@@ -140,7 +141,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
     }
 
-    private CoreTopology coreTopologyFor( String databaseName )
+    private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
         // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
         //  also an exception needs to be thrown when topology for the specified database is empty
@@ -148,7 +149,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         return topologyService.allCoreServers();
     }
 
-    private ReadReplicaTopology readReplicaTopology( String databaseName )
+    private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
         // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
         // return topologyService.allReadReplicas().filterTopologyByDb( databaseName );
