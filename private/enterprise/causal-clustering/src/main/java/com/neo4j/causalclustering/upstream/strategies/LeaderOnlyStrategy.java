@@ -31,7 +31,7 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        Set<MemberId> coreMemberIds = topologyService.coreServersForDatabase( databaseId ).members().keySet();
+        Set<MemberId> coreMemberIds = topologyService.coreTopologyForDatabase( databaseId ).members().keySet();
         Map<MemberId,RoleInfo> coreMemberRoles = topologyService.allCoreRoles();
 
         if ( coreMemberIds.isEmpty() || coreMemberRoles.isEmpty() )

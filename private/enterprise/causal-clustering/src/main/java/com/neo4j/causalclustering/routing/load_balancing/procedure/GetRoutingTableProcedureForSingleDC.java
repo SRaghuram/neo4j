@@ -125,11 +125,11 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
-        return topologyService.coreServersForDatabase( databaseId.name() );
+        return topologyService.coreTopologyForDatabase( databaseId.name() );
     }
 
     private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
-        return topologyService.readReplicasForDatabase( databaseId.name() );
+        return topologyService.readReplicaTopologyForDatabase( databaseId.name() );
     }
 }

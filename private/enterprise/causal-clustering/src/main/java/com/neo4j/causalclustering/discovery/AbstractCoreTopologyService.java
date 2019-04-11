@@ -42,7 +42,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     public final synchronized void addLocalCoreTopologyListener( Listener listener )
     {
         this.listenerService.addCoreTopologyListener( listener );
-        listener.onCoreTopologyChange( coreServersForDatabase( listener.databaseName() ) );
+        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.databaseName() ) );
     }
 
     @Override

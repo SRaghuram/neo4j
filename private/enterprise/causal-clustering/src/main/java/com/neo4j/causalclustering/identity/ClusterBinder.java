@@ -120,7 +120,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         do
         {
-            topology = topologyService.coreServersForDatabase( databaseId );
+            topology = topologyService.coreTopologyForDatabase( databaseId );
 
             if ( topology.clusterId() != null )
             {

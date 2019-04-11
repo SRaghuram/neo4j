@@ -30,7 +30,7 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        final CoreTopology coreTopology = topologyService.coreServersForDatabase( databaseId );
+        final CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
 
         if ( coreTopology.members().isEmpty() )
         {

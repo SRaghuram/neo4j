@@ -445,13 +445,13 @@ public class Cluster
     public int numberOfCoreMembersReportedByTopology( String databaseName )
     {
         DatabaseId databaseId = new DatabaseId( databaseName );
-        return numberOfMembersReportedByCoreTopology( service -> service.coreServersForDatabase( databaseId ) );
+        return numberOfMembersReportedByCoreTopology( service -> service.coreTopologyForDatabase( databaseId ) );
     }
 
     public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
         DatabaseId databaseId = new DatabaseId( databaseName );
-        return numberOfMembersReportedByCoreTopology( service -> service.readReplicasForDatabase( databaseId ) );
+        return numberOfMembersReportedByCoreTopology( service -> service.readReplicaTopologyForDatabase( databaseId ) );
     }
 
     private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology> topologySelector )

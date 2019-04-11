@@ -45,7 +45,7 @@ class ConnectToRandomCoreServerStrategyTest
         MemberId memberId3 = new MemberId( UUID.randomUUID() );
 
         TopologyService topologyService = mock( TopologyService.class );
-        when( topologyService.coreServersForDatabase( DATABASE_NAME ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_NAME ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
 
         ConnectToRandomCoreServerStrategy connectionStrategy = new ConnectToRandomCoreServerStrategy();
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );

@@ -48,10 +48,10 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
         else
         {
             // shuffled members
-            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicasForDatabase( databaseId ).members().keySet() );
+            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( databaseId ).members().keySet() );
             Collections.shuffle( readReplicaMembers );
 
-            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreServersForDatabase( databaseId ).members().keySet() );
+            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreTopologyForDatabase( databaseId ).members().keySet() );
             Collections.shuffle( coreMembers );
 
             return Stream.concat( readReplicaMembers.stream(), coreMembers.stream() ).filter( not( myself::equals ) ).findFirst();
@@ -60,7 +60,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
 
     private Optional<MemberId> randomCoreMember( DatabaseId databaseId )
     {
-        List<MemberId> coreMembersNotSelf = topologyService.coreServersForDatabase( databaseId )
+        List<MemberId> coreMembersNotSelf = topologyService.coreTopologyForDatabase( databaseId )
                 .members().keySet().stream()
                 .filter( not( myself::equals ) )
                 .collect( Collectors.toList() );

@@ -144,11 +144,11 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
     private CoreTopology coreTopologyFor( DatabaseId databaseId )
     {
-        return topologyService.coreServersForDatabase( databaseName );
+        return topologyService.coreTopologyForDatabase( databaseName );
     }
 
     private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
-        return topologyService.readReplicasForDatabase( databaseName );
+        return topologyService.readReplicaTopologyForDatabase( databaseName );
     }
 }

@@ -110,8 +110,8 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         final CoreTopology clusterTopology = new CoreTopology( databaseName, clusterId, false, coreMembers );
-        when( coreTopologyService.coreServersForDatabase( databaseName ) ).thenReturn( clusterTopology );
-        when( coreTopologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( coreTopologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( clusterTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
 
@@ -157,8 +157,8 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         final CoreTopology clusterTopology = new CoreTopology( databaseName, clusterId, false, coreMembers );
-        when( coreTopologyService.coreServersForDatabase( databaseName ) ).thenReturn( clusterTopology );
-        when( coreTopologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( coreTopologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( clusterTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         CallableProcedure proc = newProcedure( coreTopologyService, leaderService, config );
 
@@ -190,8 +190,8 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 2 ), addressesForCore( 2, false ) );
 
         final CoreTopology clusterTopology = new CoreTopology( databaseName, clusterId, false, coreMembers );
-        when( coreTopologyService.coreServersForDatabase( databaseName ) ).thenReturn( clusterTopology );
-        when( coreTopologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( coreTopologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( clusterTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         CallableProcedure proc = newProcedure( coreTopologyService, leaderService, config );
 
@@ -224,8 +224,8 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         final CoreTopology clusterTopology = new CoreTopology( databaseName, clusterId, false, coreMembers );
-        when( coreTopologyService.coreServersForDatabase( databaseName ) ).thenReturn( clusterTopology );
-        when( coreTopologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( coreTopologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( clusterTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         CallableProcedure proc = newProcedure( coreTopologyService, leaderService, config );
 
@@ -251,8 +251,8 @@ class GetRoutingTableProcedureForSingleDCTest
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
-        when( topologyService.coreServersForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
-        when( topologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, readReplicaInfoMap( 1 ) ) );
+        when( topologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
+        when( topologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, readReplicaInfoMap( 1 ) ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( theLeader );
@@ -290,8 +290,8 @@ class GetRoutingTableProcedureForSingleDCTest
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
-        when( topologyService.coreServersForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
-        when( topologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( topologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
+        when( topologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( theLeader );
@@ -320,8 +320,8 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        when( topologyService.coreServersForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
-        when( topologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( topologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
+        when( topologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
@@ -349,8 +349,8 @@ class GetRoutingTableProcedureForSingleDCTest
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
-        when( topologyService.coreServersForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
-        when( topologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( topologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( new CoreTopology( databaseName, clusterId, false, coreMembers ) );
+        when( topologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( member( 1 ) );
@@ -387,8 +387,8 @@ class GetRoutingTableProcedureForSingleDCTest
         coreMembers.put( member( 2 ), addressesForCore( 2, false ) );
 
         CoreTopology clusterTopology = new CoreTopology( databaseName, clusterId, false, coreMembers );
-        when( coreTopologyService.coreServersForDatabase( databaseName ) ).thenReturn( clusterTopology );
-        when( coreTopologyService.readReplicasForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
+        when( coreTopologyService.coreTopologyForDatabase( databaseName ) ).thenReturn( clusterTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( databaseName ) ).thenReturn( new ReadReplicaTopology( databaseName, emptyMap() ) );
 
         CallableProcedure proc = newProcedure( coreTopologyService, leaderService, config );
 

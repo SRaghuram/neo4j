@@ -93,7 +93,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
@@ -105,7 +105,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }

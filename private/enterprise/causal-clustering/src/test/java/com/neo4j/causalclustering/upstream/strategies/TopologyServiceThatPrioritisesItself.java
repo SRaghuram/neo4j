@@ -50,7 +50,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public CoreTopology coreServersForDatabase( DatabaseId databaseId )
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return new CoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), true, allCoreServers() );
     }
@@ -63,7 +63,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId )
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return new ReadReplicaTopology( DATABASE_ID, allReadReplicas() );
     }

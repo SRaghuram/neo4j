@@ -14,8 +14,6 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
-// todo: use DatabaseId instead of String
-
 /**
  * Provides a read-only service for the eventually consistent topology information.
  */
@@ -23,11 +21,11 @@ public interface TopologyService extends Lifecycle
 {
     Map<MemberId,CoreServerInfo> allCoreServers();
 
-    CoreTopology coreServersForDatabase( DatabaseId databaseId );
+    CoreTopology coreTopologyForDatabase( DatabaseId databaseId );
 
     Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
-    ReadReplicaTopology readReplicasForDatabase( DatabaseId databaseId );
+    ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
