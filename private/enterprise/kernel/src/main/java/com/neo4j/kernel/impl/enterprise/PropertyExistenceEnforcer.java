@@ -32,6 +32,7 @@ import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaProcessor;
+import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -193,6 +194,13 @@ class PropertyExistenceEnforcer
         {
             validateRelationship( id );
             super.visitRelPropertyChanges( id, added, changed, removed );
+        }
+
+        @Override
+        public void close()
+        {
+            super.close();
+            IOUtils.closeAllSilently( nodeCursor, relationshipCursor, propertyCursor );
         }
 
         private void validateNode( long nodeId ) throws NodePropertyExistenceException
