@@ -19,7 +19,6 @@ public interface SimpleStorage<T> extends StateStorage<T>
         return null;
     }
 
-    // todo: inline?
     @Override
     default void persistStoreData( T t ) throws IOException
     {
