@@ -142,9 +142,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
         ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseName );
         log.debug( "Built read replica topology for database %s: %s", databaseName, readReplicaTopology );
 
-        System.out.println( "--- Built new topology: " + readReplicaTopology );
-
-        // todo: this method used to only execute the following tro lines if new topology is different form the existing one -- do we need this now?
+        // todo: this method used to only execute the following two lines if new topology is different form the existing one -- do we need this now?
         topologySink.offer( readReplicaTopology );
         readReplicaTopologies.put( databaseName, readReplicaTopology );
     }

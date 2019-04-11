@@ -46,7 +46,6 @@ public class TopologyBuilder
 
         boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData, databaseId );
         CoreTopology newCoreTopology = new CoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
-        System.out.println( "+++ Built new topology: " + newCoreTopology );
         log.debug( "Returned topology: %s", newCoreTopology );
         return newCoreTopology;
     }
