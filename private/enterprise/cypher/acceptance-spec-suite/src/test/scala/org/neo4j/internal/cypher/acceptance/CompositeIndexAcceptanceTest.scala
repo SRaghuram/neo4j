@@ -510,21 +510,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index with combined equality and existence predicates") {
     // Given
-    graph.createIndex("User", "name")
-    graph.createIndex("User", "surname")
-    graph.createIndex("User", "name", "surname")
-    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
-    val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
-    for (_ <- 1 to 100) {
-      createLabeledNode(Map("name" -> "Jake"), "User")
-      createLabeledNode(Map("surname" -> "Soap"), "User")
-      createLabeledNode("User")
-    }
-    resampleIndexes()
+    val nodes = setUpMultipleIndexesAndSmallGraph
 
     // When
-    val resultEquality = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,exists)").containingArgument(":User(name,surname)")
@@ -533,10 +522,15 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       }))
 
     // Then
-    resultEquality.toComparableResult should equal(List(Map("n" -> n3)))
+    result.toComparableResult should equal(List(Map("n" -> nodes.head)))
+  }
+
+  test("should use composite index with only existence predicates") {
+    // Given
+    val nodes = setUpMultipleIndexesAndSmallGraph
 
     // When
-    val resultExists = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name,surname)")
@@ -545,7 +539,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       }))
 
     // Then
-    resultExists.toComparableResult.toSet should equal(Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
+    result.toComparableResult.toSet should equal(Set(Map("n" -> nodes(0)), Map("n" -> nodes(1)), Map("n" -> nodes(2))))
   }
 
   test("should be able to update composite index when only one property has changed") {
@@ -1549,4 +1543,20 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |CREATE (:Awesome {prop1: 'fehu', prop2: 'whale'})
       """.stripMargin
     )
+
+  private def setUpMultipleIndexesAndSmallGraph = {
+    graph.createIndex("User", "name")
+    graph.createIndex("User", "surname")
+    graph.createIndex("User", "name", "surname")
+    val n0 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
+    for (_ <- 1 to 100) {
+      createLabeledNode(Map("name" -> "Jake"), "User")
+      createLabeledNode(Map("surname" -> "Soap"), "User")
+      createLabeledNode("User")
+    }
+    resampleIndexes()
+    List(n0, n1, n2)
+  }
 }

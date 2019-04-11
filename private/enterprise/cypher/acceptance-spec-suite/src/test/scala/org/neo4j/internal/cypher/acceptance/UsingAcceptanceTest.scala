@@ -781,7 +781,6 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       }))
 
     result.columnAs[Node]("f").toList should equal(List(node))
-    result.executionPlanDescription() should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
   }
 
   test("should handle join hint solved multiple times") {
