@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,8 +23,11 @@ import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmT
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPasswordWithSameLengthAs;
@@ -57,9 +59,9 @@ class BasicSystemGraphRealmIT
         BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder(), dbManager );
 
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
-        Assert.assertNotNull( user );
-        Assert.assertTrue( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        Assert.assertTrue( user.passwordChangeRequired() );
+        assertNotNull( user );
+        assertTrue( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.passwordChangeRequired() );
     }
 
     @Test
@@ -68,8 +70,8 @@ class BasicSystemGraphRealmIT
         BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().initialUser( "123", false ), dbManager );
 
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
-        Assert.assertNotNull( user );
-        Assert.assertTrue( user.credentials().matchesPassword( password("123") ) );
+        assertNotNull( user );
+        assertTrue( user.credentials().matchesPassword( password("123") ) );
         assertFalse( user.passwordChangeRequired() );
     }
 
@@ -80,11 +82,11 @@ class BasicSystemGraphRealmIT
                 new BasicImportOptionsBuilder().initialUser( "123", false ).migrateUser( "oldUser", "321", false ), dbManager );
 
         final User initUser = realm.silentlyGetUser( INITIAL_USER_NAME );
-        Assert.assertNull( initUser );
+        assertNull( initUser );
 
         final User oldUser = realm.silentlyGetUser( "oldUser" );
-        Assert.assertNotNull( oldUser );
-        Assert.assertTrue( oldUser.credentials().matchesPassword( password( "321" ) ) );
+        assertNotNull( oldUser );
+        assertTrue( oldUser.credentials().matchesPassword( password( "321" ) ) );
         assertFalse( oldUser.passwordChangeRequired() );
     }
 
@@ -95,9 +97,9 @@ class BasicSystemGraphRealmIT
                 new BasicImportOptionsBuilder().initialUser( "newPassword", false ).migrateUser( INITIAL_USER_NAME, "oldPassword", true ), dbManager );
 
         final User oldUser = realm.silentlyGetUser( INITIAL_USER_NAME );
-        Assert.assertNotNull( oldUser );
-        Assert.assertTrue( oldUser.credentials().matchesPassword( password( "oldPassword" ) ) );
-        Assert.assertTrue( oldUser.passwordChangeRequired() );
+        assertNotNull( oldUser );
+        assertTrue( oldUser.credentials().matchesPassword( password( "oldPassword" ) ) );
+        assertTrue( oldUser.passwordChangeRequired() );
     }
 
     @Test
