@@ -27,6 +27,23 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
       expectReplicatorUpdates(replicator, dataKey)
     }
 
+    "refuse to update replicators with additional cluster ID" in new Fixture {
+      Given("2 cluster IDs for the same database")
+      val clusterId1 = new ClusterId(UUID.randomUUID())
+      val clusterId2 = new ClusterId(UUID.randomUUID())
+
+      When("Sending both cluster IDs")
+      Then("Only the first cluster ID should be persisted")
+      val expected = LWWMap.empty.put(cluster, "db1", clusterId1)
+
+      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId1, "db1")
+      expectClusterIdReplicatorUpdatesWithOutcome(LWWMap.empty, expected)
+      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId2, "db1")
+      expectClusterIdReplicatorUpdatesWithOutcome(expected, expected)
+      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId2, "db2")
+      expectClusterIdReplicatorUpdatesWithOutcome(expected, expected.put(cluster, "db2", clusterId2))
+    }
+
     "send cluster ID to core topology actor from replicator" in new Fixture {
       Given("cluster IDs for databases")
       val db1 = LWWMap.empty.put(cluster, "db1", new ClusterId(UUID.randomUUID()))
@@ -47,5 +64,15 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
     val coreTopologyProbe = TestProbe("coreTopologyActor")
     val props = ClusterIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, NullLogProvider.getInstance())
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+
+    def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[String,ClusterId], expected: LWWMap[String,ClusterId]): Unit =
+    {
+      replicator.fishForSpecificMessage(defaultWaitTime) {
+        case update @ Replicator.Update(`dataKey`, _, _) =>
+          val mapUpdate = update.asInstanceOf[Replicator.Update[LWWMap[String, ClusterId]]]
+          val result: java.util.Map[String,ClusterId] = mapUpdate.modify(Option(initial)).getEntries()
+          assert(result == expected.getEntries())
+      }
+    }
   }
 }

@@ -51,7 +51,14 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
         builder.match( ClusterIdSettingMessage.class, message ->
                 {
                     log.debug( "Setting ClusterId: %s", message );
-                    modifyReplicatedData( key, map -> map.put( cluster, message.database(), message.clusterId() ) );
+                    modifyReplicatedData( key, map ->
+                    {
+                        if ( map.contains( message.database() ) )
+                        {
+                            return map;
+                        }
+                        return map.put( cluster, message.database(), message.clusterId() );
+                    } );
                 } );
     }
 
