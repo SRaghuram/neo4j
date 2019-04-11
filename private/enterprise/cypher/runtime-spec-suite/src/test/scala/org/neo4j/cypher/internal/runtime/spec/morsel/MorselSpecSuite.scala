@@ -164,20 +164,7 @@ class MorselProjectionStressTest extends ProjectionStressTestBase(MorselRuntime)
 
 // UNWIND
 class MorselUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselUnwindStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
-
-  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
-    OnTopOfParallelInputTD(
-      _.unwind(s"[$propVariable, 2 * $propVariable] AS i"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-          f <- 1 to 2
-        } yield Array(x.getId * f),
-      Seq("i")
-    )
-}
+class MorselUnwindStressTest extends UnwindStressTestBase(MorselRuntime)
 
 // ARGUMENT
 

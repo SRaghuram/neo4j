@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan, RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.{QueryIndexes, slotted}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 
 class OperatorFactory(physicalPlan: PhysicalPlan,
@@ -85,6 +86,15 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                               toOffset,
                               dir,
                               lazyTypes)
+
+      case plans.UnwindCollection(src, variable, collection) =>
+        val offset = slots.get(variable) match {
+          case Some(RefSlot(idx, _, _)) => idx
+          case _ =>
+            throw new InternalException("Weird slot found for UNWIND")
+        }
+        val runtimeExpression = converters.toCommandExpression(id, collection)
+        new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)
 
       case plans.Sort(_, sortItems) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))

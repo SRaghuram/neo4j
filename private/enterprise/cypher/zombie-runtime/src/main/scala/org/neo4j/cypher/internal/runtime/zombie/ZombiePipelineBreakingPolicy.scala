@@ -24,6 +24,7 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
 
       // 1 child operators
       case _: Expand |
+           _: UnwindCollection |
            _: Sort
       => true
 

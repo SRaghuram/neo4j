@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import java.util.concurrent.{Callable, Executors, TimeUnit}
 
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
-import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
+import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.result.RuntimeResult
 
 // INPUT
@@ -45,6 +45,10 @@ class ZombieProjectionStressTest extends ProjectionStressTestBase(ZombieRuntime)
 
 // LIMIT
 class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+
+// UNWIND
+class ZombieUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieUnwindStressTest extends UnwindStressTestBase(ZombieRuntime)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
