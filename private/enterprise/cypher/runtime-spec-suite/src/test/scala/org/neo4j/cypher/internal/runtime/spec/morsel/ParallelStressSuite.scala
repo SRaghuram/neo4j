@@ -44,12 +44,43 @@ abstract class ParallelStressSuite()
     }
   }
 
+  // TODO This is to investigate flaky tests
+  def stringify(thread: Thread, elements: Array[StackTraceElement]): Unit = {
+    val builder = new StringBuilder("\"" + thread.getName + "\"" + (if (thread.isDaemon) {
+      " daemon"
+    } else {
+      ""
+    }) + " prio=" + thread.getPriority + " tid=" + thread.getId + " " + thread.getState.name.toLowerCase + "\n")
+    builder.append("   ").append(classOf[Thread.State].getName).append(": ").append(thread.getState.name.toUpperCase).append("\n")
+    for (element <- elements) {
+      builder.append("      at ").append(element.getClassName).append(".").append(element.getMethodName)
+      if (element.isNativeMethod) {
+        builder.append("(Native method)")
+      } else if (element.getFileName == null) {
+        builder.append("(Unknown source)")
+      } else {
+        builder.append("(").append(element.getFileName).append(":").append(element.getLineNumber).append(")")
+      }
+      builder.append("\n")
+    }
+    println(builder.toString)
+  }
+
   def init(): Unit = {
     nodes = nodePropertyGraph(graphSize, {
       case i => Map("prop" -> i, "text" -> i.toString)
     }, "Label")
-    index("Label", "prop")
-    index("Label", "text")
+    try {
+      index("Label", "prop")
+      index("Label", "text")
+    } catch {
+      case e:IllegalStateException =>
+        // TODO This is to investigate flaky tests
+      Thread.getAllStackTraces.forEach {
+        case (thread, trace) => stringify(thread, trace)
+      }
+      throw e
+    }
     val relTuples = (for (i <- nodes.indices) yield {
       Seq(
         (i, (i + 1) % nodes.length, "NEXT"),
