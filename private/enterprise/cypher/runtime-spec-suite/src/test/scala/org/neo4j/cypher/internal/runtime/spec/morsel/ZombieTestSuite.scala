@@ -10,14 +10,34 @@ import java.util.concurrent.{Callable, Executors, TimeUnit}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
-import org.neo4j.cypher.internal.runtime.spec.tests.{InputTestBase, LimitTestBase}
+import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
+import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.result.RuntimeResult
+
+// INPUT
+class ZombieInputTest extends ParallelInputTestBase(ZombieRuntime)
+
+// ALL NODE SCAN
+class ZombieAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieAllNodeScanStressTest extends AllNodeScanStressTestBase(ZombieRuntime)
+
+// APPLY
+//class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
+
+// EXPAND
+class ZombieExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+//class ZombieExpandStressTest extends ExpandStressTestBase(ZombieRuntime)
+
+// PROJECTION
+class ZombieProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieProjectionStressTest extends ProjectionStressTestBase(ZombieRuntime)
+
+// LIMIT
+class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
-class ZombieInputTest extends InputTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 10000)
-class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 

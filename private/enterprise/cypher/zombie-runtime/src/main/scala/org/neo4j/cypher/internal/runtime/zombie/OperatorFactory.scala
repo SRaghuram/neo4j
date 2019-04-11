@@ -88,6 +88,12 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
       case plans.Limit(_, count, ties) =>
         Some(new LimitOperator(plan.id, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
+      case plans.Projection(_, expressions) =>
+        val projectionOps = expressions.map {
+          case (key, e) => slots(key) -> converters.toCommandExpression(id, e)
+        }
+        Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
+
       case _: plans.Argument => None
     }
   }

@@ -160,19 +160,7 @@ class MorselFilterStressTest extends FilterStressTestBase(MorselRuntime)
 
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselProjectionStressTest extends ParallelStressSuite(MorselRuntime) with OnTopOfParallelInputStressTest {
-
-  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
-    OnTopOfParallelInputTD(
-      _.projection("prop * 2 AS j"),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-        } yield Array(x, x.getId * 2),
-      Seq("x", "j")
-    )
-}
+class MorselProjectionStressTest extends ProjectionStressTestBase(MorselRuntime)
 
 // UNWIND
 class MorselUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
