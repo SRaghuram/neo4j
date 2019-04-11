@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.common.CopyOnWriteHashMap;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
 

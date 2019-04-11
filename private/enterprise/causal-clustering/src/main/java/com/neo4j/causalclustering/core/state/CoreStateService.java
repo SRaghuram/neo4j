@@ -45,11 +45,11 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.common.CopyOnWriteHashMap;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -143,7 +143,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
         versionContextSupplier = globalModule.getVersionContextSupplier();
         cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
 
-        dbStateMap = new CopyOnWriteHashMap<>();
+        dbStateMap = new ConcurrentHashMap<>();
         dispatchers = new AggregateStateMachinesCommandDispatcher( databaseManager, this );
 
         idTypeConfigurationProvider = new CommercialIdTypeConfigurationProvider( config );
