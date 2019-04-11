@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.zombie.Zombie
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.LHSAccumulatingRHSStreamingBuffer.RHSBuffer
@@ -71,8 +70,6 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[RHSBuffer]]
-  Zombie.debug(s"Mr Buff LHS ASM: $lhsArgumentStateMapId")
-  Zombie.debug(s"Mr Buff RHS ASM: $rhsArgumentStateMapId")
 
   override def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext] =
     if (fromPipeline == lhsPipelineId) {
@@ -202,8 +199,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
 object LHSAccumulatingRHSStreamingBuffer {
 
   /**
-    * The buffer used on the RHS input. We can use a [[StandardBuffer]] since we protect
-    * all concurrent access to it through the [[ArgumentStateMap]].
+    * The buffer used on the RHS input.
     */
   class RHSBuffer(override val argumentRowId: Long,
                   private[LHSAccumulatingRHSStreamingBuffer] val buffer: Buffer[MorselExecutionContext]) extends ArgumentState {
