@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.scheduling
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 
 import org.mockito.Mockito
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -224,16 +224,16 @@ abstract class SchedulerTest extends CypherFunSuite {
 
     val queryExecution = s.execute(tracer,
       IndexedSeq(SubTasker(List(
-        NoopTask(() => mutableSet += "a"),
+        NoopTask(() => mutableSet += "a"), // Depending on the scheduler, this task might execute or not
         // This task will on the first invocation fail and on the second do the provided function.
         // The second should never happen.
         FailTask(() => mutableSet += "b"),
-        NoopTask(() => mutableSet += "c") // Depending on the scheduler, this task might execute
+        NoopTask(() => mutableSet += "c") // Depending on the scheduler, this task might execute or not
       ))))
 
     val result = queryExecution.await()
     result shouldBe defined // we got an exception
-    mutableSet should(equal(Set("a")) or equal(Set("a", "c")))
+    mutableSet.toSet should not contain "b"
   }
 
   test("abort should not affect other query executions") {
