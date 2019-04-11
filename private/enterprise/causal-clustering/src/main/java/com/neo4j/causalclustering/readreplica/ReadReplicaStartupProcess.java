@@ -43,7 +43,6 @@ import org.neo4j.storageengine.api.StoreId;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
-// todo: rework messages logged in this class
 class ReadReplicaStartupProcess implements Lifecycle
 {
     private final Executor executor;
@@ -157,11 +156,11 @@ class ReadReplicaStartupProcess implements Lifecycle
         MemberId source;
         try
         {
-            source = selectionStrategy.bestUpstreamMemberForDatabase( clusteredDatabaseContext.databaseId().name() );
+            source = selectionStrategy.bestUpstreamMemberForDatabase( clusteredDatabaseContext.databaseId() );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
-            debugLog.warn( "finding upstream member for database " + clusteredDatabaseContext.databaseId().name() );
+            debugLog.warn( "Unable to find upstream member for database " + clusteredDatabaseContext.databaseId().name() );
             return AsyncResult.FAIL;
         }
 
@@ -172,22 +171,22 @@ class ReadReplicaStartupProcess implements Lifecycle
         }
         catch ( TopologyLookupException e )
         {
-            debugLog.warn( "getting address of %s", source );
+            debugLog.warn( "Unable to get address of %s", source );
             return AsyncResult.FAIL;
         }
         catch ( StoreIdDownloadFailedException e )
         {
-            debugLog.warn( "getting store id from %s", source );
+            debugLog.warn( "Unable to get store ID from %s", source );
             return AsyncResult.FAIL;
         }
         catch ( StoreCopyFailedException e )
         {
-            debugLog.warn( "copying store files from %s", source );
+            debugLog.warn( "Unable to copy store files from %s", source );
             return AsyncResult.FAIL;
         }
         catch ( DatabaseShutdownException | IOException e )
         {
-            debugLog.warn( format( "syncing of stores failed unexpectedly from %s", source ), e );
+            debugLog.warn( format( "Syncing of stores failed unexpectedly from %s", source ), e );
             return AsyncResult.FAIL;
         }
     }
@@ -203,7 +202,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
-            debugLog.info( "Finding store id of upstream server %s", source );
+            debugLog.info( "Finding store ID of upstream server %s", source );
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
             StoreId storeId = catchup.remoteStore().getStoreId( fromAddress );
 
