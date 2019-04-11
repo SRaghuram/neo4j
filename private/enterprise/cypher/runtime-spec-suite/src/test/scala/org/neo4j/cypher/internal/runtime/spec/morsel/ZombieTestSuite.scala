@@ -51,6 +51,10 @@ class ZombieExpandStressTest extends ExpandStressTestBase(ZombieRuntime)
 class ZombieProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 class ZombieProjectionStressTest extends ProjectionStressTestBase(ZombieRuntime)
 
+// FILTER
+class ZombieFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieFilterStressTest extends FilterStressTestBase(ZombieRuntime)
+
 // LIMIT
 class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 
