@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class ApplyStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime) {
