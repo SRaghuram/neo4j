@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
+import org.neo4j.internal.kernel
 
 class OperatorFactory(physicalPlan: PhysicalPlan,
                       converters: ExpressionConverters,
@@ -74,6 +75,25 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                                   argumentSize,
                                   valueExpr.map(converters.toCommandExpression(id, _)),
                                   indexSeekMode)
+
+      case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        new NodeIndexScanOperator(WorkIdentity.fromPlan(plan),
+                                  slots.getLongOffsetFor(column),
+                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+                                  queryIndexes.registerQueryIndex(labelToken, properties),
+                                  asKernelIndexOrder(indexOrder),
+                                  argumentSize)
+
+      case plans.NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        new NodeIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
+                                          slots.getLongOffsetFor(column),
+                                          SlottedIndexedProperty(column, property, slots),
+                                          queryIndexes.registerQueryIndex(labelToken, property),
+                                          asKernelIndexOrder(indexOrder),
+                                          converters.toCommandExpression(id, valueExpr),
+                                          argumentSize)
 
       case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
@@ -149,4 +169,11 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
                               slots,
                               runtimeColumns)
   }
+
+  private def asKernelIndexOrder(indexOrder: plans.IndexOrder): kernel.api.IndexOrder =
+    indexOrder match {
+      case plans.IndexOrderAscending => kernel.api.IndexOrder.ASCENDING
+      case plans.IndexOrderDescending => kernel.api.IndexOrder.DESCENDING
+      case plans.IndexOrderNone => kernel.api.IndexOrder.NONE
+    }
 }

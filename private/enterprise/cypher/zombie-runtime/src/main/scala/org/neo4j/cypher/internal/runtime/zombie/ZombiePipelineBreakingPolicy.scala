@@ -18,6 +18,8 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: NodeByLabelScan |
            _: NodeIndexSeek |
            _: NodeUniqueIndexSeek |
+           _: NodeIndexContainsScan |
+           _: NodeIndexScan |
            _: Input |
            _: Argument // TODO: breaking on argument is often silly. Let's not do that when avoidable.
       => true

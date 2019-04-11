@@ -32,6 +32,14 @@ class ZombieNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL,
 class ZombieIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(ZombieRuntime)
 class ZombieIndexSeekExactStressTest extends IndexSeekExactStressTest(ZombieRuntime)
 
+// INDEX SCAN
+class ZombieNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieIndexScanStressTest extends IndexScanStressTestBase(ZombieRuntime)
+
+// INDEX CONTAINS SCAN
+class ZombieNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieIndexContainsScanStressTest extends IndexContainsScanStressTestBase(ZombieRuntime)
+
 // APPLY
 class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
 
