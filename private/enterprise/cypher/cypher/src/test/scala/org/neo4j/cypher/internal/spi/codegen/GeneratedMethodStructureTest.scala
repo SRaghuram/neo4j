@@ -222,7 +222,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         dataRead = body.field(typeRef[Read], "dataRead"),
         tokenRead = body.field(typeRef[TokenRead], "tokenRead"),
         schemaRead = body.field(typeRef[SchemaRead], "schemaRead"),
-        closeables = body.field(typeRef[SchemaRead], "closeables")
+        closeables = body.field(typeRef[java.util.ArrayList[AutoCloseable]], "closeables")
       )
       // the "COLUMNS" static field
       body.privateStaticFinalField(typeRef[util.List[String]], "COLUMNS", Templates.asList[String](Seq.empty))
