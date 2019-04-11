@@ -73,7 +73,7 @@ class AdminToolCausalClusterBackupIT
         File backupDir = testDirectory.directory( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
-        cluster.coreTx( this::createSomeData );
+        cluster.coreTx( AdminToolCausalClusterBackupIT::createSomeData );
 
         int exitCode = runBackupToolFromSameJvm( testDir,
                 "--from=" + backupAddress,
@@ -87,7 +87,7 @@ class AdminToolCausalClusterBackupIT
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 
-    private void createSomeData( GraphDatabaseService db, Transaction tx )
+    private static void createSomeData( GraphDatabaseService db, Transaction tx )
     {
         Node node1 = db.createNode( label( "Person" ) );
         node1.setProperty( "id", 1 );
@@ -112,7 +112,7 @@ class AdminToolCausalClusterBackupIT
         if ( SystemUtils.IS_OS_WINDOWS )
         {
             // ':' is an illegal file name character on Windows, so turn it into '_'
-            name = name.replaceAll( ":", "_" );
+            name = name.replace( ':', '_' );
         }
         return name;
     }

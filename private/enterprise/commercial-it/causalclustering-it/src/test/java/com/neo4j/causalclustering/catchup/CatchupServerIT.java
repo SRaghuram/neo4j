@@ -220,7 +220,7 @@ class CatchupServerIT
         try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_ID ) )
         {
             Exception error = assertThrows( Exception.class, simpleCatchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_ID + " does not exist" ) );
+            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_ID.name() + " does not exist" ) );
         }
     }
 
@@ -251,14 +251,14 @@ class CatchupServerIT
 
     private File databaseFileToClientFile( File file ) throws IOException
     {
-        String relativePathToDatabaseDir = relativePath( testDirectory.storeDir(), file );
+        String relativePathToDatabaseDir = relativePath( testDirectory.databaseDir(), file );
         return new File( temporaryDirectory, relativePathToDatabaseDir );
     }
 
     private File clientFileToDatabaseFile( File file ) throws IOException
     {
         String relativePathToDatabaseDir = relativePath( temporaryDirectory, file );
-        return new File( testDirectory.storeDir(), relativePathToDatabaseDir );
+        return new File( testDirectory.databaseDir(), relativePathToDatabaseDir );
     }
 
     private void fileContentEquals( File fileA, File fileB ) throws IOException

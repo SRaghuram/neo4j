@@ -45,7 +45,6 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.function.Predicates.instanceOf;
 import static org.neo4j.graphdb.Label.label;
@@ -159,7 +158,7 @@ class BackupSchemaIT
 
         executor.executeBackup( context );
 
-        return backupsDir.resolve( DB_NAME ).toFile();
+        return backupsDir.toFile();
     }
 
     private void awaitIndexesOnline()
@@ -175,8 +174,8 @@ class BackupSchemaIT
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( dir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) )
-                .setConfig( transaction_logs_root_path, dir.getParent() ).newDatabaseManagementService();
-        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+                .setConfig( transaction_logs_root_path, dir.getAbsolutePath() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DB_NAME );
     }
 
     private static long countNodeIndexes( GraphDatabaseService db, String label, String... propertyKeys )

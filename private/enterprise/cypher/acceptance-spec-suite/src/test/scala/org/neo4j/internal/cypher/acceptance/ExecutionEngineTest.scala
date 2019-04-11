@@ -952,7 +952,7 @@ order by a.COL1""".format(a, b))
     val managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ))
       .setConfig(GraphDatabaseSettings.read_only, "true")
       .newDatabaseManagementService()
-    val db = managementService.database("readonly")
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       val engine = createEngine(db)
       run(engine)

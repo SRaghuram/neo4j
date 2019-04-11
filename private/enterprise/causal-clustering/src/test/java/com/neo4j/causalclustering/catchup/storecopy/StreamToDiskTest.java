@@ -36,7 +36,7 @@ public class StreamToDiskTest
     {
         // GIVEN
         Monitors monitors = new Monitors();
-        StreamToDiskProvider writerProvider = new StreamToDiskProvider( directory.storeDir(), fs, monitors );
+        StreamToDiskProvider writerProvider = new StreamToDiskProvider( directory.databaseDir(), fs, monitors );
 
         // WHEN
         for ( StoreType type : StoreType.values() )

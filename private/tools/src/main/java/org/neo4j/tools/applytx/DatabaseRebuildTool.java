@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.dbms.database.DatabaseManagementService;
@@ -33,7 +34,6 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.tools.console.input.ArgsCommand;
 import org.neo4j.tools.console.input.ConsoleInput;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 import static org.neo4j.tools.console.input.ConsoleUtil.NO_PROMPT;
 import static org.neo4j.tools.console.input.ConsoleUtil.oneCommand;
@@ -88,7 +88,9 @@ public class DatabaseRebuildTool
         Args args = Args.withFlags( "i", "overwrite-to" ).parse( arguments );
         DatabaseLayout fromLayout = getFrom( args );
         File toPath = getTo( args );
-        GraphDatabaseBuilder dbBuilder = newDbBuilder( toPath, args );
+        String databaseName = toPath.getName();
+        File storeDir = toPath.getParentFile();
+        GraphDatabaseBuilder dbBuilder = newDbBuilder( storeDir, databaseName, args );
         boolean interactive = args.getBoolean( "i" );
         if ( interactive && !args.orphans().isEmpty() )
         {
@@ -98,7 +100,7 @@ public class DatabaseRebuildTool
         @SuppressWarnings( "resource" )
         InputStream input = interactive ? in : oneCommand( args.orphansAsArray() );
         LifeSupport life = new LifeSupport();
-        ConsoleInput consoleInput = console( fromLayout, dbBuilder, input,
+        ConsoleInput consoleInput = console( fromLayout, dbBuilder, databaseName, input,
                 interactive ? staticPrompt( "# " ) : NO_PROMPT, life );
         life.start();
         try
@@ -141,9 +143,10 @@ public class DatabaseRebuildTool
         return DatabaseLayout.of( sourceDirectory, () -> Optional.of( txRootDirectory ) );
     }
 
-    private static GraphDatabaseBuilder newDbBuilder( File path, Args args )
+    private static GraphDatabaseBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        GraphDatabaseBuilder builder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
+        GraphDatabaseBuilder builder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
+        builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {
             if ( entry.getKey().startsWith( "D" ) )
@@ -162,10 +165,10 @@ public class DatabaseRebuildTool
         private final StoreAccess access;
         private final DatabaseLayout databaseLayout;
 
-        Store( GraphDatabaseBuilder dbBuilder )
+        Store( GraphDatabaseBuilder dbBuilder, String databaseName )
         {
             DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
-            this.db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+            this.db = (GraphDatabaseAPI) managementService.database( databaseName );
             this.access = new StoreAccess( db.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
             this.databaseLayout = db.databaseLayout();
@@ -177,14 +180,14 @@ public class DatabaseRebuildTool
         }
     }
 
-    private ConsoleInput console( final DatabaseLayout fromLayout, final GraphDatabaseBuilder dbBuilder,
-            InputStream in, Listener<PrintStream> prompt, LifeSupport life )
+    private ConsoleInput console( final DatabaseLayout fromLayout, final GraphDatabaseBuilder dbBuilder, String databaseName, InputStream in,
+            Listener<PrintStream> prompt, LifeSupport life )
     {
         // We must have this indirection here since in order to perform CC (one of the commands) we must shut down
         // the database and let CC instantiate its own to run on. After that completes the db
         // should be restored. The commands has references to providers of things to accommodate for this.
         final AtomicReference<Store> store =
-                new AtomicReference<>( new Store( dbBuilder ) );
+                new AtomicReference<>( new Store( dbBuilder, databaseName ) );
         final Supplier<StoreAccess> storeAccess = () -> store.get().access;
         final Supplier<GraphDatabaseAPI> dbAccess = () -> store.get().db;
 
@@ -208,7 +211,7 @@ public class DatabaseRebuildTool
                 }
                 finally
                 {
-                    store.set( new Store( dbBuilder ) );
+                    store.set( new Store( dbBuilder, databaseName ) );
                 }
             }
 

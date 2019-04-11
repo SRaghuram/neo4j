@@ -9,7 +9,6 @@ import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
@@ -54,7 +53,7 @@ class HalfCreatedConstraintIT
         String property = "property";
 
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() ).newDatabaseManagementService();
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
@@ -112,10 +111,5 @@ class HalfCreatedConstraintIT
             }
             transaction.success();
         }
-    }
-
-    private static PrintStream emptyPrintStream()
-    {
-        return new PrintStream( org.neo4j.io.NullOutputStream.NULL_OUTPUT_STREAM );
     }
 }

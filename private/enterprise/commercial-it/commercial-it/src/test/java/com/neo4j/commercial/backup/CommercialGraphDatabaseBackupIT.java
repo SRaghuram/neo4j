@@ -56,7 +56,7 @@ class CommercialGraphDatabaseBackupIT
         db = newCommercialDb( testDirectory.storeDir(), true );
         createNodes( db, nodeCount );
 
-        File backupDir = performBackup( testDirectory.storeDir() );
+        File backupDir = performBackup( testDirectory.databaseDir() );
         db.shutdown();
 
         db = newCommercialBackupDb( backupDir, false );
@@ -79,20 +79,21 @@ class CommercialGraphDatabaseBackupIT
         return new File( backupsDir, DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
+    private static GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
         DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled ).newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseAPI newCommercialBackupDb( File storeDir, boolean backupEnabled )
+    private static GraphDatabaseAPI newCommercialBackupDb( File databaseDirectory, boolean backupEnabled )
     {
+        File storeDir = databaseDirectory.getParentFile();
         DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled )
-                .setConfig( transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+                .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() ).newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
+    private static GraphDatabaseBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
     {
         return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) );

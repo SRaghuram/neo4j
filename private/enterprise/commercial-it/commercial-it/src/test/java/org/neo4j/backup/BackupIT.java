@@ -164,8 +164,8 @@ class BackupIT
     void beforeEach()
     {
         databases = new ArrayList<>();
-        serverStoreLayout = DatabaseLayout.of( testDirectory.storeDir( "server" ), DEFAULT_DATABASE_NAME );
-        serverStorePath = serverStoreLayout.databaseDirectory();
+        serverStorePath = testDirectory.storeDir( "server" );
+        serverStoreLayout = DatabaseLayout.of( serverStorePath, DEFAULT_DATABASE_NAME );
         otherServerPath = DatabaseLayout.of( testDirectory.storeDir( "otherServer" ), DEFAULT_DATABASE_NAME ).databaseDirectory();
         backupsDir = testDirectory.storeDir( "backups" );
         backupDatabaseLayout = DatabaseLayout.of( backupsDir, DEFAULT_DATABASE_NAME );
@@ -184,7 +184,7 @@ class BackupIT
     {
         createInitialDataSet( serverStorePath, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
-        createInitialDataSet( backupDatabasePath, recordFormatName );
+        createInitialDataSet( backupsDir, recordFormatName );
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
@@ -634,7 +634,7 @@ class BackupIT
 
         // it should be possible to at this point to start db based on our backup and create couple of properties
         // their ids should not clash with already existing
-        GraphDatabaseService backupDb = startDbWithoutOnlineBackup( backupDatabasePath );
+        GraphDatabaseService backupDb = startDbWithoutOnlineBackup( backupsDir );
         try
         {
             try ( Transaction transaction = backupDb.beginTx() )
@@ -1076,7 +1076,7 @@ class BackupIT
     {
         Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE,
                 record_format, record_format.getDefaultValue(),
-                transaction_logs_root_path, path.getParentFile().getAbsolutePath() );
+                transaction_logs_root_path, path.getAbsolutePath() );
         return startDb( path, settings );
     }
 
@@ -1106,8 +1106,8 @@ class BackupIT
     {
         Config config = Config.builder()
                 .withSetting( online_backup_enabled, FALSE )
-                .withSetting( transaction_logs_root_path, backupDatabasePath.getParentFile().getAbsolutePath() ).build();
-        return DbRepresentation.of( backupDatabasePath, config );
+                .withSetting( transaction_logs_root_path, backupsDir.getAbsolutePath() ).build();
+        return DbRepresentation.of( backupDatabaseLayout, config );
     }
 
     private void executeBackup( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
@@ -1140,12 +1140,12 @@ class BackupIT
         executeBackup( context, monitors );
     }
 
-    private void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         executeBackup( context, new Monitors() );
     }
 
-    private void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
 
@@ -1160,7 +1160,7 @@ class BackupIT
 
     private OnlineBackupContext.Builder defaultBackupContextBuilder( AdvertisedSocketAddress address )
     {
-        Path dir = backupDatabasePath.getParentFile().toPath();
+        Path dir = backupsDir.toPath();
 
         return OnlineBackupContext.builder()
                 .withAddress( address )

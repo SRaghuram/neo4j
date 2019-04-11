@@ -92,19 +92,23 @@ class BackupCopyServiceTest
     @Test
     void shouldDeletePreExistingBrokenBackupWhenItHasSameStoreIdAsNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
-        fs.copyRecursively( oldDir, newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() );
+        fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
 
-        assertFalse( fs.fileExists( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+
+        assertFalse( fs.fileExists( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
@@ -128,44 +132,51 @@ class BackupCopyServiceTest
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItsStoreIdIsUnreadable() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        fs.deleteFileOrThrow( DatabaseLayout.of( oldDir ).metadataStore() );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() );
+        fs.deleteFileOrThrow( oldLayout.metadataStore() );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
     void shouldThrowWhenUnableToReadStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        fs.deleteFileOrThrow( DatabaseLayout.of( newDir ).metadataStore() );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+
+        fs.deleteFileOrThrow( newLayout.metadataStore() );
 
         IOException error = assertThrows( IOException.class,
-                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() ) );
+                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(),
+                        newLayout.databaseDirectory().toPath() ) );
 
         assertThat( error.getMessage(), containsString( "Unable to read store ID from the new successful backup" ) );
     }
 
-    private void startAndStopDb( File databaseDir )
+    private static void startAndStopDb( File databaseDir )
     {
         DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( databaseDir );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

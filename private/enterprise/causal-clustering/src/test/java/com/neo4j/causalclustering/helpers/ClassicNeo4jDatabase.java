@@ -132,7 +132,7 @@ public class ClassicNeo4jDatabase
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
             DatabaseManagementService managementService = new TestGraphDatabaseFactory()
                         .setFileSystem( fileSystem )
-                        .newEmbeddedDatabaseBuilder( databaseDirectory )
+                        .newEmbeddedDatabaseBuilder( databasesRootDirectoryAbsolute )
                         .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                         .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
                         .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() ).newDatabaseManagementService();

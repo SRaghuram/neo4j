@@ -190,11 +190,11 @@ class FulltextIndexBackupIT
         }
     }
 
-    private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
+    private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( backupDatabaseDir )
-                .setConfig( transaction_logs_root_path, backupDatabaseDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() ).newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -240,6 +240,6 @@ class FulltextIndexBackupIT
 
         OnlineBackupExecutor.buildDefault().executeBackup( context );
 
-        return backupDir.resolve( DEFAULT_DATABASE_NAME );
+        return backupDir;
     }
 }

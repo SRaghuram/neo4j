@@ -159,7 +159,7 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.storeDir() );
+            store.prepareDirectory( testDir.databaseDir() );
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
@@ -227,14 +227,14 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.storeDir();
+            File databaseDir = testDir.databaseDir();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -252,7 +252,7 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.storeDir();
+            File databaseDir = testDir.databaseDir();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
@@ -261,7 +261,7 @@ public class StoreUpgradeIT
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
@@ -276,7 +276,7 @@ public class StoreUpgradeIT
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
 
-        private void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
+        private static void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
                 throws IOException
         {
             File[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
@@ -286,7 +286,7 @@ public class StoreUpgradeIT
             }
         }
 
-        private Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
+        private static Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
             File[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
             assertThat( availableLogFilesBeforeMigration, not( emptyArray() ) );
@@ -328,7 +328,7 @@ public class StoreUpgradeIT
         public void migrationShouldFail() throws Throwable
         {
             // migrate the store using a single instance
-            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.storeDir() );
+            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
@@ -368,7 +368,7 @@ public class StoreUpgradeIT
         @Test
         public void shouldBeAbleToUpgradeAStoreWithoutIdFilesAsBackups() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.storeDir() );
+            File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
 
             // remove id files
             for ( File idFile : DatabaseLayout.of( databaseDirectory ).idFiles() )

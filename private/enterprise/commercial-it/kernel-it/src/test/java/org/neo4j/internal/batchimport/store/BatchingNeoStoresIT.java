@@ -84,7 +84,7 @@ class BatchingNeoStoresIT
         }
 
         DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

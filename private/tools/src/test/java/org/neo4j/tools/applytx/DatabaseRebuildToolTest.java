@@ -38,7 +38,6 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
@@ -194,9 +193,11 @@ class DatabaseRebuildToolTest
 
     private static void databaseWithSomeTransactions( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+                .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" ).newDatabaseManagementService();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );
         Node[] nodes = new Node[10];
         for ( int i = 0; i < nodes.length; i++ )
         {

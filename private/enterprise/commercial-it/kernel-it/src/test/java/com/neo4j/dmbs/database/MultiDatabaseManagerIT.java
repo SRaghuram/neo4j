@@ -35,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
@@ -53,10 +53,11 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
-                testDirectory.databaseLayout( CUSTOM_DATABASE_ID.name() ).databaseDirectory() );
-        database = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+                .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
+                .newDatabaseManagementService();
+        database = managementService.database( CUSTOM_DATABASE_ID.name() );
         databaseManager = getDatabaseManager();
     }
 

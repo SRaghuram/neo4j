@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Optional;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.CommandLocator;
@@ -28,6 +29,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.locker.StoreLocker;
@@ -50,6 +52,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -67,19 +70,21 @@ class RestoreDatabaseCommandIT
     void forceShouldRespectStoreLock()
     {
         var databaseId = new DatabaseId( "to" );
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        StoreLayout testStore = directory.storeLayout( "testStore" );
+        Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "from" );
-        DatabaseLayout toLayout = directory.databaseLayout( databaseId.name() );
+
+        DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
         int fromNodeCount = 10;
         int toNodeCount = 20;
 
         createDbAt( fromPath, fromNodeCount );
-        createDbAt( toLayout.databaseDirectory(), toNodeCount );
+        createDbAt( toLayout, toNodeCount );
 
         CommandFailed commandFailedException = assertThrows( CommandFailed.class, () ->
         {
-            try ( StoreLocker storeLocker = new StoreLocker( fileSystem, toLayout.getStoreLayout() ) )
+            try ( StoreLocker storeLocker = new StoreLocker( fileSystem, testStore ) )
             {
                 storeLocker.checkLock();
                 new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, true ).execute();
@@ -93,13 +98,14 @@ class RestoreDatabaseCommandIT
     {
         // given
         var databaseId = new DatabaseId( "to" );
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        StoreLayout testStore = directory.storeLayout( "testStore" );
+        Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "from" );
-        DatabaseLayout toLayout = directory.databaseLayout( databaseId.name() );
+        DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
 
         createDbAt( fromPath, 0 );
-        createDbAt( toLayout.databaseDirectory(), 0 );
+        createDbAt( toLayout, 0 );
 
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, false ).execute() );
@@ -142,24 +148,23 @@ class RestoreDatabaseCommandIT
     void shouldAllowForcedCopyOverAnExistingDatabase() throws Exception
     {
         // given
-        File toStoreDirectory = directory.storeDir( "to" );
-        File fromStoreDirectory = directory.storeDir( "from" );
-        Config config = configWith( toStoreDirectory.getAbsolutePath() );
+        StoreLayout toStoreLayout = directory.storeLayout( "to" );
+        StoreLayout fromStoreLayout = directory.storeLayout( "from" );
+        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
 
-        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreDirectory );
-        DatabaseLayout toLayout = directory.databaseLayout( toStoreDirectory );
+        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
+        DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         int fromNodeCount = 10;
         int toNodeCount = 20;
-        config.augment( transaction_logs_root_path, toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
 
-        createDbAt( fromLayout.databaseDirectory(), fromNodeCount );
+        createDbAt( fromLayout, fromNodeCount );
         createDbAt( toLayout, toNodeCount );
 
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
 
         // then
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( toLayout.databaseDirectory() )
+        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( toStoreLayout.storeDirectory() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
         GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -175,20 +180,20 @@ class RestoreDatabaseCommandIT
     void restoreTransactionLogsInCustomDirectoryForTargetDatabaseWhenConfigured()
             throws IOException, CommandFailed
     {
-        File toStoreDirectory = directory.storeDir( "to" );
-        File fromStoreDirectory = directory.storeDir( "from" );
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        StoreLayout toStoreLayout = directory.storeLayout( "to" );
+        StoreLayout fromStoreLayout = directory.storeLayout( "from" );
+        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
         File customTxLogDirectory = directory.directory( "customLogicalLog" );
         String customTransactionLogDirectory = customTxLogDirectory.getAbsolutePath();
         config.augmentDefaults( transaction_logs_root_path, customTransactionLogDirectory );
 
-        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreDirectory );
-        DatabaseLayout toLayout = directory.databaseLayout( toStoreDirectory, of( config ) );
+        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
+        DatabaseLayout toLayout = directory.databaseLayout( toStoreLayout.storeDirectory(), of( config ) );
         int fromNodeCount = 10;
         int toNodeCount = 20;
-        createDbAt( fromLayout.databaseDirectory(), fromNodeCount );
+        createDbAt( fromLayout, fromNodeCount );
 
-        GraphDatabaseService db = createDatabase( toLayout.databaseDirectory(), customTxLogDirectory );
+        GraphDatabaseService db = createDatabase( toLayout );
         createTestData( toNodeCount, db );
         db.shutdown();
 
@@ -269,25 +274,33 @@ class RestoreDatabaseCommandIT
 
     private void createDbAt( DatabaseLayout toLayout, int toNodeCount )
     {
-        GraphDatabaseService db = createDatabase( toLayout.databaseDirectory(), toLayout.getTransactionLogsDirectory().getParentFile() );
+        GraphDatabaseService db = createDatabase( toLayout );
         createTestData( toNodeCount, db );
         db.shutdown();
     }
 
-    private GraphDatabaseService createDatabase( File path )
+    private static GraphDatabaseService createDatabase( File databasePath )
     {
-        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
+        File storeDir = databasePath.getParentFile();
+        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( transaction_logs_root_path, path.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+                .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
+                .setConfig( default_database, databasePath.getName() )
+                .newDatabaseManagementService();
+        return managementService.database( databasePath.getName() );
     }
 
-    private GraphDatabaseService createDatabase( File path, File transactionRootLocation )
+    private static GraphDatabaseService createDatabase( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( transaction_logs_root_path, transactionRootLocation.getAbsolutePath() ).newDatabaseManagementService();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        File storeDir = databaseLayout.getStoreLayout().storeDirectory();
+        String txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath();
+        DatabaseManagementService managementService =
+                new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).setConfig(
+                        OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                        .setConfig( transaction_logs_root_path, txRootDirectory )
+                        .setConfig( default_database, databaseLayout.getDatabaseName() )
+                        .newDatabaseManagementService();
+        return managementService.database( databaseLayout.getDatabaseName() );
     }
 
     private static void createTestData( int nodesToCreate, GraphDatabaseService db )

@@ -16,6 +16,7 @@ import java.util.List;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.InconsistentStoreException;
@@ -57,7 +58,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLog;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
@@ -277,8 +277,10 @@ class RebuildFromLogs
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
         DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
                 .setExternalDependencies( dependencies )
-                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
-        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
+                .newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }
 }
