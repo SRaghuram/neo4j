@@ -36,4 +36,13 @@ public class DefaultDiscoveryMember implements DiscoveryMember
     {
         return unmodifiableSet( databaseManager.registeredDatabases().keySet() );
     }
+
+    @Override
+    public String toString()
+    {
+        return "DefaultDiscoveryMember{" +
+               "id=" + id +
+               ", databaseNames=" + databaseNames() +
+               '}';
+    }
 }
