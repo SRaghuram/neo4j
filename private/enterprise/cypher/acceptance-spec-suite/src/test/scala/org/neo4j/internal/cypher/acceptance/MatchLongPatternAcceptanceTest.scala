@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.GraphDatabaseSettings.{cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
@@ -269,7 +269,9 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
     val config: util.Map[Setting[_], String] = m.toMap.asJava
-    val graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase(config))
+    val managementService = new TestGraphDatabaseFactory().newImpermanentService(config)
+    val database = managementService.database(DEFAULT_DATABASE_NAME)
+    val graph = new GraphDatabaseCypherService(database)
     try {
       val engine = ExecutionEngineHelper.createEngine(graph)
       run(engine, graph)
