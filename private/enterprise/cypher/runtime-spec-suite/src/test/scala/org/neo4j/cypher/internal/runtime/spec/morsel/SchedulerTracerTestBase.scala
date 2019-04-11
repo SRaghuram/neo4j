@@ -9,6 +9,7 @@ import java.nio.file.{Files, Path}
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec._
+import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 import scala.collection.mutable
@@ -16,24 +17,22 @@ import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 object SchedulerTracerTestBase {
-  private val path = Files.createTempFile("scheduler-trace", ".csv")
-  val WORKER_COUNT: Int = Runtime.getRuntime.availableProcessors()
-  val MORSEL_SIZE: Int = 4
-  val EDITION = ENTERPRISE.PARALLEL.copyWith(
+  def newTempCSVPath(): Path = Files.createTempFile("scheduler-trace", ".csv")
+  private val WORKER_COUNT: Int = Runtime.getRuntime.availableProcessors()
+  private val MORSEL_SIZE: Int = 4
+}
+
+
+abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
+  extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.PARALLEL.copyWith(
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
     GraphDatabaseSettings.enable_morsel_runtime_trace -> "true",
-    GraphDatabaseSettings.morsel_scheduler_trace_filename -> path.toAbsolutePath.toString
-  )
-}
-
-import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
-
-class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends RuntimeTestSuite[EnterpriseRuntimeContext](EDITION, runtime) {
+    GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath.toString
+  ), runtime) {
 
   override def afterShutdown(): Unit = {
-    Files.delete(path)
+    Files.delete(tempCSVPath)
   }
 
   test("should trace big expand query correctly") {
@@ -57,7 +56,7 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
 
     Thread.sleep(1000) // allow tracer output daemon to finish
 
-    val (header, dataRows) = parseTrace(path.toAbsolutePath)
+    val (header, dataRows) = parseTrace(tempCSVPath.toAbsolutePath)
     header should be (Array("id_1.0",
                              "upstreamIds",
                              "queryId",
@@ -113,26 +112,30 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
     var header: Array[String] = null
     val dataRows: ArrayBuffer[DataRow] = new ArrayBuffer
 
-    for (line <- Source.fromFile(path.toFile).getLines()) {
-      val parts = line.split(",").map(_.trim)
-      if (header == null)
-        header = parts
-      else
-        dataRows += DataRow(
-          parts(0).toLong,
-          parseUpstreams(parts(1)),
-          parts(2).toInt,
-          parts(3).toLong,
-          parts(4).toLong,
-          parts(5).toLong,
-          parts(6).toLong,
-          parts(7).toLong,
-          parts(8).toLong,
-          parts(9)
-        )
+    val source = Source.fromFile(path.toFile)
+    try {
+      for (line <- source.getLines()) {
+        val parts = line.split(",").map(_.trim)
+        if (header == null)
+          header = parts
+        else
+          dataRows += DataRow(
+            parts(0).toLong,
+            parseUpstreams(parts(1)),
+            parts(2).toInt,
+            parts(3).toLong,
+            parts(4).toLong,
+            parts(5).toLong,
+            parts(6).toLong,
+            parts(7).toLong,
+            parts(8).toLong,
+            parts(9)
+          )
+      }
+      (header, dataRows)
+    } finally  {
+      source.close()
     }
-
-    (header, dataRows)
   }
 
   private def parseUpstreams(upstreams: String): Seq[Long] = {
