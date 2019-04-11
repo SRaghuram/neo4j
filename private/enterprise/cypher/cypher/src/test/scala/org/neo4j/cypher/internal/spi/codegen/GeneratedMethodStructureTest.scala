@@ -221,7 +221,8 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         propertyCursor = body.field(typeRef[PropertyCursor], "propertyCursor"),
         dataRead = body.field(typeRef[Read], "dataRead"),
         tokenRead = body.field(typeRef[TokenRead], "tokenRead"),
-        schemaRead = body.field(typeRef[SchemaRead], "schemaRead")
+        schemaRead = body.field(typeRef[SchemaRead], "schemaRead"),
+        closeables = body.field(typeRef[SchemaRead], "closeables")
       )
       // the "COLUMNS" static field
       body.privateStaticFinalField(typeRef[util.List[String]], "COLUMNS", Templates.asList[String](Seq.empty))

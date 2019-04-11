@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.codegen._
 import org.neo4j.cypher.internal.javacompat.ResultRecord
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.compiled.codegen.QueryExecutionEvent
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
 import org.neo4j.graphdb.Direction
 import org.neo4j.helpers.collection.MapUtil
@@ -26,7 +27,6 @@ import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualNodeValue, VirtualRelationshipValue}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 object Methods {
 
@@ -75,6 +75,7 @@ object Methods {
   val mapContains: MethodReference = method[util.Map[String, Object], Boolean]("containsKey", typeRef[Object])
   val setContains: MethodReference = method[util.Set[Object], Boolean]("contains", typeRef[Object])
   val setAdd: MethodReference = method[util.Set[Object], Boolean]("add", typeRef[Object])
+  val listAdd: MethodReference = method[util.List[Object], Boolean]("add", typeRef[Object])
   val labelGetForName: MethodReference = method[TokenRead, Int]("nodeLabel", typeRef[String])
   val propertyKeyGetForName: MethodReference = method[TokenRead, Int]("propertyKey", typeRef[String])
   val coerceToPredicate: MethodReference = method[CompiledConversionUtils, Boolean]("coerceToPredicate", typeRef[Object])

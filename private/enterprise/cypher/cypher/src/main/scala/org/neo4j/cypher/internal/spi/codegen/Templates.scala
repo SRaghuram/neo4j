@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.spi.codegen
 
 import java.util
 import java.util.Comparator
-import java.util.function.Consumer
 import java.util.stream.{DoubleStream, IntStream, LongStream}
 
 import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap
@@ -27,6 +26,7 @@ import org.neo4j.exceptions.KernelException
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException
+import org.neo4j.io.IOUtils
 import org.neo4j.kernel.api.SilentTokenNameLookup
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
@@ -93,55 +93,44 @@ object Templates {
     methodReference(typeRef[IntStream], typeRef[IntStream], "of", typeRef[Array[Int]]),
     Expression.newInitializedArray(typeRef[Int], values: _*))
 
-  def handleEntityNotFound[V](generate: CodeBlock, fields: Fields, finalizers: Seq[Boolean => CodeBlock => Unit], namer: Namer)
+  def handleEntityNotFound[V](generate: CodeBlock, fields: Fields, namer: Namer)
                              (happyPath: CodeBlock => V)(onFailure: CodeBlock => V): V = {
     var result = null.asInstanceOf[V]
 
-    generate.tryCatch(new Consumer[CodeBlock] {
-      override def accept(innerBody: CodeBlock): Unit = result = happyPath(innerBody)
-    }, new Consumer[CodeBlock] {
-      override def accept(innerError: CodeBlock): Unit = {
-        result = onFailure(innerError)
-        innerError.continueIfPossible()
-      }
+    generate.tryCatch((innerBody: CodeBlock) => result = happyPath(innerBody),
+                      (innerError: CodeBlock) => {
+      result = onFailure(innerError)
+      innerError.continueIfPossible()
     }, param[EntityNotFoundException](namer.newVarName()))
     result
   }
 
-  def handleKernelExceptions[V](generate: CodeBlock, fields: Fields, finalizers: Seq[Boolean => CodeBlock => Unit], namer: Namer)
+  def handleKernelExceptions[V](generate: CodeBlock, fields: Fields, namer: Namer)
                          (block: CodeBlock => V): V = {
     var result = null.asInstanceOf[V]
     val e = namer.newVarName()
-    generate.tryCatch(new Consumer[CodeBlock] {
-      override def accept(body: CodeBlock) = {
-        result = block(body)
-      }
-    }, new Consumer[CodeBlock]() {
-      override def accept(handle: CodeBlock) = {
-        finalizers.foreach(block => block(false)(handle))
-        handle.throwException(Expression.invoke(
-          Expression.newInstance(typeRef[CypherExecutionException]),
-          MethodReference.constructorReference(typeRef[CypherExecutionException], typeRef[String], typeRef[Throwable]),
-          Expression
-            .invoke(handle.load(e), method[KernelException, String]("getUserMessage", typeRef[TokenNameLookup]),
-                    Expression.invoke(
-                      Expression.newInstance(typeRef[SilentTokenNameLookup]),
-                      MethodReference
-                        .constructorReference(typeRef[SilentTokenNameLookup], typeRef[TokenRead]),
-                      Expression.get(handle.self(), fields.tokenRead))), handle.load(e)
+    generate.tryCatch((body: CodeBlock) => {
+      result = block(body)
+    }, (handle: CodeBlock) => {
+      handle.throwException(Expression.invoke(
+        Expression.newInstance(typeRef[CypherExecutionException]),
+        MethodReference.constructorReference(typeRef[CypherExecutionException], typeRef[String], typeRef[Throwable]),
+        Expression
+          .invoke(handle.load(e), method[KernelException, String]("getUserMessage", typeRef[TokenNameLookup]),
+                  Expression.invoke(
+                    Expression.newInstance(typeRef[SilentTokenNameLookup]),
+                    MethodReference
+                      .constructorReference(typeRef[SilentTokenNameLookup], typeRef[TokenRead]),
+                    Expression.get(handle.self(), fields.tokenRead))), handle.load(e)
         ))
-      }
     }, param[KernelException](e))
 
     result
   }
 
   def tryCatch(generate: CodeBlock)(tryBlock :CodeBlock => Unit)(exception: Parameter)(catchBlock :CodeBlock => Unit): Unit = {
-    generate.tryCatch(new Consumer[CodeBlock] {
-      override def accept(body: CodeBlock) = tryBlock(body)
-    }, new Consumer[CodeBlock]() {
-      override def accept(handle: CodeBlock) = catchBlock(handle)
-    }, exception)
+    generate.tryCatch((body: CodeBlock) => tryBlock(body),
+                      (handle: CodeBlock) => catchBlock(handle), exception)
   }
 
   val noValue = Expression.getStatic(staticField[Values, Value]("NO_VALUE"))
@@ -167,6 +156,8 @@ object Templates {
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[EmbeddedProxySPI], "proxySpi",
              invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, EmbeddedProxySPI]("entityAccessor"))).
+    put(self(classHandle), typeRef[java.util.ArrayList[AutoCloseable]], "closeables",
+        createNewInstance(typeRef[java.util.ArrayList[AutoCloseable]])).
     build()
 
   def getOrLoadCursors(clazz: ClassGenerator, fields: Fields) = {
@@ -276,6 +267,8 @@ object Templates {
       using(generate.ifStatement(Expression.notNull(propertyCursor))) { block =>
         block.expression(Expression.invoke(propertyCursor, method[PropertyCursor, Unit]("close")))
       }
+      generate.expression(Expression.invoke(methodReference(typeRef[IOUtils], typeRef[Unit], "closeAllSilently",
+                                                            typeRef[util.Collection[_]]), Expression.get(generate.self(), fields.closeables)))
     }
   }
 
