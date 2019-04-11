@@ -12,7 +12,7 @@ object WorkIdentity {
     WorkIdentityImpl(plan.id.x, plan.getClass.getSimpleName)
 
   def fromFusedPlans(fusedPlans: Iterable[LogicalPlan]): WorkIdentity = {
-    WorkIdentityImpl(fusedPlans.head.id.x, s"Fused(${fusedPlans.mkString(",")})")
+    WorkIdentityImpl(fusedPlans.head.id.x, s"Fused(${fusedPlans.map(_.getClass.getSimpleName).mkString("->")})")
   }
 }
 
