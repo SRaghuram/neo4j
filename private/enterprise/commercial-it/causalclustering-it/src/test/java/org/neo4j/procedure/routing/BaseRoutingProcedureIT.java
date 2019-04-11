@@ -181,6 +181,7 @@ class BaseRoutingProcedureIT
     private static Driver createDriver( String boltHostnamePort )
     {
         Config config = Config.build()
+                .withoutEncryption()
                 .withLogging( Logging.none() )
                 .build();
 
