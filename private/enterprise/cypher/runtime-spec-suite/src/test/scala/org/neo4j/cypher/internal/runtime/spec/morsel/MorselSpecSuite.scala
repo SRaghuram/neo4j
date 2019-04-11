@@ -168,7 +168,7 @@ class MorselUnwindStressTest extends UnwindStressTestBase(MorselRuntime)
 
 // ARGUMENT
 
-// FIXME broken in Morsel
+// FIXED IN Zombie
 //class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 //class MorselArgumentStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite {
