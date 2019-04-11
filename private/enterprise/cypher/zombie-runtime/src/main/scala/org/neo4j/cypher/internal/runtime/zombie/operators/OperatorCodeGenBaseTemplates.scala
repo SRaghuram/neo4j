@@ -116,7 +116,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
           ),
           body = genOperate,
-          genLocalVariables = () => genLocalVariables, // NOTE: This have to be called after genOperate!
+          genLocalVariables = () => genLocalVariables, // NOTE: This has to be called after genOperate!
           parameterizedWith = Some(("E", extending[Exception])),
           throws = Some(typeParam("E"))
         ),
@@ -140,7 +140,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
           parameters = Seq.empty,
           body = loadField(INPUT_MORSEL)
         )
-      ), genFields = () => genFields)// NOTE: This have to be called after genOperate!
+      ), genFields = () => genFields)// NOTE: This has to be called after genOperate!
   }
 }
 

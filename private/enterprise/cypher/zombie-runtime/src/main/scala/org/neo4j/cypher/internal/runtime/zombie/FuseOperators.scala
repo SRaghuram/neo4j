@@ -93,16 +93,16 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val fromOffset = slots.getLongOffsetFor(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
             val toOffset = slots.getLongOffsetFor(to)
-            val maybeTokens = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
+            val tokensOrNames = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
                 case Some(token) => Left(token)
                 case None => Right(r.name)
               }
             )
 
-            val typeTokens = maybeTokens.collect {
+            val typeTokens = tokensOrNames.collect {
               case Left(token: Int) => token
             }
-            val missingTypes = maybeTokens.collect {
+            val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
             (new ExpandAllOperatorTaskTemplate(innerTemplate,

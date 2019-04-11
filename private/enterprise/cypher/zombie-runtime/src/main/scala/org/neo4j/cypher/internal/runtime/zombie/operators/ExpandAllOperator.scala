@@ -166,9 +166,14 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
     *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
     *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
-    *      relationships = getRelationshipsCursor(context, fromNode, dir, types.types(context))
+    *      read.singleNode(node, nodeCursor)
+    *      relationships = if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+    *                      else {
+    *                        //or incomingCursor or allCursor depending on the direction
+    *                        outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
+    *                      }
     *      true
-    *    }
+    *      }
     * }}}
     *
     */
@@ -270,10 +275,10 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 object ExpandAllOperatorTaskTemplate {
-  def computeTypes(computed: Array[Int], missing: Array[String], tokenRead: DbAccess): Array[Int] = {
+  def computeTypes(computed: Array[Int], missing: Array[String], dbAccess: DbAccess): Array[Int] = {
     val newTokens = mutable.ArrayBuffer(computed:_*)
     missing.foreach(s => {
-      val token = tokenRead.relationshipType(s)
+      val token = dbAccess.relationshipType(s)
       if (token != TokenRead.NO_TOKEN && !newTokens.contains(token)) {
         newTokens.append(token)
       }
