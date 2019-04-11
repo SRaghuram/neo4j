@@ -52,7 +52,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -97,7 +96,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
  */
 public class ReadReplicaEditionModule extends ClusteringEditionModule
 {
-    private final TopologyService topologyService;
     protected final LogProvider logProvider;
     private final DatabaseId defaultDatabaseId;
     private final Config globaConfig;
@@ -108,10 +106,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private final JobScheduler jobScheduler;
     private final PanicService panicService;
     private final CatchupComponentsProvider catchupComponentsProvider;
+    private final DiscoveryServiceFactory discoveryServiceFactory;
+    private final SslPolicyLoader sslPolicyLoader;
+
+    private TopologyService topologyService;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         this.globalModule = globalModule;
+        this.discoveryServiceFactory = discoveryServiceFactory;
         this.globalHealth = globalModule.getGlobalHealthService();
         this.myself = myself;
         LogService logService = globalModule.getLogService();
@@ -137,17 +140,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,
                 fileWatcherFileNameFilter() );
 
-        RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globaConfig, logService);
-
-        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globaConfig, logProvider );
+        sslPolicyLoader = SslPolicyLoader.create( globaConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
-
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myself, (Supplier) globalDependencies.provideDependency( DatabaseManager.class ) );
-
-        topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, discoveryMember, hostnameResolver,
-                resolveStrategy( globaConfig ), sslPolicyLoader );
-
-        globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
@@ -201,21 +195,26 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
          ClusteredMultiDatabaseManager<ReadReplicaDatabaseContext> databaseManager = new ClusteredMultiDatabaseManager<>( platform, this, log, facade,
                  ReadReplicaDatabaseContext::new, catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
                  logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
-        createDatabaseManagerDependentModules( databaseManager ); // todo: move DiscoveryMember creation here to avoid the supplier
+        createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
     private void createDatabaseManagerDependentModules( ClusteredDatabaseManager<ReadReplicaDatabaseContext> databaseManager )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
-        LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
-        LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
+        Dependencies dependencies = globalModule.getGlobalDependencies();
+        LogService logService = globalModule.getLogService();
+        LogProvider internalLogProvider = logService.getInternalLogProvider();
+        LogProvider userLogProvider = logService.getUserLogProvider();
+
+        topologyService = createTopologyService( databaseManager, logService );
+        globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
         CatchupHandlerFactory handlerFactory = ignored -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
         ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory );
 
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
-        CommandIndexTracker commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );
+        CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( globalModule, commandIndexTracker );
         TimerService timerService = new TimerService( jobScheduler, logProvider );
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
@@ -327,6 +326,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         }
 
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
+    }
+
+    private TopologyService createTopologyService( DatabaseManager<?> databaseManager, LogService logService )
+    {
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myself, databaseManager );
+        RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globaConfig, logService );
+        RetryStrategy retryStrategy = resolveStrategy( globaConfig );
+        return discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, discoveryMember, hostnameResolver,
+                retryStrategy, sslPolicyLoader );
     }
 
     private static RetryStrategy resolveStrategy( Config config )

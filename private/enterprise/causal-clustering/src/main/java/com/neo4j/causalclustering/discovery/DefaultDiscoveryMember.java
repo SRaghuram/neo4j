@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
-import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
@@ -18,12 +17,12 @@ import static java.util.Collections.unmodifiableSet;
 public class DefaultDiscoveryMember implements DiscoveryMember
 {
     private final MemberId id;
-    private final Supplier<DatabaseManager<?>> databaseManagerSupplier; // todo: remove supplier somehow
+    private final DatabaseManager<?> databaseManager;
 
-    public DefaultDiscoveryMember( MemberId id, Supplier<DatabaseManager<?>> databaseManagerSupplier )
+    public DefaultDiscoveryMember( MemberId id, DatabaseManager<?> databaseManager )
     {
         this.id = id;
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.databaseManager = databaseManager;
     }
 
     @Override
@@ -35,6 +34,6 @@ public class DefaultDiscoveryMember implements DiscoveryMember
     @Override
     public Set<DatabaseId> databaseIds()
     {
-        return unmodifiableSet( databaseManagerSupplier.get().registeredDatabases().keySet() );
+        return unmodifiableSet( databaseManager.registeredDatabases().keySet() );
     }
 }

@@ -370,7 +370,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager,
             IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( identityModule.myself(), () -> databaseManager );
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( identityModule.myself(), databaseManager );
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
         Function<DatabaseId,DatabaseInitializer> databaseInitializer = id -> databaseInitializerMap.getOrDefault( id, DatabaseInitializer.NO_INITIALIZATION );
 
