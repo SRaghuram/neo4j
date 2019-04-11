@@ -360,14 +360,12 @@ public class Cluster
 
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        // todo: do not use default DB name like this, callers should always specify the database instead
         var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return getMemberWithAnyRole( databaseId, roles );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
     {
-        // todo: do not use default DB name like this, callers should always specify the database instead
         var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return getAllMembersWithAnyRole( databaseId, roles );
     }
@@ -476,7 +474,6 @@ public class Cluster
      */
     public CoreClusterMember coreTx( BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
     {
-        // todo: do not use default DB name like this, callers should always specify the database instead
         var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return coreTx( databaseId, op );
     }
