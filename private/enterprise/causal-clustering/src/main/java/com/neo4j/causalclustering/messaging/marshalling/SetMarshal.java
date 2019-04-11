@@ -12,7 +12,6 @@ import java.util.Set;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 
-// todo: test
 public final class SetMarshal
 {
     private SetMarshal()
@@ -30,8 +29,7 @@ public final class SetMarshal
         return set;
     }
 
-    // todo: make channel first arg as in other marshals
-    public static void marshalSet( Set<String> set, WritableChannel channel ) throws IOException
+    public static void marshalSet( WritableChannel channel, Set<String> set ) throws IOException
     {
         channel.putInt( set.size() );
         for ( String value : set )
