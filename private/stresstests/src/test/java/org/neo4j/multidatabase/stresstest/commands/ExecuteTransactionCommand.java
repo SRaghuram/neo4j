@@ -35,6 +35,13 @@ public class ExecuteTransactionCommand extends DatabaseManagerCommand
                 node1.createRelationshipTo( node2, RelationshipType.withName( "some" ) );
                 transaction.success();
             }
+            catch ( IllegalStateException e )
+            {
+                if ( !e.getMessage().contains( "Kernel is not running" ) )
+                {
+                    throw e;
+                }
+            }
         }
     }
 }
