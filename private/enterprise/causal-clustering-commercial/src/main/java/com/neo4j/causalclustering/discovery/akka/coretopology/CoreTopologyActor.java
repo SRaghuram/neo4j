@@ -111,7 +111,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void handleClusterIdSettingMessage( ClusterIdSettingMessage message )
     {
-        clusterIdActor.forward( message, context() );
+        clusterIdActor.forward( message, getContext() );
     }
 
     private void buildTopology()

@@ -10,6 +10,8 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +48,8 @@ import static org.neo4j.causalclustering.TestStoreId.assertAllStoresHaveTheSameS
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 
-public class ClusterBindingIT
+@RunWith( Parameterized.class )
+public abstract class BaseClusterBindingIT
 {
     private final ClusterRule clusterRule = new ClusterRule()
                         .withNumberOfCoreMembers( 3 )
@@ -60,6 +63,11 @@ public class ClusterBindingIT
 
     private Cluster<?> cluster;
     private FileSystemAbstraction fs;
+
+    protected BaseClusterBindingIT( DiscoveryServiceType discoveryServiceType )
+    {
+        clusterRule.withDiscoveryServiceType( discoveryServiceType );
+    }
 
     @Before
     public void setup() throws Exception

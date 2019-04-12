@@ -5,8 +5,6 @@
  */
 package org.neo4j.causalclustering.identity;
 
-import com.hazelcast.core.OperationTimeoutException;
-
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
@@ -22,6 +20,7 @@ import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
+import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -130,7 +129,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             clusterId = clusterIdStorage.readState();
             do
             {
-                shouldRetryPublish = publishClusterId( clusterId );
+                shouldRetryPublish = !publishClusterId( clusterId, true );
             } while ( shouldRetryPublish && clock.millis() < endTime );
             monitor.boundToCluster( clusterId );
             return new BoundState( clusterId );
@@ -138,6 +137,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         CoreSnapshot snapshot = null;
         CoreTopology topology;
+        ClusterId proposedClusterId = new ClusterId( UUID.randomUUID() );
 
         do
         {
@@ -150,10 +150,10 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             }
             else if ( hostShouldBootstrapCluster( topology ) )
             {
-                clusterId = new ClusterId( UUID.randomUUID() );
+                clusterId = proposedClusterId;
                 snapshot = coreBootstrapper.bootstrap( topology.members().keySet() );
                 monitor.bootstrapped( snapshot, clusterId );
-                shouldRetryPublish = publishClusterId( clusterId );
+                shouldRetryPublish = !publishClusterId( clusterId, false );
             }
 
             if ( availabilityGuard.isShutdown() )
@@ -181,23 +181,23 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         return Optional.ofNullable( clusterId );
     }
 
-    private boolean publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
+    private boolean publishClusterId( ClusterId localClusterId, boolean dieOnFailure ) throws BindingException, InterruptedException
     {
-        boolean shouldRetry = false;
         try
         {
             boolean success = topologyService.setClusterId( localClusterId, dbName );
 
-            if ( !success )
+            if ( !success && dieOnFailure )
             {
                 throw new BindingException( "Failed to publish: " + localClusterId );
             }
-        }
-        catch ( OperationTimeoutException e )
-        {
-            shouldRetry = true;
-        }
 
-        return shouldRetry;
+            return success;
+        }
+        catch ( DiscoveryTimeoutException e )
+        {
+            //In the event of a timeout we want to retry
+            return false;
+        }
     }
 }

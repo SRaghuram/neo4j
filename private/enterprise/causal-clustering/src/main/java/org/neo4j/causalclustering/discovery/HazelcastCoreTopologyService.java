@@ -17,6 +17,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.MemberAttributeEvent;
 import com.hazelcast.core.MembershipEvent;
 import com.hazelcast.core.MembershipListener;
+import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.nio.Address;
 
 import java.util.Collection;
@@ -112,10 +113,17 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName ) throws InterruptedException
+    public boolean setClusterId( ClusterId clusterId, String dbName ) throws InterruptedException, DiscoveryTimeoutException
     {
         waitOnHazelcastInstanceCreation();
-        return HazelcastClusterTopology.casClusterId( hazelcastInstance, clusterId, dbName );
+        try
+        {
+            return HazelcastClusterTopology.casClusterId( hazelcastInstance, clusterId, dbName );
+        }
+        catch ( OperationTimeoutException e )
+        {
+            throw new DiscoveryTimeoutException( e );
+        }
     }
 
     @Override

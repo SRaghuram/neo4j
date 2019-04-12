@@ -10,6 +10,8 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.event.EventStream;
+import akka.pattern.AskTimeoutException;
+import akka.pattern.PatternsCS;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
@@ -22,9 +24,13 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
@@ -35,6 +41,7 @@ import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.RoleInfo;
+import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -143,13 +150,36 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName )
+    public boolean setClusterId( ClusterId clusterId, String dbName ) throws DiscoveryTimeoutException
     {
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), noSender() );
-            return true;
+            ClusterIdSettingMessage clusterIdSetRequest = new ClusterIdSettingMessage( clusterId, dbName );
+            CompletionStage<Object> idSet = PatternsCS.ask( actor, clusterIdSetRequest, Duration.ofSeconds( 10 ) );
+            CompletableFuture<Boolean> idSetJob = idSet.thenApply( response ->
+            {
+                if ( !(response instanceof ClusterIdSettingMessage) )
+                {
+                    return false;
+                }
+
+                ClusterIdSettingMessage clusterIdSetResponse = (ClusterIdSettingMessage) response;
+                return clusterIdSetResponse.equals( clusterIdSetRequest );
+            } ).toCompletableFuture();
+
+            try
+            {
+                return idSetJob.join();
+            }
+            catch ( CompletionException e )
+            {
+                if ( e.getCause() instanceof AskTimeoutException )
+                {
+                    throw new DiscoveryTimeoutException( e );
+                }
+                return false;
+            }
         }
         else
         {

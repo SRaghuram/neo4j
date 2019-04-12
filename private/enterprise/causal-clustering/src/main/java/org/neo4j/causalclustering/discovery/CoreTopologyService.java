@@ -27,7 +27,7 @@ public interface CoreTopologyService extends TopologyService
      *
      * @return True if the cluster ID was successfully CAS:ed, otherwise false.
      */
-    boolean setClusterId( ClusterId clusterId, String dbName ) throws InterruptedException;
+    boolean setClusterId( ClusterId clusterId, String dbName ) throws InterruptedException, DiscoveryTimeoutException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).

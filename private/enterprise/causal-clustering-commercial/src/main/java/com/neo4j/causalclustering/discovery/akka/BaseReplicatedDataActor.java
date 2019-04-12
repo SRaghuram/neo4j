@@ -15,6 +15,7 @@ import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import scala.concurrent.duration.FiniteDuration;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -24,7 +25,8 @@ import org.neo4j.logging.LogProvider;
 
 public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActor
 {
-    private static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+    private static final Replicator.WriteConsistency WRITE_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+    protected static final Replicator.ReadConsistency READ_CONSISTENCY = new Replicator.ReadMajority( new FiniteDuration( 5, TimeUnit.SECONDS ) );
 
     protected final Cluster cluster;
     protected final ActorRef replicator;
@@ -65,8 +67,8 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     public final Receive createReceive()
     {
         ReceiveBuilder receiveBuilder = new ReceiveBuilder();
-        handleReplicationEvents( receiveBuilder );
         handleCustomEvents( receiveBuilder );
+        handleReplicationEvents( receiveBuilder );
         return receiveBuilder.build();
     }
 
@@ -77,14 +79,12 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
             {
                 T newData = (T) message.dataValue();
                 handleIncomingData( newData );
-            } ).match( Replicator.UpdateResponse.class, updated -> {
-                log.debug( "Update: %s", updated );
-            } );
+            } ).match( Replicator.UpdateResponse.class, updated -> log.debug( "Update: %s", updated ) );
     }
 
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-
+        //no-op by default
     }
 
     protected abstract void handleIncomingData( T newData );
@@ -96,8 +96,14 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
     protected void modifyReplicatedData( Key<T> key, Function<T,T> modify )
     {
-        Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), METADATA_CONSISTENCY, modify );
+        modifyReplicatedData( key, modify, null );
+    }
+
+    protected <M> void modifyReplicatedData( Key<T> key, Function<T,T> modify, M message )
+    {
+        Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), WRITE_CONSISTENCY, Optional.ofNullable(message), modify );
 
         replicator.tell( update, self() );
     }
+
 }
