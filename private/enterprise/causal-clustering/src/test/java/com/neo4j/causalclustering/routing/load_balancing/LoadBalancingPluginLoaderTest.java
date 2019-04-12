@@ -16,7 +16,6 @@ import java.util.Optional;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -170,7 +169,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public RoutingResult run( DatabaseId databaseId, MapValue context )
+        public RoutingResult run( String databaseName, MapValue context )
         {
             return null;
         }

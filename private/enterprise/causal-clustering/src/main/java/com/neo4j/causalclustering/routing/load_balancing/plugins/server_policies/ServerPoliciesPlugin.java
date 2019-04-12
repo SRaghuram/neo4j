@@ -83,15 +83,16 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
+    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
     {
+        var dbId = new DatabaseId( databaseName );
         Policy policy = policies.selectFor( context );
 
-        CoreTopology coreTopology = coreTopologyFor( databaseId );
-        ReadReplicaTopology rrTopology = readReplicaTopology( databaseId );
+        CoreTopology coreTopology = coreTopologyFor( dbId );
+        ReadReplicaTopology rrTopology = readReplicaTopology( dbId );
 
-        return new RoutingResult( routeEndpoints( coreTopology ), writeEndpoints( databaseId ),
-                readEndpoints( coreTopology, rrTopology, policy, databaseId ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology ), writeEndpoints( dbId ),
+                readEndpoints( coreTopology, rrTopology, policy, dbId ), timeToLive );
     }
 
     private static List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology )
