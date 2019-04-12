@@ -132,9 +132,8 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
             parts(9)
             )
       }
+      (header, dataRows)
     } finally source.close()
-
-    (header, dataRows)
   }
 
   private def parseUpstreams(upstreams: String): Seq[Long] = {
