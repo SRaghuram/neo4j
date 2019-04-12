@@ -8,13 +8,13 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
-import org.neo4j.server.security.auth.RealmLifecycle;
+import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
-import org.apache.shiro.authc.credential.CredentialsMatcher;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.cache.Cache;
 import org.apache.shiro.subject.PrincipalCollection;
@@ -34,7 +34,7 @@ import static java.lang.String.format;
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider, CredentialsMatcher
+public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
 {
     private final boolean authorizationEnabled;
     private final SystemGraphOperations systemGraphOperations;
@@ -44,11 +44,16 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
             boolean authorizationEnabled )
     {
         super( systemGraphOperations, systemGraphInitializer, initOnStart, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
-
+        setName( SecuritySettings.NATIVE_REALM_NAME );
         this.authorizationEnabled = authorizationEnabled;
         this.systemGraphOperations = systemGraphOperations;
 
         setAuthorizationCachingEnabled( true );
+    }
+
+    @Override
+    public void initialize()
+    {
     }
 
     @Override

@@ -42,7 +42,6 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
-import org.neo4j.server.security.auth.RealmLifecycle;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
 import static org.neo4j.helpers.Strings.escape;

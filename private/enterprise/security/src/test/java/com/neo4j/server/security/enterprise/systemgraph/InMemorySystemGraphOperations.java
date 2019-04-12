@@ -226,6 +226,16 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     @Override
     public boolean deleteUser( String username ) throws InvalidArgumentsException
     {
+        Set<String> rolesForUser = rolesForUsers.remove( username );
+        if ( rolesForUser != null )
+        {
+            for ( String role : rolesForUser )
+            {
+                RoleRecord roleRecord = roles.get( role );
+                roles.put( role, roleRecord.augment().withoutUser( username ).build() );
+            }
+        }
+
         return basic.deleteUser( username );
     }
 

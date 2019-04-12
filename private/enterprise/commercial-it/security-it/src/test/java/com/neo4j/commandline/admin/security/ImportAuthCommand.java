@@ -7,7 +7,7 @@ package com.neo4j.commandline.admin.security;
 
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
-import org.neo4j.server.security.auth.RealmLifecycle;
+import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;

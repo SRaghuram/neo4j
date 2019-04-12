@@ -59,8 +59,6 @@ class TestBasicSystemGraphRealm
                 authStrategy,
                 true
         );
-
-        realm.initialize();
         realm.start();
 
         return realm;
