@@ -15,7 +15,6 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
-// todo: consider renaming to DatabaseCoreTopology
 public class CoreTopology implements Topology<CoreServerInfo>
 {
     public static final CoreTopology EMPTY = new CoreTopology( null, null, false, emptyMap() );
