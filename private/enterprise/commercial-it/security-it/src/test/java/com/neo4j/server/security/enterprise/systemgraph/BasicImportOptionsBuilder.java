@@ -6,25 +6,22 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
+
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 
 class BasicImportOptionsBuilder
 {
-    private String[] migrateUsers = new String[0];
-    private String[] initialUsers = new String[0];
-
-    private String migratePassword;
-    private String initialPassword;
-
-    private boolean migratePasswordChangeRequired;
-    private boolean initialPasswordChangeRequired;
+    private List<User> migrateUsers = new ArrayList<>();
+    private List<User> initialUsers = new ArrayList<>();
 
     BasicImportOptionsBuilder()
     {
@@ -32,53 +29,50 @@ class BasicImportOptionsBuilder
 
     BasicImportOptionsBuilder migrateUser( String userName, String password, boolean pwdChangeRequired )
     {
-        this.migrateUsers = new String[]{ userName };
-        this.migratePassword = password;
-        this.migratePasswordChangeRequired = pwdChangeRequired;
+        migrateUsers.add( createUser( userName, password, pwdChangeRequired ) );
         return this;
     }
 
     BasicImportOptionsBuilder migrateUsers( String... migrateUsers )
     {
-        this.migrateUsers = migrateUsers;
+        for ( String userName : migrateUsers )
+        {
+            // Use username as password to simplify test assertions
+            this.migrateUsers.add( createUser( userName, userName, false ) );
+        }
         return this;
     }
 
     BasicImportOptionsBuilder initialUser( String password, boolean pwdChangeRequired )
     {
-        this.initialUsers = new String[]{ INITIAL_USER_NAME };
-        this.initialPassword = password;
-        this.initialPasswordChangeRequired = pwdChangeRequired;
+        this.initialUsers.add( createUser( INITIAL_USER_NAME, password, pwdChangeRequired ) );
         return this;
     }
 
     Supplier<UserRepository> migrationSupplier() throws IOException, InvalidArgumentsException
     {
         UserRepository migrationUserRepository = new InMemoryUserRepository();
-        populateUserRepository( migrationUserRepository, migrateUsers, migratePassword, migratePasswordChangeRequired );
+        populateUserRepository( migrationUserRepository, migrateUsers );
         return () -> migrationUserRepository;
     }
 
     Supplier<UserRepository> initalUserSupplier() throws IOException, InvalidArgumentsException
     {
-        UserRepository migrationUserRepository = new InMemoryUserRepository();
-        populateUserRepository( migrationUserRepository, initialUsers, initialPassword, initialPasswordChangeRequired );
-        return () -> migrationUserRepository;
+        UserRepository initialUserRepository = new InMemoryUserRepository();
+        populateUserRepository( initialUserRepository, initialUsers );
+        return () -> initialUserRepository;
     }
 
-    private static void populateUserRepository( UserRepository repository, String[] usernames, String password, boolean pwdChangeRequired )
-            throws IOException, InvalidArgumentsException
+    private static void populateUserRepository( UserRepository repository, List<User> users ) throws IOException, InvalidArgumentsException
     {
-        for ( String username : usernames )
+        for ( User user : users )
         {
-            if ( password == null )
-            {
-                // Use username as password to simplify test assertions
-                password = username;
-            }
-
-            User user = new User.Builder( username, credentialFor( password ) ).withRequiredPasswordChange( pwdChangeRequired ).build();
             repository.create( user );
         }
+    }
+
+    private static User createUser( String userName, String password, boolean pwdChangeRequired )
+    {
+        return new User.Builder( userName, credentialFor( password ) ).withRequiredPasswordChange( pwdChangeRequired ).build();
     }
 }
