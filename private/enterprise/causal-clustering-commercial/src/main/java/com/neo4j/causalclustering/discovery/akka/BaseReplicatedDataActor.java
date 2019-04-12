@@ -26,7 +26,6 @@ import org.neo4j.logging.LogProvider;
 public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActor
 {
     private static final Replicator.WriteConsistency WRITE_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
-    protected static final Replicator.ReadConsistency READ_CONSISTENCY = new Replicator.ReadMajority( new FiniteDuration( 5, TimeUnit.SECONDS ) );
 
     protected final Cluster cluster;
     protected final ActorRef replicator;

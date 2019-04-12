@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import java.time.Duration
 import java.util.UUID
 
 import akka.actor.ActorRef
@@ -21,7 +22,7 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
 
     "update replicator with cluster ID from this core server" in new Fixture {
       When("send cluster ID locally")
-      replicatedDataActorRef ! new ClusterIdSettingMessage(new ClusterId(UUID.randomUUID()), "dbName")
+      replicatedDataActorRef ! new ClusterIdSetRequest(new ClusterId(UUID.randomUUID()), "dbName", Duration.ofSeconds(2))
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
@@ -36,11 +37,11 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
       Then("Only the first cluster ID should be persisted")
       val expected = LWWMap.empty.put(cluster, "db1", clusterId1)
 
-      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId1, "db1")
+      replicatedDataActorRef ! new ClusterIdSetRequest(clusterId1, "db1", Duration.ofSeconds(2))
       expectClusterIdReplicatorUpdatesWithOutcome(LWWMap.empty, expected)
-      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId2, "db1")
+      replicatedDataActorRef ! new ClusterIdSetRequest(clusterId2, "db1", Duration.ofSeconds(2))
       expectClusterIdReplicatorUpdatesWithOutcome(expected, expected)
-      replicatedDataActorRef ! new ClusterIdSettingMessage(clusterId2, "db2")
+      replicatedDataActorRef ! new ClusterIdSetRequest(clusterId2, "db2", Duration.ofSeconds(2))
       expectClusterIdReplicatorUpdatesWithOutcome(expected, expected.put(cluster, "db2", clusterId2))
     }
 
@@ -62,7 +63,7 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
   class Fixture extends ReplicatedDataActorFixture[LWWMap[String, ClusterId]] {
     override val dataKey: Key[LWWMap[String, ClusterId]] = LWWMapKey(ClusterIdActor.CLUSTER_ID_PER_DB_KEY)
     val coreTopologyProbe = TestProbe("coreTopologyActor")
-    val props = ClusterIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, NullLogProvider.getInstance())
+    val props = ClusterIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, NullLogProvider.getInstance(), 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
 
     def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[String,ClusterId], expected: LWWMap[String,ClusterId]): Unit =

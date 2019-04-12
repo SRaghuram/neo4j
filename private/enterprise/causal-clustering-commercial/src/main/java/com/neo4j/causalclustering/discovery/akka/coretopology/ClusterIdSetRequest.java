@@ -7,36 +7,42 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.ActorRef;
 
+import java.time.Duration;
 import java.util.Objects;
 
 import org.neo4j.causalclustering.identity.ClusterId;
 
 /**
- * Sent from this Neo4J instance into discovery service
+ * Sent from this Neo4J instance into discovery service during cluster binding
  */
-public class ClusterIdSettingMessage
+public class ClusterIdSetRequest
 {
     private final ClusterId clusterId;
     private final String database;
+    private final Duration timeout;
     private final ActorRef replyTo;
 
-    public ClusterIdSettingMessage( ClusterId clusterId, String database )
+    public ClusterIdSetRequest( ClusterId clusterId, String database, Duration timeout )
     {
-        this.clusterId = clusterId;
-        this.database = database;
-        this.replyTo = ActorRef.noSender();
+        this( clusterId, database, timeout, ActorRef.noSender() );
     }
 
-    private ClusterIdSettingMessage( ClusterId clusterId, String database, ActorRef replyTo )
+    private ClusterIdSetRequest( ClusterId clusterId, String database, Duration timeout, ActorRef replyTo )
     {
         this.clusterId = clusterId;
         this.database = database;
+        this.timeout = timeout;
         this.replyTo = replyTo;
     }
 
-    ClusterIdSettingMessage withReplyTo( ActorRef replyTo )
+    ClusterIdSetRequest withReplyTo( ActorRef replyTo )
     {
-        return new ClusterIdSettingMessage( clusterId, database, replyTo );
+        return new ClusterIdSetRequest( clusterId(), database(), timeout, replyTo );
+    }
+
+    ActorRef replyTo()
+    {
+        return replyTo;
     }
 
     public ClusterId clusterId()
@@ -49,10 +55,15 @@ public class ClusterIdSettingMessage
         return database;
     }
 
+    public Duration timeout()
+    {
+        return timeout;
+    }
+
     @Override
     public String toString()
     {
-        return "ClusterIdSettingMessage{" + "clusterId=" + clusterId + ", database='" + database + '}';
+        return "ClusterIdSetRequest{" + "clusterId=" + clusterId + ", database='" + database + '\'' + '}';
     }
 
     @Override
@@ -62,11 +73,11 @@ public class ClusterIdSettingMessage
         {
             return true;
         }
-        if ( !(o instanceof ClusterIdSettingMessage) )
+        if ( !(o instanceof ClusterIdSetRequest) )
         {
             return false;
         }
-        ClusterIdSettingMessage that = (ClusterIdSettingMessage) o;
+        ClusterIdSetRequest that = (ClusterIdSetRequest) o;
         return Objects.equals( clusterId, that.clusterId ) && Objects.equals( database, that.database );
     }
 
@@ -74,10 +85,5 @@ public class ClusterIdSettingMessage
     public int hashCode()
     {
         return Objects.hash( clusterId, database );
-    }
-
-    ActorRef replyTo()
-    {
-        return replyTo;
     }
 }

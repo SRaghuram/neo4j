@@ -30,13 +30,15 @@ public class CoreTopologyActor extends AbstractActorWithTimers
             Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         return Props.create( CoreTopologyActor.class,
-                () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config, logProvider ) );
+                () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster,
+                        topologyBuilder, config, logProvider ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
 
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final TopologyBuilder topologyBuilder;
+    private final int minCoreHostsAtRuntime;
     private final String databaseName;
 
     private final Address myAddress;
@@ -53,18 +55,13 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private CoreTopology coreTopology;
 
-    CoreTopologyActor( MemberId myself,
-            SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
-            ActorRef readReplicaTopologyActor,
-            ActorRef replicator,
-            Cluster cluster,
-            TopologyBuilder topologyBuilder,
-            Config config,
-            LogProvider logProvider )
+    CoreTopologyActor( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef readReplicaTopologyActor, ActorRef replicator,
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
+        this.minCoreHostsAtRuntime = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         this.memberData = MetadataMessage.EMPTY;
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
         this.databaseName = config.get( CausalClusteringSettings.database );
@@ -77,7 +74,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, metadataActor, logProvider ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, config, logProvider ) );
-        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider ) );
+        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider, minCoreHostsAtRuntime ) );
     }
 
     @Override
@@ -87,7 +84,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
                 .match( ClusterViewMessage.class,        this::handleClusterViewMessage)
                 .match( MetadataMessage.class,           this::handleMetadataMessage )
                 .match( ClusterIdDirectoryMessage.class, this::handleClusterIdDirectoryMessage )
-                .match( ClusterIdSettingMessage.class,   this::handleClusterIdSettingMessage )
+                .match( ClusterIdSetRequest.class,       this::handleClusterIdSettingMessage )
                 .build();
     }
 
@@ -109,7 +106,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         buildTopology();
     }
 
-    private void handleClusterIdSettingMessage( ClusterIdSettingMessage message )
+    private void handleClusterIdSettingMessage( ClusterIdSetRequest message )
     {
         clusterIdActor.forward( message, getContext() );
     }

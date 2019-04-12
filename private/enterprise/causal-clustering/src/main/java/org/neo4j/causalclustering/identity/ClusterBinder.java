@@ -146,6 +146,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             if ( topology.clusterId() != null )
             {
                 clusterId = topology.clusterId();
+                shouldRetryPublish = false;
                 monitor.boundToCluster( clusterId );
             }
             else if ( hostShouldBootstrapCluster( topology ) )

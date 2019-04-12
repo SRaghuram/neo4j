@@ -13,7 +13,7 @@ import akka.event.EventStream;
 import akka.pattern.AskTimeoutException;
 import akka.pattern.PatternsCS;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
@@ -108,7 +108,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
                 cluster,
                 topologyBuilder,
                 config,
-                logProvider);
+                logProvider );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
@@ -155,17 +155,17 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            ClusterIdSettingMessage clusterIdSetRequest = new ClusterIdSettingMessage( clusterId, dbName );
-            CompletionStage<Object> idSet = PatternsCS.ask( actor, clusterIdSetRequest, Duration.ofSeconds( 10 ) );
+            Duration timeout = Duration.ofSeconds( 20 );
+            ClusterIdSetRequest clusterIdSetRequest = new ClusterIdSetRequest( clusterId, dbName, timeout );
+            CompletionStage<Object> idSet = PatternsCS.ask( actor, clusterIdSetRequest, timeout );
             CompletableFuture<Boolean> idSetJob = idSet.thenApply( response ->
             {
-                if ( !(response instanceof ClusterIdSettingMessage) )
+                if ( !(response instanceof Boolean) )
                 {
                     return false;
                 }
 
-                ClusterIdSettingMessage clusterIdSetResponse = (ClusterIdSettingMessage) response;
-                return clusterIdSetResponse.equals( clusterIdSetRequest );
+                return (Boolean) response;
             } ).toCompletableFuture();
 
             try

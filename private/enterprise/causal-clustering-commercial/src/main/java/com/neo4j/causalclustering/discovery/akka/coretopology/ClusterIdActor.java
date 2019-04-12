@@ -15,8 +15,12 @@ import akka.cluster.ddata.LWWRegister;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
+import scala.concurrent.duration.FiniteDuration;
 
+import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.logging.LogProvider;
@@ -27,16 +31,18 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     private final ActorRef coreTopologyActor;
     //We use a reverse clock because we want the ClusterId map to observe first-write-wins semantics, not the standard last-write-wins
     private final LWWRegister.Clock<ClusterId> clock = LWWRegister.reverseClock();
+    private final int minRuntimeQuorumSize;
 
-    public ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider )
+    ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider, int minRuntimeCores )
     {
         super( cluster, replicator, LWWMapKey.create( CLUSTER_ID_PER_DB_KEY ), LWWMap::create, logProvider );
         this.coreTopologyActor = coreTopologyActor;
+        this.minRuntimeQuorumSize = ( minRuntimeCores / 2 ) + 1;
     }
 
-    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider )
+    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider, int minRuntimeCores )
     {
-        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, logProvider ) );
+        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, logProvider, minRuntimeCores ) );
     }
 
     @Override
@@ -54,11 +60,10 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( ClusterIdSettingMessage.class, this::setClusterId )
+        builder.match( ClusterIdSetRequest.class,       this::setClusterId )
                 .match( Replicator.UpdateSuccess.class, this::handleUpdateSuccess )
-                .match( Replicator.GetSuccess.class, this::replyToClusterIdSetter )
+                .match( Replicator.GetSuccess.class,    this::validateClusterIdUpdate )
                 .match( Replicator.UpdateFailure.class, this::handleUpdateFailure );
-
     }
 
     @Override
@@ -68,7 +73,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
         coreTopologyActor.tell( new ClusterIdDirectoryMessage( data ), getSelf() );
     }
 
-    private void setClusterId( ClusterIdSettingMessage message )
+    private void setClusterId( ClusterIdSetRequest message )
     {
         log.debug( "Setting ClusterId: %s", message );
         modifyReplicatedData( key, map ->
@@ -84,33 +89,41 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     private void handleUpdateSuccess( Replicator.UpdateSuccess<?> updateSuccess )
     {
         updateSuccess.getRequest()
-                .filter( m -> m instanceof ClusterIdSettingMessage )
-                .map( m -> (ClusterIdSettingMessage) m )
+                .filter( m -> m instanceof ClusterIdSetRequest )
+                .map( m -> (ClusterIdSetRequest) m )
                 .ifPresent( m ->
                 {
-                    Replicator.Get<LWWMap<String,ClusterId>> getOp = new Replicator.Get<>( key, READ_CONSISTENCY, Optional.of( m ) );
+                    //Replicator.Update operations may return UpdateSuccess even if the merge function means that an update had
+                    // no effect, so in the event of an UpdateSuccess response we must validate the impact by fetching the latest
+                    // contents of the Replicator. We use a read quorum to ensure the update isn't validated against stale data.
+                    Replicator.ReadConsistency readConsistency = new Replicator.ReadFrom( minRuntimeQuorumSize, m.timeout() );
+                    Replicator.Get<LWWMap<String,ClusterId>> getOp = new Replicator.Get<>( key, readConsistency, Optional.of( m ) );
                     replicator.tell( getOp, getSelf() );
                 } );
     }
 
-    private void replyToClusterIdSetter( Replicator.GetSuccess<LWWMap<String,ClusterId>> getSuccess )
+    private void validateClusterIdUpdate( Replicator.GetSuccess<LWWMap<String,ClusterId>> getSuccess )
     {
-        LWWMap<String,ClusterId> latest = getSuccess.get( key );
+        LWWMap<String,ClusterId> current = getSuccess.get( key );
         getSuccess.getRequest()
-                .filter( m -> m instanceof ClusterIdSettingMessage )
-                .map( m -> (ClusterIdSettingMessage) m )
+                .filter( m -> m instanceof ClusterIdSetRequest )
+                .map( m -> (ClusterIdSetRequest) m )
                 .ifPresent( m ->
                 {
-                    ClusterIdSettingMessage response = new ClusterIdSettingMessage( latest.getEntries().get( m.database() ), m.database() );
-                    m.replyTo().tell( response, getSelf() );
+                    //The original ClusterIdSetRequest is passed through all messages in this actor as additional request context (.getRequest())
+                    // we check that the original request was successful by checking whether the current cluster id for the given database is the
+                    // same as that in the request.
+                    ClusterId currentClusterId = current.getEntries().get( m.database() );
+                    boolean clusterIdSuccessfullySet = Objects.equals( currentClusterId, m.clusterId() );
+                    m.replyTo().tell( clusterIdSuccessfullySet, getSelf() );
                 } );
     }
 
     private void handleUpdateFailure( Replicator.UpdateFailure<?> updateFailure )
     {
         updateFailure.getRequest()
-                .filter( m -> m instanceof ClusterIdSettingMessage )
-                .map( m -> (ClusterIdSettingMessage) m )
+                .filter( m -> m instanceof ClusterIdSetRequest )
+                .map( m -> (ClusterIdSetRequest) m )
                 .ifPresent( m ->
                 {
                     String message = String.format( "Failed to set ClusterId: %s", m );
