@@ -19,7 +19,7 @@ import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
 /**
   * This operator implements both [[StreamingOperator]] and [[ContinuableOperator]] because it
@@ -134,7 +134,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
     val nodeFromSlot = (offset: Int) =>
       invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
     val relFromSlot = (offset: Int) =>
-      invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("relationshipById"), getLongAt(offset))
+      invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
 
     def getFromSlot(slot: Slot) = slot match {
       case LongSlot(offset, true, symbols.CTNode) =>
