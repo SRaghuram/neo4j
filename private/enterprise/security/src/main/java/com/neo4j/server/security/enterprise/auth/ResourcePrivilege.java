@@ -39,7 +39,7 @@ public class ResourcePrivilege
         }
         catch ( IllegalArgumentException e )
         {
-            throw new InvalidArgumentsException( action + " is not a valid action" );
+            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
         }
     }
 

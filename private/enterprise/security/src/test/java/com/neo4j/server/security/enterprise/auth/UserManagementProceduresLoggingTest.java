@@ -542,11 +542,11 @@ class UserManagementProceduresLoggingTest
                 assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "bar", "read", "graph", "*" ) );
         assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "bar", "graph", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "bar is not a valid action" ) );
+        assertThat( exception.getMessage(), equalTo( "`bar` is not a valid action" ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "write", "bar", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "bar is not a valid resource" ) );
+        assertThat( exception.getMessage(), equalTo( "`bar` is not a valid resource" ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "execute", "schema", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "Invalid combination of action (execute) and resource (schema)" ) );
+        assertThat( exception.getMessage(), equalTo( "Schema resource cannot be combined with action `execute`" ) );
 
         // Then
         log.assertExactly(
@@ -599,11 +599,11 @@ class UserManagementProceduresLoggingTest
                 assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "bar", "read", "graph", "*" ) );
         assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "bar", "graph", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "bar is not a valid action" ) );
+        assertThat( exception.getMessage(), equalTo( "`bar` is not a valid action" ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "bar", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "bar is not a valid resource" ) );
+        assertThat( exception.getMessage(), equalTo( "`bar` is not a valid resource" ) );
         exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "execute", "schema", "*" ) );
-        assertThat( exception.getMessage(), equalTo( "Invalid combination of action (execute) and resource (schema)" ) );
+        assertThat( exception.getMessage(), equalTo( "Schema resource cannot be combined with action `execute`" ) );
 
         // Then
         log.assertExactly(
