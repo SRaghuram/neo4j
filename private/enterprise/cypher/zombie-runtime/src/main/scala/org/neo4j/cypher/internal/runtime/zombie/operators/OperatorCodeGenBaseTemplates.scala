@@ -48,14 +48,14 @@ object ContinuableOperatorTaskWithMorselGenerator {
     val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
 
     (dataRead, inputMorsel) => {
-      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy).asInstanceOf[ContinuableOperatorTaskWithMorsel])
+      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy))
     }
   }
 
 }
 
 trait OperatorTaskTemplate {
-  def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
+  def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
     throw new InternalException("Illegal start operator template")
   }
 
@@ -96,9 +96,9 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 
   // TODO: Use methods of actual interface to generate declaration?
-  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
+  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
 
-    ClassDeclaration(packageName, className,
+    ClassDeclaration[ContinuableOperatorTaskWithMorsel](packageName, className,
       extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
       implementsInterfaces = Seq.empty,
       constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),

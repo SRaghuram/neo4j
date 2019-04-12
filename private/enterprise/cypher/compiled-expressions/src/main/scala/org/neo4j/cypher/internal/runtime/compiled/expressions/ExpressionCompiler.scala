@@ -67,7 +67,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   def compileExpression(e: Expression): Option[CompiledExpression] = {
     intermediateCompileExpression(e).map { expression =>
       val classDeclaration =
-        ClassDeclaration(
+        ClassDeclaration[CompiledExpression](
           PACKAGE_NAME,
           className(),
           None,
@@ -91,7 +91,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                 returns(nullCheck(expression)(expression.ir))
                               ))))
       compileClass(classDeclaration)
-        .getDeclaredConstructor().newInstance().asInstanceOf[CompiledExpression]
+        .getDeclaredConstructor().newInstance()
     }
   }
 
@@ -107,7 +107,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     else {
       val expression = intermediateCompileProjection(compiled)
       val classDeclaration =
-        ClassDeclaration(
+        ClassDeclaration[CompiledProjection](
           PACKAGE_NAME,
           className(),
           None,
@@ -131,7 +131,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                 expression.ir
                               ))))
       Some(compileClass(classDeclaration)
-        .getDeclaredConstructor().newInstance().asInstanceOf[CompiledProjection])
+        .getDeclaredConstructor().newInstance())
     }
   }
 
@@ -150,7 +150,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     else {
       val grouping = intermediateCompileGroupingExpression(compiled)
       val classDeclaration =
-        ClassDeclaration(
+        ClassDeclaration[CompiledGroupingExpression](
           PACKAGE_NAME,
           className(),
           None,
@@ -186,8 +186,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                 declarations(grouping.getKey),
                                 returns(nullCheck(grouping.getKey)(grouping.getKey.ir))))
           ))
-      Some(compileClass(classDeclaration)
-             .getDeclaredConstructor().newInstance().asInstanceOf[CompiledGroupingExpression])
+      Some(compileClass(classDeclaration).getDeclaredConstructor().newInstance())
     }
   }
 
