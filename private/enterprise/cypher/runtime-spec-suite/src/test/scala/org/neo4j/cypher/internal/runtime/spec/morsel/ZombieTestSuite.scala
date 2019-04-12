@@ -115,7 +115,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
   test("should handle expand + filter") {
     // given
-    val size = 10
+    val size = 1000
     val (_, rels) = circleGraph(size)
 
     // when
