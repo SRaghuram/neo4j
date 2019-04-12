@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,9 +24,9 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class StoreDownloaderTest
+class StoreDownloaderTest
 {
     private final AdvertisedSocketAddress primaryAddress = new AdvertisedSocketAddress( "primary", 1 );
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
@@ -48,7 +48,7 @@ public class StoreDownloaderTest
     private final StoreDownloader downloader = new StoreDownloader( components, NullLogProvider.getInstance() );
 
     @Test
-    public void shouldReplaceMismatchedStoreIfEmpty() throws Exception
+    void shouldReplaceMismatchedStoreIfEmpty() throws Exception
     {
         // given
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, true, storeId );
@@ -58,7 +58,7 @@ public class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -68,7 +68,7 @@ public class StoreDownloaderTest
     }
 
     @Test
-    public void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
+    void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
     {
         // given
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
@@ -78,7 +78,7 @@ public class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -88,14 +88,14 @@ public class StoreDownloaderTest
     }
 
     @Test
-    public void shouldOnlyCatchupIfPossible() throws Exception
+    void shouldOnlyCatchupIfPossible() throws Exception
     {
         // given
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
         RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseContext );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -105,7 +105,7 @@ public class StoreDownloaderTest
     }
 
     @Test
-    public void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
+    void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
     {
         // given
         ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
@@ -113,7 +113,7 @@ public class StoreDownloaderTest
         StoreCopyProcess storeCopyProcess = databaseContext.catchupComponents().storeCopyProcess();
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -123,22 +123,14 @@ public class StoreDownloaderTest
     }
 
     @Test
-    public void shouldThrowIfComponentsDoNotExist() throws Exception
+    void shouldThrowIfComponentsDoNotExist()
     {
         // given
         ClusteredDatabaseContext wrongDb = mock( ClusteredDatabaseContext.class );
         when( wrongDb.databaseId() ).thenReturn( new DatabaseId( "wrong" ) );
 
-        // when
-        try
-        {
-            downloader.bringUpToDate( wrongDb, primaryAddress, new CatchupAddressProvider.SingleAddressProvider( secondaryAddress ) );
-            fail();
-        }
-        catch ( IllegalStateException ignored )
-        {
-            // expected
-        }
+        // when & then
+        assertThrows( IllegalStateException.class, () -> downloader.bringUpToDate( wrongDb, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) );
     }
 
     private ClusteredDatabaseContext mockLocalDatabase( DatabaseId databaseId, boolean isEmpty, StoreId storeId )
