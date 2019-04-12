@@ -5,21 +5,17 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +35,6 @@ import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
-import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isIn;
@@ -62,7 +57,7 @@ class UserDefinedConfigurationStrategyTest
         // given
         MemberId theCoreMemberId = new MemberId( UUID.randomUUID() );
         TopologyService topologyService =
-                fakeTopologyService( fakeCoreTopology( theCoreMemberId ), fakeReadReplicaTopology( memberIDs( 100 ), this::noEastGroupGenerator ) );
+                new FakeTopologyService( fakeCoreTopology( theCoreMemberId ), fakeReadReplicaTopology( memberIDs( 100 ), this::noEastGroupGenerator ) );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
         Config config = Config.defaults( CausalClusteringSettings.user_defined_upstream_selection_strategy, "groups(east); groups(core); halt()" );
@@ -81,7 +76,7 @@ class UserDefinedConfigurationStrategyTest
     {
         // given
         MemberId[] readReplicaIds = memberIDs( 100 );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
                 fakeReadReplicaTopology( readReplicaIds, this::noEastGroupGenerator ) );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -103,7 +98,7 @@ class UserDefinedConfigurationStrategyTest
     {
         // given
         MemberId[] readReplicaIds = memberIDs( 100 );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
                 fakeReadReplicaTopology( readReplicaIds, this::noEastGroupGenerator ) );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -123,7 +118,7 @@ class UserDefinedConfigurationStrategyTest
     void shouldReturnEmptyIfInvalidFilterSpecification()
     {
         // given
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
                 fakeReadReplicaTopology( memberIDs( 100 ), this::noEastGroupGenerator ) );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -144,8 +139,8 @@ class UserDefinedConfigurationStrategyTest
         // given
         String wantedGroup = eastGroup;
         MemberId[] readReplicaIds = memberIDs( 1 );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
-                fakeReadReplicaTopology( readReplicaIds, memberId -> asSet( wantedGroup ) ) );
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+                fakeReadReplicaTopology( readReplicaIds, memberId1 -> asSet( wantedGroup ) ) );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
         Config config = configWithFilter( "groups(" + wantedGroup + "); halt()" );
@@ -190,99 +185,6 @@ class UserDefinedConfigurationStrategyTest
         Set<String> groups = groupGenerator.apply( memberId );
         Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
         return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
-    }
-
-    private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( CoreTopology coreTopology, ReadReplicaTopology rrTopology )
-    {
-        Map<MemberId,AdvertisedSocketAddress> catchupAddressMap = new HashMap<>();
-
-        for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.members().entrySet() )
-        {
-            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
-        }
-
-        for ( Map.Entry<MemberId,ReadReplicaInfo> entry : rrTopology.members().entrySet() )
-        {
-            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
-
-        }
-
-        return catchupAddressMap;
-    }
-
-    static TopologyService fakeTopologyService( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
-    {
-        return new TopologyService()
-        {
-            private Map<MemberId,AdvertisedSocketAddress> catchupAddresses = extractCatchupAddressesMap( coreTopology, readReplicaTopology );
-
-            @Override
-            public Map<MemberId,CoreServerInfo> allCoreServers()
-            {
-                return coreTopology.members();
-            }
-
-            @Override
-            public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
-            {
-                return coreTopology;
-            }
-
-            @Override
-            public Map<MemberId,ReadReplicaInfo> allReadReplicas()
-            {
-                return readReplicaTopology.members();
-            }
-
-            @Override
-            public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
-            {
-                return readReplicaTopology;
-            }
-
-            @Override
-            public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
-            {
-                AdvertisedSocketAddress advertisedSocketAddress = catchupAddresses.get( upstream );
-                if ( advertisedSocketAddress == null )
-                {
-                    throw new CatchupAddressResolutionException( upstream );
-                }
-                return advertisedSocketAddress;
-            }
-
-            @Override
-            public Map<MemberId,RoleInfo> allCoreRoles()
-            {
-                return emptyMap();
-            }
-
-            @Override
-            public MemberId myself()
-            {
-                return new MemberId( new UUID( 0, 0 ) );
-            }
-
-            @Override
-            public void init()
-            {
-            }
-
-            @Override
-            public void start()
-            {
-            }
-
-            @Override
-            public void stop()
-            {
-            }
-
-            @Override
-            public void shutdown()
-            {
-            }
-        };
     }
 
     static MemberId[] memberIDs( int howMany )

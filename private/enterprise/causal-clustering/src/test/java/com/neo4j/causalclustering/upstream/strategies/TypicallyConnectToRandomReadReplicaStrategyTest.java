@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,6 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.fakeReadReplicaTopology;
-import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.fakeTopologyService;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,7 +39,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
     {
         // given
         MemberId theCoreMemberId = new MemberId( UUID.randomUUID() );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( theCoreMemberId ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( theCoreMemberId ),
                 fakeReadReplicaTopology( UserDefinedConfigurationStrategyTest.memberIDs( 100 ) ) );
 
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
@@ -88,7 +88,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
 
         // and requesting core member will return self and another member
         MemberId otherCoreMember = new MemberId( new UUID( 12, 34 ) );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( myself, otherCoreMember ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( myself, otherCoreMember ),
                 fakeReadReplicaTopology( UserDefinedConfigurationStrategyTest.memberIDs( 2 ) ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
@@ -109,7 +109,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         // and
         MemberId firstOther = new MemberId( new UUID( 12, 34 ) );
         MemberId secondOther = new MemberId( new UUID( 56, 78 ) );
-        TopologyService topologyService = fakeTopologyService( fakeCoreTopology( myself, firstOther, secondOther ),
+        TopologyService topologyService = new FakeTopologyService( fakeCoreTopology( myself, firstOther, secondOther ),
                 fakeReadReplicaTopology( UserDefinedConfigurationStrategyTest.memberIDs( 2 ) ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 

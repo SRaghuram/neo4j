@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -106,7 +107,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
     static TopologyService getTopologyService( List<String> myServerGroups, MemberId[] myGroupMemberIds, List<String> unwanted )
     {
-        return UserDefinedConfigurationStrategyTest.fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+        return new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
                 fakeReadReplicaTopology( myServerGroups, myGroupMemberIds, unwanted, 10 ) );
     }
 
