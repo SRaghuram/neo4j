@@ -21,12 +21,17 @@ public class TestDiscoveryMember implements DiscoveryMember
 
     public TestDiscoveryMember()
     {
-        this( new MemberId( UUID.randomUUID() ) );
+        this( randomMemberId() );
     }
 
     public TestDiscoveryMember( MemberId memberId )
     {
         this( memberId, Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+    }
+
+    public TestDiscoveryMember( Set<DatabaseId> databaseIds )
+    {
+        this( randomMemberId(), databaseIds );
     }
 
     public TestDiscoveryMember( MemberId id, Set<DatabaseId> databaseIds )
@@ -45,5 +50,10 @@ public class TestDiscoveryMember implements DiscoveryMember
     public Set<DatabaseId> databaseIds()
     {
         return databaseIds;
+    }
+
+    private static MemberId randomMemberId()
+    {
+        return new MemberId( UUID.randomUUID() );
     }
 }

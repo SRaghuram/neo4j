@@ -34,6 +34,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       "update topology" when {
         "cluster id updated" in new Fixture {
           Given("updated cluster ID data")
+          makeTopologyActorKnowAboutCoreMember()
           val clusterIdData = Map(databaseId -> clusterId).asJava
           val event = new ClusterIdDirectoryMessage(clusterIdData)
 
@@ -51,7 +52,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           Given("updated metadata")
           val metadata = Map(
             UniqueAddress(Address("protocol", "system", "host", 1),1L) ->
-              new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), TestTopology.addressesForCore(1, false))).asJava
+              new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1))).asJava
           val event = new MetadataMessage(metadata)
 
           When("metadata received")
@@ -66,6 +67,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
         "cluster view updated" in new Fixture {
           Given("a cluster view")
+          makeTopologyActorKnowAboutCoreMember()
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
@@ -89,6 +91,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
           topologyActorRef ! clusterView
+          makeTopologyActorKnowAboutCoreMember()
           awaitExpectedCoreTopology(nullClusterIdTopology)
 
           When("update cluster ID")
@@ -102,23 +105,6 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           awaitExpectedCoreTopology()
         }
       }
-      "not update topology" when {
-        "core topology has not changed" in new Fixture {
-          Given("actor has a known topology")
-          topologyActorRef ! ClusterViewMessage.EMPTY
-          awaitExpectedCoreTopology()
-
-          And("received state is reset")
-          actualCoreTopology = CoreTopology.EMPTY
-
-          When("generate a new topology with same members")
-          topologyActorRef ! ClusterViewMessage.EMPTY
-
-          Then("no further topology changes")
-          awaitNoChangeToCoreTopology()
-        }
-      }
-
     }
   }
 
@@ -140,7 +126,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     val config = {
       val conf = Config.defaults()
-      val myCoreServerConfig = TestTopology.configFor(TestTopology.addressesForCore(0, false))
+      val myCoreServerConfig = TestTopology.configFor(coreServerInfo(0))
       conf.augment(myCoreServerConfig)
       conf
     }
@@ -159,8 +145,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       clusterId,
       false,
       Map(
-        new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
-        new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
+        new MemberId(UUID.randomUUID()) -> coreServerInfo(0),
+        new MemberId(UUID.randomUUID()) -> coreServerInfo(1)
       ).asJava
     )
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
@@ -184,16 +170,21 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     def awaitExpectedCoreTopology(newCoreTopology: CoreTopology = expectedCoreTopology) = {
       awaitCond(
-        actualCoreTopology == newCoreTopology && actualCoreTopology.clusterId() == newCoreTopology.clusterId(),
+        actualCoreTopology == newCoreTopology,
         max = defaultWaitTime,
         message = s"Expected $newCoreTopology but was $actualCoreTopology"
       )
       readReplicaProbe.expectMsg(newCoreTopology)
     }
 
-    def awaitNoChangeToCoreTopology() = awaitNotCond(
-      actualCoreTopology == expectedCoreTopology && actualCoreTopology.clusterId() == expectedCoreTopology.clusterId(),
-      max = defaultWaitTime,
-      message = "Should not have updated core topology")
+    def makeTopologyActorKnowAboutCoreMember(): Unit = {
+      val metadata = Map(UniqueAddress(Address("protocol", "system"), 1L) ->
+        new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1))).asJava
+      val metadataEvent = new MetadataMessage(metadata)
+
+      topologyActorRef ! metadataEvent
+    }
+
+    def coreServerInfo(id: Int): CoreServerInfo = TestTopology.addressesForCore(id, false, Set(databaseId).asJava)
   }
 }

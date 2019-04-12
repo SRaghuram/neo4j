@@ -9,10 +9,8 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -22,13 +20,14 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class UpstreamAddressLookupTest
+class UpstreamAddressLookupTest
 {
     private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
@@ -39,11 +38,8 @@ public class UpstreamAddressLookupTest
     private final AdvertisedSocketAddress secondAddress = new AdvertisedSocketAddress( "Second", 789 );
     private final TopologyService topologyService = mock( TopologyService.class );
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
-    @Before
-    public void setup() throws CatchupAddressResolutionException
+    @BeforeEach
+    void setup() throws CatchupAddressResolutionException
     {
         when( topologyService.findCatchupAddress( eq( defaultMember ) ) ).thenReturn( defaultAddress );
         when( topologyService.findCatchupAddress( eq( firstMember ) ) ).thenReturn( firstAddress );
@@ -51,7 +47,7 @@ public class UpstreamAddressLookupTest
     }
 
     @Test
-    public void selectionPrioritiesAreKept() throws CatchupAddressResolutionException
+    void selectionPrioritiesAreKept() throws CatchupAddressResolutionException
     {
         // given various strategies with different priorities
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
@@ -75,7 +71,7 @@ public class UpstreamAddressLookupTest
     }
 
     @Test
-    public void exceptionWhenStrategiesFail() throws CatchupAddressResolutionException
+    void exceptionWhenStrategiesFail()
     {
         // given a guaranteed fail strategy
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
@@ -85,16 +81,13 @@ public class UpstreamAddressLookupTest
         UpstreamAddressLookup upstreamAddressLookup =
                 new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
-        // then
-        expectedException.expect( CatchupAddressResolutionException.class );
-
-        // when
-        upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        // when & then
+        assertThrows( CatchupAddressResolutionException.class, () -> upstreamAddressLookup.lookupAddressForDatabase( databaseId ) );
     }
 
-    private class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
+    private static class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
-        MemberId upstreamDatabase;
+        private final MemberId upstreamDatabase;
         private int numberOfIterations;
 
         CountedSelectionStrategy( MemberId upstreamDatabase, int numberOfIterations )
@@ -107,13 +100,12 @@ public class UpstreamAddressLookupTest
         @Override
         public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
-            MemberId consumed = upstreamDatabase;
-            numberOfIterations--;
-            if ( numberOfIterations < 0 )
+            if ( numberOfIterations <= 0 )
             {
-                upstreamDatabase = null;
+                return Optional.empty();
             }
-            return Optional.ofNullable( consumed );
+            numberOfIterations--;
+            return Optional.of( upstreamDatabase );
         }
     }
 }

@@ -20,7 +20,7 @@ import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.collection.JavaConverters._
@@ -145,8 +145,8 @@ class TopologyBuilderTest
 
     def memberMetaData(n: Int, from: Int = 0, refusesToBeLeader: Int => Boolean = _ => false ): MetadataMessage = {
       val coreServerInfoStream = Stream.from(from)
-          .map(i => TestTopology.addressesForCore(i, refusesToBeLeader(i)))
-          .map(info => new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()),info))
+        .map(i => TestTopology.addressesForCore(i, refusesToBeLeader(i), Set(databaseId).asJava))
+        .map(info => new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), info))
 
       val addressWithInfo = uniqueAddressStreamFrom(from).zip(coreServerInfoStream).take(n)
 

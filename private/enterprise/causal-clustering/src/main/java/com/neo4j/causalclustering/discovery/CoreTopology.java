@@ -10,8 +10,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -41,6 +39,7 @@ public class CoreTopology implements Topology<CoreServerInfo>
         return coreMembers;
     }
 
+    @Override
     public DatabaseId databaseId()
     {
         return databaseId;
@@ -54,15 +53,6 @@ public class CoreTopology implements Topology<CoreServerInfo>
     public boolean canBeBootstrapped()
     {
         return canBeBootstrapped;
-    }
-
-    public Optional<MemberId> randomCoreMemberId()
-    {
-        if ( coreMembers.isEmpty() )
-        {
-            return Optional.empty();
-        }
-        return coreMembers.keySet().stream().skip( ThreadLocalRandom.current().nextInt( coreMembers.size() ) ).findFirst();
     }
 
     @Override

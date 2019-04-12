@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
+import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -57,27 +58,30 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class ReadReplicaStartupProcessTest
+class ReadReplicaStartupProcessTest
 {
-    private ConstantTimeTimeoutStrategy retryStrategy = new ConstantTimeTimeoutStrategy( 1, MILLISECONDS );
-    private TopologyService topologyService = mock( TopologyService.class );
-    private CoreTopology clusterTopology = mock( CoreTopology.class );
-    private Lifecycle txPulling = mock( Lifecycle.class );
-    private CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
+    private final ConstantTimeTimeoutStrategy retryStrategy = new ConstantTimeTimeoutStrategy( 1, MILLISECONDS );
+    private final TopologyService topologyService = mock( TopologyService.class );
+    private final Lifecycle txPulling = mock( Lifecycle.class );
+    private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
 
-    private List<DatabaseId> databaseNames = asList( new DatabaseId( "db1" ), new DatabaseId( "db2" ) );
-    private StubClusteredDatabaseManager clusteredDatabaseManager = Mockito.spy( new StubClusteredDatabaseManager() );
-    private Map<DatabaseId,DatabaseCatchupComponents> dbCatchupComponents = new HashMap<>();
-    private MemberId memberId = new MemberId( UUID.randomUUID() );
-    private AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "127.0.0.1", 123 );
-    private StoreId otherStoreId = new StoreId( 5, 6, 7, 8, 9 );
+    private final ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+    private final List<DatabaseId> databaseIds = asList( new DatabaseId( "db1" ), new DatabaseId( "db2" ) );
+    private final StubClusteredDatabaseManager clusteredDatabaseManager = Mockito.spy( new StubClusteredDatabaseManager() );
+    private final Map<DatabaseId,DatabaseCatchupComponents> dbCatchupComponents = new HashMap<>();
+    private final MemberId memberId = new MemberId( UUID.randomUUID() );
+    private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "127.0.0.1", 123 );
+    private final StoreId otherStoreId = new StoreId( 5, 6, 7, 8, 9 );
 
     @BeforeEach
     void commonMocking() throws CatchupAddressResolutionException
     {
         Map<MemberId,CoreServerInfo> members = Map.of( memberId, mock( CoreServerInfo.class ) );
         when( topologyService.allCoreServers() ).thenReturn( members );
-        when( clusterTopology.members() ).thenReturn( members );
+        for ( DatabaseId databaseId : databaseIds )
+        {
+            when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new CoreTopology( databaseId, clusterId, false, members ) );
+        }
         when( topologyService.findCatchupAddress( memberId ) ).thenReturn( fromAddress );
         //I know ... I'm sorry
         when( catchupComponents.componentsFor( any( DatabaseId.class ) ) )
@@ -90,9 +94,9 @@ public class ReadReplicaStartupProcessTest
         dbCatchupComponents.put( databaseId, new DatabaseCatchupComponents( remoteStore, storeCopyProcess ) );
     }
 
-    private void mockDatabaseResponses( DatabaseId databaseId, boolean isEmpty ) throws Throwable
+    private void mockDatabaseResponses( DatabaseId databaseId ) throws Throwable
     {
-        mockDatabaseResponses( databaseId, isEmpty, Optional.empty() );
+        mockDatabaseResponses( databaseId, false, Optional.empty() );
     }
 
     private <E extends Exception> void failToGetFirstStoreId( DatabaseId databaseId, Class<E> eClass ) throws StoreIdDownloadFailedException
@@ -139,13 +143,13 @@ public class ReadReplicaStartupProcessTest
     void shouldRetryIfDbThatThrewExpectedException() throws Throwable
     {
         // given
-        Iterator<DatabaseId> iterator = databaseNames.iterator();
+        Iterator<DatabaseId> iterator = databaseIds.iterator();
         DatabaseId db1 = iterator.next();
         failToGetFirstStoreId( db1, StoreIdDownloadFailedException.class );
 
         while ( iterator.hasNext() )
         {
-            mockDatabaseResponses( iterator.next(), false );
+            mockDatabaseResponses( iterator.next() );
         }
 
         ReadReplicaStartupProcess readReplicaStartupProcess =
@@ -164,13 +168,13 @@ public class ReadReplicaStartupProcessTest
     void shouldThrowIfNotExpectedExceptionIsThrown() throws Throwable
     {
         // given
-        Iterator<DatabaseId> iterator = databaseNames.iterator();
+        Iterator<DatabaseId> iterator = databaseIds.iterator();
         DatabaseId db1 = iterator.next();
         failToGetFirstStoreId( db1, RuntimeException.class );
 
         while ( iterator.hasNext() )
         {
-            mockDatabaseResponses( iterator.next(), false );
+            mockDatabaseResponses( iterator.next() );
         }
 
         ReadReplicaStartupProcess readReplicaStartupProcess =
@@ -185,7 +189,7 @@ public class ReadReplicaStartupProcessTest
     void shouldReplaceEmptyStoreWithRemote() throws Throwable
     {
         // given
-        for ( DatabaseId name : databaseNames )
+        for ( DatabaseId name : databaseIds )
         {
             mockDatabaseResponses( name, true, Optional.of( otherStoreId ) );
         }
@@ -215,7 +219,7 @@ public class ReadReplicaStartupProcessTest
         List<StoreCopyProcess> emptyStoreCopies = new ArrayList<>();
         List<StoreCopyProcess> nonEmptyStoreCopies = new ArrayList<>();
         boolean emptyStoreToggle = false;
-        for ( DatabaseId name : databaseNames )
+        for ( DatabaseId name : databaseIds )
         {
             StubClusteredDatabaseContext stubDb = stubDatabase( name );
             stubDb.setEmpty( emptyStoreToggle );
@@ -264,7 +268,7 @@ public class ReadReplicaStartupProcessTest
     void shouldNotStartWithMismatchedNonEmptyStore() throws Throwable
     {
         // given
-        DatabaseId name = databaseNames.get( 0 );
+        DatabaseId name = databaseIds.get( 0 );
         mockDatabaseResponses( name, false, Optional.of( otherStoreId ) );
 
         ReadReplicaStartupProcess readReplicaStartupProcess =
@@ -285,9 +289,9 @@ public class ReadReplicaStartupProcessTest
     void shouldStartWithMatchingDatabase() throws Throwable
     {
         // given
-        for ( DatabaseId name : databaseNames )
+        for ( DatabaseId name : databaseIds )
         {
-            mockDatabaseResponses( name, false );
+            mockDatabaseResponses( name );
         }
 
         ReadReplicaStartupProcess readReplicaStartupProcess =
@@ -306,9 +310,9 @@ public class ReadReplicaStartupProcessTest
     void stopShouldStopTheDatabaseAndStopPolling() throws Throwable
     {
         // given
-        for ( DatabaseId name : databaseNames )
+        for ( DatabaseId name : databaseIds )
         {
-            mockDatabaseResponses( name, false );
+            mockDatabaseResponses( name );
         }
 
         ReadReplicaStartupProcess readReplicaStartupProcess =
@@ -329,7 +333,7 @@ public class ReadReplicaStartupProcessTest
     @ServiceProvider
     public static class AlwaysChooseFirstMember extends UpstreamDatabaseSelectionStrategy
     {
-        public AlwaysChooseFirstMember()
+        AlwaysChooseFirstMember()
         {
             super( "always-choose-first-member" );
         }

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -119,7 +120,8 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
         if ( allowReadsOnFollowers || possibleReaders.isEmpty() )
         {
-            Set<MemberId> validCores = coreTopology.members().keySet();
+            Map<MemberId,CoreServerInfo> coreMembers = coreTopology.members();
+            Set<MemberId> validCores = coreMembers.keySet();
 
             Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseId );
             if ( optionalLeaderId.isPresent() )
@@ -131,10 +133,11 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
             for ( MemberId validCore : validCores )
             {
-                Optional<CoreServerInfo> coreServerInfo = coreTopology.find( validCore );
-                coreServerInfo.ifPresent(
-                        coreServerInfo1 -> possibleReaders.add(
-                                new ServerInfo( coreServerInfo1.connectors().boltAddress(), validCore, coreServerInfo1.groups() ) ) );
+                CoreServerInfo coreServerInfo = coreMembers.get( validCore );
+                if ( coreServerInfo != null )
+                {
+                    possibleReaders.add( new ServerInfo( coreServerInfo.connectors().boltAddress(), validCore, coreServerInfo.groups() ) );
+                }
             }
         }
 

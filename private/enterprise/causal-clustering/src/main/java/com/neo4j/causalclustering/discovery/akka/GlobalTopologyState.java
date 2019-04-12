@@ -13,11 +13,11 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
-import com.neo4j.causalclustering.discovery.TopologyDifference;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -56,16 +56,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         DatabaseId databaseId = newCoreTopology.databaseId();
         CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
-        if ( currentCoreTopology == null )
-        {
-            currentCoreTopology = CoreTopology.EMPTY;
-        }
 
-        TopologyDifference diff = currentCoreTopology.difference( newCoreTopology );
-        this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
-        if ( diff.hasChanges() )
+        if ( !Objects.equals( currentCoreTopology, newCoreTopology ) )
         {
-            log.info( "Core topology for database %s changed %s", databaseId, diff );
+            this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
+            log.info( "Core topology for database %s changed from %s to %s", databaseId, currentCoreTopology, newCoreTopology );
             callback.accept( newCoreTopology );
         }
     }
@@ -75,16 +70,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         DatabaseId databaseId = newReadReplicaTopology.databaseId();
         ReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabase.put( databaseId, newReadReplicaTopology );
-        if ( currentReadReplicaTopology == null )
-        {
-            currentReadReplicaTopology = ReadReplicaTopology.EMPTY;
-        }
 
-        TopologyDifference diff = currentReadReplicaTopology.difference( newReadReplicaTopology );
-        this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
-        if ( diff.hasChanges() )
+        if ( !Objects.equals( currentReadReplicaTopology, newReadReplicaTopology ) )
         {
-            log.info( "Read replica topology for database %s changed %s", databaseId, diff );
+            this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
+            log.info( "Read replica topology for database %s changed from %s to %s", databaseId, currentReadReplicaTopology, newReadReplicaTopology );
         }
     }
 

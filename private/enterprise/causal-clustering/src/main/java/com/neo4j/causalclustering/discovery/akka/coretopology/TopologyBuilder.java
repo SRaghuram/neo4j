@@ -38,7 +38,6 @@ public class TopologyBuilder
 
     CoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
-
         log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
         Map<MemberId, CoreServerInfo> coreMembers =
                 getCoreInfos( cluster, memberData )

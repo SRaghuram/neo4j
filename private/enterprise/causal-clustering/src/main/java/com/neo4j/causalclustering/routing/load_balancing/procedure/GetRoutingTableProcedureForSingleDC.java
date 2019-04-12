@@ -6,11 +6,12 @@
 package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import com.neo4j.causalclustering.discovery.ClientConnector;
-import com.neo4j.causalclustering.discovery.CoreTopology;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -72,8 +73,8 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private List<AdvertisedSocketAddress> routeEndpoints( DatabaseId databaseId )
     {
-        var routers = coreTopologyFor( databaseId )
-                .allMemberInfo()
+        var routers = coreServersFor( databaseId )
+                .stream()
                 .map( ClientConnector::boltAddress )
                 .collect( toList() );
 
@@ -93,8 +94,8 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private List<AdvertisedSocketAddress> readEndpoints( DatabaseId databaseId )
     {
-        var readReplicas = readReplicaTopology( databaseId )
-                .allMemberInfo()
+        var readReplicas = readReplicasFor( databaseId )
+                .stream()
                 .map( ClientConnector::boltAddress )
                 .collect( toList() );
 
@@ -108,7 +109,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
     private Stream<AdvertisedSocketAddress> coreReadEndPoints( DatabaseId databaseId )
     {
         var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseId );
-        var coreServerInfos = coreTopologyFor( databaseId ).members().values();
+        var coreServerInfos = coreServersFor( databaseId );
         var coreAddresses = coreServerInfos.stream().map( ClientConnector::boltAddress );
 
         // if the leader is present and it is not alone filter it out from the read end points
@@ -123,13 +124,13 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return coreAddresses;
     }
 
-    private CoreTopology coreTopologyFor( DatabaseId databaseId )
+    private Collection<CoreServerInfo> coreServersFor( DatabaseId databaseId )
     {
-        return topologyService.coreTopologyForDatabase( databaseId );
+        return topologyService.coreTopologyForDatabase( databaseId ).members().values();
     }
 
-    private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
+    private Collection<ReadReplicaInfo> readReplicasFor( DatabaseId databaseId )
     {
-        return topologyService.readReplicaTopologyForDatabase( databaseId );
+        return topologyService.readReplicaTopologyForDatabase( databaseId ).members().values();
     }
 }

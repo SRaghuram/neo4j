@@ -12,22 +12,29 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.identity.ClusterId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CoreTopologyChangeListenerTest
 {
-    private final DiscoveryMember myself = new TestDiscoveryMember();
+    private final DatabaseId databaseId = new DatabaseId( "my_db" );
+    private final DiscoveryMember myself = new TestDiscoveryMember( Set.of( databaseId ) );
     private final RetryStrategy topologyServiceRetryStrategy = new NoRetriesStrategy();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -46,9 +53,11 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
+        CoreTopology coreTopology = new CoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, Map.of() );
         Listener listener = mock( Listener.class );
+        when( listener.databaseId() ).thenReturn( databaseId );
         service.addLocalCoreTopologyListener( listener );
-        service.topologyState().onTopologyUpdate( CoreTopology.EMPTY );
-        verify( listener ).onCoreTopologyChange( CoreTopology.EMPTY );
+        service.topologyState().onTopologyUpdate( coreTopology );
+        verify( listener ).onCoreTopologyChange( coreTopology );
     }
 }
