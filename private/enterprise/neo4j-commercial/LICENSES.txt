@@ -308,6 +308,7 @@ BSD License
   Scala Compiler
   scala-java8-compat
   scala-parser-combinators
+  zstd
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
