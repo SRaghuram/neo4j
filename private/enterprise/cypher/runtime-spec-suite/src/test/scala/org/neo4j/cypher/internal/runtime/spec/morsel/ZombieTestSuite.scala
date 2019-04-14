@@ -42,16 +42,7 @@ class ZombieIndexContainsScanStressTest extends IndexContainsScanStressTestBase(
 
 // ARGUMENT
 class ZombieArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
-class ZombieArgumentStressTest extends ParallelStressSuite(ZombieRuntime) with RHSOfApplyLeafStressSuite {
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-    RHSOfApplyLeafTD(
-      _.projection(s"$nodeArgument AS $variable").|.argument(variable),
-      rowsComingIntoTheOperator =>
-        for {
-          Array(x) <- rowsComingIntoTheOperator
-        } yield Array(x, x)
-    )
-}
+class ZombieArgumentStressTest extends ArgumentStressTestBase(ZombieRuntime)
 
 // APPLY
 class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
