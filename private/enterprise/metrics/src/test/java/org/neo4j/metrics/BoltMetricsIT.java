@@ -48,12 +48,13 @@ class BoltMetricsIT
 
     private GraphDatabaseAPI db;
     private TransportConnection conn;
+    private DatabaseManagementService managementService;
 
     @AfterEach
     void cleanup() throws Exception
     {
         conn.disconnect();
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -61,7 +62,7 @@ class BoltMetricsIT
     {
         // Given
         File metricsFolder = testDirectory.directory( "metrics" );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )

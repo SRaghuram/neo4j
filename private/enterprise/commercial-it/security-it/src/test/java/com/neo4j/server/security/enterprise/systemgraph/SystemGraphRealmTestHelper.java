@@ -41,13 +41,19 @@ class SystemGraphRealmTestHelper
     public static class TestDatabaseManager extends LifecycleAdapter implements DatabaseManager<StandaloneDatabaseContext>
     {
         GraphDatabaseFacade testSystemDb;
+        private final DatabaseManagementService managementService;
 
         TestDatabaseManager( TestDirectory testDir )
         {
-            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+            managementService = new TestCommercialGraphDatabaseFactory()
                     .newImpermanentDatabaseBuilder( testDir.databaseDir() )
                     .setConfig( GraphDatabaseSettings.auth_enabled, "false" ).newDatabaseManagementService();
             testSystemDb = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
+        }
+
+        public DatabaseManagementService getManagementService()
+        {
+            return managementService;
         }
 
         @Override

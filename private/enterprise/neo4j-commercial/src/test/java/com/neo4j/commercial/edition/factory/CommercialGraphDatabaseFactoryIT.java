@@ -56,7 +56,7 @@ class CommercialGraphDatabaseFactoryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -74,7 +74,7 @@ class CommercialGraphDatabaseFactoryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

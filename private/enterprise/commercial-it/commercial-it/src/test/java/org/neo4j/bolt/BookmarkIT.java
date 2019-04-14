@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
@@ -58,6 +59,7 @@ public class BookmarkIT
 
     private Driver driver;
     private GraphDatabaseAPI db;
+    private DatabaseManagementService managementService;
 
     @After
     public void tearDown() throws Exception
@@ -65,7 +67,7 @@ public class BookmarkIT
         IOUtils.closeAllSilently( driver );
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -107,7 +109,8 @@ public class BookmarkIT
     {
         GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
         GraphDatabaseFacadeFactory facadeFactory = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        return (GraphDatabaseAPI) facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), state.databaseDependencies() ).database(
+        managementService = facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), state.databaseDependencies() );
+        return (GraphDatabaseAPI) managementService.database(
                 GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 

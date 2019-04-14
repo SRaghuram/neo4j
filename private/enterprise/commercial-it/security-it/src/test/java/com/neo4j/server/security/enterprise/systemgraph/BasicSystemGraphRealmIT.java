@@ -50,7 +50,7 @@ class BasicSystemGraphRealmIT
     @AfterEach
     void tearDown()
     {
-        dbManager.testSystemDb.shutdown();
+        dbManager.getManagementService().shutdown();
     }
 
     @Test

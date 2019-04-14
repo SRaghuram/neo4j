@@ -48,7 +48,7 @@ public class PropertyExistenceIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
 
     }

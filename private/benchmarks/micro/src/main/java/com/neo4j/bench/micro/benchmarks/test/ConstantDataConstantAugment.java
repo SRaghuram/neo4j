@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.test;
 
+import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -90,7 +90,7 @@ public class ConstantDataConstantAugment extends BaseDatabaseBenchmark
                     db.createNode();
                     tx.success();
                 }
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
 
             @Override

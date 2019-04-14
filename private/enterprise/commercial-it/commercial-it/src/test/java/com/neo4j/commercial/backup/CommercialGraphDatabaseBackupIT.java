@@ -39,13 +39,14 @@ class CommercialGraphDatabaseBackupIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI db;
+    private static DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -57,12 +58,12 @@ class CommercialGraphDatabaseBackupIT
         createNodes( db, nodeCount );
 
         File backupDir = performBackup( testDirectory.databaseDir() );
-        db.shutdown();
+        managementService.shutdown();
 
         db = newCommercialBackupDb( backupDir, false );
         verifyNodes( nodeCount );
 
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private File performBackup( File storeDir ) throws Exception
@@ -81,14 +82,14 @@ class CommercialGraphDatabaseBackupIT
 
     private static GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
-        DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled ).newDatabaseManagementService();
+        managementService = defaultCommercialBuilder( storeDir, backupEnabled ).newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static GraphDatabaseAPI newCommercialBackupDb( File databaseDirectory, boolean backupEnabled )
     {
         File storeDir = databaseDirectory.getParentFile();
-        DatabaseManagementService managementService = defaultCommercialBuilder( storeDir, backupEnabled )
+        managementService = defaultCommercialBuilder( storeDir, backupEnabled )
                 .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() ).newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }

@@ -23,10 +23,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.neo4j.bench.ldbc.cli.RunCommand.discoverSchema;
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
@@ -89,11 +91,12 @@ public class UpgradeStoreCommand implements Runnable
             {
                 System.out.println( "Starting store and recreating Indexes..." );
                 Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile, null );
-                GraphDatabaseService db = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
+                DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
+                GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
                 LdbcIndexer ldbcIndexer = new LdbcIndexer( neo4jSchema, true, false, true );
                 ldbcIndexer.createTransactional( db );
                 System.out.println( "Shutting down store..." );
-                db.shutdown();
+                managementService.shutdown();
             }
             catch ( DbException e )
             {
@@ -103,9 +106,9 @@ public class UpgradeStoreCommand implements Runnable
         else
         {
             System.out.println( "Starting store..." );
-            GraphDatabaseService db = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
+            DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
             System.out.println( "Shutting down store..." );
-            db.shutdown();
+            managementService.shutdown();
         }
         System.out.println( "Store upgrade complete" );
     }

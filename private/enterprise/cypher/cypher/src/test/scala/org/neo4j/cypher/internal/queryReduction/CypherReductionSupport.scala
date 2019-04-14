@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSeque
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -77,12 +78,14 @@ object CypherReductionSupport {
 trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   self: CypherFunSuite  =>
 
+  private var managementService: DatabaseManagementService = _
   private var graph: GraphDatabaseCypherService = _
   private var contextFactory: TransactionalContextFactory = _
 
   override protected def initTest() {
     super.initTest()
-    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME))
+    managementService = new TestGraphDatabaseFactory().newImpermanentService()
+    graph = new GraphDatabaseCypherService(managementService.database(DEFAULT_DATABASE_NAME))
     contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }
 
@@ -91,7 +94,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
       super.stopTest()
     }
     finally {
-      if (graph != null) graph.shutdown()
+      if (graph != null) managementService.shutdown()
     }
   }
 

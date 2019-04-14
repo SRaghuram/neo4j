@@ -113,6 +113,12 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
+    public void shutdown()
+    {
+        server.shutdownDatabase();
+    }
+
+    @Override
     public FileSystemAbstraction fileSystem()
     {
         return fileSystem;
@@ -197,7 +203,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
             subject.client.disconnect();
         }
         subjects.clear();
-        server.graphDatabaseService().shutdown();
+        shutdown();
         fileSystem.close();
     }
 

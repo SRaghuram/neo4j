@@ -175,7 +175,7 @@ public class StoreUpgradeIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
             assertConsistentStore( databaseLayout );
@@ -240,7 +240,7 @@ public class StoreUpgradeIT
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
-            database.shutdown();
+            managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
@@ -268,7 +268,7 @@ public class StoreUpgradeIT
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
-            database.shutdown();
+            managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
@@ -345,7 +345,7 @@ public class StoreUpgradeIT
             }
             finally
             {
-                databaseService.shutdown();
+                managementService.shutdown();
             }
         }
     }
@@ -393,7 +393,7 @@ public class StoreUpgradeIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
             assertConsistentStore( databaseLayout );

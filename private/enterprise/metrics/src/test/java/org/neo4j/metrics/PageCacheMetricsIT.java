@@ -45,12 +45,13 @@ class PageCacheMetricsIT
     private TestDirectory testDirectory;
     private File metricsDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( MetricsSettings.metricsEnabled, Settings.FALSE  )
                 .setConfig( MetricsSettings.neoPageCacheEnabled, Settings.TRUE  )
                 .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
@@ -63,7 +64,7 @@ class PageCacheMetricsIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

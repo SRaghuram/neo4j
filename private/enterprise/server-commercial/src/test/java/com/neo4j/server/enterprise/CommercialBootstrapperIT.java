@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,8 +25,6 @@ import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.database.GraphFactory;
 import org.neo4j.test.rule.CleanupRule;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -69,7 +66,6 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
         assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
-        assertThat( bootstrapper.getServer().getDatabase().getGraph(), instanceOf( CommercialGraphDatabase.class ) );
     }
 
     @Test

@@ -36,6 +36,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.BATCH;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
@@ -44,8 +45,6 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.number.IsCloseTo.closeTo;
-
-import static java.lang.String.format;
 
 public class DataGeneratorTestUtil
 {
@@ -163,7 +162,7 @@ public class DataGeneratorTestUtil
             FileUtils.deleteRecursively( NEO4J_CONFIG.toFile() );
             if ( null != db )
             {
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         }
     }

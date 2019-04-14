@@ -26,6 +26,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -41,6 +42,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {TestDirectoryExtension.class, RandomExtension.class} )
 class ImportTest
@@ -865,7 +867,8 @@ class ImportTest
             LdbcDateCodec.Format neo4jFormat,
             LdbcDateCodec.Resolution timestampResolution ) throws DbException
     {
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution, new LdbcDateCodecUtil() );
 
@@ -921,7 +924,7 @@ class ImportTest
                 metadata.neo4jSchema(),
                 equalTo( neo4jSchema ) );
 
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private void assertConsistentStore( File dbDir ) throws ConsistencyCheckIncompleteException

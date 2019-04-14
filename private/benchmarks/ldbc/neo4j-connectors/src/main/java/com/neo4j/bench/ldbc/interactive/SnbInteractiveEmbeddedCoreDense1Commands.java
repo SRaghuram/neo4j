@@ -81,6 +81,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -109,9 +111,10 @@ public class SnbInteractiveEmbeddedCoreDense1Commands implements Neo4jDbCommands
     @Override
     public void init() throws DbException
     {
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile);
+        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
-        registerShutdownHook( db );
+        registerShutdownHook( managementService );
 
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         if ( !metadata.hasCommentHasCreatorMinDateAtResolution() ||
@@ -145,8 +148,7 @@ public class SnbInteractiveEmbeddedCoreDense1Commands implements Neo4jDbCommands
         }
         loggingService.info( metadata.toString() );
 
-        connection = new Neo4jConnectionState(
-                db,
+        connection = new Neo4jConnectionState( managementService, db,
                 null,
                 null,
                 loggingService,
@@ -277,7 +279,7 @@ public class SnbInteractiveEmbeddedCoreDense1Commands implements Neo4jDbCommands
                 Update8HandlerEmbeddedCoreDense1.class );
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
+    private static void registerShutdownHook( final DatabaseManagementService managementService )
     {
         Runtime.getRuntime().addShutdownHook(
                 new Thread()
@@ -285,7 +287,7 @@ public class SnbInteractiveEmbeddedCoreDense1Commands implements Neo4jDbCommands
                     @Override
                     public void run()
                     {
-                        graphDb.shutdown();
+                        managementService.shutdown();
                     }
                 }
         );

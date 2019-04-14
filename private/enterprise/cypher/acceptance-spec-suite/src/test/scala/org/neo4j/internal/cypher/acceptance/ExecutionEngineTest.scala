@@ -433,7 +433,7 @@ order by a.COL1""".format(a, b))
       case _: SyntaxException =>
       case _: Throwable => fail("expected exception")
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
   }
 
@@ -957,7 +957,7 @@ order by a.COL1""".format(a, b))
       val engine = createEngine(db)
       run(engine)
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
   }
 }

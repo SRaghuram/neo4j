@@ -143,7 +143,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         {
             try
             {
-                database.shutdown();
+                database.getManagementService().shutdown();
             }
             finally
             {

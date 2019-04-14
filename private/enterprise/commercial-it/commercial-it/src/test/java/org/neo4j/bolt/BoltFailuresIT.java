@@ -53,13 +53,14 @@ public class BoltFailuresIT
 
     private GraphDatabaseService db;
     private Driver driver;
+    private DatabaseManagementService managementService;
 
     @After
     public void shutdownDb()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         IOUtils.closeAllSilently( driver );
     }
@@ -187,7 +188,7 @@ public class BoltFailuresIT
 
     private GraphDatabaseService startDbWithBolt( GraphDatabaseFactory dbFactory )
     {
-        DatabaseManagementService managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
+        managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
                 .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )

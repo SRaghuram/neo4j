@@ -164,10 +164,11 @@ public class DatabaseRebuildTool
         private final GraphDatabaseAPI db;
         private final StoreAccess access;
         private final DatabaseLayout databaseLayout;
+        private final DatabaseManagementService managementService;
 
         Store( GraphDatabaseBuilder dbBuilder, String databaseName )
         {
-            DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+            managementService = dbBuilder.newDatabaseManagementService();
             this.db = (GraphDatabaseAPI) managementService.database( databaseName );
             this.access = new StoreAccess( db.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
@@ -176,7 +177,7 @@ public class DatabaseRebuildTool
 
         public void shutdown()
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

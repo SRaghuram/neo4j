@@ -13,8 +13,6 @@ import java.nio.file.Path;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
 public class TestSupport
 {
     public static Store createEmptyStore( Path storeDir )
@@ -24,8 +22,7 @@ public class TestSupport
         DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( graphDbDir.toFile() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toAbsolutePath().toString() ).newDatabaseManagementService();
-        managementService.database( DEFAULT_DATABASE_NAME )
-                .shutdown();
+        managementService.shutdown();
         return Store.createFrom( storeDir );
     }
 }

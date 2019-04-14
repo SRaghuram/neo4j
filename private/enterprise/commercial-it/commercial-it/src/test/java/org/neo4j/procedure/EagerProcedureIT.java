@@ -48,6 +48,7 @@ public class EagerProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldNotGetPropertyAccessFailureWhenStreamingToAnEagerDestructiveProcedure()
@@ -152,7 +153,7 @@ public class EagerProcedureIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.directory().getAbsolutePath() ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -163,7 +164,7 @@ public class EagerProcedureIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 

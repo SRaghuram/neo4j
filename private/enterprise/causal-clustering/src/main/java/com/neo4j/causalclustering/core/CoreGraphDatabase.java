@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import java.io.File;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -18,6 +19,9 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class CoreGraphDatabase extends GraphDatabaseFacade
 {
+
+    private final DatabaseManagementService managementService;
+
     public interface CoreEditionModuleFactory
     {
         AbstractCoreEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
@@ -28,7 +32,13 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
             DiscoveryServiceFactory discoveryServiceFactory,
             CoreEditionModuleFactory editionModuleFactory )
     {
-        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
+        managementService = new GraphDatabaseFacadeFactory( DatabaseInfo.CORE,
+                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
                 .initFacade( storeDir, config, dependencies, this );
+    }
+
+    public DatabaseManagementService getManagementService()
+    {
+        return managementService;
     }
 }

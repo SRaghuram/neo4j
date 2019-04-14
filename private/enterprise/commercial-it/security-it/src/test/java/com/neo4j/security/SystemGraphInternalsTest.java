@@ -11,7 +11,6 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import com.neo4j.server.security.enterprise.systemgraph.TestSystemGraphRealm;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
@@ -30,6 +29,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -52,6 +52,7 @@ class SystemGraphInternalsTest
 
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws Throwable
@@ -60,7 +61,7 @@ class SystemGraphInternalsTest
         File storeDir = testDirectory.storeDir();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager<?> databaseManager = getDatabaseManager();
@@ -76,7 +77,7 @@ class SystemGraphInternalsTest
     {
         if ( database != null )
         {
-            database.shutdown();
+            managementService.shutdown();
             database = null;
         }
     }

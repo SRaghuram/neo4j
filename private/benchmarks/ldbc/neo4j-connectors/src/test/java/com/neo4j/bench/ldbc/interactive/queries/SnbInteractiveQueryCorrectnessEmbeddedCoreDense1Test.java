@@ -59,15 +59,15 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate5AddForumMembers
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate6AddPost;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
-import com.neo4j.bench.ldbc.DriverConfigUtils;
-import com.neo4j.bench.ldbc.Neo4jDb;
-import com.neo4j.bench.ldbc.Neo4jQuery;
 import com.neo4j.bench.ldbc.Domain.Forum;
 import com.neo4j.bench.ldbc.Domain.HasMember;
 import com.neo4j.bench.ldbc.Domain.Message;
 import com.neo4j.bench.ldbc.Domain.Nodes;
 import com.neo4j.bench.ldbc.Domain.Rels;
 import com.neo4j.bench.ldbc.Domain.WorksAt;
+import com.neo4j.bench.ldbc.DriverConfigUtils;
+import com.neo4j.bench.ldbc.Neo4jDb;
+import com.neo4j.bench.ldbc.Neo4jQuery;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
@@ -111,6 +111,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -119,6 +120,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -164,10 +166,8 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     @Override
     public Neo4jConnectionState openConnection( String path ) throws Exception
     {
-        Neo4jConnectionState connection = new Neo4jConnectionState(
-                Neo4jDb.newDb(
-                        new File( path ),
-                        DriverConfigUtils.neo4jTestConfig() ),
+        DatabaseManagementService managementService = Neo4jDb.newDb( new File( path ), DriverConfigUtils.neo4jTestConfig() );
+        Neo4jConnectionState connection = new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
                 null,
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
@@ -464,7 +464,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.db().shutdown();
+        connection.getManagementService().shutdown();
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
 import com.neo4j.bench.micro.data.ValueGeneratorUtil;
@@ -104,7 +105,7 @@ public class StartupDb extends AbstractCoreBenchmark
     @TearDown( Level.Iteration )
     public void tearDownIteration()
     {
-        db().shutdown();
+        ManagedStore.getManagementService().shutdown();
     }
 
     @Benchmark

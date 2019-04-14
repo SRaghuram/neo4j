@@ -229,7 +229,7 @@ class DatabaseRebuildToolTest
             node.delete();
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private static void setProperties( PropertyContainer entity, int i )

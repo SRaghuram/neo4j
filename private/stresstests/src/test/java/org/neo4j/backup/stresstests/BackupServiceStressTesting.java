@@ -76,19 +76,17 @@ class BackupServiceStressTesting
         Control control = new Control( new Config() );
 
         AtomicReference<GraphDatabaseService> dbRef = new AtomicReference<>();
+        AtomicReference<DatabaseManagementService> managementRef = new AtomicReference<>();
         ExecutorService executor = Executors.newCachedThreadPool( new DaemonThreadFactory() );
         try
         {
-            DatabaseManagementService managementService1 = graphDatabaseBuilder.newDatabaseManagementService();
-            dbRef.set( managementService1.database( DEFAULT_DATABASE_NAME ) );
+            DatabaseManagementService managementService = graphDatabaseBuilder.newDatabaseManagementService();
+            managementRef.set( managementService );
+            dbRef.set( managementService.database( DEFAULT_DATABASE_NAME ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
             BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
-            StartStop startStopWorkload = new StartStop( control, () ->
-            {
-                DatabaseManagementService managementService = graphDatabaseBuilder.newDatabaseManagementService();
-                return managementService.database( DEFAULT_DATABASE_NAME );
-            }, dbRef );
+            StartStop startStopWorkload = new StartStop( control, () -> managementService.database( DEFAULT_DATABASE_NAME ), dbRef, managementRef );
 
             executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 
@@ -102,7 +100,7 @@ class BackupServiceStressTesting
         }
         finally
         {
-            dbRef.get().shutdown();
+            managementRef.get().shutdown();
             executor.shutdown();
         }
     }

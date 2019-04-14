@@ -89,7 +89,7 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
                     db.createNode();
                     tx.success();
                 }
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         };
     }

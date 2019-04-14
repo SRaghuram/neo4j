@@ -59,11 +59,12 @@ class CommercialSystemDatabaseIT
     private DatabaseManager<?> databaseManager;
     private GraphDatabaseFacade defaultDb;
     private GraphDatabaseFacade systemDb;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
@@ -74,7 +75,7 @@ class CommercialSystemDatabaseIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -173,7 +174,7 @@ class CommercialSystemDatabaseIT
             }
         }
 
-        database.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
         assertTrue( runConsistencyCheck( systemDatabaseLayout, consistencyCheckService ).isSuccessful() );
@@ -184,11 +185,11 @@ class CommercialSystemDatabaseIT
     void systemDatabaseEnabledByDefault()
     {
         GraphDatabaseService databaseWithSystemDb = null;
-
+        DatabaseManagementService managementService = null;
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
-            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( disabledSystemDbDirectory );
+            managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( disabledSystemDbDirectory );
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );
@@ -197,7 +198,7 @@ class CommercialSystemDatabaseIT
         {
             if ( databaseWithSystemDb != null )
             {
-                databaseWithSystemDb.shutdown();
+                managementService.shutdown();
             }
         }
     }

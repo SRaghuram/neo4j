@@ -35,6 +35,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class Database implements AutoCloseable
 {
     private final Store store;
+    private final DatabaseManagementService managementService;
     private final GraphDatabaseService db;
 
     public static void recreateSchema( Store store, Edition edition, Path neo4jConfig, Schema schema )
@@ -105,14 +106,15 @@ public class Database implements AutoCloseable
 
     public static Database startWith( Store store, Edition edition, Path neo4jConfig )
     {
-        GraphDatabaseService db = newDb( store, edition, neo4jConfig );
-        return new Database( store, db );
+        DatabaseManagementService managementService = newDb( store, edition, neo4jConfig );
+        return new Database( store, managementService );
     }
 
-    private Database( Store store, GraphDatabaseService db )
+    private Database( Store store, DatabaseManagementService managementService )
     {
         this.store = store;
-        this.db = db;
+        this.managementService = managementService;
+        this.db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     public boolean isRunning()
@@ -120,15 +122,14 @@ public class Database implements AutoCloseable
         return db != null && db.isAvailable( SECONDS.toMillis( 10 ) );
     }
 
-    private static GraphDatabaseService newDb( Store store, Edition edition, Path neo4jConfig )
+    private static DatabaseManagementService newDb( Store store, Edition edition, Path neo4jConfig )
     {
         GraphDatabaseBuilder builder = newBuilder( store, edition );
         if ( null != neo4jConfig )
         {
             builder.loadPropertiesFromFile( neo4jConfig.toAbsolutePath().toString() );
         }
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return builder.newDatabaseManagementService();
     }
 
     private static GraphDatabaseBuilder newBuilder( Store store, Edition edition )
@@ -276,7 +277,7 @@ public class Database implements AutoCloseable
     {
         if ( isRunning() )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

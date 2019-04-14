@@ -53,6 +53,7 @@ public class BatchInsertEnterpriseIT
 
     @Parameter
     public String recordFormat;
+    private DatabaseManagementService managementService;
 
     @Parameters( name = "{0}" )
     public static List<String> recordFormats()
@@ -105,7 +106,7 @@ public class BatchInsertEnterpriseIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -121,7 +122,7 @@ public class BatchInsertEnterpriseIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get() );
@@ -143,7 +144,7 @@ public class BatchInsertEnterpriseIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -180,7 +181,7 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.record_format, recordFormat ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

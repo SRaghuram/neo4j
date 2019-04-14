@@ -87,13 +87,13 @@ class CatchupServerIT
     private ExecutorService executor;
     private PageCache pageCache;
     private CatchupClientFactory catchupClient;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void startDb() throws Throwable
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );
@@ -115,7 +115,7 @@ class CatchupServerIT
         pageCache.flushAndForce();
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         if ( catchupClient != null )
         {

@@ -54,7 +54,8 @@ public class DbStructureTool
                 generatedClassWithPackage
         );
 
-        GraphDatabaseService graph = instantiateGraphDatabase( dbDir );
+        DatabaseManagementService managementService = instantiateGraphDatabase( dbDir );
+        GraphDatabaseService graph = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             if ( writeToFile )
@@ -76,20 +77,16 @@ public class DbStructureTool
         }
         finally
         {
-            graph.shutdown();
+            managementService.shutdown();
         }
     }
 
-    protected GraphDatabaseService instantiateGraphDatabase( String dbDir )
+    private static DatabaseManagementService instantiateGraphDatabase( String dbDir )
     {
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( new File( dbDir ) );
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return new CommercialGraphDatabaseFactory().newDatabaseManagementService( new File( dbDir ) );
     }
 
-    private void traceDb( String generator,
-                                 String generatedClazzPackage, String generatedClazzName,
-                                 GraphDatabaseService graph,
-                                 Appendable output )
+    private static void traceDb( String generator, String generatedClazzPackage, String generatedClazzName, GraphDatabaseService graph, Appendable output )
             throws IOException
     {
         InvocationTracer<DbStructureVisitor> tracer = new InvocationTracer<>(
@@ -107,7 +104,7 @@ public class DbStructureTool
         tracer.close();
     }
 
-    private Pair<String, String> parseClassNameWithPackage( String classNameWithPackage )
+    private static Pair<String, String> parseClassNameWithPackage( String classNameWithPackage )
     {
         if ( classNameWithPackage.contains( "%" ) )
         {

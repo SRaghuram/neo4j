@@ -86,6 +86,7 @@ public class ProcedureIT
     private static List<Exception> exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
     private GraphDatabaseService db;
     static boolean[] onCloseCalled;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws IOException
@@ -93,7 +94,7 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+        managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
                 record_id_batch_size, "1" ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -105,7 +106,7 @@ public class ProcedureIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 
@@ -586,7 +587,7 @@ public class ProcedureIT
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        db.shutdown();
+        managementService.shutdown();
         DatabaseManagementService managementService = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
@@ -1762,12 +1763,6 @@ public class ProcedureIT
                 @Name( value = "value", defaultValue = "Zhang Wei" ) String value )
         {
             db.createNode( Label.label( label ) ).setProperty( propertyKey, value );
-        }
-
-        @Procedure
-        public void shutdown()
-        {
-            db.shutdown();
         }
 
         @Procedure( mode = WRITE )

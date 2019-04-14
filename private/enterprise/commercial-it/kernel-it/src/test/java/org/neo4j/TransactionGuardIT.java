@@ -101,6 +101,7 @@ public class TransactionGuardIT
     private static final KernelTransactionTimeoutMonitorSupplier monitorSupplier = new
             KernelTransactionTimeoutMonitorSupplier();
     private static final IdInjectionFunctionAction getIdInjectionFunction = new IdInjectionFunctionAction( monitorSupplier );
+    private DatabaseManagementService customManagementService;
 
     @After
     public void tearDown()
@@ -514,8 +515,8 @@ public class TransactionGuardIT
         configMap.forEach( databaseBuilder::setConfig );
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
 
-        DatabaseManagementService managementService = databaseBuilder.newDatabaseManagementService();
-        GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        customManagementService = databaseBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI database = (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
         cleanupRule.add( database );
         return database;
     }
@@ -582,7 +583,7 @@ public class TransactionGuardIT
         {
             GuardTestServer( Config config, ExternalDependencies dependencies )
             {
-                super( config, new SimpleGraphFactory( graphDatabaseFacade ), dependencies );
+                super( config, new SimpleGraphFactory( customManagementService ), dependencies );
             }
         }
     }

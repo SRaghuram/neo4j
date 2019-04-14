@@ -48,12 +48,13 @@ class MultiDatabaseManagerIT
     private GraphDatabaseService database;
     private AssertableLogProvider logProvider;
     private DatabaseManager<?> databaseManager;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
+        managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
                 .newDatabaseManagementService();
@@ -64,7 +65,7 @@ class MultiDatabaseManagerIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

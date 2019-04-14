@@ -48,13 +48,14 @@ public class BoltSnapshotQueryExecutionIT
 
     private Driver driver;
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @After
     public void tearDown()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         IOUtils.closeAllSilently( driver );
     }
@@ -73,7 +74,7 @@ public class BoltSnapshotQueryExecutionIT
 
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )

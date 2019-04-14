@@ -10,21 +10,24 @@ import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-import com.neo4j.commercial.edition.CommercialGraphDatabase;
+import com.neo4j.commercial.edition.CommercialEditionModule;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 
 import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
+import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.GraphFactory;
 
 public class CommercialGraphFactory implements GraphFactory
 {
     @Override
-    public GraphDatabaseFacade newGraphDatabase( Config config, ExternalDependencies dependencies )
+    public DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
         CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
@@ -32,11 +35,13 @@ public class CommercialGraphFactory implements GraphFactory
         switch ( mode )
         {
         case CORE:
-            return new CoreGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new );
+            return new CoreGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new ).getManagementService();
         case READ_REPLICA:
-            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), ReadReplicaEditionModule::new );
+            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(),
+                    ReadReplicaEditionModule::new ).getManagementService();
         default:
-            return new CommercialGraphDatabase( storeDir, config, dependencies );
+            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
+                    .initFacade( storeDir, config, dependencies, new GraphDatabaseFacade() );
         }
     }
 

@@ -98,6 +98,7 @@ class BackupRetriesIT
     private Path backupsDir;
     private GraphDatabaseAPI db;
     private StorageEngineFactory storageEngineFactory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
@@ -111,7 +112,7 @@ class BackupRetriesIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -143,7 +144,7 @@ class BackupRetriesIT
     private GraphDatabaseAPI startDb()
     {
         File databaseDirectory = testDirectory.storeDir();
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory( logProvider )
+        managementService = new TestCommercialGraphDatabaseFactory( logProvider )
                 .newEmbeddedDatabaseBuilder( databaseDirectory )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE ).newDatabaseManagementService();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

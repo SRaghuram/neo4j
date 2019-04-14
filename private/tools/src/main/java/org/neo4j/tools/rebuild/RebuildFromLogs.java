@@ -71,6 +71,7 @@ class RebuildFromLogs
     private static final String UP_TO_TX_ID = "tx";
 
     private final FileSystemAbstraction fs;
+    private static DatabaseManagementService managementService;
 
     RebuildFromLogs( FileSystemAbstraction fs )
     {
@@ -228,7 +229,7 @@ class RebuildFromLogs
         @Override
         public void close()
         {
-            graphdb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -267,7 +268,7 @@ class RebuildFromLogs
         @Override
         public void close()
         {
-            graphdb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -275,7 +276,7 @@ class RebuildFromLogs
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
+        managementService = new CommercialGraphDatabaseFactory()
                 .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )

@@ -39,11 +39,12 @@ class PrometheusOutputIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( prometheusEnabled, Settings.TRUE )
                 .setConfig( prometheusEndpoint, "localhost:0" ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
@@ -52,7 +53,7 @@ class PrometheusOutputIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

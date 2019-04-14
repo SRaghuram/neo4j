@@ -33,7 +33,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   )
 
   test("changing idp max table size should affect IDP inner loop count") {
-    graph.shutdown()
+    managementService.shutdown()
     // GIVEN
     val numberOfPatternRelationships = 13
     val maxTableSizes = Seq(128, 64, 32, 16)
@@ -53,7 +53,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   test("changing idp iteration duration threshold should affect IDP inner loop count") {
     // GIVEN
-    graph.shutdown()
+    managementService.shutdown()
     val numberOfPatternRelationships = 13
     val iterationDurationThresholds = Seq(1000, 500, 10)
 
@@ -276,7 +276,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       val engine = ExecutionEngineHelper.createEngine(graph)
       run(engine, graph)
     } finally {
-      graph.shutdown()
+      managementService.shutdown()
     }
   }
 

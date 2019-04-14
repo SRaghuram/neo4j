@@ -22,6 +22,7 @@ import java.util.Stack;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
@@ -38,6 +39,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     private final Stack<ClusterTx> clusterTxStack = new Stack<>();
     private GraphDatabaseFacade graphDatabaseFacade;
     private Path tempDirectory;
+    private DatabaseManagementService managementService;
 
     protected GraphDatabaseService db()
     {
@@ -52,8 +54,9 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
-        graphDatabaseFacade = (GraphDatabaseFacade) new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
-                tempDirectory.toFile(), Config.defaults(), GraphDatabaseDependencies.newDependencies() ).database(
+        managementService = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
+                tempDirectory.toFile(), Config.defaults(), GraphDatabaseDependencies.newDependencies() );
+        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database(
                 Config.defaults().get( GraphDatabaseSettings.default_database ) );
 
         setUp();
@@ -72,7 +75,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkTearDown()
     {
         shutdown();
-        graphDatabaseFacade.shutdown();
+        managementService.shutdown();
         BenchmarkUtil.assertDirectoryExists( tempDirectory );
         BenchmarkUtil.deleteDir( tempDirectory );
     }

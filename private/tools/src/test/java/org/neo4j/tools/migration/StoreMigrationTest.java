@@ -56,7 +56,7 @@ class StoreMigrationTest
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 }

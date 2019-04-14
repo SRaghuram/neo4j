@@ -104,7 +104,7 @@ public class CheckPointingLogRotationStressTesting
         }
 
         System.out.println( "5/6\tShutting down..." );
-        db.shutdown();
+        managementService.shutdown();
 
         try
         {

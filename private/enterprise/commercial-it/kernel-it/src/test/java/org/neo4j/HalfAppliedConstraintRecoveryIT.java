@@ -86,6 +86,7 @@ public class HalfAppliedConstraintRecoveryIT
             db -> db.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ", n." + KEY2 + ") IS NODE KEY" );
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
             ( db, txs ) -> apply( db, txs.subList( txs.size() - 1, txs.size() ) );
+    private DatabaseManagementService managementService;
 
     private static BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> recreate( Consumer<GraphDatabaseAPI> constraintCreator )
     {
@@ -149,7 +150,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         // WHEN
@@ -187,7 +188,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -248,7 +249,7 @@ public class HalfAppliedConstraintRecoveryIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
 
@@ -267,7 +268,7 @@ public class HalfAppliedConstraintRecoveryIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
     }
@@ -323,7 +324,7 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs )
+        managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs )
                 .setMonitors( monitors ).newImpermanentService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
@@ -373,7 +374,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

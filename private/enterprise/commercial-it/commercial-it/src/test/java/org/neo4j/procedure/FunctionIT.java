@@ -87,6 +87,7 @@ class FunctionIT
     private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
 
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldGiveNiceErrorMessageOnWrongStaticType()
@@ -338,8 +339,8 @@ class FunctionIT
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        db.shutdown();
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService.shutdown();
+        managementService = new TestGraphDatabaseFactory()
                 .setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
@@ -873,7 +874,7 @@ class FunctionIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 
@@ -1060,13 +1061,6 @@ class FunctionIT
         public void writingProcedure()
         {
             db.createNode();
-        }
-
-        @UserFunction
-        public String shutdown()
-        {
-            db.shutdown();
-            return "oh no!";
         }
 
         @UserFunction

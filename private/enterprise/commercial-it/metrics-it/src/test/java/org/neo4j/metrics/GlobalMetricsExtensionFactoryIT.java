@@ -62,6 +62,7 @@ public class GlobalMetricsExtensionFactoryIT
 
     private File outputPath;
     private GraphDatabaseAPI db;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setup()
@@ -106,11 +107,10 @@ public class GlobalMetricsExtensionFactoryIT
         // Start the database
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
         GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
-        DatabaseManagementService
-                managementService = builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
-                        .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
-                        .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
-                        .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        managementService = builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
+                .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
         // key point!
         GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = nullTracerDatabase.beginTx() )
@@ -121,7 +121,7 @@ public class GlobalMetricsExtensionFactoryIT
         }
         finally
         {
-            nullTracerDatabase.shutdown();
+            managementService.shutdown();
         }
         // We assert that no exception is thrown during startup or the operation of the database.
     }

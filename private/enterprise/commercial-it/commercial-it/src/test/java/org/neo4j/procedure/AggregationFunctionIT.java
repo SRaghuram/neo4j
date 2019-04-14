@@ -51,6 +51,7 @@ class AggregationFunctionIT
     private TestDirectory plugins;
 
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldHandleSingleStringArgumentAggregationFunction()
@@ -298,7 +299,7 @@ class AggregationFunctionIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
@@ -311,7 +312,7 @@ class AggregationFunctionIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 

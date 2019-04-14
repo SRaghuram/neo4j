@@ -27,6 +27,7 @@ public class StartOnExistingDbWithIndexIT
 {
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    private DatabaseManagementService managementService;
 
     @Test
     public void startStopDatabaseWithIndex()
@@ -35,9 +36,9 @@ public class StartOnExistingDbWithIndexIT
         String property = "property";
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
         GraphDatabaseService db = prepareDb( label, property, logProvider );
-        db.shutdown();
+        managementService.shutdown();
         db = getDatabase( logProvider );
-        db.shutdown();
+        managementService.shutdown();
 
         logProvider.assertNoMessagesContaining( "Failed to open index" );
     }
@@ -56,7 +57,7 @@ public class StartOnExistingDbWithIndexIT
 
     private GraphDatabaseService getDatabase( LogProvider logProvider )
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialGraphDatabaseFactory()
                 .setInternalLogProvider( logProvider )
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();

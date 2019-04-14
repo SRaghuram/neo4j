@@ -98,7 +98,7 @@ public class CreateIndex
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

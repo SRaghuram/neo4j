@@ -39,7 +39,7 @@ class PageCacheFlushTracingTest
             database.createNode();
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
         logProvider.assertContainsMessageContaining( "Flushing file" );
     }
 }

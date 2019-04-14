@@ -85,6 +85,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
@@ -128,9 +130,10 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
     @Override
     public void init() throws DbException
     {
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
+        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
-        registerShutdownHook( db );
+        registerShutdownHook( managementService );
 
         LdbcCompilationTimeEventListener ldbcCompilationTimeEventListener = new LdbcCompilationTimeEventListener();
         Monitors monitors = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( Monitors.class );
@@ -144,8 +147,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
         }
         loggingService.info( metadata.toString() );
 
-        connection = new Neo4jConnectionState(
-                db,
+        connection = new Neo4jConnectionState( managementService, db,
                 null,
                 null,
                 loggingService,
@@ -371,8 +373,8 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
                 LdbcSnbBiQuery25HandlerEmbeddedCypher.class );
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
+    private static void registerShutdownHook( final DatabaseManagementService managementService )
     {
-        Runtime.getRuntime().addShutdownHook( new Thread( graphDb::shutdown ) );
+        Runtime.getRuntime().addShutdownHook( new Thread( managementService::shutdown ) );
     }
 }

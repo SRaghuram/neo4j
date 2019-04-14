@@ -96,6 +96,7 @@ public class QueryLoggerIT
     private File logFilename;
     private GraphDatabaseFacade db;
     private GraphDatabaseService database;
+    private DatabaseManagementService databaseManagementService;
 
     @Before
     public void setUp()
@@ -114,11 +115,11 @@ public class QueryLoggerIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            databaseManagementService.shutdown();
         }
         if ( database != null )
         {
-            database.shutdown();
+            databaseManagementService.shutdown();
         }
     }
 
@@ -148,7 +149,7 @@ public class QueryLoggerIT
         CommercialLoginContext andres = login( "andres", "neo4j" );
         executeQuery( andres, "MATCH (n:Label) RETURN n", emptyMap(), ResourceIterator::close );
 
-        db.shutdown();
+        managementService.shutdown();
 
         // THEN
         List<String> logLines = readAllUserQueryLines( logFilename );
@@ -193,7 +194,7 @@ public class QueryLoggerIT
             tx.success();
         }
 
-        db.shutdown();
+        managementService.shutdown();
 
         // THEN
         List<String> logLines = readAllUserQueryLines( logFilename );
@@ -214,10 +215,10 @@ public class QueryLoggerIT
     @Test
     public void shouldLogQuerySlowerThanThreshold() throws Exception
     {
-        DatabaseManagementService managementService = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.getPath() )
                 .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, Settings.FALSE ).newDatabaseManagementService();
-        database = managementService.database( DEFAULT_DATABASE_NAME );
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
 
         executeQueryAndShutdown( database );
 
@@ -323,7 +324,7 @@ public class QueryLoggerIT
             database.execute( QUERY );
         }
 
-        database.shutdown();
+        managementService.shutdown();
 
         assertFalse( "There should not exist a shifted log file because rotation is disabled",
                 shiftedLogFilename1.exists() );
@@ -340,8 +341,8 @@ public class QueryLoggerIT
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.getPath() )
                 .setConfig( GraphDatabaseSettings.log_queries_max_archives, "100" )
                 .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, "1" );
-        DatabaseManagementService managementService1 = databaseBuilder.newDatabaseManagementService();
-        database = managementService1.database( DEFAULT_DATABASE_NAME );
+        databaseManagementService = databaseBuilder.newDatabaseManagementService();
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
 
         // Logging is done asynchronously, and it turns out it's really hard to make it all work the same on Linux
         // and on Windows, so just write many times to make sure we rotate several times.
@@ -351,7 +352,7 @@ public class QueryLoggerIT
             database.execute( QUERY );
         }
 
-        database.shutdown();
+        databaseManagementService.shutdown();
 
         File[] queryLogs = fileSystem.get().listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
@@ -362,8 +363,8 @@ public class QueryLoggerIT
                                            .collect( Collectors.toList() );
         assertThat( "Expected log file to have at least one log entry", loggedQueries, hasSize( 100 ) );
 
-        DatabaseManagementService managementService = databaseBuilder.newDatabaseManagementService();
-        database = managementService.database( DEFAULT_DATABASE_NAME );
+        databaseManagementService = databaseBuilder.newDatabaseManagementService();
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
         // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
         database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
         database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
@@ -372,7 +373,7 @@ public class QueryLoggerIT
             database.execute( QUERY );
         }
 
-        database.shutdown();
+        databaseManagementService.shutdown();
 
         queryLogs = fileSystem.get().listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
@@ -406,7 +407,7 @@ public class QueryLoggerIT
         }
         finally
         {
-            facade.shutdown();
+            managementService.shutdown();
         }
 
         List<String> logLines = readAllUserQueryLines( logFilename );
@@ -444,7 +445,7 @@ public class QueryLoggerIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
 
         // Value should not change when disabled
@@ -479,7 +480,7 @@ public class QueryLoggerIT
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.getPath() ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         database.execute( QUERY ).close();
-        database.shutdown();
+        managementService.shutdown();
     }
 
     private static void executeQueryAndShutdown( GraphDatabaseService database )
@@ -491,7 +492,6 @@ public class QueryLoggerIT
     {
         Result execute = database.execute( query, params );
         execute.close();
-        database.shutdown();
     }
 
     private EnterpriseUserManager getUserManager()

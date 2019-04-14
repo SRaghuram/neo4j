@@ -213,7 +213,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                     waitForSchemaIndexes( db, Stream.of( indexes ).map( LabelKeyDefinition::label ).toArray( Label[]::new ) );
                 }
 
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         };
     }

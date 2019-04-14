@@ -371,7 +371,7 @@ public class DataGenerator
         {
             if ( null != db )
             {
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         }
     }
@@ -432,7 +432,7 @@ public class DataGenerator
         {
             if ( null != db )
             {
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         }
     }

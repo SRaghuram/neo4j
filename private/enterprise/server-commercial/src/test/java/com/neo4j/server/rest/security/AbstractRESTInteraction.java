@@ -109,6 +109,12 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
+    public void shutdown()
+    {
+        server.stop();
+    }
+
+    @Override
     public FileSystemAbstraction fileSystem()
     {
         return new DefaultFileSystemAbstraction();

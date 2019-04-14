@@ -24,6 +24,8 @@ public interface NeoInteractionLevel<S>
 
     GraphDatabaseFacade getLocalGraph();
 
+    void shutdown();
+
     FileSystemAbstraction fileSystem();
 
     InternalTransaction beginLocalTransactionAsUser( S subject, KernelTransaction.Type txType ) throws Throwable;

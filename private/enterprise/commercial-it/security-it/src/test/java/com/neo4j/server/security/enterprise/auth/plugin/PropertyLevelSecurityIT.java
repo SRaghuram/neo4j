@@ -62,12 +62,13 @@ class PropertyLevelSecurityIT
     private LoginContext smith;
     private LoginContext morpheus;
     private LoginContext jones;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws Throwable
     {
         TestGraphDatabaseFactory s = new TestCommercialGraphDatabaseFactory();
-        DatabaseManagementService managementService = s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+        managementService = s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
                 .setConfig( SecuritySettings.procedure_roles, "test.*:procRole" )
@@ -98,7 +99,7 @@ class PropertyLevelSecurityIT
     @AfterEach
     void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test

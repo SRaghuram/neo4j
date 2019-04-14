@@ -71,14 +71,16 @@ class FulltextIndexBackupIT
 
     private GraphDatabaseAPI db;
     private GraphDatabaseAPI backupDb;
+    private DatabaseManagementService dbManagementService;
+    private static DatabaseManagementService backupManagementService;
 
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        dbManagementService = new TestCommercialGraphDatabaseFactory()
                     .newEmbeddedDatabaseBuilder( dir.storeDir() )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
-        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -86,11 +88,11 @@ class FulltextIndexBackupIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            dbManagementService.shutdown();
         }
         if ( backupDb != null )
         {
-            backupDb.shutdown();
+            backupManagementService.shutdown();
         }
     }
 
@@ -100,7 +102,7 @@ class FulltextIndexBackupIT
         initializeTestData();
         verifyData( db );
         Path backupDir = executeBackup();
-        db.shutdown();
+        dbManagementService.shutdown();
 
         backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
@@ -132,7 +134,7 @@ class FulltextIndexBackupIT
 
         executeBackup();
 
-        db.shutdown();
+        dbManagementService.shutdown();
 
         backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
@@ -192,10 +194,10 @@ class FulltextIndexBackupIT
 
     private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        backupManagementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( backupDatabaseDir )
                 .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() ).newDatabaseManagementService();
-        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void verifyData( GraphDatabaseAPI db )

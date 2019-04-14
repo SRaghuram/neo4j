@@ -41,7 +41,7 @@ public class PathModelTest
     @AfterEach
     void cleanupDB()
     {
-        db.shutdown();
+        editionModuleBackedAbstractBenchmark.benchmarkTearDown();
     }
 
     @BeforeEach

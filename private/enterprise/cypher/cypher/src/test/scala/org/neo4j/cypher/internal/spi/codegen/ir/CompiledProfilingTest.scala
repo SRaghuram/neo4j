@@ -67,8 +67,9 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
   }
 
   test("should profile hash join") {
+    val managementService = new TestGraphDatabaseFactory().newImpermanentService()
     //given
-    val database = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
+    val database = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       val graphDb = new GraphDatabaseCypherService(database)
       val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.write())
@@ -92,7 +93,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
       hashJoin.dbHits() should equal(0)
       hashJoin.rows() should equal(2)
     } finally {
-      database.shutdown()
+      managementService.shutdown()
     }
   }
 

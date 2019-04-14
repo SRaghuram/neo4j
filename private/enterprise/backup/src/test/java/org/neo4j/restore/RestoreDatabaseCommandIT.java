@@ -65,6 +65,7 @@ class RestoreDatabaseCommandIT
     private TestDirectory directory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    private static DatabaseManagementService managementService;
 
     @Test
     void forceShouldRespectStoreLock()
@@ -173,7 +174,7 @@ class RestoreDatabaseCommandIT
             assertEquals( fromNodeCount, Iterables.count( copiedDb.getAllNodes() ) );
         }
 
-        copiedDb.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -195,7 +196,7 @@ class RestoreDatabaseCommandIT
 
         GraphDatabaseService db = createDatabase( toLayout );
         createTestData( toNodeCount, db );
-        db.shutdown();
+        managementService.shutdown();
 
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
@@ -269,20 +270,20 @@ class RestoreDatabaseCommandIT
     {
         GraphDatabaseService db = createDatabase( fromPath );
         createTestData( nodesToCreate, db );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private void createDbAt( DatabaseLayout toLayout, int toNodeCount )
     {
         GraphDatabaseService db = createDatabase( toLayout );
         createTestData( toNodeCount, db );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private static GraphDatabaseService createDatabase( File databasePath )
     {
         File storeDir = databasePath.getParentFile();
-        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
                 .setConfig( default_database, databasePath.getName() )

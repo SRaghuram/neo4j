@@ -13,6 +13,7 @@ import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.{GraphDatabaseService, Result}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
@@ -34,15 +35,17 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   private val runtimes = Seq("interpreted", "compiled")
 
+  private var managementService: DatabaseManagementService = _
   private var db : GraphDatabaseService = _
 
   override protected def initTest(): Unit = {
     super.initTest()
-    db = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
+    managementService = new TestGraphDatabaseFactory().newImpermanentService()
+    db = managementService.database(DEFAULT_DATABASE_NAME)
   }
 
   override protected def stopTest(): Unit = {
-    db.shutdown()
+    managementService.shutdown()
     super.stopTest()
   }
 

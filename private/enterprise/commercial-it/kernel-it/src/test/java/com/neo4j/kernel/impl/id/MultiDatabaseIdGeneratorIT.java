@@ -45,11 +45,12 @@ class MultiDatabaseIdGeneratorIT
     private GraphDatabaseFacade secondDatabase;
     private IdGeneratorFactory firstIdGeneratorFactory;
     private IdGeneratorFactory secondIdGeneratorFactory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );
@@ -61,7 +62,7 @@ class MultiDatabaseIdGeneratorIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

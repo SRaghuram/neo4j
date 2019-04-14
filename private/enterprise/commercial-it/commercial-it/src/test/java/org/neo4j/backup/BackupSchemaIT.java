@@ -68,13 +68,14 @@ class BackupSchemaIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI db;
+    private static DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -135,7 +136,7 @@ class BackupSchemaIT
         schemaElement.populate( db );
 
         File backupDir = executeBackup();
-        db.shutdown();
+        managementService.shutdown();
 
         db = startDb( backupDir, false );
         schemaElement.verify( db );
@@ -171,7 +172,7 @@ class BackupSchemaIT
 
     private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( dir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) )
                 .setConfig( transaction_logs_root_path, dir.getAbsolutePath() ).newDatabaseManagementService();

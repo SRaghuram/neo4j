@@ -71,6 +71,7 @@ public class ImportAuthCommand implements AdminCommand
     private final Path homeDir;
     private final Path configDir;
     private OutsideWorld outsideWorld;
+    private static DatabaseManagementService managementService;
 
     ImportAuthCommand( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {
@@ -190,7 +191,7 @@ public class ImportAuthCommand implements AdminCommand
             }
             finally
             {
-                systemDb.shutdown();
+                managementService.shutdown();
             }
         }
     }
@@ -199,7 +200,7 @@ public class ImportAuthCommand implements AdminCommand
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        DatabaseManagementService managementService = factory.newEmbeddedDatabaseBuilder( databaseDir )
+        managementService = factory.newEmbeddedDatabaseBuilder( databaseDir )
                 .setConfig( default_database, IMPORT_SYSTEM_DATABASE_NAME )
                 .newDatabaseManagementService();
         return managementService.database( IMPORT_SYSTEM_DATABASE_NAME );

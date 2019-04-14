@@ -188,7 +188,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         {
             try
             {
-                database.shutdown();
+                database.getManagementService().shutdown();
             }
             finally
             {

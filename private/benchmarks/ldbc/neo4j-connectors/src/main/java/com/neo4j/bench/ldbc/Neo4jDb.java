@@ -40,11 +40,9 @@ import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Neo4jDb extends Db
 {
@@ -418,10 +416,9 @@ public class Neo4jDb extends Db
     // ==========================================  UTILS  =============================================================
     // ================================================================================================================
 
-    public static GraphDatabaseService newDb( File dbDir, File configFile )
+    public static DatabaseManagementService newDb( File dbDir, File configFile )
     {
-        DatabaseManagementService managementService = newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
     }
 
     private static GraphDatabaseBuilder newDbBuilder( File dbDir, File configFile )

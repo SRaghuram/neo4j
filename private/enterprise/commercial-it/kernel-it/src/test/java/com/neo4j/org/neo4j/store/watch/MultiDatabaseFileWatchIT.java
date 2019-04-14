@@ -46,13 +46,13 @@ class MultiDatabaseFileWatchIT
     private DatabaseContext secondContext;
     private DatabaseContext thirdContext;
     private AssertableLogProvider logProvider;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
+        managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
                 testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
@@ -64,7 +64,7 @@ class MultiDatabaseFileWatchIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

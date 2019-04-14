@@ -157,8 +157,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
                 ).newDatabaseManagementService();
             GraphDatabaseService graphDatabase = managementService.database( DEFAULT_DATABASE_NAME );
             ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
-            return new Neo4jConnectionState(
-                    graphDatabase,
+            return new Neo4jConnectionState( managementService, graphDatabase,
                     URI.create( "bolt://" + portRegister.getLocalAddress( "bolt" ) ),
                     AuthTokens.none(),
                     new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),

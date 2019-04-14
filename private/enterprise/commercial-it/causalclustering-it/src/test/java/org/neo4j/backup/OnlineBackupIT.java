@@ -69,6 +69,7 @@ class OnlineBackupIT
     private Path defaultDbBackupDir;
     private GraphDatabaseAPI db;
     private HostnamePort backupAddress;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
@@ -76,7 +77,7 @@ class OnlineBackupIT
         backupsDir = testDirectory.directory( "backups" ).toPath();
         defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( online_backup_enabled, TRUE ).newDatabaseManagementService();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
@@ -91,7 +92,7 @@ class OnlineBackupIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

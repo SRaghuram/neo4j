@@ -45,12 +45,12 @@ import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.Extractors;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.AdditionalInitialIds;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
 import org.neo4j.internal.batchimport.input.Collector;
-import org.neo4j.internal.batchimport.input.Collectors;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.Groups;
 import org.neo4j.internal.batchimport.input.IdType;
@@ -973,7 +973,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         System.out.println( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, importerProperties );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
+        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 
@@ -988,7 +989,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
         System.out.printf( "Shutting down..." );
-        db.shutdown();
+        managementService.shutdown();
         System.out.println( "Done" );
     }
 }

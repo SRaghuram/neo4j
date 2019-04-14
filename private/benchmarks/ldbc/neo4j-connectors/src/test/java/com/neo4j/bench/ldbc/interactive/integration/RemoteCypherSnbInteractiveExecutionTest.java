@@ -67,7 +67,7 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
         ).newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String url = "bolt://" + boltAddressWithoutPort + ":" + port;
-        return new DatabaseAndUrl( db, url );
+        return new DatabaseAndUrl( managementService, url );
     }
 }
 

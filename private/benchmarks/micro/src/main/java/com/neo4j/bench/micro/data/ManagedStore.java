@@ -33,6 +33,7 @@ public class ManagedStore
     private DataGeneratorConfig dataGeneratorConfig;
     private StoreAndConfig storeAndConfig;
     protected GraphDatabaseService db;
+    private static DatabaseManagementService managementService;
 
     public ManagedStore( Stores stores )
     {
@@ -84,15 +85,20 @@ public class ManagedStore
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
         }
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
+    }
+
+    public static DatabaseManagementService getManagementService()
+    {
+        return managementService;
     }
 
     public void tearDownDb() throws IOException
     {
         if ( isDatabaseRunning() )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         if ( !dataGeneratorConfig.isReusable() )
         {

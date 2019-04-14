@@ -32,11 +32,12 @@ class MultiDatabaseDiagnosticsLoggingIT
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
     private AssertableLogProvider provider = new AssertableLogProvider();
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( provider ).newDatabaseManagementService(
+        managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( provider ).newDatabaseManagementService(
                 testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
@@ -44,7 +45,7 @@ class MultiDatabaseDiagnosticsLoggingIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

@@ -45,7 +45,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
   }
 
   private def restartGraphDatabase(config: Map[Setting[_], String] = databaseConfig()): Unit = {
-    graph.shutdown()
+    managementService.shutdown()
     startGraphDatabaseWithConfig(dbDir, config)
   }
 
@@ -54,7 +54,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
       super.stopTest()
     }
     finally {
-      if (graph != null) graph.shutdown()
+      if (graph != null) managementService.shutdown()
       FileUtils.deleteRecursively(dbDir)
     }
   }

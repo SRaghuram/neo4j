@@ -97,7 +97,10 @@ import com.neo4j.bench.ldbc.interactive.embedded_core.Update8EmbeddedCore_0_1_2;
 import java.io.File;
 import java.util.List;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -144,8 +147,8 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     @Override
     public Neo4jConnectionState openConnection( String path ) throws Exception
     {
-        return new Neo4jConnectionState(
-                Neo4jDb.newDb( new File( path ), DriverConfigUtils.neo4jTestConfig() ),
+        DatabaseManagementService managementService = Neo4jDb.newDb( new File( path ), DriverConfigUtils.neo4jTestConfig() );
+        return new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
                 null,
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
@@ -158,7 +161,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.db().shutdown();
+        connection.getManagementService().shutdown();
     }
 
     @Override

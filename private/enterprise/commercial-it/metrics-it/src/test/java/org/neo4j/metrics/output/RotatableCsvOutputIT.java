@@ -50,12 +50,13 @@ class RotatableCsvOutputIT
     private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
                 .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
                 .setConfig( csvInterval, "100ms" )
@@ -67,7 +68,7 @@ class RotatableCsvOutputIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test

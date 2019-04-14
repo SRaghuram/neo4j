@@ -107,7 +107,7 @@ class RestartableImportIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         } );
     }

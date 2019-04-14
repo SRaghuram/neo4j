@@ -94,7 +94,7 @@ class BatchingNeoStoresIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 

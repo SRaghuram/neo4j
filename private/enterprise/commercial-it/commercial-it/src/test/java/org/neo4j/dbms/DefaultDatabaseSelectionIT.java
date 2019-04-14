@@ -39,6 +39,7 @@ class DefaultDatabaseSelectionIT
     private static final String LEGACY_DATABASE_NAME = "graph.db";
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @Test
     void startWithSystemAndNeo4jByDefault()
@@ -50,7 +51,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -65,7 +66,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -81,7 +82,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -98,7 +99,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -114,7 +115,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -131,7 +132,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -145,7 +146,7 @@ class DefaultDatabaseSelectionIT
     private void prepareLegacyStandalone( String databaseName ) throws IOException
     {
         GraphDatabaseService database = startDatabase( databaseName );
-        database.shutdown();
+        managementService.shutdown();
         DatabaseLayout systemLayout = testDirectory.databaseLayout( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         assertTrue( systemLayout.metadataStore().exists() );
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
@@ -156,13 +157,13 @@ class DefaultDatabaseSelectionIT
 
     private GraphDatabaseService startDatabase()
     {
-        DatabaseManagementService managementService = getDatabaseBuilder().newDatabaseManagementService();
+        managementService = getDatabaseBuilder().newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDatabase( String databaseName )
     {
-        DatabaseManagementService managementService = getDatabaseBuilder()
+        managementService = getDatabaseBuilder()
                .setConfig( GraphDatabaseSettings.default_database, databaseName ).newDatabaseManagementService();
         return managementService.database( databaseName );
     }

@@ -262,7 +262,7 @@ class RestartableParallelBatchImporterIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

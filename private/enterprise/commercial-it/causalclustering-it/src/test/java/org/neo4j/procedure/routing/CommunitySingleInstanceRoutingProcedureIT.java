@@ -48,13 +48,14 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI db;
+    private DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -130,7 +131,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         {
             builder.setConfig( connector.advertised_address, advertisedBoltAddress.toString() );
         }
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

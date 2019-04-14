@@ -116,7 +116,7 @@ class RestartImportFromSpecificStatesTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

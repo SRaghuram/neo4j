@@ -70,7 +70,7 @@ class CompositeConstraintIT
             node.setProperty( "b", new double[]{0.7, 0.5, 0.3} );
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( testDirectory.databaseLayout() );
         assertTrue( consistencyCheckResult.isSuccessful(), "Database is consistent" );

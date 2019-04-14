@@ -67,6 +67,7 @@ class RecordFormatsMigrationIT
     private DefaultFileSystemAbstraction fileSystem;
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @Test
     void migrateLatestStandardToLatestHighLimit() throws Exception
@@ -115,7 +116,7 @@ class RecordFormatsMigrationIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
         assertLatestHighLimitStore();
     }
@@ -153,7 +154,7 @@ class RecordFormatsMigrationIT
 
     private GraphDatabaseService startDb()
     {
-        DatabaseManagementService managementService = getGraphDatabaseBuilder().newDatabaseManagementService();
+        managementService = getGraphDatabaseBuilder().newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -187,7 +188,7 @@ class RecordFormatsMigrationIT
         }
     }
 
-    private static void executeAndStopDb( GraphDatabaseService db, Consumer<GraphDatabaseService> action )
+    private void executeAndStopDb( GraphDatabaseService db, Consumer<GraphDatabaseService> action )
     {
         try
         {
@@ -195,7 +196,7 @@ class RecordFormatsMigrationIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

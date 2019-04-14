@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
@@ -27,6 +28,7 @@ import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirecto
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -62,7 +64,8 @@ public class EnterpriseSanityCheckTest
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception
     {
         File dbDir = createTempDirectory( testFolder.absolutePath() );
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
         Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
         result.accept( row -> true );
@@ -70,7 +73,7 @@ public class EnterpriseSanityCheckTest
         String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );
         assertThat( planner.toLowerCase(), equalTo( "cost" ) );
         assertThat( runtime.toLowerCase(), equalTo( expectedRuntime ) );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private File configFile() throws IOException

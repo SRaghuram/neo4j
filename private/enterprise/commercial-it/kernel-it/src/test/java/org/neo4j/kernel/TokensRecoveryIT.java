@@ -36,6 +36,7 @@ class TokensRecoveryIT
     private TestDirectory testDirectory;
     @Inject
     private EphemeralFileSystemAbstraction fs;
+    private DatabaseManagementService managementService;
 
     @Test
     void tokenCreateCommandsMustUpdateTokenHoldersDuringRecoveryWithFulltextIndex()
@@ -51,7 +52,7 @@ class TokensRecoveryIT
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
         // Recover and start the database again.
         db = startDatabase( crashedFs );
@@ -63,7 +64,7 @@ class TokensRecoveryIT
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -80,7 +81,7 @@ class TokensRecoveryIT
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
         // Recover and start the database again.
         db = startDatabase( crashedFs );
@@ -92,7 +93,7 @@ class TokensRecoveryIT
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private GraphDatabaseService startDatabase( EphemeralFileSystemAbstraction fs )
@@ -101,7 +102,7 @@ class TokensRecoveryIT
         GraphDatabaseBuilder builder = factory.setFileSystem( fs ).newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( online_backup_enabled, "false" );
         builder.setConfig( GraphDatabaseSettings.check_point_policy, "periodic" );
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

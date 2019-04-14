@@ -531,7 +531,7 @@ class LoadCsvAcceptanceTest
         db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
       }.getMessage should endWith(": configuration property 'dbms.security.allow_csv_import_from_file_urls' is false")
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
     resourceMonitor.assertClosedAndClear(0)
   }
@@ -556,7 +556,7 @@ class LoadCsvAcceptanceTest
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       result.close()
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
     resourceMonitor.assertClosedAndClear(1)
   }
@@ -576,7 +576,7 @@ class LoadCsvAcceptanceTest
         db.execute(s"LOAD CSV FROM 'file:///../foo.csv' AS line RETURN line[0] AS field", emptyMap()).asScala.size
       }.getMessage should endWith(" file URL points outside configured import directory").or(include("Couldn't load the external resource at"))
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
     resourceMonitor.assertClosedAndClear(0)
   }
@@ -608,7 +608,7 @@ class LoadCsvAcceptanceTest
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       resourceMonitor.assertClosedAndClear(1)
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
   }
 

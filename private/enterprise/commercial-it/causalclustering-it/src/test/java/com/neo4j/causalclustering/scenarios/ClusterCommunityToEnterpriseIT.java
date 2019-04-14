@@ -73,7 +73,7 @@ public class ClusterCommunityToEnterpriseIT
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseLayout databaseLayout = ((GraphDatabaseAPI) database).databaseLayout();
-        database.shutdown();
+        managementService.shutdown();
         Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).withSetting(
                 GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() ).build();
         DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );

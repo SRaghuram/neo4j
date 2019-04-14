@@ -63,7 +63,7 @@ class HalfCreatedConstraintIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
 
         ConsistencyCheckService service = new ConsistencyCheckService();

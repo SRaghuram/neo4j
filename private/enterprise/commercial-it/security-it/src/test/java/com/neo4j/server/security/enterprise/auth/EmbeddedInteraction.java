@@ -39,6 +39,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     private GraphDatabaseFacade db;
     private CommercialAuthManager authManager;
     private ConnectorPortRegister connectorRegister;
+    private DatabaseManagementService managementService;
 
     EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
@@ -60,7 +61,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
         builder.setConfig( config );
 
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
@@ -80,6 +81,12 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     public GraphDatabaseFacade getLocalGraph()
     {
         return db;
+    }
+
+    @Override
+    public void shutdown()
+    {
+        managementService.shutdown();
     }
 
     @Override
@@ -137,7 +144,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     @Override
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Override

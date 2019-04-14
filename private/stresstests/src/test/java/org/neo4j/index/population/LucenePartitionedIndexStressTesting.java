@@ -66,6 +66,7 @@ public class LucenePartitionedIndexStressTesting
     private ExecutorService populators;
     private GraphDatabaseService db;
     private File storeDir;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp() throws IOException
@@ -74,14 +75,14 @@ public class LucenePartitionedIndexStressTesting
         System.out.println( String.format( "Starting database at: %s", storeDir ) );
 
         populators = Executors.newFixedThreadPool( NUMBER_OF_POPULATORS );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
     public void tearDown() throws IOException
     {
-        db.shutdown();
+        managementService.shutdown();
         populators.shutdown();
         FileUtils.deleteRecursively( storeDir );
     }

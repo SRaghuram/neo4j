@@ -28,10 +28,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class LdbcSnbImporterBatchDense1 extends LdbcSnbImporter
 {
@@ -173,7 +175,8 @@ public class LdbcSnbImporterBatchDense1 extends LdbcSnbImporter
         // Create Indexes
         batchInserter.shutdown();
 
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, importerPropertiesFile );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerPropertiesFile );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         indexer.createTransactional( db );
 
@@ -189,7 +192,7 @@ public class LdbcSnbImporterBatchDense1 extends LdbcSnbImporter
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
         System.out.printf( "Shutting down..." );
-        db.shutdown();
+        managementService.shutdown();
         System.out.println( "Done" );
     }
 

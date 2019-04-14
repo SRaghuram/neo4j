@@ -10,6 +10,7 @@ import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.StringGenerator;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -107,7 +108,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @Setup( Level.Iteration )
     public void truncateCheckpointFromLogs() throws IOException
     {
-        managedStore.db().shutdown();
+        ManagedStore.getManagementService().shutdown();
         removeLastCheckpointRecordFromLastLogFile();
     }
 

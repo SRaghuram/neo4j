@@ -159,6 +159,7 @@ class BackupIT
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
     private DatabaseLayout serverStoreLayout;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void beforeEach()
@@ -175,7 +176,7 @@ class BackupIT
     @AfterEach
     void afterEach()
     {
-        databases.forEach( GraphDatabaseService::shutdown );
+        managementService.shutdown();
         databases.clear();
     }
 
@@ -209,7 +210,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
 
         executeBackup( db );
-        db.shutdown();
+        managementService.shutdown();
 
         long firstChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
         assertNotEquals( 0, firstChecksum );
@@ -219,7 +220,7 @@ class BackupIT
         db = startDb( serverStorePath );
 
         executeBackupWithoutFallbackToFull( db );
-        db.shutdown();
+        managementService.shutdown();
 
         long secondChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
         assertNotEquals( 0, secondChecksum );
@@ -262,7 +263,7 @@ class BackupIT
         executeBackup( db );
 
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
-        db.shutdown();
+        managementService.shutdown();
 
         DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
@@ -287,7 +288,7 @@ class BackupIT
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
 
         // Then check real incremental
-        db.shutdown();
+        managementService.shutdown();
         addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
 
@@ -305,7 +306,7 @@ class BackupIT
         // Grab initial backup from server A
         executeBackup( db );
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
-        db.shutdown();
+        managementService.shutdown();
 
         // Create data set X+Y on server B
         createInitialDataSet( otherServerPath, recordFormatName );
@@ -317,7 +318,7 @@ class BackupIT
         final GraphDatabaseService finalDb = db;
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( finalDb ) );
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
-        db.shutdown();
+        managementService.shutdown();
 
         // Just make sure incremental backup can be received properly from
         // server A, even after a failed attempt from server B
@@ -658,7 +659,7 @@ class BackupIT
         }
         finally
         {
-            backupDb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -691,7 +692,7 @@ class BackupIT
 
         long lastCommittedTxBefore = getLastCommittedTx( db );
 
-        db.shutdown();
+        managementService.shutdown();
         FileUtils.deleteFile( oldLog );
         GraphDatabaseService dbAfterRestart = startDb( serverStorePath );
 
@@ -716,7 +717,7 @@ class BackupIT
         // when
         long lastCommittedTx = getLastCommittedTx( db );
         executeBackup( db );
-        db.shutdown();
+        managementService.shutdown();
 
         // then
         // pull transactions is always executed after a full backup
@@ -819,7 +820,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
         addLotsOfData( db );
-        db.shutdown();
+        managementService.shutdown();
 
         db = startDb( serverStorePath, Maps.mutable.of( read_only, TRUE ) );
 
@@ -1043,7 +1044,7 @@ class BackupIT
         finally
         {
             representation = DbRepresentation.of( db );
-            db.shutdown();
+            managementService.shutdown();
         }
         return representation;
     }
@@ -1058,7 +1059,7 @@ class BackupIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -1096,7 +1097,7 @@ class BackupIT
             builder.setConfig( entry.getKey(), entry.getValue() );
         }
 
-        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        managementService = builder.newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         databases.add( db );
         return db;

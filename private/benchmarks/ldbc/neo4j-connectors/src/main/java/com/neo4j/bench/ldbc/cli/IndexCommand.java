@@ -18,9 +18,11 @@ import io.airlift.airline.OptionType;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "index",
@@ -105,8 +107,9 @@ public class IndexCommand implements Runnable
         try
         {
             System.out.println( "Starting database..." );
-            GraphDatabaseService db = Neo4jDb.newDb( dbDir, dbConfigurationFile );
+            DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, dbConfigurationFile );
 
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
             System.out.println( metadataProxy.toString() );
 
@@ -136,7 +139,7 @@ public class IndexCommand implements Runnable
                     - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
             System.out.printf( "Shutting down database..." );
-            db.shutdown();
+            managementService.shutdown();
             System.out.println( "Done" );
         }
         catch ( Exception e )

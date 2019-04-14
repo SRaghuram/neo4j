@@ -33,6 +33,7 @@ class StartupConstraintSemanticsTest
 {
     @Inject
     private TestDirectory dir;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldNotAllowOpeningADatabaseWithPECInCommunityEdition()
@@ -64,7 +65,7 @@ class StartupConstraintSemanticsTest
         }
         finally
         {
-            graphDb.shutdown();
+            managementService.shutdown();
         }
         graphDb = null;
 
@@ -78,14 +79,14 @@ class StartupConstraintSemanticsTest
         {
             if ( graphDb != null )
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         }
     }
 
     private GraphDatabaseService getCommunityDatabase()
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.storeDir() );
+        managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.storeDir() );
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -99,7 +100,7 @@ class StartupConstraintSemanticsTest
         }
         finally
         {
-            graphDb.shutdown();
+            managementService.shutdown();
         }
         graphDb = null;
 
@@ -118,15 +119,14 @@ class StartupConstraintSemanticsTest
         {
             if ( graphDb != null )
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         }
     }
 
     private GraphDatabaseService getCommercialDatabase()
     {
-        DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
+        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

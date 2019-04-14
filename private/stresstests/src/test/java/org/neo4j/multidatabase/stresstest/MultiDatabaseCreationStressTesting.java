@@ -61,7 +61,7 @@ class MultiDatabaseCreationStressTesting
         }
         finally
         {
-            databaseService.shutdown();
+            managementService.shutdown();
             executorPool.shutdown();
         }
     }

@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -23,6 +24,8 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
 {
+
+    private DatabaseManagementService managementService;
 
     public interface ReadReplicaEditionModuleFactory
     {
@@ -40,8 +43,11 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
     {
         Function<GlobalModule,AbstractEditionModule> factory =
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId );
-        new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
-                dependencies, this );
+        managementService = new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config, dependencies, this );
     }
 
+    public DatabaseManagementService getManagementService()
+    {
+        return managementService;
+    }
 }

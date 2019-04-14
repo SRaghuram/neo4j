@@ -122,7 +122,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
             DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).newDatabaseManagementService();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             LdbcIndexer.waitForIndexesToBeOnline( db );
-            registerShutdownHook( db );
+            registerShutdownHook( managementService );
 
             GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
             if ( !metadata.timestampResolution().equals( LdbcDateCodec.Resolution.NOT_APPLICABLE ) ||
@@ -132,8 +132,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
             }
             System.out.printf( metadata.toString() );
 
-            dbConnectionState = new Neo4jConnectionState(
-                    db,
+            dbConnectionState = new Neo4jConnectionState( managementService, db,
                     uri,
                     authToken,
                     loggingService,
@@ -144,8 +143,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         }
         else
         {
-            dbConnectionState = new Neo4jConnectionState(
-                    null,
+            dbConnectionState = new Neo4jConnectionState( null, null,
                     uri,
                     authToken,
                     loggingService,
@@ -206,14 +204,14 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         db.registerOperationHandler( LdbcUpdate8AddFriendship.class, LdbcUpdate8HandlerRemoteCypher.class );
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
+    private static void registerShutdownHook( final DatabaseManagementService managementService )
     {
         Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override
             public void run()
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         } );
     }

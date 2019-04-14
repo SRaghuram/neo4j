@@ -53,6 +53,7 @@ public class BoltTlsIT
     private SslResource sslResource;
 
     private BoltConnector bolt = new BoltConnector( "bolt" );
+    private DatabaseManagementService managementService;
 
     @Before
     public void setup() throws IOException
@@ -111,7 +112,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
@@ -130,7 +131,7 @@ public class BoltTlsIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

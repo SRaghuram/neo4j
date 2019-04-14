@@ -56,6 +56,7 @@ public class RebuildFromLogsTest
             .around( suppressOutput ).around( fileSystemRule ).around( expectedException );
 
     private final Transaction[] work;
+    private static DatabaseManagementService managementService;
 
     @Parameterized.Parameters( name = "{0}" )
     public static Collection<WorkLog> commands()
@@ -110,7 +111,7 @@ public class RebuildFromLogsTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         // when
@@ -134,14 +135,14 @@ public class RebuildFromLogsTest
         finally
         {
             txId = prototype.getDependencyResolver().resolveDependency( MetaDataStore.class ).getLastCommittedTransactionId();
-            prototype.shutdown();
+            managementService.shutdown();
         }
         return txId;
     }
 
     private static GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .newDatabaseManagementService();

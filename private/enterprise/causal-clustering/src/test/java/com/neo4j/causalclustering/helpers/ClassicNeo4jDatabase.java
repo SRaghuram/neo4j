@@ -71,6 +71,7 @@ public class ClassicNeo4jDatabase
         private String recordFormat = Standard.LATEST_NAME;
         private File transactionLogsRootDirectoryAbsolute;
         private File databasesRootDirectoryAbsolute;
+        private DatabaseManagementService managementService;
 
         Neo4jDatabaseBuilder( File baseDirectoryAbsolute, FileSystemAbstraction fileSystem )
         {
@@ -130,7 +131,7 @@ public class ClassicNeo4jDatabase
         public ClassicNeo4jDatabase build() throws IOException
         {
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
-            DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+            managementService = new TestGraphDatabaseFactory()
                         .setFileSystem( fileSystem )
                         .newEmbeddedDatabaseBuilder( databasesRootDirectoryAbsolute )
                         .setConfig( GraphDatabaseSettings.record_format, recordFormat )
@@ -155,7 +156,7 @@ public class ClassicNeo4jDatabase
             }
             else
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
             return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
@@ -186,7 +187,7 @@ public class ClassicNeo4jDatabase
                 fileSystem.copyFile( file, new File( temporaryDirectory, file.getName() ) );
             }
 
-            db.shutdown();
+            managementService.shutdown();
 
             /* Delete proper transaction logs. */
             for ( File file : logFiles.logFiles() )

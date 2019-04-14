@@ -187,7 +187,7 @@ class BackupCopyServiceTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

@@ -33,18 +33,19 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -53,7 +54,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
         ThreadToStatementContextBridge bridge = getTransactionBridge();
         DatabaseManager<?> databaseManager = getDatabaseManager();
         GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
-        secondDatabase.shutdown();
+        managementService.shutdown();
 
         assertThrows( NotInTransactionException.class, bridge::assertInUnterminatedTransaction );
     }
