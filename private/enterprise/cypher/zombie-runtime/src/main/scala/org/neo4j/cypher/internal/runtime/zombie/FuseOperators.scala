@@ -41,6 +41,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
   }
 
   private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
+
+    // TODO: operator fusing is broken for multiple all-node-scans
+    //       see ZombieAllNodeScanTest#should handle multiple scans
+    return (None, middlePlans, produceResult)
+
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(id)
     val expressionCompiler = new OperatorExpressionCompiler(slots) // NOTE: We assume slots is the same within an entire pipeline
