@@ -72,7 +72,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
                 .match( ReadReplicaViewActor.Tick.class,    this::sendTopologiesToClients )
-                .match( CoreTopology.class, this::addCoreTopology )
+                .match( CoreTopology.class,                 this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
     }
