@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
@@ -16,26 +15,16 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.core.consensus.term.TermState;
-import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.error_handling.PanicEventHandler;
-import com.neo4j.causalclustering.helper.VolatileFuture;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Predicate;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Monitors;
+import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static java.lang.String.format;
@@ -47,8 +36,8 @@ import static java.lang.String.format;
  */
 public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandler, RoleProvider
 {
-    private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
     private final InFlightCache inFlightCache;
+    private final RaftOutcomeApplier outcomeApplier;
 
     private final RaftState state;
     private final MemberId myself;
@@ -56,34 +45,22 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final RaftMembershipManager membershipManager;
 
-    private final VolatileFuture<MemberId> volatileLeader = new VolatileFuture<>( null );
-
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
     private final Log log;
     private volatile Role currentRole = Role.FOLLOWER;
 
-    private final RaftLogShippingManager logShipping;
-    private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
-
-    public RaftMachine( MemberId myself, StateStorage<TermState> termStorage, StateStorage<VoteState> voteStorage, RaftLog entryLog,
-            LeaderAvailabilityTimers leaderAvailabilityTimers, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LogProvider logProvider,
-            RaftMembershipManager membershipManager, RaftLogShippingManager logShipping, InFlightCache inFlightCache, boolean refuseToBecomeLeader,
-            boolean supportPreVoting, Monitors monitors )
+    public RaftMachine( MemberId myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider, RaftMembershipManager membershipManager,
+            InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state )
     {
         this.myself = myself;
         this.leaderAvailabilityTimers = leaderAvailabilityTimers;
 
-        this.outbound = outbound;
-        this.logShipping = logShipping;
         this.log = logProvider.getLog( getClass() );
 
         this.membershipManager = membershipManager;
 
         this.inFlightCache = inFlightCache;
-        this.state = new RaftState( myself, termStorage, membershipManager, entryLog, voteStorage, inFlightCache,
-                logProvider, supportPreVoting, refuseToBecomeLeader );
-
-        raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
+        this.outcomeApplier = outcomeApplier;
+        this.state = state;
     }
 
     @Override
@@ -144,38 +121,19 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
     @Override
     public MemberId getLeader() throws NoLeaderFoundException
     {
-        return waitForLeader( 0, Objects::nonNull );
-    }
-
-    private MemberId waitForLeader( long timeoutMillis, Predicate<MemberId> predicate ) throws NoLeaderFoundException
-    {
-        try
-        {
-            return volatileLeader.get( timeoutMillis, predicate );
-        }
-        catch ( InterruptedException e )
-        {
-            Thread.currentThread().interrupt();
-
-            throw new NoLeaderFoundException( e );
-        }
-        catch ( TimeoutException e )
-        {
-            throw new NoLeaderFoundException( e );
-        }
+        return outcomeApplier.getLeader();
     }
 
     @Override
-    public synchronized void registerListener( LeaderListener listener )
+    public void registerListener( LeaderListener listener )
     {
-        leaderListeners.add( listener );
-        listener.onLeaderSwitch( state.leaderInfo() );
+        outcomeApplier.registerListener( listener );
     }
 
     @Override
-    public synchronized void unregisterListener( LeaderListener listener )
+    public void unregisterListener( LeaderListener listener )
     {
-        leaderListeners.remove( listener );
+        outcomeApplier.unregisterListener( listener );
     }
 
     /**
@@ -188,99 +146,13 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
         return state.copy();
     }
 
-    private void notifyLeaderChanges( Outcome outcome )
-    {
-        for ( LeaderListener listener : leaderListeners )
-        {
-            listener.onLeaderEvent( outcome );
-        }
-    }
-
-    private void handleLogShipping( Outcome outcome )
-    {
-        LeaderContext leaderContext = new LeaderContext( outcome.getTerm(), outcome.getLeaderCommit() );
-        if ( outcome.isElectedLeader() )
-        {
-            logShipping.resume( leaderContext );
-        }
-        else if ( outcome.isSteppingDown() )
-        {
-            logShipping.pause();
-        }
-
-        if ( outcome.getRole() == LEADER )
-        {
-            logShipping.handleCommands( outcome.getShipCommands(), leaderContext );
-        }
-    }
-
-    private boolean leaderChanged( Outcome outcome, MemberId oldLeader )
-    {
-        return !Objects.equals( oldLeader, outcome.getLeader() );
-    }
-
     public synchronized ConsensusOutcome handle( RaftMessages.RaftMessage incomingMessage ) throws IOException
     {
         Outcome outcome = currentRole.handler.handle( incomingMessage, state, log );
 
-        boolean newLeaderWasElected = leaderChanged( outcome, state.leader() );
+        currentRole = outcomeApplier.handle( outcome );
 
-        state.update( outcome ); // updates to raft log happen within
-        sendMessages( outcome );
-
-        handleTimers( outcome );
-        handleLogShipping( outcome );
-
-        driveMembership( outcome );
-
-        volatileLeader.set( outcome.getLeader() );
-
-        if ( newLeaderWasElected )
-        {
-            notifyLeaderChanges( outcome );
-        }
         return outcome;
-    }
-
-    private void driveMembership( Outcome outcome ) throws IOException
-    {
-        membershipManager.processLog( outcome.getCommitIndex(), outcome.getLogCommands() );
-
-        currentRole = outcome.getRole();
-        membershipManager.onRole( currentRole );
-
-        if ( currentRole == LEADER )
-        {
-            membershipManager.onFollowerStateChange( state.followerStates() );
-        }
-    }
-
-    private void handleTimers( Outcome outcome )
-    {
-        if ( outcome.electionTimeoutRenewed() )
-        {
-            raftMessageTimerResetMonitor.timerReset();
-            leaderAvailabilityTimers.renewElection();
-        }
-        else if ( outcome.isSteppingDown() )
-        {
-            raftMessageTimerResetMonitor.timerReset();
-        }
-    }
-
-    private void sendMessages( Outcome outcome )
-    {
-        for ( RaftMessages.Directed outgoingMessage : outcome.getOutgoingMessages() )
-        {
-            try
-            {
-                outbound.send( outgoingMessage.to(), outgoingMessage.message() );
-            }
-            catch ( Exception e )
-            {
-                log.warn( format( "Failed to send message %s.", outgoingMessage ), e );
-            }
-        }
     }
 
     @Override
@@ -300,9 +172,10 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
         return myself;
     }
 
+    @VisibleForTesting
     public RaftLogShippingManager logShippingManager()
     {
-        return logShipping;
+        return outcomeApplier.logShippingManager();
     }
 
     @Override

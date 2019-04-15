@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManage
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
+import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.term.MonitoredTermStateStorage;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
@@ -99,8 +100,14 @@ public class RaftGroup
 
         boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
-        raftMachine = new RaftMachine( myself, termState, voteState, raftLog, leaderAvailabilityTimers, outbound, logProvider, raftMembershipManager,
-                logShipping, inFlightCache, config.get( refuse_to_be_leader ), supportsPreVoting, monitors );
+        var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
+                logProvider, supportsPreVoting, config.get( refuse_to_be_leader ) );
+
+        var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
+        var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
+                raftMembershipManager, logProvider );
+
+        raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier, state );
 
         DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( clock );
         monitors.addMonitorListener( durationSinceLastMessageMonitor );
