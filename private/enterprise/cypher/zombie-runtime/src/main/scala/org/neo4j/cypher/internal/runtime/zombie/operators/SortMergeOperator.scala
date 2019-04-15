@@ -9,13 +9,11 @@ import java.util.{Comparator, PriorityQueue}
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.zombie.state.buffers.ArgumentStateBuffer
 
 /**
   * Reducing operator which collects pre-sorted input morsels until it

@@ -32,13 +32,14 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle).toArray
     val produceResultOperator = unhandledProduceResult.map(operatorFactory.createProduceResults)
     ExecutablePipeline(p.id,
-      headOperator,
-      middleOperators,
-      produceResultOperator,
-      p.serial,
-      physicalPlan.slotConfigurations(p.headPlan.id),
-      p.inputBuffer,
-      p.outputBuffer)
+                       headOperator,
+                       middleOperators,
+                       produceResultOperator,
+                       p.outputBuffer.flatMap(_.workOnPut),
+                       p.serial,
+                       physicalPlan.slotConfigurations(p.headPlan.id),
+                       p.inputBuffer,
+                       p.outputBuffer.orNull)
   }
 
 
