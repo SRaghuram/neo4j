@@ -8,10 +8,8 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer, StandardBuffer}
@@ -19,19 +17,16 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Concurren
 import scala.collection.JavaConverters._
 
 /**
-  * Operator which sorts morsels in place. Merging these sorted morsels is
-  * done downstream by [[SortMergeOperator]].
+  * MorselAccumulator which pre-sorts morsels in place before adding to a buffer. Merging
+  * these sorted morsels is done downstream by [[SortMergeOperator]].
   */
-class SortPreOperator(val workIdentity: WorkIdentity,
-                      orderBy: Seq[ColumnOrder],
-                      limit: Long = Long.MaxValue) extends StatelessOperator {
+class PreSortingBuffer(override val argumentRowId: Long,
+                       orderBy: Seq[ColumnOrder],
+                       limit: Long,
+                       inner: Buffer[MorselExecutionContext])
+  extends MorselAccumulator {
 
-  override def toString: String = "SortPre"
-
-  override def operate(morsel: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState,
-                       resources: QueryResources): Unit = {
+  override def update(morsel: MorselExecutionContext): Unit = {
 
     val rowCloneForComparators = morsel.shallowCopy()
     val comparator: Comparator[Integer] = orderBy
@@ -44,6 +39,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
 
     if (limit <= 0) {
       morsel.finishedWriting()
+
     } else if (limit < morsel.getValidRows) {
       val intLimit = limit.asInstanceOf[Int]
 
@@ -62,6 +58,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
       // only the first count elements stay valid
       morsel.moveToRow(intLimit)
       morsel.finishedWriting()
+
     } else {
       // We have to sort everything
       java.util.Arrays.sort(outputToInputIndexes, comparator)
@@ -70,5 +67,23 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     // Now that we have a sorted array, we need to shuffle the morsel rows around until they follow the same order
     // as the sorted array
     MorselSorting.createSortedMorselData(morsel, outputToInputIndexes)
+
+    inner.put(morsel)
+  }
+
+  def foreach(f: MorselExecutionContext => Unit): Unit =
+    inner.foreach(f)
+}
+
+object PreSortingBuffer {
+
+  val NO_LIMIT: Long = Long.MaxValue
+
+  class Factory(orderBy: Seq[ColumnOrder], limit: Long) extends ArgumentStateFactory[PreSortingBuffer] {
+    override def newStandardArgumentState(argumentRowId: Long): PreSortingBuffer =
+      new PreSortingBuffer(argumentRowId, orderBy, limit, new StandardBuffer[MorselExecutionContext])
+
+    override def newConcurrentArgumentState(argumentRowId: Long): PreSortingBuffer =
+      new PreSortingBuffer(argumentRowId, orderBy, limit, new ConcurrentBuffer[MorselExecutionContext])
   }
 }

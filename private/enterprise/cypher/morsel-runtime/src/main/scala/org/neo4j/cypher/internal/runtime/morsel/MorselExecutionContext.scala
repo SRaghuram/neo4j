@@ -72,6 +72,8 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   def getValidRows: Int = validRows
 
+  def getFirstRow: Int = firstRow
+
   def getCurrentRow: Int = currentRow
 
   def getLongsPerRow: Int = longsPerRow
@@ -132,11 +134,11 @@ class MorselExecutionContext(private val morsel: Morsel,
         currentRow
   }
 
-  def copyAllRowsFrom(input: ExecutionContext): Unit = input match {
-    case other:MorselExecutionContext =>
-      System.arraycopy(other.morsel.longs, 0, morsel.longs, 0, other.morsel.longs.length)
-      System.arraycopy(other.morsel.refs, 0, morsel.refs, 0, other.morsel.refs.length)
-    case _ => fail()
+  def copyAllRowsFrom(input: MorselExecutionContext): Unit = {
+    if (longsPerRow > 0)
+      System.arraycopy(input.morsel.longs, 0, morsel.longs, firstRow * longsPerRow, input.morsel.longs.length)
+    if (refsPerRow > 0)
+      System.arraycopy(input.morsel.refs, 0, morsel.refs, firstRow * refsPerRow, input.morsel.refs.length)
   }
 
   override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit =

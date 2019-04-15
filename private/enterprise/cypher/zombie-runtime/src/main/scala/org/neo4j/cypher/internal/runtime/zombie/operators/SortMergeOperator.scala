@@ -27,7 +27,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
                         orderBy: Seq[ColumnOrder],
                         argumentSlotOffset: Int,
-                        countExpression: Option[Expression] = None) extends Operator with ReduceOperatorState[ArgumentStateBuffer] {
+                        limit: Long = PreSortingBuffer.NO_LIMIT) extends Operator with ReduceOperatorState[PreSortingBuffer] {
 
   override def toString: String = "SortMerge"
 
@@ -36,16 +36,16 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     .map(MorselSorting.createMorselComparator)
     .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[ArgumentStateBuffer] = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, ArgumentStateBuffer.Factory)
+  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[PreSortingBuffer] = {
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new PreSortingBuffer.Factory(orderBy, limit))
     this
   }
 
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
-                         input: ArgumentStateBuffer,
+                         input: PreSortingBuffer,
                          resources: QueryResources
-                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[ArgumentStateBuffer]] = {
+                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[PreSortingBuffer]] = {
     Array(new OTask(input))
   }
 
@@ -54,7 +54,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[ArgumentStateBuffer] {
+  class OTask(override val accumulator: PreSortingBuffer) extends ContinuableOperatorTaskWithAccumulator[PreSortingBuffer] {
 
     override def toString: String = "SortMergeTask"
 

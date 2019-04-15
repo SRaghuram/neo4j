@@ -185,13 +185,6 @@ class OperatorFactory(val stateDefinition: StateDefinition,
     generateSlotAccessorFunctions(slots)
 
     plan match {
-      case plans.Sort(_, sortItems) =>
-        val argumentDepth = physicalPlan.applyPlans(id)
-        val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
-        val argumentOrdering = slotted.Ascending(LongSlot(argumentSlot, nullable = false, CTInteger))
-        val ordering = argumentOrdering +: sortItems.map(translateColumnOrder(slots, _))
-        Some(new SortPreOperator(WorkIdentity.fromPlan(plan),
-                                 ordering))
       case plans.Selection(predicate, _) =>
         Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
