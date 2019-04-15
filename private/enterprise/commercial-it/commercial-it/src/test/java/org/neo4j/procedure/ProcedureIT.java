@@ -932,17 +932,6 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldFailToShutdown()
-    {
-        try ( Transaction ignore = db.beginTx() )
-        {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.shutdown()" ) );
-            assertThat( exception.getMessage(),
-                    equalTo( "Failed to invoke procedure `org.neo4j.procedure.shutdown`: Caused by: java.lang.UnsupportedOperationException" ) );
-        }
-    }
-
-    @Test
     void shouldBeAbleToWriteAfterCallingReadOnlyProcedure()
     {
         try ( Transaction ignore = db.beginTx() )
