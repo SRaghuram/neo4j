@@ -16,6 +16,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.util.VisibleForTesting;
 
+import static java.lang.Math.min;
+
 public class ConfigurableIOLimiter implements IOLimiter
 {
     private static final AtomicLongFieldUpdater<ConfigurableIOLimiter> stateUpdater =
@@ -133,7 +135,7 @@ public class ConfigurableIOLimiter implements IOLimiter
         long ioSum = (previousStamp >> TIME_BITS) + recentlyCompletedIOs;
         if ( ioSum >= getIOPQ( state ) )
         {
-            long millisLeftInQuantum = QUANTUM_MILLIS - (now - then);
+            long millisLeftInQuantum = min( QUANTUM_MILLIS, QUANTUM_MILLIS - (now - then) );
             pauseNanos.accept( this, TimeUnit.MILLISECONDS.toNanos( millisLeftInQuantum ) );
             return currentTimeMillis() & TIME_MASK;
         }
