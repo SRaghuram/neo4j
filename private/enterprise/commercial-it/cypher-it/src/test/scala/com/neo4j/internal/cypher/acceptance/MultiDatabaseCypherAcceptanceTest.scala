@@ -5,7 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.util.{Collections, Optional}
+import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.server.security.enterprise.auth.SecureHasher
@@ -56,6 +56,25 @@ class MultiDatabaseCypherAcceptanceTest
     result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
+  test("should fail on creating already existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+
+    try{
+      // WHEN
+      execute("CREATE DATABASE foo")
+
+      fail("Expected error \"Can't create already existing database\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Can't create already existing database") =>
+    }
+  }
+
   test("should create and delete databases") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -75,6 +94,7 @@ class MultiDatabaseCypherAcceptanceTest
     )
 
     // GIVEN
+    execute("STOP DATABASE bar")
     execute("DROP DATABASE bar")
 
     // WHEN
@@ -84,6 +104,59 @@ class MultiDatabaseCypherAcceptanceTest
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should contain allOf("foo", "baz")
     databaseNames should not contain "bar"
+  }
+
+  test("should fail on deleting online database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    val result = execute("SHOW DATABASES")
+    result.toList should contain (Map("name" -> "foo", "status" -> "online"))
+
+    try {
+      // WHEN
+      execute("DROP DATABASE foo")
+
+      fail("Expected error \"Cannot delete database 'foo' that is not offline. It is: online\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot delete database 'foo' that is not offline. It is: online") =>
+    }
+  }
+
+  test("should fail on deleting dropped database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASES")
+    execute("STOP DATABASE foo")
+    execute("DROP DATABASE foo")
+
+    try {
+      // WHEN
+      execute("DROP DATABASE foo")
+
+      fail("Expected error \"Cannot delete non-existent database 'foo'\"")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot delete non-existent database 'foo'") =>
+    }
+  }
+
+  test("should fail on deleting non-existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("DROP DATABASE foo")
+
+      fail("Expected error \"Cannot delete non-existent database 'foo'\"")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot delete non-existent database 'foo'") =>
+    }
   }
 
   test("should start database on create") {
@@ -99,22 +172,61 @@ class MultiDatabaseCypherAcceptanceTest
     result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
-  test("should stop database") {
+  test("should not be able to start non-existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("START DATABASE foo")
+
+      fail("Expected error \"Cannot start non-existent database 'foo'\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot start non-existent database 'foo'") =>
+    }
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty)
+  }
+
+  test("should not be able to start a dropped database") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // GIVEN
     execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    execute("DROP DATABASE foo")
 
+    try{
     // WHEN
-    val result = execute("SHOW DATABASE foo")
+    execute("START DATABASE foo")
+
+      fail("Expected error \"Cannot start database 'foo' that is not offline. It is: deleted\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot start database 'foo' that is not offline. It is: deleted") =>
+    }
 
     // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List.empty)
+  }
+
+  test("should be able to start a started database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
 
     // WHEN
-    execute("STOP DATABASE foo")
+    execute("START DATABASE foo")
+
+    // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> "offline")))
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
   test("should re-start database") {
@@ -136,37 +248,36 @@ class MultiDatabaseCypherAcceptanceTest
     result3.toList should be(List(Map("name" -> "foo", "status" -> "online")))
   }
 
-  test("should not be able to start non existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    execute("START DATABASE foo") // TODO: Shouldn't this throw?
-
-    // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty)
-  }
-
-  test("should not be able to stop non existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
-
-    // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty)
-  }
-
-  test("should not be able to start a dropped database") {
+  test("should stop database") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // GIVEN
     execute("CREATE DATABASE foo")
-    execute("DROP DATABASE foo")
 
     // WHEN
-    execute("START DATABASE foo") // TODO: Shouldn't this throw?
+    val result = execute("SHOW DATABASE foo")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> "online")))
+
+    // WHEN
+    execute("STOP DATABASE foo")
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "offline")))
+  }
+
+  test("should not be able to stop non-existing database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try{
+      // WHEN
+      execute("STOP DATABASE foo")
+
+      fail("Expected error \"Cannot start non-existent database 'foo'\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot stop non-existent database 'foo'") =>
+    }
 
     // THEN
     val result = execute("SHOW DATABASE foo")
@@ -178,14 +289,39 @@ class MultiDatabaseCypherAcceptanceTest
 
     // GIVEN
     execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    // WHEN
-    execute("STOP DATABASE foo") // TODO: Shouldn't this throw?
+    try{
+      // WHEN
+      execute("STOP DATABASE foo")
+
+      fail("Expected error \"Cannot stop database 'foo' that is not online. It is: deleted\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot stop database 'foo' that is not online. It is: deleted") =>
+    }
 
     // THEN
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List.empty)
+  }
+
+  test("should be able to stop a stopped database") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> "offline")))
+
+    // WHEN
+    execute("STOP DATABASE foo")
+
+    // THEN
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> "offline")))
   }
 
   protected override def initTest(): Unit = {
