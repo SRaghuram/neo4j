@@ -106,6 +106,14 @@ public class TransactionGuardIT
     @After
     public void tearDown()
     {
+        databaseWithTimeout = null;
+        databaseWithoutTimeout = null;
+        if ( neoServer != null )
+        {
+            neoServer.stop();
+            neoServer = null;
+        }
+        customManagementService.shutdown();
         monitorSupplier.clear();
     }
 
@@ -516,9 +524,7 @@ public class TransactionGuardIT
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
 
         customManagementService = databaseBuilder.newDatabaseManagementService();
-        GraphDatabaseAPI database = (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
-        cleanupRule.add( database );
-        return database;
+        return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static class KernelTransactionTimeoutMonitorSupplier implements Supplier<KernelTransactionMonitor>

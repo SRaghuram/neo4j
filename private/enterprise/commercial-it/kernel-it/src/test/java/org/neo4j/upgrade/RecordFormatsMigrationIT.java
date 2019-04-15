@@ -147,7 +147,7 @@ class RecordFormatsMigrationIT
 
     private GraphDatabaseService startDb( String recordFormatName )
     {
-        DatabaseManagementService managementService = getGraphDatabaseBuilder()
+        managementService = getGraphDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.record_format, recordFormatName ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

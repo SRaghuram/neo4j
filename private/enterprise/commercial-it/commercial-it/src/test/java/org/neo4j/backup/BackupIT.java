@@ -176,7 +176,10 @@ class BackupIT
     @AfterEach
     void afterEach()
     {
-        managementService.shutdown();
+        if ( managementService != null )
+        {
+            managementService.shutdown();
+        }
         databases.clear();
     }
 
@@ -184,8 +187,8 @@ class BackupIT
     void makeSureFullFailsWhenDifferentDbExists( String recordFormatName )
     {
         createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( backupsDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverStorePath );
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
@@ -632,6 +635,7 @@ class BackupIT
 
         // propagate to backup new properties with reclaimed ids
         executeBackupWithoutFallbackToFull( db );
+        managementService.shutdown();
 
         // it should be possible to at this point to start db based on our backup and create couple of properties
         // their ids should not clash with already existing

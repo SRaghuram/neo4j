@@ -295,7 +295,7 @@ class RestoreDatabaseCommandIT
     {
         File storeDir = databaseLayout.getStoreLayout().storeDirectory();
         String txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath();
-        DatabaseManagementService managementService =
+        managementService =
                 new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).setConfig(
                         OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                         .setConfig( transaction_logs_root_path, txRootDirectory )

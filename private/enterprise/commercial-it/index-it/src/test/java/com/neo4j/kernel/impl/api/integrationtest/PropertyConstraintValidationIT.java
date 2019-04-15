@@ -17,7 +17,6 @@ import java.util.UUID;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.SchemaWrite;
@@ -41,7 +40,6 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabel;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelType;
 import static org.neo4j.test.assertion.Assert.assertException;
@@ -104,8 +102,7 @@ public class PropertyConstraintValidationIT
         }
     }
 
-    public static class NodePropertyExistenceConstraintValidationIT
-            extends AbstractPropertyExistenceConstraintValidationIT
+    public static class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExistenceConstraintValidationIT
     {
         @Test
         public void shouldAllowNoopLabelUpdate() throws Exception
@@ -308,11 +305,10 @@ public class PropertyConstraintValidationIT
         abstract int entityCount() throws TransactionFailureException;
 
         @Override
-        protected GraphDatabaseService createGraphDatabase()
+        protected DatabaseManagementService createDatabaseService()
         {
-            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
+            return new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
                         .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
-            return managementService.database( DEFAULT_DATABASE_NAME );
         }
 
         @Test

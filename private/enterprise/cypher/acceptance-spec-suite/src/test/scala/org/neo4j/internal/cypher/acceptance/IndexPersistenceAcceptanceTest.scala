@@ -39,7 +39,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     config.foreach {
       case (setting, settingValue) => builder.setConfig(setting, settingValue)
     }
-    val managementService = builder.newDatabaseManagementService()
+    managementService = builder.newDatabaseManagementService()
     graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }

@@ -9,7 +9,6 @@ import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.io.File;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.newapi.WriteTestSupport;
 
@@ -20,8 +19,7 @@ public class EnterpriseWriteTestSupport extends WriteTestSupport
     @Override
     protected GraphDatabaseService newDb( File storeDir )
     {
-        DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder( storeDir ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

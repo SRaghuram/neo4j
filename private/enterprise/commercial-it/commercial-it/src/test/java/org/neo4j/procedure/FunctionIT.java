@@ -487,22 +487,6 @@ class FunctionIT
     }
 
     @Test
-    void shouldFailToShutdown()
-    {
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () ->
-                {
-                    try ( Transaction ignore = db.beginTx() )
-                    {
-                        db.execute( "RETURN org.neo4j.procedure.shutdown()" ).next();
-                    }
-                } );
-        assertThat( exception.getMessage(), equalTo(
-                "Failed to invoke function `org.neo4j.procedure.shutdown`: Caused by: java.lang" +
-                        ".UnsupportedOperationException" ) );
-    }
-
-    @Test
     void shouldBeAbleToWriteAfterCallingReadOnlyFunction()
     {
         try ( Transaction ignore = db.beginTx() )
@@ -809,7 +793,7 @@ class FunctionIT
      * built-in functions in any shape or form.
      */
     @Test
-    public void shouldListAllFunctions()
+    void shouldListAllFunctions()
     {
         //Given/When
         Result res = db.execute( "CALL dbms.functions()" );
@@ -860,7 +844,7 @@ class FunctionIT
     {
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        managementService = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
