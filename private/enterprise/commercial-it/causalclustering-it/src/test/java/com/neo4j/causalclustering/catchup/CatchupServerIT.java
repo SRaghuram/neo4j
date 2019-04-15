@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;

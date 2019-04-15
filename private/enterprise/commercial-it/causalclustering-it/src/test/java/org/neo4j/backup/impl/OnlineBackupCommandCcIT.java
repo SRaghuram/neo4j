@@ -6,9 +6,9 @@
 package org.neo4j.backup.impl;
 
 import com.neo4j.backup.BackupTestUtil;
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestWithRecordFormats;
 import com.neo4j.test.causalclustering.ClusterConfig;

@@ -28,7 +28,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

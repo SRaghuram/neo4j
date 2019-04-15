@@ -31,7 +31,7 @@ import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
 
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.graphdb.Label.label;
