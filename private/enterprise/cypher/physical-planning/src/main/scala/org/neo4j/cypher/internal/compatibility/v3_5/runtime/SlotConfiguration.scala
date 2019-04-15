@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.compatibility.v3_5.runtime
 
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.v3_5.logical.plans.{CachedNodeProperty, LogicalPlan}
-import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v3_5.util.InternalException
 import org.neo4j.cypher.internal.v3_5.util.symbols.{CTAny, CypherType}
+import org.neo4j.values.AnyValue
 
 import scala.collection.{immutable, mutable}
 
@@ -203,33 +203,33 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   private def replaceExistingSlot(key: String, existingSlot: Slot, modifiedSlot: Slot): Unit = {
     slots.put(key, modifiedSlot)
-    val existingAliases = slotAliases.get(existingSlot).get
+    val existingAliases = slotAliases(existingSlot)
     assert(existingAliases.contains(key))
     slotAliases.put(modifiedSlot, existingAliases)
     slotAliases.remove(existingSlot)
   }
 
-  private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot) = {
+  private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot): Unit = {
     val updateNullable = !existingSlot.nullable && newSlot.nullable
     val updateTyp = existingSlot.typ != newSlot.typ && !existingSlot.typ.isAssignableFrom(newSlot.typ)
     assert(!updateTyp || newSlot.typ.isAssignableFrom(existingSlot.typ))
     if (updateNullable || updateTyp) {
       val modifiedSlot = (existingSlot, updateNullable, updateTyp) match {
         // We are conservative about nullability and increase it to true
-        case ((LongSlot(offset, _, _), true, true)) =>
-          LongSlot(offset, true, newSlot.typ)
-        case ((RefSlot(offset, _, _), true, true)) =>
-          RefSlot(offset, true, newSlot.typ)
-        case ((LongSlot(offset, _, typ), true, false)) =>
-          LongSlot(offset, true, typ)
-        case ((RefSlot(offset, _, typ), true, false)) =>
-          RefSlot(offset, true, typ)
-        case ((LongSlot(offset, nullable, _), false, true)) =>
+        case (LongSlot(offset, _, _), true, true) =>
+          LongSlot(offset, nullable = true, newSlot.typ)
+        case (RefSlot(offset, _, _), true, true) =>
+          RefSlot(offset, nullable = true, newSlot.typ)
+        case (LongSlot(offset, _, typ), true, false) =>
+          LongSlot(offset, nullable = true, typ)
+        case (RefSlot(offset, _, typ), true, false) =>
+          RefSlot(offset, nullable = true, typ)
+        case (LongSlot(offset, nullable, _), false, true) =>
           LongSlot(offset, nullable, newSlot.typ)
-        case ((RefSlot(offset, nullable, _), false, true)) =>
+        case (RefSlot(offset, nullable, _), false, true) =>
           RefSlot(offset, nullable, newSlot.typ)
       }
-      replaceExistingSlot(key, existingSlot, modifiedSlot);
+      replaceExistingSlot(key, existingSlot, modifiedSlot)
     }
   }
 
@@ -238,7 +238,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: ${existingSlot})")
+          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
@@ -256,7 +256,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: ${existingSlot})")
+          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
@@ -270,12 +270,13 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   }
 
   def newCachedProperty(key: CachedNodeProperty): SlotConfiguration = {
+    val slot = RefSlot(numberOfReferences, nullable = false, CTAny)
     cachedProperties.get(key) match {
-      case Some(existingSlot) =>
-        throw new InternalException(s"Tried overwriting already taken cached node property $key!")
+      case Some(_) =>
+        // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
 
       case None =>
-        cachedProperties.put(key, RefSlot(numberOfReferences, nullable = false, CTAny))
+        cachedProperties.put(key, slot)
         numberOfReferences = numberOfReferences + 1
     }
     this
