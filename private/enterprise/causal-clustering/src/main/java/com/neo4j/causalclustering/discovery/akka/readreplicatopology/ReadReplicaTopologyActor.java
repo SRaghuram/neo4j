@@ -34,9 +34,8 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private final SourceQueueWithComplete<ReadReplicaTopology> topologySink;
     private final Log log;
 
-    // todo: these maps not good because 1) entries are never removed 2) they duplicate maps in GlobalTopologyState
-    private Map<DatabaseId,CoreTopology> coreTopologies = new HashMap<>();
-    private Map<DatabaseId,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
+    private final Map<DatabaseId,CoreTopology> coreTopologies = new HashMap<>();
+    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
@@ -143,7 +142,6 @@ public class ReadReplicaTopologyActor extends AbstractActor
         ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
         log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
 
-        // todo: this method used to only execute the following two lines if new topology is different form the existing one -- do we need this now?
         topologySink.offer( readReplicaTopology );
         readReplicaTopologies.put( databaseId, readReplicaTopology );
     }

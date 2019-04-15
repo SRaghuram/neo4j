@@ -126,7 +126,6 @@ public class CoreTopologyActor extends AbstractActorWithTimers
                 .filter( addr -> !addr.equals( myAddress ) )
                 .collect( Collectors.toList() );
 
-        // todo: this method used to only execute the following two lines if new topology is different form the existing one -- do we need this now?
         topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
         readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
     }
