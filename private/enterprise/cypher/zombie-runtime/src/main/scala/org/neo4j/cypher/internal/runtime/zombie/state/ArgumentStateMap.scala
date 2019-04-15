@@ -139,10 +139,11 @@ object ArgumentStateMap {
 
   /**
     * Operators that use ArgumentStateMaps need to implement this to be able to instantiate
-    * the corresponding ArgumentStateMap. They will usually do this using a lambda function.
+    * the corresponding ArgumentStateMap.
     */
   trait ArgumentStateFactory[S <: ArgumentState] {
-    def newArgumentState(argumentRowId: Long): S
+    def newStandardArgumentState(argumentRowId: Long): S
+    def newConcurrentArgumentState(argumentRowId: Long): S
   }
 
   /**

@@ -92,7 +92,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   }
 
   override def initiate(argument: Long): Unit = {
-    controllers += argument -> new StandardStateController(factory.newArgumentState(argument))
+    controllers += argument -> new StandardStateController(factory.newStandardArgumentState(argument))
   }
 
   override def increment(argument: Long): Unit = {

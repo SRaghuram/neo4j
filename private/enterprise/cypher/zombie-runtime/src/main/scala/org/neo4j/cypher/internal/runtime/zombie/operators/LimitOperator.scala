@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
+import java.util.concurrent.atomic.AtomicLong
+
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
@@ -12,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryRe
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap
-import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
@@ -39,8 +41,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     val count = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
 
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-                                                                      argumentRowId => new LimitState(argumentRowId,
-                                                                                                      count)))
+                                                                      new LimitStateFactory(count)))
   }
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
@@ -69,10 +70,22 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     }
   }
 
+  class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
+    override def newStandardArgumentState(argumentRowId: Long): LimitState =
+      new StandardLimitState(argumentRowId, count)
+
+    override def newConcurrentArgumentState(argumentRowId: Long): LimitState =
+      new ConcurrentLimitState(argumentRowId, count)
+  }
+
   /**
-    * Query-write row count for the rows from one argumentRowId.
+    * Query-wide row count for the rows from one argumentRowId.
     */
-  class LimitState(override val argumentRowId: Long, countTotal: Long) extends WorkCanceller {
+  abstract class LimitState extends WorkCanceller {
+    def reserve(wanted: Long): Long
+  }
+
+  class StandardLimitState(override val argumentRowId: Long, countTotal: Long) extends LimitState {
     private var countLeft = countTotal
 
     def reserve(wanted: Long): Long = {
@@ -83,6 +96,28 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def isCancelled: Boolean = countLeft == 0
 
-    override def toString: String = s"LimitState($argumentRowId, countLeft=$countLeft)"
+    override def toString: String = s"StandardLimitState($argumentRowId, countLeft=$countLeft)"
+  }
+
+  class ConcurrentLimitState(override val argumentRowId: Long, countTotal: Long) extends LimitState {
+    private val countLeft = new AtomicLong(countTotal)
+
+    def reserve(wanted: Long): Long = {
+      if (countLeft.get() <= 0) {
+        0L
+      } else {
+        val newCountLeft = countLeft.addAndGet(-wanted)
+        Zombie.debug("newCountLeft:"+newCountLeft)
+        if (newCountLeft >= 0) {
+          wanted
+        } else {
+          math.max(0L, wanted + newCountLeft)
+        }
+      }
+    }
+
+    override def isCancelled: Boolean = countLeft.get() <= 0
+
+    override def toString: String = s"ConcurrentLimitState($argumentRowId, countLeft=${countLeft.get()})"
   }
 }

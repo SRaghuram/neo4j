@@ -23,4 +23,8 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
     if (data.isEmpty) null.asInstanceOf[T]
     else data.remove(0)
   }
+
+  override def foreach(f: T => Unit): Unit = {
+    data.foreach(f)
+  }
 }

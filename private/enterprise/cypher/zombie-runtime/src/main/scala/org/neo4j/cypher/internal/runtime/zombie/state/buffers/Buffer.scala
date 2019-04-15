@@ -8,7 +8,16 @@ package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 /**
   * Basic buffer (put things and then take them in FIFO order).
   */
-trait Buffer[T <: AnyRef] extends Sink[T] with Source[T]
+trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
+
+  /**
+    * Perform {{{f}}} on each element in the buffer.
+    *
+    * Not that there are no guarantees that an element observed
+    * by [[foreach]] will not be taken.
+    */
+  def foreach(f: T => Unit): Unit
+}
 
 /**
   * Place where you put things of type `T`.

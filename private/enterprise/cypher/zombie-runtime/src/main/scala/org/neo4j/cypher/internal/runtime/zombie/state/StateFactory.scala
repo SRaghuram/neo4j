@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.zombie._
+import org.neo4j.cypher.internal.runtime.zombie.ExecutionState
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffer
 

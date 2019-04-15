@@ -20,10 +20,14 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
     data.poll()
   }
 
+  override def foreach(f: T => Unit): Unit = {
+    data.forEach(t => f(t))
+  }
+
   override def toString: String = {
     val sb = new StringBuilder()
     sb ++= "ConcurrentBuffer("
-    data.iterator().forEachRemaining(t => {
+    data.forEach(t => {
       sb ++= t.toString
       sb += ','
     })

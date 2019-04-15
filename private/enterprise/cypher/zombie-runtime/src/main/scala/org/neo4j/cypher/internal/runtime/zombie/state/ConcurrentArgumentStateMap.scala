@@ -33,12 +33,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
       morsel,
       (argumentRowId, morselView) => {
         val controller = controllers.get(argumentRowId)
-        if (takeLock) {
-          controller.update(morselView, onState)
-        } else {
-          // used from call sights that know they have thread-safe argument states
-          onState(controller.state, morselView)
-        }
+        onState(controller.state, morselView)
       }
     )
   }
@@ -49,9 +44,8 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
     ArgumentStateMap.filter(
       argumentSlotOffset,
       readingRow,
-      (argumentRowId, nRows) => {
-        controllers.get(argumentRowId).compute(state => onArgument(state, nRows))
-      },
+      (argumentRowId, nRows) =>
+        onArgument(controllers.get(argumentRowId).state, nRows),
       onRow
     )
   }
@@ -60,7 +54,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
                                         isCancelled: STATE => Boolean): IndexedSeq[Long] = {
     ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
                                               morsel,
-                                              argumentRowId => controllers.get(argumentRowId).compute(isCancelled))
+                                              argumentRowId => isCancelled(controllers.get(argumentRowId).state))
   }
 
   override def takeOneCompleted(): STATE = {
@@ -114,7 +108,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override def initiate(argument: Long): Unit = {
     val id = if (Zombie.DEBUG) s"ArgumentState[id=$argumentStateMapId, rowId=$argument]" else "ArgumentState[...]"
     debug("ASM %s init %03d".format(argumentStateMapId, argument))
-    val newController = new ConcurrentStateController(id, factory.newArgumentState(argument))
+    val newController = new ConcurrentStateController(id, factory.newConcurrentArgumentState(argument))
     controllers.put(argument, newController)
   }
 
@@ -154,7 +148,6 @@ object ConcurrentArgumentStateMap {
     */
   private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](id: String, val state: STATE) {
     private val count = new AtomicLong(1)
-    private val lock = new ConcurrentLock(id)
 
     def increment(): Long = count.incrementAndGet()
 
@@ -164,26 +157,8 @@ object ConcurrentArgumentStateMap {
 
     def isZero: Boolean = count.get() == 0
 
-    def update(morsel: MorselExecutionContext, onState: (STATE, MorselExecutionContext) => Unit): Unit = {
-      lock.lock()
-      try {
-        onState(state, morsel)
-      } finally {
-        lock.unlock()
-      }
-    }
-
-    def compute[U](onArgument: STATE => U): U = {
-      lock.lock()
-      try {
-        onArgument(state)
-      } finally {
-        lock.unlock()
-      }
-    }
-
     override def toString: String = {
-      s"[count: ${count.get()}, lock: $lock, state: $state]"
+      s"[count: ${count.get()}, state: $state]"
     }
   }
 }
