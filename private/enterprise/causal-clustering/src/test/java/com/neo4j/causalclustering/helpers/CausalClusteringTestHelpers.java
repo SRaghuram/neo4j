@@ -22,19 +22,12 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -114,24 +107,5 @@ public final class CausalClusteringTestHelpers
                 .resolveDependency( ConnectorPortRegister.class )
                 .getLocalAddress( TransactionBackupServiceProvider.BACKUP_SERVER_NAME )
                 .toString();
-    }
-
-    public static Map<Integer, DatabaseId> distributeDatabaseNamesToHostNums( int nHosts, Set<DatabaseId> databaseIds )
-    {
-        //Max number of hosts per database is (nHosts / nDatabases) or (nHosts / nDatabases) + 1
-        int nDatabases = databaseIds.size();
-        int maxCapacity = (nHosts % nDatabases == 0) ? (nHosts / nDatabases) : (nHosts / nDatabases) + 1;
-
-        List<DatabaseId> repeated = databaseIds.stream()
-                .flatMap( db -> IntStream.range( 0, maxCapacity ).mapToObj( ignored -> db ) )
-                .collect( Collectors.toList() );
-
-        Map<Integer,DatabaseId> mapping = new HashMap<>( nHosts );
-
-        for ( int hostId = 0; hostId < nHosts; hostId++ )
-        {
-            mapping.put( hostId, repeated.get( hostId ) );
-        }
-        return mapping;
     }
 }
