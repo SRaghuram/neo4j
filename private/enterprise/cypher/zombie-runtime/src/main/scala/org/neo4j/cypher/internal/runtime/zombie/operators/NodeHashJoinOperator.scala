@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.zombie.operators.NodeHashJoinOperator.HashTable
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
@@ -65,7 +66,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources): Boolean = {
-      NodeHashJoinOperator.fillKeyArray(rhsRow, key, rhsOffsets)
+      NodeHashJoinSlottedPipe.fillKeyArray(rhsRow, key, rhsOffsets)
       lhsRows = accumulator.table.get(Values.longArray(key)).iterator()
       true
     }
@@ -76,7 +77,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next())
-        copyDataFromRhs(outputRow, rhsRow)
+        NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, outputRow, rhsRow)
         outputRow.moveToNextRow()
       }
     }
@@ -84,43 +85,9 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     override protected def closeInnerLoop(resources: QueryResources): Unit = ()
   }
 
-  private def copyDataFromRhs(newRow: MorselExecutionContext, rhs: MorselExecutionContext): Unit = {
-    var i = 0
-    while (i < longsToCopy.length) {
-      val fromTo = longsToCopy(i)
-      newRow.setLongAt(fromTo._2, rhs.getLongAt(fromTo._1))
-      i += 1
-    }
-    i = 0
-    while (i < refsToCopy.length) {
-      val fromTo = refsToCopy(i)
-      newRow.setRefAt(fromTo._2, rhs.getRefAt(fromTo._1))
-      i += 1
-    }
-    i = 0
-    while (i < cachedPropertiesToCopy.length) {
-      val fromTo = cachedPropertiesToCopy(i)
-      newRow.setCachedPropertyAt(fromTo._2, rhs.getCachedPropertyAt(fromTo._1))
-      i += 1
-    }
-  }
 }
 
 object NodeHashJoinOperator {
-
-  private def fillKeyArray(currentMorsel: MorselExecutionContext, key: Array[Long], offsets: Array[Int]): Unit = {
-    // We use a while loop like this to be able to break out early
-    var i = 0
-    while (i < offsets.length) {
-      val thisId = currentMorsel.getLongAt(offsets(i))
-      key(i) = thisId
-      if (NullChecker.entityIsNull(thisId)) {
-        key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
-        return
-      }
-      i += 1
-    }
-  }
 
   class HashTable(override val argumentRowId: Long,
                   lhsOffsets: Array[Int]) extends MorselAccumulator {
@@ -130,7 +97,7 @@ object NodeHashJoinOperator {
     override def update(morsel: MorselExecutionContext): Unit = {
       while (morsel.isValidRow) {
         val key = new Array[Long](lhsOffsets.length)
-        fillKeyArray(morsel, key, lhsOffsets)
+        NodeHashJoinSlottedPipe.fillKeyArray(morsel, key, lhsOffsets)
         if (!NullChecker.entityIsNull(key(0))) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
@@ -145,5 +112,4 @@ object NodeHashJoinOperator {
       }
     }
   }
-
 }

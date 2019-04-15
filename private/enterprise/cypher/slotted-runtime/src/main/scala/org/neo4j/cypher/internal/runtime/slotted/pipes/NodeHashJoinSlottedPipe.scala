@@ -10,10 +10,11 @@ import java.util
 import org.eclipse.collections.api.multimap.list.MutableListMultimap
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.{copyDataFromRhs, fillKeyArray}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.storable.{LongArray, Values}
 
@@ -76,7 +77,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
           val lhs = matches.next()
           val newRow = SlottedExecutionContext(slots)
           lhs.copyTo(newRow)
-          copyDataFromRhs(newRow, currentRhsRow)
+          copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, newRow, currentRhsRow)
           return Some(newRow)
         }
 
@@ -96,21 +97,18 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
       }
     }
 
-  private def fillKeyArray(current: ExecutionContext, key: Array[Long], offsets: Array[Int]): Unit = {
-    // We use a while loop like this to be able to break out early
-    var i = 0
-    while (i < width) {
-      val thisId = current.getLongAt(offsets(i))
-      key(i) = thisId
-      if (NullChecker.entityIsNull(thisId)) {
-        key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
-        return
-      }
-      i += 1
-    }
-  }
+}
 
-  private def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit = {
+object NodeHashJoinSlottedPipe {
+
+  /**
+    * Copies longs, refs, and cached properties from the given rhs into the given new row.
+    */
+  def copyDataFromRhs(longsToCopy: Array[(Int, Int)],
+                      refsToCopy: Array[(Int, Int)],
+                      cachedPropertiesToCopy: Array[(Int, Int)],
+                      newRow: ExecutionContext,
+                      rhs: ExecutionContext): Unit = {
     var i = 0
     while (i < longsToCopy.length) {
       val fromTo = longsToCopy(i)
@@ -127,6 +125,29 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     while (i < cachedPropertiesToCopy.length) {
       val fromTo = cachedPropertiesToCopy(i)
       newRow.setCachedPropertyAt(fromTo._2, rhs.getCachedPropertyAt(fromTo._1))
+      i += 1
+    }
+  }
+
+  /**
+    * Modifies the given key array by writing the ids of the nodes
+    * at the offsets of the given execution context into the array.
+    *
+    * If at least one node is null. It will write -1 into the first
+    * position of the array.
+    */
+  def fillKeyArray(current: ExecutionContext,
+                   key: Array[Long],
+                   offsets: Array[Int]): Unit = {
+    // We use a while loop like this to be able to break out early
+    var i = 0
+    while (i < offsets.length) {
+      val thisId = current.getLongAt(offsets(i))
+      key(i) = thisId
+      if (NullChecker.entityIsNull(thisId)) {
+        key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
+        return
+      }
       i += 1
     }
   }
