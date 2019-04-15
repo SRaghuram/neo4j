@@ -96,22 +96,19 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             try
             {
-                try
-                {
-                    debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
-                    Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( dbsToSync ).get();
-                    Set<DatabaseId> successful = findSuccessfullySyncedDatabaseIds( results );
-                    debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
-                    syncedDbs.addAll( successful );
-                }
-                catch ( ExecutionException e )
-                {
-                    debugLog.error( "Unexpected error when syncing stores", e );
-                    throw new RuntimeException( e );
-                }
+                debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
+                Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( dbsToSync ).get();
+                Set<DatabaseId> successful = findSuccessfullySyncedDatabaseIds( results );
+                debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
+                syncedDbs.addAll( successful );
 
                 Thread.sleep( syncRetryWaitPeriod.getMillis() );
                 syncRetryWaitPeriod.increment();
+            }
+            catch ( ExecutionException e )
+            {
+                debugLog.error( "Unexpected error when syncing stores", e );
+                throw new RuntimeException( e );
             }
             catch ( InterruptedException e )
             {
