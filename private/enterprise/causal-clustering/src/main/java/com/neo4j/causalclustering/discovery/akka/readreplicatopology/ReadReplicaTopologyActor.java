@@ -139,7 +139,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void buildTopology( DatabaseId databaseId )
     {
-        log.debug( "Building read replica topology for databse %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
+        log.debug( "Building read replica topology for database %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
         ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
         log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
 

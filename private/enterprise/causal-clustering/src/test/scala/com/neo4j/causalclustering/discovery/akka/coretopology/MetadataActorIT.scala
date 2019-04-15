@@ -15,7 +15,10 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
+
+import scala.collection.JavaConverters._
 
 class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
   "metadata actor" should {
@@ -83,7 +86,10 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
     val myself = new MemberId(UUID.randomUUID())
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
 
-    val coreServerInfo = TestTopology.addressesForCore(0, false)
+    val databaseIds = Set(new DatabaseId("system"), new DatabaseId("not_system")).asJava
+    var discoveryMember = new TestDiscoveryMember(myself, databaseIds)
+
+    val coreServerInfo = TestTopology.addressesForCore(0, false, databaseIds)
 
     val config = {
       val conf = Config.defaults()
@@ -92,6 +98,6 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
     }
 
     val replicatedDataActorRef = system.actorOf(MetadataActor.props(
-      new TestDiscoveryMember(myself), cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
+      discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
   }
 }

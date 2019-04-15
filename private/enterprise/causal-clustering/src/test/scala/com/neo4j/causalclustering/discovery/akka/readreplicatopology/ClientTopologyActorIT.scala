@@ -144,7 +144,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val memberId = new MemberId(UUID.randomUUID())
 
-    val readReplicaInfo = TestTopology.addressesForReadReplica(0)
+    val databaseIds = Set(new DatabaseId("orders"), new DatabaseId("employees"), new DatabaseId("customers")).asJava
+
+    val readReplicaInfo = TestTopology.addressesForReadReplica(0, databaseIds)
 
     val refresh = Duration(1, TimeUnit.SECONDS)
 
@@ -158,7 +160,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val clusterClientProbe = TestProbe()
     val props = ClientTopologyActor.props(
-      new TestDiscoveryMember(memberId),
+      new TestDiscoveryMember(memberId, databaseIds),
       coreTopologySink,
       readReplicaTopologySink,
       discoverySink,
