@@ -8,11 +8,14 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
-import org.neo4j.cypher.internal.runtime.spec._
+import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.{NodeReference, NodeValue, RelationshipReference, RelationshipValue, VirtualValues}
 
 // INPUT
 class ZombieInputTest extends ParallelInputTestBase(ZombieRuntime)
@@ -321,6 +324,41 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
       for (result <- resultSet) {
         result should beColumns("x").withRows(singleColumn(nodes))
       }
+    }
+  }
+
+
+  //NOTE: this could maybe be removed once morsel and zombie are merged since then
+  //      we get test coverage also from PrePopulateAcceptanceTests. However this might
+  //      be nice to have since it will test both with fusing enabled and disabled.
+  test("should prepopulate results") {
+    // given
+    circleGraph(11)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "r")
+      .sort(Seq(Descending("y")))
+      .expandAll("(x)-[r]-(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y", "r").withRows(populated)
+  }
+
+  case object populated extends RowsMatcher {
+    override def toString: String = "All entities should have been populated"
+    override def matches(columns: IndexedSeq[String], rows: IndexedSeq[Array[AnyValue]]): Boolean = {
+      rows.forall(row => row.forall {
+        case _: NodeReference => false
+        case n: NodeProxyWrappingNodeValue => n.isPopulated
+        case _ : RelationshipReference => false
+        case r: RelationshipProxyWrappingValue => r.isPopulated
+        case _ => true
+      })
     }
   }
 }

@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -137,19 +137,31 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
     val relFromSlot = (offset: Int) =>
       invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
 
-    def getFromSlot(slot: Slot) = slot match {
-      case LongSlot(offset, true, symbols.CTNode) =>
-        ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
-      case LongSlot(offset, false, symbols.CTNode) =>
-        nodeFromSlot(offset)
-      case LongSlot(offset, true, symbols.CTRelationship) =>
-        ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
-      case LongSlot(offset, false,  symbols.CTRelationship) =>
-        relFromSlot(offset)
 
-      case RefSlot(offset, _, _) => getRefAt(offset)
-      case _ =>
-        throw new InternalException(s"Do not know how to project $slot")
+    def getFromSlot(slot: Slot) = {
+      val notPopulated = slot match {
+        case LongSlot(offset, true, symbols.CTNode) =>
+          ternary(equal(getLongAt(offset), constant(-1)), noValue, nodeFromSlot(offset))
+        case LongSlot(offset, false, symbols.CTNode) =>
+          nodeFromSlot(offset)
+        case LongSlot(offset, true, symbols.CTRelationship) =>
+          ternary(equal(getLongAt(offset), constant(-1)), noValue, relFromSlot(offset))
+        case LongSlot(offset, false, symbols.CTRelationship) =>
+          relFromSlot(offset)
+
+        case RefSlot(offset, _, _) => getRefAt(offset)
+        case _ =>
+          throw new InternalException(s"Do not know how to project $slot")
+      }
+
+      /**
+        * {{{
+        *   prePopulateResults ? ValuePopulation.populate(results) : results
+        * }}}
+        */
+      ternary(PRE_POPULATE_RESULTS,
+              invokeStatic(method[ValuePopulation, AnyValue, AnyValue]("populate"), notPopulated),
+              notPopulated)
     }
 
     val project = block(columns.zipWithIndex.map {

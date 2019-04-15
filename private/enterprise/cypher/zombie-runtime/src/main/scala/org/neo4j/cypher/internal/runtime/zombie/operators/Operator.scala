@@ -278,7 +278,8 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
       //--- Additional operator codegen dependencies
       cursorPools = resources.cursorPools,
       //--- Additional produce result codegen dependencies
-      resultVisitor = state.visitor
+      resultVisitor = state.visitor,
+      prepopulateResults = state.prepopulateResults
     )
   }
 
@@ -303,5 +304,6 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
                                       cursors: ExpressionCursors,
                                       expressionVariables: Array[AnyValue],
                                       cursorPools: CursorPools,
-                                      resultVisitor: QueryResultVisitor[E]): Unit
+                                      resultVisitor: QueryResultVisitor[E],
+                                      prepopulateResults: Boolean): Unit
 }

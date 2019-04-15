@@ -47,6 +47,9 @@ object OperatorCodeGenHelperTemplates {
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
 
+  val PRE_POPULATE_RESULTS: IntermediateRepresentation =
+    load("prePopulateResults")
+
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)

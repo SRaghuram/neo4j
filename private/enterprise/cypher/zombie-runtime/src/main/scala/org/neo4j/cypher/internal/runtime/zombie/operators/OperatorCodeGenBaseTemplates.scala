@@ -113,7 +113,8 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param[ExpressionCursors]("cursors"),
               param[Array[AnyValue]]("expressionVariables"),
               param[CursorPools]("cursorPools"),
-              param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
+              param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E"))),
+              param[Boolean]("prePopulateResults")
           ),
           body = genOperate,
           genLocalVariables = () => genLocalVariables, // NOTE: This has to be called after genOperate!
