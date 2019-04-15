@@ -12,8 +12,6 @@ import java.util.Set;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
 
-import static java.util.Collections.unmodifiableSet;
-
 public class DefaultDiscoveryMember implements DiscoveryMember
 {
     private final MemberId id;
@@ -32,9 +30,9 @@ public class DefaultDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> databaseIds()
+    public Set<DatabaseId> hostedDatabases()
     {
-        return unmodifiableSet( databaseManager.registeredDatabases().keySet() );
+        return databaseManager.registeredDatabases().keySet();
     }
 
     @Override
@@ -42,7 +40,7 @@ public class DefaultDiscoveryMember implements DiscoveryMember
     {
         return "DefaultDiscoveryMember{" +
                "id=" + id +
-               ", databaseIds=" + databaseIds() +
+               ", hostedDatabases=" + hostedDatabases() +
                '}';
     }
 }

@@ -49,7 +49,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     public void sendInitialDataToReplicator()
     {
-        CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself.id(), new CoreServerInfo( config, myself.databaseIds() ) );
+        CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself.id(), new CoreServerInfo( config, myself.hostedDatabases() ) );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 

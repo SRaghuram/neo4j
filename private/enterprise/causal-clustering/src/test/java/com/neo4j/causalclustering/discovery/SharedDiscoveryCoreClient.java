@@ -108,7 +108,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
 
     Set<DatabaseId> getDatabaseIds()
     {
-        return myself.databaseIds();
+        return myself.hostedDatabases();
     }
 
     CoreServerInfo getCoreServerInfo()

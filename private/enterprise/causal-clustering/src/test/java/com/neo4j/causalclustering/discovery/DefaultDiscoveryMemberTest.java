@@ -30,7 +30,7 @@ class DefaultDiscoveryMemberTest
     }
 
     @Test
-    void shouldReturnDatabaseIds()
+    void shouldReturnHostedDatabases()
     {
         DatabaseId databaseId1 = new DatabaseId( "one" );
         DatabaseId databaseId2 = new DatabaseId( "two" );
@@ -43,17 +43,17 @@ class DefaultDiscoveryMemberTest
 
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
 
-        assertEquals( Set.of( databaseId1, databaseId2, databaseId3 ), discoveryMember.databaseIds() );
+        assertEquals( Set.of( databaseId1, databaseId2, databaseId3 ), discoveryMember.hostedDatabases() );
     }
 
     @Test
-    void shouldReturnUnmodifiableDatabaseIds()
+    void shouldReturnUnmodifiableHostedDatabases()
     {
         StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
 
-        Set<DatabaseId> databaseIds = discoveryMember.databaseIds();
+        Set<DatabaseId> databaseIds = discoveryMember.hostedDatabases();
         assertEquals( Set.of(), databaseIds );
         assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( new DatabaseId( "one" ) ) );
     }

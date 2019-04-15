@@ -17,7 +17,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class TestDiscoveryMember implements DiscoveryMember
 {
     private final MemberId id;
-    private final Set<DatabaseId> databaseIds;
+    private final Set<DatabaseId> hostedDatabases;
 
     public TestDiscoveryMember()
     {
@@ -29,15 +29,15 @@ public class TestDiscoveryMember implements DiscoveryMember
         this( memberId, Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
     }
 
-    public TestDiscoveryMember( Set<DatabaseId> databaseIds )
+    public TestDiscoveryMember( Set<DatabaseId> hostedDatabases )
     {
-        this( randomMemberId(), databaseIds );
+        this( randomMemberId(), hostedDatabases );
     }
 
-    public TestDiscoveryMember( MemberId id, Set<DatabaseId> databaseIds )
+    public TestDiscoveryMember( MemberId id, Set<DatabaseId> hostedDatabases )
     {
         this.id = id;
-        this.databaseIds = databaseIds;
+        this.hostedDatabases = hostedDatabases;
     }
 
     @Override
@@ -47,9 +47,9 @@ public class TestDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> databaseIds()
+    public Set<DatabaseId> hostedDatabases()
     {
-        return databaseIds;
+        return hostedDatabases;
     }
 
     private static MemberId randomMemberId()
