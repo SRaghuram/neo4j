@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 
+import java.util.concurrent.atomic.AtomicLong
+
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
@@ -36,7 +38,8 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
 
 object ContinuableOperatorTaskWithMorselGenerator {
   private val PACKAGE_NAME = "org.neo4j.codegen"
-  private def className(): String = "Operator" + System.nanoTime()
+  private val COUNTER = new AtomicLong(0)
+  private def className(): String = "Operator" + COUNTER.getAndIncrement()
 
   type CompiledTaskFactory = (Read, MorselParallelizer) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
