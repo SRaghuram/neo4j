@@ -274,6 +274,7 @@ BSD License
   asm
   asm-tree
   Scala Compiler
+  Zstandard
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>

@@ -275,6 +275,7 @@ BSD License
   asm-tree
   JLine
   Scala Compiler
+  Zstandard
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>

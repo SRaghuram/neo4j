@@ -280,6 +280,7 @@ BSD License
   scala-parser-combinators
   scala-xml
   Scalap
+  Zstandard
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
