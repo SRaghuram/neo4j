@@ -57,6 +57,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        schedulerTracer: SchedulerTracer,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
+                                       prePopulateResults: Boolean,
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory, this)
@@ -68,6 +69,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 transactionBinder,
                                 numberOfWorkers,
                                 nExpressionSlots,
+                                prePopulateResults,
                                 inputDataStream)
 
     // instead of creating new resources here only for initializing the query, we could

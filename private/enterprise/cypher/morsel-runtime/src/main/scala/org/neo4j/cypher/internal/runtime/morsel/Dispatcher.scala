@@ -19,6 +19,7 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transact
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
+                              prePopulateResults: Boolean,
                               input: InputDataStream)
                              (visitor: QueryResultVisitor[E]): Unit = {
     val leafPipeline = pipeline.getUpstreamLeafPipeline
@@ -30,6 +31,7 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transact
                            transactionBinder,
                            scheduler.numberOfWorkers,
                            nExpressionSlots,
+                           prePopulateResults,
                            input)
 
     // instead of creating new cursors here only for initializing the query, we could

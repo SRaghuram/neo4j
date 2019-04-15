@@ -105,6 +105,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               stateDefinition,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
                               nExpressionSlots,
+                              prePopulateResults,
                               inputDataStream,
                               logicalPlan,
                               queryContext,
@@ -127,6 +128,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             stateDefinition: StateDefinition,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
+                            prePopulateResults: Boolean,
                             inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
@@ -147,6 +149,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   schedulerTracer,
                                                   queryIndexes,
                                                   nExpressionSlots,
+                                                  prePopulateResults,
                                                   visitor)
 
       executionHandle.await()

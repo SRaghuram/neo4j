@@ -118,6 +118,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
       new MorselRuntimeResult(operators,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
                               nExpressionSlots,
+                              prePopulateResults,
                               logicalPlan,
                               queryContext,
                               createParameterArray(params, parameterMapping),
@@ -138,6 +139,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   class MorselRuntimeResult(operators: Pipeline,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
+                            prePopulateResults: Boolean,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
                             params: Array[AnyValue],
@@ -150,7 +152,14 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes, nExpressionSlots, input)(visitor)
+      dispatcher.execute(operators,
+                         queryContext,
+                         params,
+                         schedulerTracer,
+                         queryIndexes,
+                         nExpressionSlots,
+                         prePopulateResults,
+                         input)(visitor)
       resultRequested = true
     }
 

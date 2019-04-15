@@ -20,6 +20,7 @@ case class QueryState(params: Array[AnyValue],
                       transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
                       numberOfWorkers: Int,
                       nExpressionSlots: Int,
+                      prepopulateResults: Boolean,
                       input: InputDataStream,
                       reduceCollector: Option[ReduceCollector] = None) {
 

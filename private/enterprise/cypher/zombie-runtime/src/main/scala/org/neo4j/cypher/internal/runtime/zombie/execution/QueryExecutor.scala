@@ -25,6 +25,7 @@ trait QueryExecutor {
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
+                              prePopulateResults: Boolean,
                               visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
 }
 
