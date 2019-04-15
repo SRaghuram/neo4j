@@ -60,7 +60,7 @@ class DumpClusterStateTest
     void shouldDumpClusterState() throws Exception
     {
         // given
-        int numClusterStateItems = 10;
+        int numClusterStateItems = 9;
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
