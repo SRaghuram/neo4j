@@ -379,7 +379,6 @@ BSD License
   scala-parser-combinators
   sntp
   tough-cookie
-  zstd
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>

@@ -314,7 +314,6 @@ BSD License
   asm-util
   JLine
   Scala Compiler
-  zstd
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
