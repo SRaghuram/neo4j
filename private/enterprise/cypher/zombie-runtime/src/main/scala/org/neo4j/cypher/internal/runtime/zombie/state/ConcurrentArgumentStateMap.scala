@@ -103,10 +103,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
 
   override def hasCompleted(argument: Long): Boolean = {
     val controller = controllers.get(argument)
-    if (controller == null) {
-      return false
-    }
-    controller.isZero
+    controller != null && controller.isZero
   }
 
   override def remove(argument: Long): Boolean = {
@@ -146,6 +143,10 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
 
 
 object ConcurrentArgumentStateMap {
+  /**
+    * CAS the count to this value once taken.
+    */
+  private val TAKEN = -1000000
 
   /**
     * Controller which knows when an [[ArgumentState]] is complete,
@@ -159,7 +160,7 @@ object ConcurrentArgumentStateMap {
 
     def decrement(): Long = count.decrementAndGet()
 
-    def take: Boolean = count.compareAndSet(0, -1000000)
+    def take: Boolean = count.compareAndSet(0, TAKEN)
 
     def isZero: Boolean = count.get() == 0
 

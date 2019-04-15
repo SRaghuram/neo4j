@@ -26,7 +26,7 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
 
   private val buffers: Array[SinkByOrigin] = new Array[SinkByOrigin](bufferDefinitions.length)
 
-  // Static initializer code
+  // Constructor code
     /**
       * This finds the first buffer downstream of the one at `initialIndex`, which accumulates
       * results. This is needed to set the reducer correctly, which in turn manages reference counting
