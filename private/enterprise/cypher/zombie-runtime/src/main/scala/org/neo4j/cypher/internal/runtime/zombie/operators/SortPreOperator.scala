@@ -9,13 +9,12 @@ import java.util.Comparator
 
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{ColumnOrder, SlottedQueryState => OldQueryState}
-import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.storable.NumberValue
+import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer, StandardBuffer}
 
 import scala.collection.JavaConverters._
 
@@ -25,62 +24,51 @@ import scala.collection.JavaConverters._
   */
 class SortPreOperator(val workIdentity: WorkIdentity,
                       orderBy: Seq[ColumnOrder],
-                      countExpression: Option[Expression] = None) extends StatelessOperator {
+                      limit: Long = Long.MaxValue) extends StatelessOperator {
 
   override def toString: String = "SortPre"
 
-  override def operate(currentRow: MorselExecutionContext,
+  override def operate(morsel: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-      val rowCloneForComparators = currentRow.shallowCopy()
-      val comparator: Comparator[Integer] = orderBy
-        .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
-        .reduce((a, b) => a.thenComparing(b))
+    val rowCloneForComparators = morsel.shallowCopy()
+    val comparator: Comparator[Integer] = orderBy
+      .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
+      .reduce((a, b) => a.thenComparing(b))
 
-      // First we create an array of the same size as the rows in the morsel that we'll sort.
-      // This array contains only the pointers to the morsel rows
-      var outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(currentRow)
+    // First we create an array of the same size as the rows in the morsel that we'll sort.
+    // This array contains only the pointers to the morsel rows
+    var outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
 
-      // potentially calculate the limit
-      val maybeLimit = countExpression.map { count =>
-        val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots))
-        count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
+    if (limit <= 0) {
+      morsel.finishedWriting()
+    } else if (limit < morsel.getValidRows) {
+      val intLimit = limit.asInstanceOf[Int]
+
+      // a table to hold the top n entries
+      val topTable = new DefaultComparatorTopTable(comparator, intLimit)
+
+      while (morsel.isValidRow) {
+        topTable.add(outputToInputIndexes(morsel.getCurrentRow))
+        morsel.moveToNextRow()
       }
 
-      maybeLimit match {
-        case Some(limit) if limit <= 0 =>
-          currentRow.finishedWriting()
-        case Some(limit) if limit < currentRow.getValidRows =>
-          // a table to hold the top n entries
-          val topTable = new DefaultComparatorTopTable(comparator, limit)
+      topTable.sort()
 
-          while (currentRow.isValidRow) {
-            topTable.add(outputToInputIndexes(currentRow.getCurrentRow))
-            currentRow.moveToNextRow()
-          }
+      outputToInputIndexes = topTable.iterator.asScala.toArray
 
-          topTable.sort()
+      // only the first count elements stay valid
+      morsel.moveToRow(intLimit)
+      morsel.finishedWriting()
+    } else {
+      // We have to sort everything
+      java.util.Arrays.sort(outputToInputIndexes, comparator)
+    }
 
-          outputToInputIndexes = topTable.iterator.asScala.toArray
-
-          // only the first count elements stay valid
-          currentRow.moveToRow(limit)
-          currentRow.finishedWriting()
-
-        case _ =>
-          // We have to sort everything
-          java.util.Arrays.sort(outputToInputIndexes, comparator)
-      }
-
-      // Now that we have a sorted array, we need to shuffle the morsel rows around until they follow the same order
-      // as the sorted array
-      MorselSorting.createSortedMorselData(currentRow, outputToInputIndexes)
+    // Now that we have a sorted array, we need to shuffle the morsel rows around until they follow the same order
+    // as the sorted array
+    MorselSorting.createSortedMorselData(morsel, outputToInputIndexes)
   }
 }
