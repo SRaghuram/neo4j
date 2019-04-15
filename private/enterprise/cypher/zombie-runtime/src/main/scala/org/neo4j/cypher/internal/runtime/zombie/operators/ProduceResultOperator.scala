@@ -138,11 +138,11 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
 
     def getFromSlot(slot: Slot) = slot match {
       case LongSlot(offset, true, symbols.CTNode) =>
-        ternary(equal(getLongAt(offset), constant(-1)), noValue, nodeFromSlot(offset))
+        ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
       case LongSlot(offset, false, symbols.CTNode) =>
         nodeFromSlot(offset)
       case LongSlot(offset, true, symbols.CTRelationship) =>
-        ternary(equal(getLongAt(offset), constant(-1)), noValue, relFromSlot(offset))
+        ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
       case LongSlot(offset, false,  symbols.CTRelationship) =>
         relFromSlot(offset)
 
