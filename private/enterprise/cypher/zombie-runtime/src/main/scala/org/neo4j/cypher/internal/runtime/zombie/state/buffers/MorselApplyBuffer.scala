@@ -61,7 +61,7 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
       incrementArgumentCounts(argumentReducersOnTopOfThisApply, morsel)
       var i = 0
       while (i < delegates.size) {
-        delegates(i).putByApply(morsel.shallowCopy())
+        delegates(i).putInDelegate(morsel.shallowCopy())
         i += 1
       }
     }

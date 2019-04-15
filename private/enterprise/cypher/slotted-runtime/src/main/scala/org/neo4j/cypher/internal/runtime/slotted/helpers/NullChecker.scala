@@ -6,5 +6,6 @@
 package org.neo4j.cypher.internal.runtime.slotted.helpers
 
 object NullChecker {
-  def entityIsNull(entityId: Long): Boolean = entityId == -1L
+  val NULL_ENTITY: Long = -1L
+  def entityIsNull(entityId: Long): Boolean = entityId == NULL_ENTITY
 }

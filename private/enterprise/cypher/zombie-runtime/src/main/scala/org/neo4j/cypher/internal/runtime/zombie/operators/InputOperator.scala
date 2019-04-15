@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
 import org.neo4j.values.storable.Values
@@ -44,7 +45,7 @@ class InputOperator(val workIdentity: WorkIdentity,
         var i = 0
         while (i < nodeOffsets.length) {
           val value = cursor.value(i)
-          outputRow.setLongAt(nodeOffsets(i), if (value == Values.NO_VALUE) -1 else value.asInstanceOf[VirtualNodeValue].id())
+          outputRow.setLongAt(nodeOffsets(i), if (value == Values.NO_VALUE) NullChecker.NULL_ENTITY else value.asInstanceOf[VirtualNodeValue].id())
           i += 1
         }
         i = 0

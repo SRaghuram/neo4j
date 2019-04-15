@@ -111,20 +111,20 @@ object NodeHashJoinSlottedPipe {
                       rhs: ExecutionContext): Unit = {
     var i = 0
     while (i < longsToCopy.length) {
-      val fromTo = longsToCopy(i)
-      newRow.setLongAt(fromTo._2, rhs.getLongAt(fromTo._1))
+      val (from, to) = longsToCopy(i)
+      newRow.setLongAt(to, rhs.getLongAt(from))
       i += 1
     }
     i = 0
     while (i < refsToCopy.length) {
-      val fromTo = refsToCopy(i)
-      newRow.setRefAt(fromTo._2, rhs.getRefAt(fromTo._1))
+      val (from, to) = refsToCopy(i)
+      newRow.setRefAt(to, rhs.getRefAt(from))
       i += 1
     }
     i = 0
     while (i < cachedPropertiesToCopy.length) {
-      val fromTo = cachedPropertiesToCopy(i)
-      newRow.setCachedPropertyAt(fromTo._2, rhs.getCachedPropertyAt(fromTo._1))
+      val (from, to) = cachedPropertiesToCopy(i)
+      newRow.setCachedPropertyAt(to, rhs.getCachedPropertyAt(from))
       i += 1
     }
   }
@@ -145,7 +145,7 @@ object NodeHashJoinSlottedPipe {
       val thisId = current.getLongAt(offsets(i))
       key(i) = thisId
       if (NullChecker.entityIsNull(thisId)) {
-        key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
+        key(0) = NullChecker.NULL_ENTITY // We flag the null in this cryptic way to avoid creating objects
         return
       }
       i += 1

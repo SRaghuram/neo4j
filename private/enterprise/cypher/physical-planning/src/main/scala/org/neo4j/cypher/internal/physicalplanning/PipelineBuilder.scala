@@ -418,7 +418,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           // We only add the RHS since the LHS is not streaming through the join
           // Therefore it needs to finish before the join can even start
           upstreams += pipelines(b.rhsPipelineId.x).inputBuffer
-        case d: DelegateBufferDefinition /* if d.applyBuffer != applyBuffer */ =>
+        case d: DelegateBufferDefinition =>
           onDelegateBuffer(d)
           upstreams += pipelines(d.applyBuffer.producingPipelineId.x).inputBuffer
         case b: MorselBufferDefinition =>

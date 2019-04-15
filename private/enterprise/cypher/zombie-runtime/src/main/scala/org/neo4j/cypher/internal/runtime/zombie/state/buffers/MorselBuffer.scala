@@ -44,7 +44,7 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
     * buffer took care of incrementing the right ones already.
     */
-  def putByApply(morsel: MorselExecutionContext): Unit = {
+  def putInDelegate(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {
       morsel.resetToFirstRow()
       tracker.increment()
