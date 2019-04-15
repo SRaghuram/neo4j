@@ -322,11 +322,12 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
       val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
       resultSet.size should be(QUERIES_PER_THREAD)
       for (result <- resultSet) {
-        result should beColumns("x").withRows(singleColumn(nodes))
+        inTx(
+          result should beColumns("x").withRows(singleColumn(nodes))
+        )
       }
     }
   }
-
 
   //NOTE: this could maybe be removed once morsel and zombie are merged since then
   //      we get test coverage also from PrePopulateAcceptanceTests. However this might
@@ -338,7 +339,6 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "y", "r")
-      .sort(Seq(Descending("y")))
       .expandAll("(x)-[r]-(y)")
       .allNodeScan("x")
       .build()
