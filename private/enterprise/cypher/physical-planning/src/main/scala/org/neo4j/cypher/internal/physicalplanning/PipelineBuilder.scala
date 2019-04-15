@@ -48,8 +48,8 @@ abstract class BufferDefinition(val id: BufferId) {
 /**
   * A buffer between two pipelines. Maps to a MorselBuffer.
   */
-class InputBufferDefinition(id: BufferId,
-                            val producingPipelineId: PipelineId) extends BufferDefinition(id)
+class MorselBufferDefinition(id: BufferId,
+                             val producingPipelineId: PipelineId) extends BufferDefinition(id)
 
 /**
   * One of the delegates of an ApplyBufferDefinition. Maps to a MorselBuffer.
@@ -58,13 +58,14 @@ class DelegateBufferDefinition(id: BufferId,
                                val applyBuffer: ApplyBufferDefinition) extends BufferDefinition(id)
 
 /**
+  * Sits between the LHS and RHS of an apply.
   * This acts as a multiplexer. It receives input and copies it into
   * its delegates. Maps to a MorselApplyBuffer.
   */
 class ApplyBufferDefinition(id: BufferId,
                             producingPipelineId: PipelineId,
                             val argumentSlotOffset: Int
-                           ) extends InputBufferDefinition(id, producingPipelineId) {
+                           ) extends MorselBufferDefinition(id, producingPipelineId) {
   // These are ArgumentStates of reducers on the RHS
   val reducersOnRHS = new ArrayBuffer[ArgumentStateDefinition]
   val delegates: ArrayBuffer[BufferId] = new ArrayBuffer[BufferId]()
@@ -76,7 +77,7 @@ class ApplyBufferDefinition(id: BufferId,
   */
 class ArgumentStateBufferDefinition(id: BufferId,
                                     producingPipelineId: PipelineId,
-                                    val argumentStateMapId: ArgumentStateMapId) extends InputBufferDefinition(id, producingPipelineId)
+                                    val argumentStateMapId: ArgumentStateMapId) extends MorselBufferDefinition(id, producingPipelineId)
 
 /**
   * This buffer maps to a LHSAccumulatingRHSStreamingBuffer. It sits before a hash join.
@@ -109,9 +110,9 @@ class StateDefinition(val physicalPlan: PhysicalPlan) {
     asm
   }
 
-  def newBuffer(producingPipelineId: PipelineId): InputBufferDefinition = {
+  def newBuffer(producingPipelineId: PipelineId): MorselBufferDefinition = {
     val x = buffers.size
-    val buffer = new InputBufferDefinition(BufferId(x), producingPipelineId)
+    val buffer = new MorselBufferDefinition(BufferId(x), producingPipelineId)
     buffers += buffer
     buffer
   }
@@ -176,7 +177,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     pipeline
   }
 
-  private def outputToBuffer(pipeline: Pipeline): InputBufferDefinition = {
+  private def outputToBuffer(pipeline: Pipeline): MorselBufferDefinition = {
     val output = stateDefinition.newBuffer(pipeline.id)
     pipeline.outputBuffer = output
     output
@@ -399,7 +400,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     */
   private def traverseBuffers(buffer: BufferDefinition,
                               applyBuffer: ApplyBufferDefinition,
-                              onInputBuffer: InputBufferDefinition => Unit,
+                              onInputBuffer: MorselBufferDefinition => Unit,
                               onLHSAccumulatingRHSStreamingBuffer: LHSAccumulatingRHSStreamingBufferDefinition => Unit,
                               onDelegateBuffer: DelegateBufferDefinition => Unit,
                               onLastDelegate: DelegateBufferDefinition => Unit): Unit = {
@@ -420,7 +421,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
         case d: DelegateBufferDefinition /* if d.applyBuffer != applyBuffer */ =>
           onDelegateBuffer(d)
           upstreams += pipelines(d.applyBuffer.producingPipelineId.x).inputBuffer
-        case b: InputBufferDefinition =>
+        case b: MorselBufferDefinition =>
           onInputBuffer(b)
           upstreams += pipelines(b.producingPipelineId.x).inputBuffer
       }

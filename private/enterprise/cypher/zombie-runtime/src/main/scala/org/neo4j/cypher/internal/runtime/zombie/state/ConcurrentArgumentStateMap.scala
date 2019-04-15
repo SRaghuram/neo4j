@@ -57,7 +57,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   }
 
   override def filterCancelledArguments(morsel: MorselExecutionContext,
-                                        isCancelled: STATE => Boolean): Seq[Long] = {
+                                        isCancelled: STATE => Boolean): IndexedSeq[Long] = {
     ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
                                               morsel,
                                               argumentRowId => controllers.get(argumentRowId).compute(isCancelled))

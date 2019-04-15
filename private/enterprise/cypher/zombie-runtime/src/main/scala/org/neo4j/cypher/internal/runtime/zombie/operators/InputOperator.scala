@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.VirtualNodeValue
 
 class InputOperator(val workIdentity: WorkIdentity,
                     nodeOffsets: Array[Int],
@@ -44,7 +44,7 @@ class InputOperator(val workIdentity: WorkIdentity,
         var i = 0
         while (i < nodeOffsets.length) {
           val value = cursor.value(i)
-          outputRow.setLongAt(nodeOffsets(i), if (value == Values.NO_VALUE) -1 else value.asInstanceOf[NodeValue].id())
+          outputRow.setLongAt(nodeOffsets(i), if (value == Values.NO_VALUE) -1 else value.asInstanceOf[VirtualNodeValue].id())
           i += 1
         }
         i = 0

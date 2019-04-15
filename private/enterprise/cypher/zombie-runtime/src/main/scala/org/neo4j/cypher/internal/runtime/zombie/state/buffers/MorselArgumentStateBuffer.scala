@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, Arg
   * @param argumentStateMapId id of the argument state map to reduce data into.
   */
 class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompletionTracker,
-                                                          downstreamArgumentReducers: Seq[AccumulatingBuffer],
+                                                          downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                                                           argumentStateMaps: ArgumentStateMaps,
                                                           val argumentStateMapId: ArgumentStateMapId
                                                          ) extends ArgumentCountUpdater
@@ -53,7 +53,7 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
   override def initiate(argumentRowId: Long): Unit = {
     argumentStateMap.initiate(argumentRowId)
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
-    incrementArgumentCounts(downstreamArgumentReducers, Seq(argumentRowId))
+    incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
     tracker.increment()
   }
 
@@ -70,7 +70,7 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
     */
   def close(accumulator: ACC): Unit = {
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
-    decrementArgumentCounts(downstreamArgumentReducers, Seq(accumulator.argumentRowId))
+    decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
     tracker.decrement()
   }
 

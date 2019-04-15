@@ -57,7 +57,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, Arg
   * ............\__/
   **/
 class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: QueryCompletionTracker,
-                                                                      downstreamArgumentReducers: Seq[AccumulatingBuffer],
+                                                                      downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                                                                       argumentStateMaps: ArgumentStateMaps,
                                                                       val lhsArgumentStateMapId: ArgumentStateMapId,
                                                                       val rhsArgumentStateMapId: ArgumentStateMapId,
@@ -129,7 +129,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
       }
     }
     // Decrement for a morsel in the RHS buffer
-    decrementArgumentCounts(downstreamArgumentReducers, Seq(accumulator.argumentRowId))
+    decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
     tracker.decrement()
   }
 
@@ -168,7 +168,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
       rhsArgumentStateMap.update(morsel, (acc, morselView) => {
         acc.buffer.put(morselView)
         // Increment for a morsel in the RHS buffer
-        incrementArgumentCounts(downstreamArgumentReducers, Seq(acc.argumentRowId))
+        incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(acc.argumentRowId))
         tracker.increment()
       }, takeLock = false)
     }
@@ -176,7 +176,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
     override def initiate(argumentRowId: Long): Unit = {
       rhsArgumentStateMap.initiate(argumentRowId)
       // Increment for an ArgumentID in RHS's accumulator
-      incrementArgumentCounts(downstreamArgumentReducers, Seq(argumentRowId))
+      incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
       tracker.increment()
     }
 
@@ -188,7 +188,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
       val isZero = rhsArgumentStateMap.decrement(argumentRowId)
       if (isZero) {
         // Decrement for an ArgumentID in RHS's accumulator
-        decrementArgumentCounts(downstreamArgumentReducers, Seq(argumentRowId))
+        decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
         tracker.decrement()
       }
     }

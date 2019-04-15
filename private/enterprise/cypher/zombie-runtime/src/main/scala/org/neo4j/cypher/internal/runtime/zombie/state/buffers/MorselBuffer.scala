@@ -19,8 +19,8 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, Arg
   * @param inner inner buffer to delegate real buffer work to
   */
 class MorselBuffer(tracker: QueryCompletionTracker,
-                   downstreamArgumentReducers: Seq[AccumulatingBuffer],
-                   workCancellers: Seq[ArgumentStateMapId],
+                   downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                   workCancellers: IndexedSeq[ArgumentStateMapId],
                    argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater

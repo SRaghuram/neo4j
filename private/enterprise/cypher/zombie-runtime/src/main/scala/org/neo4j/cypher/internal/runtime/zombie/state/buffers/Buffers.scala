@@ -73,7 +73,7 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
             val reducersOnRHS = reducerOnRHSDefs.map(argStateDef => findRHSAccumulatingStateBuffer(i, argStateDef.id)).reverse
             new MorselApplyBuffer(argumentStatesToInitiate,
                                   reducersOnRHS,
-                                  argumentReducersAfterThisApply = reducers,
+                                  argumentReducersOnTopOfThisApply = reducers,
                                   argumentStateMaps,
                                   x.argumentSlotOffset,
                                   stateFactory.newIdAllocator(),

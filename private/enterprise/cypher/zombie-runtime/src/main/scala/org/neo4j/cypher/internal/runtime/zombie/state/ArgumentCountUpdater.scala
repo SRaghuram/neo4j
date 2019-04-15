@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.Accumulati
   */
 abstract class ArgumentCountUpdater {
 
-  private def morselLoop(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+  private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                          morsel: MorselExecutionContext,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
     var i = 0
@@ -29,8 +29,8 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  private def argumentCountLoop(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
-                                argumentRowIds: Seq[Long],
+  private def argumentCountLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                argumentRowIds: IndexedSeq[Long],
                                 operation: (AccumulatingBuffer, Long) => Unit): Unit = {
     var i = 0
     while (i < downstreamAccumulatingBuffers.length) {
@@ -44,28 +44,28 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  protected def initiateArgumentStates(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
-                                       morsel: MorselExecutionContext): Unit = {
+  protected def initiateArgumentReducers(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(downstreamAccumulatingBuffers, morsel, _.initiate(_))
   }
 
-  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(downstreamAccumulatingBuffers, morsel, _.increment(_))
   }
 
-  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
+  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(downstreamAccumulatingBuffers, morsel, _.decrement(_))
   }
 
-  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
-                                        argumentRowIds: Seq[Long]): Unit = {
+  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                        argumentRowIds: IndexedSeq[Long]): Unit = {
     argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.increment(_))
   }
 
-  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: Seq[AccumulatingBuffer],
-                                        argumentRowIds: Seq[Long]): Unit = {
+  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                        argumentRowIds: IndexedSeq[Long]): Unit = {
     argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.decrement(_))
   }
 }

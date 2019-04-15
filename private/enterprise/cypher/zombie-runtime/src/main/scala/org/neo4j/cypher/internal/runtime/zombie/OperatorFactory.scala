@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 import org.neo4j.internal.kernel
 
 /**
-  * Responsible for a 1-to-1 mapping between LogicalPlans and Operators.
+  * Responsible for a mapping from LogicalPlans to Operators.
   */
 class OperatorFactory(stateDefinition: StateDefinition,
                       converters: ExpressionConverters,
@@ -36,7 +36,7 @@ class OperatorFactory(stateDefinition: StateDefinition,
     generateSlotAccessorFunctions(slots)
 
     plan match {
-      case plans.Input(nodes, variables, nullable) =>
+      case plans.Input(nodes, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
                           nodes.map(v => slots.getLongOffsetFor(v)),
                           variables.map(v => slots.getReferenceOffsetFor(v)))
@@ -119,9 +119,9 @@ class OperatorFactory(stateDefinition: StateDefinition,
         val lhsOffsets: Array[Int] = joinPlan.nodes.map(k => slots.getLongOffsetFor(k)).toArray
         val rhsSlots = slotConfigs(joinPlan.right.id)
         val rhsOffsets: Array[Int] = joinPlan.nodes.map(k => rhsSlots.getLongOffsetFor(k)).toArray
-        val copyLongsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-        val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-        val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+        val copyLongsFromRHS = Array.newBuilder[(Int,Int)]
+        val copyRefsFromRHS = Array.newBuilder[(Int,Int)]
+        val copyCachedPropertiesFromRHS = Array.newBuilder[(Int,Int)]
 
         // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
         // part of the join comparison
@@ -137,9 +137,9 @@ class OperatorFactory(stateDefinition: StateDefinition,
             copyCachedPropertiesFromRHS += offset -> slots.getCachedNodePropertyOffsetFor(cnp)
         })
 
-        val longsToCopy = copyLongsFromRHS.result().toArray
-        val refsToCopy = copyRefsFromRHS.result().toArray
-        val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result().toArray
+        val longsToCopy = copyLongsFromRHS.result()
+        val refsToCopy = copyRefsFromRHS.result()
+        val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result()
 
         val buffer = inputBuffer.asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
         new NodeHashJoinOperator(

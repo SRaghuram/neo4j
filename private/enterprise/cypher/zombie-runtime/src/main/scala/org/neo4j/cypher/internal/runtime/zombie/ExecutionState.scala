@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentStateMap, MorselP
 trait ArgumentStateMapCreator {
 
   /**
-    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `argumentStateDefinition`.
+    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `argumentStateMapId`.
     */
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                  factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
@@ -55,7 +55,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
     * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingBuffer]] with id `bufferId`.
     *
-    * @return the ready morsel accumulator, or `null` if no accumulators are ready
+    * @return the ready morsel accumulator, or `null` if no accumulator is ready
     */
   def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): (ACC, MorselExecutionContext)
 

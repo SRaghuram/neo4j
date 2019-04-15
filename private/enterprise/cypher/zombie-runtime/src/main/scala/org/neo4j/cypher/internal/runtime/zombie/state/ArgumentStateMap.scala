@@ -41,7 +41,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
     *                    If true, rows for the argumentRowId will be discarded, otherwise they will be retained.
     */
   def filterCancelledArguments(morsel: MorselExecutionContext,
-                               isCancelled: S => Boolean): Seq[Long]
+                               isCancelled: S => Boolean): IndexedSeq[Long]
 
   /**
     * Take the [[ArgumentState]] of one complete arguments. The [[ArgumentState]] will
@@ -224,7 +224,7 @@ object ArgumentStateMap {
 
   def filterCancelledArguments(argumentSlotOffset: Int,
                                morsel: MorselExecutionContext,
-                               isCancelledCheck: Long => Boolean): Seq[Long] = {
+                               isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
 
     val readingRow = morsel.shallowCopy()
     readingRow.resetToFirstRow()

@@ -61,17 +61,20 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
     override def toString: String = "SortMergeTask"
 
-    val sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
-    accumulator.data.foreach { morsel =>
-      if (morsel.hasData) {
-        sortedInputPerArgument.add(morsel)
-      }
-    }
+    var sortedInputPerArgument: PriorityQueue[MorselExecutionContext] = _
 
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
+      if (sortedInputPerArgument == null) {
+        sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
+        accumulator.data.foreach { morsel =>
+          if (morsel.hasData) {
+            sortedInputPerArgument.add(morsel)
+          }
+        }
+      }
 
       while (outputRow.isValidRow && canContinue) {
         while (outputRow.isValidRow && !sortedInputPerArgument.isEmpty) {
