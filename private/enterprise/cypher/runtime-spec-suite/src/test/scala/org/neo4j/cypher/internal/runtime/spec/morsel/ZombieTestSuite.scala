@@ -20,14 +20,18 @@ class ZombieInputTest extends ParallelInputTestBase(ZombieRuntime)
 
 // ALL NODE SCAN
 class ZombieAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieAllNodeScanNoFusingTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 class ZombieAllNodeScanStressTest extends AllNodeScanStressTestBase(ZombieRuntime)
 
 // LABEL SCAN
 class ZombieLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieLabelScanNoFusingTest extends LabelScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieLabelScanStressTest extends LabelScanStressTestBase(ZombieRuntime)
 
 // INDEX SEEK
 class ZombieNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+  with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+class ZombieNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
 
 class ZombieIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(ZombieRuntime)
@@ -35,14 +39,17 @@ class ZombieIndexSeekExactStressTest extends IndexSeekExactStressTest(ZombieRunt
 
 // INDEX SCAN
 class ZombieNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieIndexScanStressTest extends IndexScanStressTestBase(ZombieRuntime)
 
 // INDEX CONTAINS SCAN
 class ZombieNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieIndexContainsScanStressTest extends IndexContainsScanStressTestBase(ZombieRuntime)
 
 // ARGUMENT
 class ZombieArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieArgumentNoFusingTest extends ArgumentTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieArgumentStressTest extends ArgumentStressTestBase(ZombieRuntime)
 
 // APPLY
@@ -50,30 +57,32 @@ class ZombieApplyStressTest extends ApplyStressTestBase(ZombieRuntime)
 
 // EXPAND
 class ZombieExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieExpandStressTest extends ExpandStressTestBase(ZombieRuntime)
 
 // PROJECTION
 class ZombieProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieProjectionNoFusingTest extends ProjectionTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieProjectionStressTest extends ProjectionStressTestBase(ZombieRuntime)
 
 // FILTER
 class ZombieFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieFilterNoFusingTest extends FilterTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieFilterStressTest extends FilterStressTestBase(ZombieRuntime)
 
 // LIMIT
 class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieLimitNoFusingTest extends LimitTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 
 // UNWIND
 class ZombieUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieUnwindNoFusingTest extends UnwindTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieUnwindStressTest extends UnwindStressTestBase(ZombieRuntime)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
-class ZombieSingleThreadedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.SINGLE_THREADED, ZombieRuntime, 1000)
-class ZombieSingleThreadedNoFusingExpandAllTest extends ExpandAllTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime, 1000)
-class ZombieParallelExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 
