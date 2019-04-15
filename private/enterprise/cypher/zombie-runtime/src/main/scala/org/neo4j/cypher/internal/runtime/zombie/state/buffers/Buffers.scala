@@ -197,6 +197,10 @@ object Buffers {
       * Will be called when upstream pipelines (both regular and apply) complete.
       */
     def decrement(argumentRowId: Long): Unit
-
   }
+
+  /**
+    * Output of lhsAccumulatingRhsStreamingBuffers.
+    */
+  case class AccumulatorAndMorsel[ACC <: MorselAccumulator](acc: ACC, morsel: MorselExecutionContext)
 }

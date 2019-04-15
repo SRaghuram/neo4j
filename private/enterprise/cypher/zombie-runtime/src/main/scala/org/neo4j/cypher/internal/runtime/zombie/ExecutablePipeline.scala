@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdenti
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, _}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
@@ -146,7 +147,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeAccumulator(pipeline.inputBuffer.id, pipeline)
   }
 
-  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): (ACC, MorselExecutionContext) = {
+  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): AccumulatorAndMorsel[ACC] = {
     executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id, pipeline)
   }
 

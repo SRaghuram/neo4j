@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEv
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.values.AnyValue
@@ -36,9 +37,9 @@ trait OperatorInput {
   /**
     * Take the next input accumulator from the LHS and morsel from the RHS.
     *
-    * @return the input accumulator and the morsel as a tuple, or `null` if no input is available
+    * @return the input accumulator and the morsel, or `null` if no input is available
     */
-  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): (ACC, MorselExecutionContext)
+  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): AccumulatorAndMorsel[ACC]
 }
 
 /**

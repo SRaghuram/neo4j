@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateMaps, MorselAccumulator}
-import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.LHSAccumulatingRHSStreamingBuffer.RHSBuffer
 import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker, StateFactory}
 
@@ -65,7 +65,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
                                                                       rhsPipelineId: PipelineId,
                                                                       stateFactory: StateFactory
                                              ) extends ArgumentCountUpdater
-                                               with Source[(LHS_ACC, MorselExecutionContext)]
+                                               with Source[AccumulatorAndMorsel[LHS_ACC]]
                                                with SinkByOrigin {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
@@ -89,7 +89,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
     })
   }
 
-  override def take(): (LHS_ACC, MorselExecutionContext) = {
+  override def take(): AccumulatorAndMorsel[LHS_ACC] = {
     val it = lhsArgumentStateMap.peekCompleted()
     while (it.hasNext) {
       val lhsAcc = it.next()
@@ -97,7 +97,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
       if (rhsBuffer != null) {
         val rhsMorsel = rhsBuffer.buffer.take()
         if (rhsMorsel != null) {
-          return (lhsAcc, rhsMorsel)
+          return AccumulatorAndMorsel(lhsAcc, rhsMorsel)
         }
       }
     }

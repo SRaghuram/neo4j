@@ -42,9 +42,9 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          operatorInput: OperatorInput,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[HashTable]] = {
-    val tuple = operatorInput.takeAccumulatorAndMorsel()
-    if (tuple != null) {
-      Array(new OTask(tuple._1, tuple._2))
+    val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
+    if (accAndMorsel != null) {
+      Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
     } else {
       null
     }

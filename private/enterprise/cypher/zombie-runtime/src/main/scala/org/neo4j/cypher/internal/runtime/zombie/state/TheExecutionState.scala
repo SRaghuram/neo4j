@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers}
 import org.neo4j.util.Preconditions
 
@@ -82,8 +83,8 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.source[ACC](bufferId).take()
   }
 
-  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): (ACC, MorselExecutionContext) = {
-    buffers.source[(ACC, MorselExecutionContext)](bufferId).take()
+  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC] = {
+    buffers.source[AccumulatorAndMorsel[ACC]](bufferId).take()
   }
 
   override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {

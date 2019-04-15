@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer}
 import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentStateMap, MorselParallelizer}
 
@@ -57,7 +58,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     *
     * @return the ready morsel accumulator, or `null` if no accumulator is ready
     */
-  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): (ACC, MorselExecutionContext)
+  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC]
 
   /**
     * Close a pipeline task which was executing over an input morsel.
