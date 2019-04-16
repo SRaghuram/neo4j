@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 // Eager aggregation means that this pipe will eagerly load the whole resulting sub graphs before starting
 // to emit aggregated results.
@@ -37,7 +37,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
 
-    val result = mutable.LinkedHashMap[groupingExpression.KeyType, Seq[AggregationFunction]]()
+    val result = new java.util.LinkedHashMap[groupingExpression.KeyType, Seq[AggregationFunction]]()
 
     // Used when we have no input and no grouping expressions. In this case, we'll return a single row
     def createEmptyResult(): Iterator[ExecutionContext] = {
@@ -63,7 +63,11 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     // Consume all input and aggregate
     input.foreach(ctx => {
       val groupingValue = groupingExpression.computeGroupingKey(ctx, state)
-      val functions = result.getOrElseUpdate(groupingValue, aggregationFunctions.map(_.createAggregationFunction))
+      var functions = result.get(groupingValue)
+      if ( functions == null ) {
+        functions = aggregationFunctions.map(_.createAggregationFunction)
+        result.put(groupingValue, functions)
+      }
       functions.foreach(func => func(ctx, state))
     })
 
@@ -71,9 +75,13 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     if (result.isEmpty && groupingExpression.isEmpty) {
       createEmptyResult()
     } else {
-      result.map {
-        case (key, aggregator) => writeAggregationResultToContext(key, aggregator)
-      }.toIterator
+      val buffer = ArrayBuffer.empty[ExecutionContext]
+      val iterator = result.entrySet().iterator()
+      while (iterator.hasNext) {
+        val entry = iterator.next()
+        buffer.append(writeAggregationResultToContext(entry.getKey, entry.getValue))
+      }
+      buffer.toIterator
     }
   }
 }
