@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.collection.Iterables;
@@ -26,6 +27,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ReadReplicaViewMessageTest extends TestKit
 {
@@ -76,5 +78,28 @@ class ReadReplicaViewMessageTest extends TestKit
         ReadReplicaTopology expected = new ReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
 
         assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
+    }
+
+    @Test
+    void shouldReturnDatabaseIds()
+    {
+        var clusterClient1 = TestProbe.apply( getSystem() ).ref();
+        var clusterClient2 = TestProbe.apply( getSystem() ).ref();
+        var clusterClient3 = TestProbe.apply( getSystem() ).ref();
+
+        var info1 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ) ) );
+        var info2 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "employees" ), new DatabaseId( "orders" ) ) );
+        var info3 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "customers" ), new DatabaseId( "employees" ) ) );
+
+        var record1 = new ReadReplicaViewRecord( info1, topologyClient, memberId, now );
+        var record2 = new ReadReplicaViewRecord( info2, topologyClient, memberId, now );
+        var record3 = new ReadReplicaViewRecord( info3, topologyClient, memberId, now );
+
+        var clusterClientReadReplicas = Map.of( clusterClient1, record1, clusterClient2, record2, clusterClient3, record3 );
+        var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
+
+        var expectedDatabaseIds = Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ), new DatabaseId( "employees" ) );
+        var actualDatabaseIds = readReplicaViewMessage.databaseIds();
+        assertEquals( expectedDatabaseIds, actualDatabaseIds );
     }
 }

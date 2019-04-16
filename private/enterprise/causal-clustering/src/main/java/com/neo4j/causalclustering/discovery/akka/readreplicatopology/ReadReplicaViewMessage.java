@@ -13,11 +13,14 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
+
+import static java.util.stream.Collectors.toSet;
 
 class ReadReplicaViewMessage
 {
@@ -48,11 +51,12 @@ class ReadReplicaViewMessage
         return new ReadReplicaTopology( databaseId, knownReadReplicas );
     }
 
-    Stream<DatabaseId> databaseIds()
+    Set<DatabaseId> databaseIds()
     {
         return clusterClientReadReplicas.values().stream()
                 .map( ReadReplicaViewRecord::readReplicaInfo )
-                .flatMap( info -> info.getDatabaseIds().stream() );
+                .flatMap( info -> info.getDatabaseIds().stream() )
+                .collect( toSet() );
     }
 
     @Override

@@ -29,6 +29,8 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static java.util.stream.Collectors.toSet;
+
 public class ReadReplicaTopologyActor extends AbstractActor
 {
     private final SourceQueueWithComplete<ReadReplicaTopology> topologySink;
@@ -133,7 +135,18 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void buildTopologies()
     {
-        readReplicaViewMessage.databaseIds().forEach( this::buildTopology );
+        var receivedDatabaseIds = readReplicaViewMessage.databaseIds();
+
+        // build topologies for the set of received database IDs
+        receivedDatabaseIds.forEach( this::buildTopology );
+
+        // build empty topologies for database IDs cached locally but absent from the set of received database IDs
+        var absentDatabaseIds = readReplicaTopologies.keySet()
+                .stream()
+                .filter( id -> !receivedDatabaseIds.contains( id ) )
+                .collect( toSet() );
+
+        absentDatabaseIds.forEach( this::buildTopology );
     }
 
     private void buildTopology( DatabaseId databaseId )
@@ -143,6 +156,13 @@ public class ReadReplicaTopologyActor extends AbstractActor
         log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );
-        readReplicaTopologies.put( databaseId, readReplicaTopology );
+        if ( readReplicaTopology.members().isEmpty() )
+        {
+            readReplicaTopologies.remove( databaseId );
+        }
+        else
+        {
+            readReplicaTopologies.put( databaseId, readReplicaTopology );
+        }
     }
 }
