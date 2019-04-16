@@ -139,17 +139,19 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
 
 
     def getFromSlot(slot: Slot) = {
-      val notPopulated = slot match {
+      val (notPopulated, populateMethod) = slot match {
         case LongSlot(offset, true, symbols.CTNode) =>
-          ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
+          (ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset)),
+            method[ValuePopulation, NodeValue, NodeValue]("populate"))
         case LongSlot(offset, false, symbols.CTNode) =>
-          nodeFromSlot(offset)
+          (nodeFromSlot(offset), method[ValuePopulation, NodeValue, NodeValue]("populate"))
         case LongSlot(offset, true, symbols.CTRelationship) =>
-          ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
+          (ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset)),
+            method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"))
         case LongSlot(offset, false, symbols.CTRelationship) =>
-          relFromSlot(offset)
-
-        case RefSlot(offset, _, _) => getRefAt(offset)
+          (relFromSlot(offset), method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"))
+        case RefSlot(offset, _, _) => (getRefAt(offset),
+          method[ValuePopulation, AnyValue, AnyValue]("populate"))
         case _ =>
           throw new InternalException(s"Do not know how to project $slot")
       }
@@ -160,7 +162,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
         * }}}
         */
       ternary(PRE_POPULATE_RESULTS,
-              invokeStatic(method[ValuePopulation, AnyValue, AnyValue]("populate"), notPopulated),
+              invokeStatic(populateMethod, notPopulated),
               notPopulated)
     }
 
