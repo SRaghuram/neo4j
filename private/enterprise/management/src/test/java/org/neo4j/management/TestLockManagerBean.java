@@ -5,9 +5,8 @@
  */
 package org.neo4j.management;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -16,35 +15,34 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.jmx.impl.JmxExtension;
 import org.neo4j.kernel.info.LockInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.ImpermanentDbmsRule;
+import org.neo4j.test.extension.ImpermanentDbmsExtension;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class TestLockManagerBean
+@ImpermanentDbmsExtension
+class TestLockManagerBean
 {
     private LockManager lockManager;
 
-    @Rule
-    public ImpermanentDbmsRule dbRule = new ImpermanentDbmsRule();
+    @Inject
     private GraphDatabaseAPI graphDb;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
-        graphDb = dbRule.getGraphDatabaseAPI();
-        lockManager = graphDb.getDependencyResolver().resolveDependency( JmxExtension.class )
-                .getSingleManagementBean( LockManager.class );
+        lockManager = graphDb.getDependencyResolver().resolveDependency( JmxExtension.class ).getSingleManagementBean( LockManager.class );
     }
 
     @Test
-    public void restingGraphHoldsNoLocks()
+    void restingGraphHoldsNoLocks()
     {
-        assertEquals( "unexpected lock count", 0, lockManager.getLocks().size() );
+        assertEquals( 0, lockManager.getLocks().size(), "unexpected lock count" );
     }
 
     @Test
-    public void modifiedNodeImpliesLock()
+    void modifiedNodeImpliesLock()
     {
         Node node = createNode();
 
@@ -53,13 +51,13 @@ public class TestLockManagerBean
             node.setProperty( "key", "value" );
 
             List<LockInfo> locks = lockManager.getLocks();
-            assertEquals( "unexpected lock count", 1, locks.size() );
+            assertEquals( 1, locks.size(), "unexpected lock count" );
             LockInfo lock = locks.get( 0 );
-            assertNotNull( "null lock", lock );
+            assertNotNull( lock, "null lock" );
 
         }
         List<LockInfo> locks = lockManager.getLocks();
-        assertEquals( "unexpected lock count", 0, locks.size() );
+        assertEquals( 0, locks.size(), "unexpected lock count" );
     }
 
     private Node createNode()

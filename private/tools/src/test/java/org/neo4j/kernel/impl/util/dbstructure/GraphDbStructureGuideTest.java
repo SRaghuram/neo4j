@@ -5,15 +5,13 @@
  */
 package org.neo4j.kernel.impl.util.dbstructure;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.IndexReference;
@@ -26,7 +24,8 @@ import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.ImpermanentDbmsRule;
+import org.neo4j.test.extension.ImpermanentDbmsExtension;
+import org.neo4j.test.extension.Inject;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,16 +34,17 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_RELATIONSHIP_TYPE;
 
-public class GraphDbStructureGuideTest
+@ImpermanentDbmsExtension
+class GraphDbStructureGuideTest
 {
     @Test
-    public void visitsLabelIds()
+    void visitsLabelIds()
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
-        graph.createNode( label("Person") );
-        graph.createNode( label("Party") );
-        graph.createNode( label("Animal") );
+        db.createNode( label("Person") );
+        db.createNode( label("Party") );
+        db.createNode( label("Animal") );
         int personLabelId;
         int partyLabelId;
         int animalLabelId;
@@ -65,7 +65,7 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsPropertyKeyIds() throws Exception
+    void visitsPropertyKeyIds() throws Exception
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
@@ -83,12 +83,12 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsRelationshipTypeIds()
+    void visitsRelationshipTypeIds()
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
-        Node lhs = graph.createNode();
-        Node rhs = graph.createNode();
+        Node lhs = db.createNode();
+        Node rhs = db.createNode();
         lhs.createRelationshipTo( rhs, withName( "KNOWS" ) );
         lhs.createRelationshipTo( rhs, withName( "LOVES" ) );
         lhs.createRelationshipTo( rhs, withName( "FAWNS_AT" ) );
@@ -112,7 +112,7 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsIndexes() throws Exception
+    void visitsIndexes() throws Exception
     {
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
         int labelId = createLabel( "Person" );
@@ -130,7 +130,7 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsUniqueConstraintsAndIndices() throws Exception
+    void visitsUniqueConstraintsAndIndices() throws Exception
     {
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
         int labelId = createLabel( "Person" );
@@ -151,7 +151,7 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsNodeCounts() throws Exception
+    void visitsNodeCounts() throws Exception
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
@@ -170,7 +170,7 @@ public class GraphDbStructureGuideTest
     }
 
     @Test
-    public void visitsRelCounts() throws Exception
+    void visitsRelCounts() throws Exception
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
@@ -275,25 +275,21 @@ public class GraphDbStructureGuideTest
         return ktx.tokenWrite().relationshipTypeGetOrCreateForName( name );
     }
 
-    @Rule
-    public ImpermanentDbmsRule dbRule = new ImpermanentDbmsRule();
-    private GraphDatabaseService graph;
+    @Inject
+    private GraphDatabaseAPI db;
     private ThreadToStatementContextBridge bridge;
     private Transaction tx;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
-        GraphDatabaseAPI api = dbRule.getGraphDatabaseAPI();
-        graph = api;
-        DependencyResolver dependencyResolver = api.getDependencyResolver();
+        DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.bridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
-        this.tx = graph.beginTx();
-
+        this.tx = db.beginTx();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( bridge.hasTransaction() )
         {
@@ -307,18 +303,18 @@ public class GraphDbStructureGuideTest
         return bridge.getKernelTransactionBoundToThisThread( true );
     }
 
-    public void commitAndReOpen()
+    void commitAndReOpen()
     {
         commit();
 
-        tx = graph.beginTx();
+        tx = db.beginTx();
     }
 
-    public void accept( DbStructureVisitor visitor )
+    void accept( DbStructureVisitor visitor )
     {
         commitAndReOpen();
 
-        graph.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+        db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
         commit();
 
         if ( bridge.hasTransaction() )
@@ -326,7 +322,7 @@ public class GraphDbStructureGuideTest
             throw new IllegalStateException( "Dangling transaction before running visitable" );
         }
 
-        GraphDbStructureGuide analyzer = new GraphDbStructureGuide( graph );
+        GraphDbStructureGuide analyzer = new GraphDbStructureGuide( db );
         analyzer.accept( visitor );
     }
 
