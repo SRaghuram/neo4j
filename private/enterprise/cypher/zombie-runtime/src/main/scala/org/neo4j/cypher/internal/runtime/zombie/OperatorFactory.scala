@@ -216,4 +216,15 @@ class OperatorFactory(val stateDefinition: StateDefinition,
       case plans.IndexOrderDescending => kernel.api.IndexOrder.DESCENDING
       case plans.IndexOrderNone => kernel.api.IndexOrder.NONE
     }
+
+  def createOutput(plan: Option[LogicalPlan],
+                   maybeOutputBuffer: Option[BufferDefinition]): OutputOperator = {
+
+    (plan, maybeOutputBuffer) match {
+      case (Some(p: plans.ProduceResult), None) => createProduceResults(p)
+      case (None, None) => NoOutput
+      case (None, Some(b: BufferDefinition)) => MorselBufferOutput(b.id)
+      // TODO: case (Some(p: Sort), Some(bufferDefinition))
+    }
+  }
 }

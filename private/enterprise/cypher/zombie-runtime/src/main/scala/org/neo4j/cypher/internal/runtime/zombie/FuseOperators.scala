@@ -24,26 +24,24 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
   def compilePipeline(p: Pipeline): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
-    val (maybeHeadOperator, unhandledMiddlePlans, unhandledProduceResult) =
-      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
-      else (None, p.middlePlans, p.produceResults)
+    val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutputPlan) =
+      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.outputPlan)
+      else (None, p.middlePlans, p.outputPlan)
 
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle).toArray
-    val produceResultOperator = unhandledProduceResult.map(operatorFactory.createProduceResults)
     ExecutablePipeline(p.id,
                        headOperator,
                        middleOperators,
-                       produceResultOperator,
+                       None,
                        p.outputBuffer.flatMap(_.workOnPut),
                        p.serial,
                        physicalPlan.slotConfigurations(p.headPlan.id),
                        p.inputBuffer,
-                       p.outputBuffer.orNull)
+                       operatorFactory.createOutput(unhandledOutputPlan, p.outputBuffer))
   }
 
-
-  private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
+  private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], outputPlan: Option[LogicalPlan]): (Option[Operator], Seq[LogicalPlan], Option[LogicalPlan]) = {
 
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(id)
@@ -62,15 +60,21 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // HeadPlan    -> Template3(inner=Template2)
     val innermostTemplate = new DelegateOperatorTaskTemplate()(expressionCompiler)
 
-    val innerTemplate = produceResult.map(p => {
-      innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
-      new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
-    }).getOrElse(innermostTemplate)
+    val (innerTemplate, initFusedPlans, unhandledOutputPlan) =
+      outputPlan match {
+        case Some(p: ProduceResult) =>
+          innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
+          val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
+          (template, List(p), None)
+
+        case unhandled =>
+          (innermostTemplate, List.empty[LogicalPlan], unhandled)
+      }
 
     val reversePlans = (headPlan +: middlePlans).reverse
 
     val fusedPipeline =
-      reversePlans.foldLeft(FusionPlan(innerTemplate, produceResult.toList, List.empty, None)) {
+      reversePlans.foldLeft(FusionPlan(innerTemplate, outputPlan.toList, List.empty, None)) {
         case (acc, nextPlan) => nextPlan match {
 
           case plans.AllNodesScan(nodeVariableName, _) =>
@@ -115,7 +119,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case plans.Selection(predicate, _) =>
             val compiledPredicate = () => expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
-              return (None, middlePlans, acc.unhandledProduceResult)
+              return (None, middlePlans, acc.unhandledOutputPlan)
             )
             acc.copy(
               template = new FilterOperatorTemplate(acc.template, compiledPredicate),
@@ -127,13 +131,13 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = innermostTemplate,
               fusedPlans = List.empty,
               unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]):::acc.unhandledPlans,
-              unhandledProduceResult = produceResult)
+              unhandledOutputPlan = outputPlan)
         }
       }
 
     // Did we find any sequence of operators that we can fuse with the headPlan?
     if (fusedPipeline.fusedPlans.length < FUSE_LIMIT) {
-      (None, middlePlans, produceResult)
+      (None, middlePlans, outputPlan)
     } else {
       // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
       dprintln(() => s"@@@ Fused plans ${fusedPipeline.fusedPlans.map(_.getClass.getSimpleName)}")
@@ -154,4 +158,4 @@ object FuseOperators {
 case class FusionPlan(template: OperatorTaskTemplate,
                       fusedPlans: List[LogicalPlan],
                       unhandledPlans: List[LogicalPlan] = List.empty,
-                      unhandledProduceResult: Option[ProduceResult] = None)
+                      unhandledOutputPlan: Option[LogicalPlan] = None)

@@ -100,8 +100,7 @@ class Pipeline(val id: PipelineId,
   var inputBuffer: BufferDefinition = _
   var outputBuffer: Option[BufferDefinition] = None
   val middlePlans = new ArrayBuffer[LogicalPlan]
-  // ProduceResults can either be in the head position or here
-  var produceResults: Option[ProduceResult] = None
+  var outputPlan: Option[LogicalPlan] = None
   var serial: Boolean = false
 }
 
@@ -249,7 +248,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           pipeline.serial = true
           pipeline
         } else {
-          source.produceResults = Some(produceResult)
+          source.outputPlan = Some(produceResult)
           source.serial = true
           source
         }

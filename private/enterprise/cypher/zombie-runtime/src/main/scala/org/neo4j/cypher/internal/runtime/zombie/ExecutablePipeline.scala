@@ -23,7 +23,7 @@ case class ExecutablePipeline(id: PipelineId,
                               serial: Boolean,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
-                              outputBuffer: BufferDefinition) extends WorkIdentity {
+                              outputOperator: OutputOperator) extends WorkIdentity {
 
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,
@@ -33,6 +33,7 @@ case class ExecutablePipeline(id: PipelineId,
     new PipelineState(this,
                       start.createState(executionState),
                       middleOperators.map(_.createTask(executionState, queryContext, queryState, resources)),
+                      outputOperator.createState(executionState, id),
                       executionState)
 
   override val workId: Int = start.workIdentity.workId
@@ -49,6 +50,7 @@ case class ExecutablePipeline(id: PipelineId,
 class PipelineState(val pipeline: ExecutablePipeline,
                     startState: OperatorState,
                     middleTasks: Array[OperatorTask],
+                    outputOperatorState: OutputOperatorState,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
@@ -96,10 +98,9 @@ class PipelineState(val pipeline: ExecutablePipeline,
     val streamTasks = startState.nextTasks(context, state, this, resources)
     if (streamTasks != null) {
       Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
-      val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
       val tasks = streamTasks.map(startTask => PipelineTask(startTask,
                                                             middleTasks,
-                                                            produceResultsTask,
+                                                            outputOperatorState,
                                                             context,
                                                             state,
                                                             this))
@@ -108,16 +109,6 @@ class PipelineState(val pipeline: ExecutablePipeline,
       tasks.head
     } else {
       null
-    }
-  }
-
-  /**
-    * Put the result of an execution of this pipeline into the corresponding output buffer.
-    * @param morsel the output morsel
-    */
-  def produce(morsel: MorselExecutionContext): Unit = {
-    if (pipeline.outputBuffer != null) {
-      executionState.putMorsel(pipeline.id, pipeline.outputBuffer.id, morsel)
     }
   }
 

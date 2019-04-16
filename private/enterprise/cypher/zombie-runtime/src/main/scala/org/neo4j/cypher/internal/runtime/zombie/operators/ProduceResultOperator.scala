@@ -6,12 +6,12 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
@@ -31,7 +31,10 @@ import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
   */
 class ProduceResultOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
-                            columns: Seq[(String, Expression)]) extends StreamingOperator with ContinuableOperator {
+                            columns: Seq[(String, Expression)])
+  extends StreamingOperator
+     with OutputOperator
+     with OutputOperatorState {
 
   override def toString: String = "ProduceResult"
 
@@ -57,32 +60,27 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
   // This is called whe ProduceResult is the final operator of a pipeline
-  override def init(context: QueryContext,
+  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = this
+
+  override def prepareOutput(outputMorsel: MorselExecutionContext,
+                             context: QueryContext,
+                             state: QueryState,
+                             resources: QueryResources): PreparedOutput =
+    new OutputOTask(outputMorsel, context, state, resources)
+
+  class OutputOTask(outputMorsel: MorselExecutionContext,
+                    context: QueryContext,
                     state: QueryState,
-                    resources: QueryResources): ContinuableOperatorTask =
-    new OutputOTask()
+                    resources: QueryResources) extends OTask() with PreparedOutput {
 
-  class OutputOTask() extends OTask() {
-
-    override def canContinue: Boolean = false // will be true sometimes for reactive results
-    override def close(operatorCloser: OperatorCloser): Unit = {}
-    override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = false
-    override def producingWorkUnitEvent: WorkUnitEvent = null
-
-    override def operate(output: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState,
-                         resources: QueryResources): Unit = {
-      produceOutput(output, context, state, resources)
-    }
+    override def produce(): Unit = produceOutput(outputMorsel, context, state, resources)
   }
 
   //==========================================================================
-  abstract class OTask() extends ContinuableOperatorTask {
+
+  abstract class OTask() {
 
     override def toString: String = "ProduceResultTask"
-
-    override def canContinue: Boolean = false // will be true sometimes for reactive results
 
     protected def produceOutput(output: MorselExecutionContext,
                                 context: QueryContext,

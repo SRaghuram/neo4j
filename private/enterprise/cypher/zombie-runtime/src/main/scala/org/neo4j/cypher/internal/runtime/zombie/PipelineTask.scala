@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 
 /**
   * The [[Task]] of executing an [[ExecutablePipeline]] once.
@@ -17,13 +17,13 @@ import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTa
   */
 case class PipelineTask(startTask: ContinuableOperatorTask,
                         middleTasks: Array[OperatorTask],
-                        produceResult: ContinuableOperatorTask,
+                        outputOperatorState: OutputOperatorState,
                         queryContext: QueryContext,
                         state: QueryState,
                         pipelineState: PipelineState)
   extends Task[QueryResources] {
 
-  override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): Unit = {
+  override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): PreparedOutput = {
     try {
       state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
       doExecuteWorkUnit(resources, output)
@@ -33,16 +33,14 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   }
 
   private def doExecuteWorkUnit(resources: QueryResources,
-                                output: MorselExecutionContext): Unit = {
+                                output: MorselExecutionContext): PreparedOutput = {
     startTask.operate(output, queryContext, state, resources)
     for (op <- middleTasks) {
       output.resetToFirstRow()
       op.operate(output, queryContext, state, resources)
     }
-    if (produceResult != null) {
-      output.resetToFirstRow()
-      produceResult.operate(output, queryContext, state, resources)
-    }
+    output.resetToFirstRow()
+    outputOperatorState.prepareOutput(output, queryContext, state, resources)
   }
 
   /**
@@ -65,5 +63,5 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   override def workDescription: String = pipelineState.pipeline.workDescription
 
-  override def canContinue: Boolean = startTask.canContinue || (produceResult != null && produceResult.canContinue)
+  override def canContinue: Boolean = startTask.canContinue
 }

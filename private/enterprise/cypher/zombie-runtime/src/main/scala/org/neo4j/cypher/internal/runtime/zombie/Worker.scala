@@ -65,10 +65,10 @@ class Worker(val workerId: Int,
         val state = task.pipelineState
         val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
         val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
-        task.executeWorkUnit(resources, output)
+        val preparedOutput = task.executeWorkUnit(resources, output)
         workUnitEvent.stop()
 
-        state.produce(output)
+        preparedOutput.produce()
 
         if (task.canContinue) {
           // Put the continuation before unlocking (closeWorkUnit)

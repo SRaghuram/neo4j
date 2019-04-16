@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.operators.PreparedOutput
 
 /**
   * A single task
@@ -21,7 +22,7 @@ trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
     * @param output morsel into which execution results are written
     */
   def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE,
-                      output: MorselExecutionContext): Unit
+                      output: MorselExecutionContext): PreparedOutput
 
   /**
     * Returns true if there is another work unit to execute.
