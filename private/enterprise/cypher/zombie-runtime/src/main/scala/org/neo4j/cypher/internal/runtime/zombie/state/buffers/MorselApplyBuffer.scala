@@ -35,7 +35,7 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
                          with SinkByOrigin
                          with Sink[MorselExecutionContext] {
 
-  override def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext] = this
+  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   def put(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {

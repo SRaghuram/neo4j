@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{Argument
   */
 class ArgumentStateBuffer(override val argumentRowId: Long,
                           inner: Buffer[MorselExecutionContext])
-  extends MorselAccumulator
+  extends MorselAccumulator[MorselExecutionContext]
      with Buffer[MorselExecutionContext] {
 
   // MorselAccumulator

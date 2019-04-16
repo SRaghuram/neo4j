@@ -137,11 +137,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeMorsel(pipeline.inputBuffer.id, pipeline)
   }
 
-  override def takeAccumulator[ACC <: MorselAccumulator](): ACC = {
+  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): ACC = {
     executionState.takeAccumulator(pipeline.inputBuffer.id, pipeline)
   }
 
-  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](): AccumulatorAndMorsel[ACC] = {
+  override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): AccumulatorAndMorsel[DATA, ACC] = {
     executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id, pipeline)
   }
 
@@ -151,11 +151,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.closeMorselTask(pipeline, morsel)
   }
 
-  override def closeAccumulator[ACC <: MorselAccumulator](accumulator: ACC): Unit = {
+  override def closeAccumulator(accumulator: MorselAccumulator[_]): Unit = {
     executionState.closeAccumulatorTask(pipeline, accumulator)
   }
 
-  override def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Unit = {
+  override def closeMorselAndAccumulatorTask(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Unit = {
     executionState.closeMorselAndAccumulatorTask(pipeline, morsel, accumulator)
   }
 
@@ -163,11 +163,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.filterCancelledArguments(pipeline, morsel)
   }
 
-  override def filterCancelledArguments[ACC <: MorselAccumulator](accumulator: ACC): Boolean = {
+  override def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
     executionState.filterCancelledArguments(pipeline, accumulator)
   }
 
-  override def filterCancelledArguments[ACC <: MorselAccumulator](morsel: MorselExecutionContext, accumulator: ACC): Boolean = {
+  override def filterCancelledArguments(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel, accumulator)
   }
 }

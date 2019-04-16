@@ -40,11 +40,11 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
       var j = initialIndex + 1
       while (j < buffers.length) {
         buffers(j) match {
-          case x: LHSAccumulatingRHSStreamingBuffer[_] if x.lhsArgumentStateMapId == argumentStateMapId =>
+          case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
             return x.LHSSink
-          case x: LHSAccumulatingRHSStreamingBuffer[_] if x.rhsArgumentStateMapId == argumentStateMapId =>
+          case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.rhsArgumentStateMapId == argumentStateMapId =>
             return x.RHSSink
-          case x: MorselArgumentStateBuffer[_] if x.argumentStateMapId == argumentStateMapId =>
+          case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
             return x
           case _ =>
         }
@@ -113,8 +113,8 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
     * @param bufferId     the buffer
     * @return the Sink.
     */
-  def sink(fromPipeline: PipelineId, bufferId: BufferId): Sink[MorselExecutionContext] =
-    buffers(bufferId.x).sinkFor(fromPipeline)
+  def sink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T] =
+    buffers(bufferId.x).sinkFor[T](fromPipeline)
 
   /**
     * Get the buffer with the given id casted as a [[Source]].
@@ -137,14 +137,14 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
   /**
     * Get the buffer with the given id casted as a [[MorselArgumentStateBuffer]].
     */
-  def argumentStateBuffer[ACC <: MorselAccumulator](bufferId: BufferId): MorselArgumentStateBuffer[ACC] =
-    buffers(bufferId.x).asInstanceOf[MorselArgumentStateBuffer[ACC]]
+  def argumentStateBuffer(bufferId: BufferId): MorselArgumentStateBuffer[_, _] =
+    buffers(bufferId.x).asInstanceOf[MorselArgumentStateBuffer[_, _]]
 
   /**
     * Get the buffer with the given id casted as a [[LHSAccumulatingRHSStreamingBuffer]].
     */
-  def lhsAccumulatingRhsStreamingBuffer[LHS_ACC <: MorselAccumulator](bufferId: BufferId): LHSAccumulatingRHSStreamingBuffer[LHS_ACC] =
-    buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingBuffer[LHS_ACC]]
+  def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingBuffer[_, _] =
+    buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingBuffer[_, _]]
 }
 
 /**
@@ -165,7 +165,7 @@ object Buffers {
       * @param fromPipeline the pipeline that wants to obtain the sink, to put data into it.
       * @return the Sink.
       */
-    def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext]
+    def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T]
   }
 
   /**
@@ -202,5 +202,5 @@ object Buffers {
   /**
     * Output of lhsAccumulatingRhsStreamingBuffers.
     */
-  case class AccumulatorAndMorsel[ACC <: MorselAccumulator](acc: ACC, morsel: MorselExecutionContext)
+  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: MorselExecutionContext)
 }

@@ -28,7 +28,7 @@ class MorselBuffer(tracker: QueryCompletionTracker,
                     with Source[MorselParallelizer]
                     with SinkByOrigin {
 
-  override def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext] = this
+  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {

@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers, Sink}
 import org.neo4j.util.Preconditions
 
 
@@ -68,10 +68,16 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
 
   // Methods
 
+  override def getSink[T <: AnyRef](fromPipeline: PipelineId,
+                                    bufferId: BufferId): Sink[T] = {
+    buffers.sink[T](fromPipeline, bufferId)
+  }
+
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
-    buffers.sink(fromPipeline, bufferId).put(output)
+    buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
+    // TODO: what about this?
     workerWaker.wakeAll()
   }
 
@@ -79,12 +85,12 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.morselBuffer(bufferId).take()
   }
 
-  override def takeAccumulator[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): ACC = {
+  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): ACC = {
     buffers.source[ACC](bufferId).take()
   }
 
-  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC] = {
-    buffers.source[AccumulatorAndMorsel[ACC]](bufferId).take()
+  override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[DATA, ACC] = {
+    buffers.source[AccumulatorAndMorsel[DATA, ACC]](bufferId).take()
   }
 
   override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
@@ -98,16 +104,16 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
 
-  override def closeAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulator: ACC): Unit = {
+  override def closeAccumulatorTask(pipeline: ExecutablePipeline, accumulator: MorselAccumulator[_]): Unit = {
     closeWorkUnit(pipeline)
     buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulator)
   }
 
-  override def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                                       inputMorsel: MorselExecutionContext,
-                                                                       accumulator: ACC): Unit = {
+  override def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
+                                             inputMorsel: MorselExecutionContext,
+                                             accumulator: MorselAccumulator[_]): Unit = {
     closeWorkUnit(pipeline)
-    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
     buffer.close(accumulator, inputMorsel)
   }
 
@@ -119,18 +125,18 @@ class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
     isCancelled
   }
 
-  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                                  accumulator: ACC): Boolean = {
-    val isCancelled = buffers.argumentStateBuffer[ACC](pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
+  override def filterCancelledArguments(pipeline: ExecutablePipeline,
+                                        accumulator: MorselAccumulator[_]): Boolean = {
+    val isCancelled = buffers.argumentStateBuffer(pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
     if (isCancelled)
       closeWorkUnit(pipeline)
     isCancelled
   }
 
-  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+  override def filterCancelledArguments(pipeline: ExecutablePipeline,
                                                                   inputMorsel: MorselExecutionContext,
-                                                                  accumulator: ACC): Boolean = {
-    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+                                                                  accumulator: MorselAccumulator[_]): Boolean = {
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
     val isCancelled = buffer.filterCancelledArguments(accumulator, inputMorsel)
     if (isCancelled)
       closeWorkUnit(pipeline)

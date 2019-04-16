@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 import org.neo4j.internal.kernel
+import org.neo4j.util.Preconditions
 
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
@@ -217,14 +218,35 @@ class OperatorFactory(val stateDefinition: StateDefinition,
       case plans.IndexOrderNone => kernel.api.IndexOrder.NONE
     }
 
-  def createOutput(plan: Option[LogicalPlan],
+  def createOutput(maybePlan: Option[LogicalPlan],
                    maybeOutputBuffer: Option[BufferDefinition]): OutputOperator = {
 
-    (plan, maybeOutputBuffer) match {
-      case (Some(p: plans.ProduceResult), None) => createProduceResults(p)
-      case (None, None) => NoOutput
-      case (None, Some(b: BufferDefinition)) => MorselBufferOutput(b.id)
-      // TODO: case (Some(p: Sort), Some(bufferDefinition))
+    maybePlan match {
+      case None =>
+        maybeOutputBuffer match {
+          case None => NoOutput
+          case Some(b: BufferDefinition) => MorselBufferOutput(b.id)
+        }
+
+      case Some(p: plans.ProduceResult) =>
+        Preconditions.checkArgument(maybeOutputBuffer.isEmpty, s"Expected no outputBuffer, but found ${maybeOutputBuffer}")
+        createProduceResults(p)
+
+      case Some(plan) =>
+        val id = plan.id
+        val slots = physicalPlan.slotConfigurations(id)
+        generateSlotAccessorFunctions(slots)
+
+        val outputBuffer = maybeOutputBuffer.get
+
+        plan match {
+          case plans.Sort(_, sortItems) => {
+            val argumentDepth = physicalPlan.applyPlans(id)
+            val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
+            val ordering = sortItems.map(translateColumnOrder(slots, _))
+            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, outputBuffer.id, ordering)
+          }
+        }
     }
   }
 }

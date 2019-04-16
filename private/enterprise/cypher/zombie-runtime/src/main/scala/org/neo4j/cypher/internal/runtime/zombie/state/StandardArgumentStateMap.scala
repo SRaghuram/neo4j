@@ -33,6 +33,10 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     )
   }
 
+  def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
+    onState(controllers(argumentRowId).state)
+  }
+
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {

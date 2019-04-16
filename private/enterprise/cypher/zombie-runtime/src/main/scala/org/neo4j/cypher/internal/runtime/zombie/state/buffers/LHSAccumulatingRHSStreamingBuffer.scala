@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker, StateFactory}
 
@@ -55,26 +55,28 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, Arg
   * ............|==|
   * ............\__/
   **/
-class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: QueryCompletionTracker,
-                                                                      downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                                                      argumentStateMaps: ArgumentStateMaps,
-                                                                      val lhsArgumentStateMapId: ArgumentStateMapId,
-                                                                      val rhsArgumentStateMapId: ArgumentStateMapId,
-                                                                      lhsPipelineId: PipelineId,
-                                                                      rhsPipelineId: PipelineId,
-                                                                      stateFactory: StateFactory
-                                             ) extends ArgumentCountUpdater
-                                               with Source[AccumulatorAndMorsel[LHS_ACC]]
-                                               with SinkByOrigin {
+class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
+                                        LHS_ACC <: MorselAccumulator[DATA]
+                                       ](tracker: QueryCompletionTracker,
+                                         downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                         argumentStateMaps: ArgumentStateMaps,
+                                         val lhsArgumentStateMapId: ArgumentStateMapId,
+                                         val rhsArgumentStateMapId: ArgumentStateMapId,
+                                         lhsPipelineId: PipelineId,
+                                         rhsPipelineId: PipelineId,
+                                         stateFactory: StateFactory
+                                       ) extends ArgumentCountUpdater
+                                            with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
+                                            with SinkByOrigin {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
-  override def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext] =
+  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] =
     if (fromPipeline == lhsPipelineId) {
-      LHSSink
+      LHSSink.asInstanceOf[Sink[T]]
     } else if (fromPipeline == rhsPipelineId) {
-      RHSSink
+      RHSSink.asInstanceOf[Sink[T]]
     } else {
       throw new IllegalStateException(s"Requesting sink from unexpected pipeline.")
     }
@@ -88,7 +90,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
     })
   }
 
-  override def take(): AccumulatorAndMorsel[LHS_ACC] = {
+  override def take(): AccumulatorAndMorsel[DATA, LHS_ACC] = {
     val it = lhsArgumentStateMap.peekCompleted()
     while (it.hasNext) {
       val lhsAcc = it.next()
@@ -111,12 +113,12 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
     * @param accumulator the accumulator
     * @return `true` iff both the morsel and the accumulator are cancelled
     */
-  def filterCancelledArguments(accumulator: LHS_ACC, rhsMorsel: MorselExecutionContext): Boolean = {
+  def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Boolean = {
     // TODO
     false
   }
 
-  def close(accumulator: LHS_ACC, rhsMorsel: MorselExecutionContext): Unit = {
+  def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Unit = {
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
     if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
       val rhsAcc = rhsArgumentStateMap.peek(accumulator.argumentRowId)
@@ -134,12 +136,15 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
 
   // The LHS does not need any reference counting, because no tasks
   // will ever be produced from the LHS
-  object LHSSink extends Sink[MorselExecutionContext] with AccumulatingBuffer {
+  object LHSSink extends Sink[IndexedSeq[PerArgument[DATA]]] with AccumulatingBuffer {
     override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
 
-    override def put(morsel: MorselExecutionContext): Unit = {
-      morsel.resetToFirstRow()
-      lhsArgumentStateMap.update(morsel, (acc, morselView) => acc.update(morselView))
+    override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+      var i = 0
+      while (i < data.length) {
+        lhsArgumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+        i += 1
+      }
     }
 
     override def initiate(argumentRowId: Long): Unit = {

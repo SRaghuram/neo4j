@@ -37,6 +37,10 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
     )
   }
 
+  def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
+    onState(controllers.get(argumentRowId).state)
+  }
+
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {

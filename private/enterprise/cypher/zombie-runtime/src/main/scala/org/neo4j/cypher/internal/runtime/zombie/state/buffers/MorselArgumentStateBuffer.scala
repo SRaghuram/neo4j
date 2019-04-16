@@ -6,8 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
-import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
 
@@ -19,28 +18,30 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentCountUpdater, Arg
   *
   * @param argumentStateMapId id of the argument state map to reduce data into.
   */
-class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompletionTracker,
-                                                          downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                                          argumentStateMaps: ArgumentStateMaps,
-                                                          val argumentStateMapId: ArgumentStateMapId
-                                                         ) extends ArgumentCountUpdater
-                                                           with AccumulatingBuffer
-                                                           with Sink[MorselExecutionContext]
-                                                           with Source[ACC]
-                                                           with SinkByOrigin {
+class MorselArgumentStateBuffer[DATA <: AnyRef,
+                                ACC <: MorselAccumulator[DATA]
+                               ](
+                                 tracker: QueryCompletionTracker,
+                                 downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                 argumentStateMaps: ArgumentStateMaps,
+                                 val argumentStateMapId: ArgumentStateMapId
+                               ) extends ArgumentCountUpdater
+                                    with AccumulatingBuffer
+                                    with Sink[IndexedSeq[PerArgument[DATA]]]
+                                    with Source[ACC]
+                                    with SinkByOrigin {
 
   private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def sinkFor(fromPipeline: PipelineId): Sink[MorselExecutionContext] = this
+  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
-  override def put(morsel: MorselExecutionContext): Unit = {
-    if (morsel.hasData) {
-      morsel.resetToFirstRow()
-      argumentStateMap.update(morsel, (acc, morselView) => {
-        acc.update(morselView)
-      })
+  override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+    var i = 0
+    while (i < data.length) {
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      i += 1
     }
   }
 
@@ -68,7 +69,7 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
   /**
     * Decrement reference counters attached to `accumulator`.
     */
-  def close(accumulator: ACC): Unit = {
+  def close(accumulator: MorselAccumulator[_]): Unit = {
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
     decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
     tracker.decrement()
@@ -80,7 +81,7 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
     * @param accumulator the accumulator
     * @return `true` iff the accumulator is cancelled
     */
-  def filterCancelledArguments(accumulator: ACC): Boolean = {
+  def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
     // TODO
     false
   }

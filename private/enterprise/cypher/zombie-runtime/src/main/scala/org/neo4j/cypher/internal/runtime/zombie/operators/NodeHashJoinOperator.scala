@@ -45,7 +45,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
   override def nextTasks(context: QueryContext,
                          state: QueryState,
                          operatorInput: OperatorInput,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[HashTable]] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
       Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
@@ -58,7 +58,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: HashTable, rhsRow: MorselExecutionContext)
     extends InputLoopTask
-      with ContinuableOperatorTaskWithMorselAndAccumulator[HashTable] {
+      with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, HashTable] {
 
     override val inputMorsel: MorselExecutionContext = rhsRow
 
@@ -101,7 +101,7 @@ object NodeHashJoinOperator {
   /**
     * MorselAccumulator which groups rows by a tuple of node ids.
     */
-  abstract class HashTable extends MorselAccumulator {
+  abstract class HashTable extends MorselAccumulator[MorselExecutionContext] {
     def lhsRows(nodeIds: LongArray): java.util.Iterator[MorselExecutionContext]
 
   }

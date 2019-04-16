@@ -22,6 +22,8 @@ trait ArgumentStateMap[S <: ArgumentState] {
     */
   def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit): Unit
 
+  def update(argumentRowId: Long, onState: S => Unit): Unit
+
   /**
     * Filter the input morsel using the [[ArgumentState]] related to `argument`.
     *
@@ -125,14 +127,14 @@ object ArgumentStateMap {
   }
 
   /**
-    * Accumulator of morsels. Has internal state which it updates using provided morsel.
+    * Accumulator of data. Has internal state which it updates using provided data.
     */
-  trait MorselAccumulator extends ArgumentState {
+  trait MorselAccumulator[DATA <: AnyRef] extends ArgumentState {
 
     /**
-      * Update internal state using the provided morsel.
+      * Update internal state using the provided data.
       */
-    def update(morsel: MorselExecutionContext): Unit
+    def update(data: DATA): Unit
   }
 
   /**
@@ -252,5 +254,29 @@ object ArgumentStateMap {
     morsel.moveToRow(newCurrentRow)
     morsel.finishedWritingUsing(writingRow)
     cancelled
+  }
+
+  case class PerArgument[T](argumentRowId: Long, value: T)
+
+  def map[T](argumentSlotOffset: Int,
+             morsel: MorselExecutionContext,
+             f: MorselExecutionContext => T): IndexedSeq[PerArgument[T]] = {
+
+    val readingRow = morsel.shallowCopy()
+    readingRow.resetToFirstRow()
+    val result = new ArrayBuffer[PerArgument[T]]()
+
+    while (readingRow.isValidRow) {
+      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val start: Int = readingRow.getCurrentRow
+      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+        readingRow.moveToNextRow()
+      }
+      val end: Int = readingRow.getCurrentRow
+
+      val view = readingRow.view(start, end)
+      result += PerArgument(arg, f(view))
+    }
+    result
   }
 }

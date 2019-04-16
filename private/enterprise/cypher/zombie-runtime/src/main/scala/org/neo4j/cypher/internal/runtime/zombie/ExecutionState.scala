@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId,
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, Sink}
 import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentStateMap, MorselParallelizer}
 
 /**
@@ -34,6 +34,8 @@ trait ArgumentStateMapCreator {
   */
 trait ExecutionState extends ArgumentStateMapCreator {
 
+  def getSink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T]
+
   /**
     * Put a morsel into the buffer with id `bufferId`.
     */
@@ -51,14 +53,14 @@ trait ExecutionState extends ArgumentStateMapCreator {
     *
     * @return the ready morsel accumulator, or `null` if no accumulators are ready
     */
-  def takeAccumulator[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): ACC
+  def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): ACC
 
   /**
     * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingBuffer]] with id `bufferId`.
     *
     * @return the ready morsel accumulator, or `null` if no accumulator is ready
     */
-  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC]
+  def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[DATA, ACC]
 
   /**
     * Close a pipeline task which was executing over an input morsel.
@@ -85,7 +87,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param pipeline the executing pipeline
     * @param accumulator the input morsel accumulator
     */
-  def closeAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulator: ACC): Unit
+  def closeAccumulatorTask(pipeline: ExecutablePipeline, accumulator: MorselAccumulator[_]): Unit
 
   /**
     * Close a pipeline task which was executing over some input morsel accumulator (LHS) and a morsel (RHS) from a [[LHSAccumulatingRHSStreamingBuffer]].
@@ -94,9 +96,9 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param inputMorsel the input morsel
     * @param accumulator the input morsel accumulator
     */
-  def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                              inputMorsel: MorselExecutionContext,
-                                                              accumulator: ACC): Unit
+  def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
+                                    inputMorsel: MorselExecutionContext,
+                                    accumulator: MorselAccumulator[_]): Unit
 
   /**
     * Remove all rows related to cancelled argumentRowIds from `morsel`.
@@ -114,8 +116,8 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param accumulator the accumulator
     * @return `true` iff the accumulator is cancelled
     */
-  def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                         accumulator: ACC): Boolean
+  def filterCancelledArguments(pipeline: ExecutablePipeline,
+                               accumulator: MorselAccumulator[_]): Boolean
 
   /**
     * Remove all rows related to cancelled argumentRowIds from `morsel`.
@@ -126,9 +128,9 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param accumulator the accumulator
     * @return `true` iff both the morsel and the accumulator are cancelled
     */
-  def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
-                                                         inputMorsel: MorselExecutionContext,
-                                                         accumulator: ACC): Boolean
+  def filterCancelledArguments(pipeline: ExecutablePipeline,
+                               inputMorsel: MorselExecutionContext,
+                               accumulator: MorselAccumulator[_]): Boolean
 
   /**
     * Continue executing pipeline `p`.
