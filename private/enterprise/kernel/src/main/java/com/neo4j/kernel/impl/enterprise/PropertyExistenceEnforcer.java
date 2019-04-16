@@ -200,7 +200,7 @@ class PropertyExistenceEnforcer
         public void close()
         {
             super.close();
-            IOUtils.closeAllSilently( nodeCursor, relationshipCursor, propertyCursor );
+            IOUtils.closeAllUnchecked( nodeCursor, relationshipCursor, propertyCursor );
         }
 
         private void validateNode( long nodeId ) throws NodePropertyExistenceException
