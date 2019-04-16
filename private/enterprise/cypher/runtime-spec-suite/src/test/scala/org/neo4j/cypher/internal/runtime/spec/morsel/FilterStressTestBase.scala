@@ -13,7 +13,7 @@ abstract class FilterStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeCont
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
-      _.filter(Seq(lessThan(varFor("prop"), literalInt(10)))),
+      _.filter("prop < 10"),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator if x.getId < 10

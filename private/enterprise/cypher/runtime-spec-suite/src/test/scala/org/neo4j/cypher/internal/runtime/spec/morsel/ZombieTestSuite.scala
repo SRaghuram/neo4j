@@ -115,8 +115,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
-      .filter(Seq(
-        greaterThanOrEqual(function("id", varFor("x")), literalInt(3))))
+      .filter("id(x) >= 3")
       .allNodeScan("x")
       .build()
 
@@ -135,8 +134,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "y")
-      .filter(Seq(
-        greaterThanOrEqual(function("id", varFor("y")), literalInt(size / 2))))
+      .filter(s"id(y) >= ${size / 2}")
       .expandAll("(x)-->(y)")
       .allNodeScan("x")
       .build()
