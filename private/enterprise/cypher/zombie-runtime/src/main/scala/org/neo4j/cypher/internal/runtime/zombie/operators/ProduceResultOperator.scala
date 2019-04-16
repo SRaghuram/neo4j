@@ -22,7 +22,7 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
 /**
-  * This operator implements both [[StreamingOperator]] and [[ContinuableOperator]] because it
+  * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
   * can occur both as the start of a pipeline, and as the final operator of a pipeline.
   *
   * @param workIdentity
@@ -37,6 +37,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
      with OutputOperatorState {
 
   override def toString: String = "ProduceResult"
+  override def outputBuffer: Option[BufferId] = None
 
   //==========================================================================
   // This is called when ProduceResult is the start operator of a new pipeline

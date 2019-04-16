@@ -9,10 +9,8 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.QueryState
 import org.neo4j.cypher.internal.runtime.scheduling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.zombie.ExecutionState
-import org.neo4j.cypher.internal.runtime.zombie.state.PipelineExecutions
 
-class ExecutingQuery(val pipelineExecutions: PipelineExecutions,
-                     val executionState: ExecutionState,
+class ExecutingQuery(val executionState: ExecutionState,
                      val queryContext: QueryContext,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer) extends QueryExecutionHandle {

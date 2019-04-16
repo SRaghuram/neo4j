@@ -28,6 +28,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
                       limit: Long = Long.MaxValue) extends OutputOperator {
 
   override def toString: String = "SortPre"
+  override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
   override def createState(executionState: ExecutionState,
                            pipelineId: PipelineId): OutputOperatorState =

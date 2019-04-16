@@ -17,10 +17,13 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
      with Buffer[MorselExecutionContext] {
 
   // MorselAccumulator
-  override def update(morsel: MorselExecutionContext): Unit = inner.put(morsel)
+  override def update(morsel: MorselExecutionContext): Unit = put(morsel)
 
   // Buffer
-  override def put(morsel: MorselExecutionContext): Unit = inner.put(morsel)
+  override def put(morsel: MorselExecutionContext): Unit = {
+    morsel.resetToFirstRow()
+    inner.put(morsel)
+  }
   override def hasData: Boolean = inner.hasData
   override def take(): MorselExecutionContext = inner.take()
   override def foreach(f: MorselExecutionContext => Unit): Unit = inner.foreach(f)

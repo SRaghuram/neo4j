@@ -34,6 +34,14 @@ trait ArgumentStateMapCreator {
   */
 trait ExecutionState extends ArgumentStateMapCreator {
 
+  /**
+    * The pipeline states of this execution.
+    */
+  def pipelineStates: Array[PipelineState]
+
+  /**
+    * The sink with if `bufferId` of the pipeline with id fromPipeline`.
+    */
   def getSink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T]
 
   /**

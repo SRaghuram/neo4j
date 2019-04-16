@@ -19,88 +19,91 @@ import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentStateMap, QueryCo
   * The reason to do it this way is to have one location only where we make these assumptions
   * and have method names that clearly communicate what type of buffer we expect.
   */
-class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
+class Buffers(numBuffers: Int,
               tracker: QueryCompletionTracker,
               argumentStateMaps: ArgumentStateMaps,
               stateFactory: StateFactory) {
 
-  private val buffers: Array[SinkByOrigin] = new Array[SinkByOrigin](bufferDefinitions.length)
+  private val buffers: Array[SinkByOrigin] = new Array[SinkByOrigin](numBuffers)
 
   // Constructor code
-    /**
-      * This finds the first buffer downstream of the one at `initialIndex`, which accumulates
-      * results. This is needed to set the reducer correctly, which in turn manages reference counting
-      * on the accumulating buffer.
-      *
-      * @param initialIndex the index of the buffer to start the search from.
-      * @param argumentStateMapId    the reducer for which we try to find the corresponding buffer.
-      * @return the reducer
-      */
-    private def findRHSAccumulatingStateBuffer(initialIndex: Int, argumentStateMapId: ArgumentStateMapId): AccumulatingBuffer = {
-      var j = initialIndex + 1
-      while (j < buffers.length) {
-        buffers(j) match {
-          case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
-            return x.LHSSink
-          case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.rhsArgumentStateMapId == argumentStateMapId =>
-            return x.RHSSink
-          case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
-            return x
-          case _ =>
-        }
-        j += 1
+
+  /**
+    * This finds the first buffer downstream of the one at `initialIndex`, which accumulates
+    * results. This is needed to set the reducer correctly, which in turn manages reference counting
+    * on the accumulating buffer.
+    *
+    * @param initialIndex       index of the buffer to start the search from.
+    * @param argumentStateMapId reducer for which we try to find the corresponding buffer.
+    * @return                   AccumulatingBuffer
+    */
+  private def findRHSAccumulatingStateBuffer(initialIndex: Int, argumentStateMapId: ArgumentStateMapId): AccumulatingBuffer = {
+    var j = initialIndex + 1
+    while (j < buffers.length) {
+      buffers(j) match {
+        case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
+          return x.LHSSink
+        case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.rhsArgumentStateMapId == argumentStateMapId =>
+          return x.RHSSink
+        case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
+          return x
+        case _ =>
       }
-      throw new IllegalStateException(s"Could not find downstream argumentStateBuffer with id $argumentStateMapId")
+      j += 1
     }
+    throw new IllegalStateException(s"Could not find downstream argumentStateBuffer with id $argumentStateMapId")
+  }
 
-    /* Go through the buffer definitions in reverse order and initialize an actual buffer for each definition.
-     * Reverse order is needed, since we need to set reducers on upstream buffers, for which the downstream buffer
-     * has to exist already.
-     */
-    private var i = buffers.length - 1
-    while (i >= 0) {
-      val bufferDefinition = bufferDefinitions(i)
-      val reducers = bufferDefinition.reducers.map(asmId => findRHSAccumulatingStateBuffer(i, asmId))
-      val workCancellers = bufferDefinition.workCancellers.map(_.id)
-      buffers(i) =
-        bufferDefinition match {
-          case x: ApplyBufferDefinition =>
-            val reducerOnRHSDefs = x.reducersOnRHS
-            val argumentStatesToInitiate = workCancellers
-            // argumentReducersForThis in reverse order, since upstream reducers possibly
-            // need to increment counts on their downstreams, which have to be initialized
-            // first in order to do that
-            val reducersOnRHS = reducerOnRHSDefs.map(argStateDef => findRHSAccumulatingStateBuffer(i, argStateDef.id)).reverse
-            new MorselApplyBuffer(argumentStatesToInitiate,
-                                  reducersOnRHS,
-                                  argumentReducersOnTopOfThisApply = reducers,
-                                  argumentStateMaps,
-                                  x.argumentSlotOffset,
-                                  stateFactory.newIdAllocator(),
-                                  x.delegates.map(bufferId => morselBuffer(bufferId)))
+  private[state] def constructBuffer(bufferDefinition: BufferDefinition): Unit = {
+    val i = bufferDefinition.id.x
 
-          case x: ArgumentStateBufferDefinition =>
-            new MorselArgumentStateBuffer(tracker,
-                                          reducers,
-                                          argumentStateMaps,
-                                          x.argumentStateMapId)
+    // Since apply buffers delegate, the output buffer of the producing pipeline and the input
+    // buffer of the consuming pipeline(s) will not be logically the same. Therefore we explicitly
+    // construct both the output and input buffers of all pipelines, but since they are still mostly
+    // the same, we need to idempotently ignore the construct call if the buffer is already constructed.
+    if (buffers(i) != null)
+      return
 
-          case x: LHSAccumulatingRHSStreamingBufferDefinition =>
-            new LHSAccumulatingRHSStreamingBuffer(
-              tracker,
-              reducers,
-              argumentStateMaps,
-              x.lhsargumentStateMapId,
-              x.rhsargumentStateMapId,
-              x.lhsPipelineId,
-              x.rhsPipelineId,
-              stateFactory)
+    val reducers = bufferDefinition.reducers.map(asmId => findRHSAccumulatingStateBuffer(i, asmId))
+    val workCancellers = bufferDefinition.workCancellers.map(_.id)
+    buffers(i) =
+      bufferDefinition match {
+        case x: ApplyBufferDefinition =>
+          val reducerOnRHSDefs = x.reducersOnRHS
+          val argumentStatesToInitiate = workCancellers
+          // argumentReducersForThis in reverse order, since upstream reducers possibly
+          // need to increment counts on their downstreams, which have to be initialized
+          // first in order to do that
+          val reducersOnRHS = reducerOnRHSDefs.map(argStateDef => findRHSAccumulatingStateBuffer(i,
+                                                                                                 argStateDef.id)).reverse
+          new MorselApplyBuffer(argumentStatesToInitiate,
+                                reducersOnRHS,
+                                argumentReducersOnTopOfThisApply = reducers,
+                                argumentStateMaps,
+                                x.argumentSlotOffset,
+                                stateFactory.newIdAllocator(),
+                                x.delegates.map(bufferId => morselBuffer(bufferId)))
 
-          case _: BufferDefinition =>
-            new MorselBuffer(tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer())
-        }
-      i -= 1
-    }
+        case x: ArgumentStateBufferDefinition =>
+          new MorselArgumentStateBuffer(tracker,
+                                        reducers,
+                                        argumentStateMaps,
+                                        x.argumentStateMapId)
+
+        case x: LHSAccumulatingRHSStreamingBufferDefinition =>
+          new LHSAccumulatingRHSStreamingBuffer(tracker,
+                                                reducers,
+                                                argumentStateMaps,
+                                                x.lhsargumentStateMapId,
+                                                x.rhsargumentStateMapId,
+                                                x.lhsPipelineId,
+                                                x.rhsPipelineId,
+                                                stateFactory)
+
+        case _: BufferDefinition =>
+          new MorselBuffer(tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer())
+      }
+  }
 
   // Public methods
 

@@ -22,11 +22,16 @@ object LazyScheduling extends SchedulingPolicy {
                queryResources: QueryResources): PipelineTask = {
 
     // TODO this schedules RHS of hash join first. Not so good.
-    for (pipelineState <- executingQuery.pipelineExecutions.reverseIterator) {
+    val pipelineStates = executingQuery.executionState.pipelineStates
+
+    var i = pipelineStates.length - 1
+    while (i >= 0) {
+      val pipelineState = pipelineStates(i)
       val task = pipelineState.nextTask(executingQuery.queryContext, executingQuery.queryState, queryResources)
       if (task != null) {
         return task
       }
+      i -= 1
     }
     null
   }

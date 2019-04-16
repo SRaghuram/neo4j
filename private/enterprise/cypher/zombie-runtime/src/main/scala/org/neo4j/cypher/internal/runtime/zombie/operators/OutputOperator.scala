@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, Task}
   *                             data for example.
   */
 trait OutputOperator extends HasWorkIdentity {
+  def outputBuffer: Option[BufferId]
   def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState
 }
 
@@ -34,6 +35,7 @@ trait PreparedOutput {
 // NO OUTPUT
 
 case object NoOutput extends OutputOperator with OutputOperatorState with PreparedOutput {
+  override def outputBuffer: Option[BufferId] = None
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = this
   override def prepareOutput(outputMorsel: MorselExecutionContext,
                              context: QueryContext,
@@ -47,6 +49,7 @@ case object NoOutput extends OutputOperator with OutputOperatorState with Prepar
 // MORSEL BUFFER OUTPUT
 
 case class MorselBufferOutput(bufferId: BufferId) extends OutputOperator {
+  override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(bufferId.x, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselBufferOutputState(bufferId, executionState, pipelineId)
