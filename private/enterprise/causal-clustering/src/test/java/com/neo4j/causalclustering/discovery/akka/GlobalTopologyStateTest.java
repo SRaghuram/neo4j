@@ -32,6 +32,7 @@ import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Sche
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class GlobalTopologyStateTest
@@ -250,6 +251,20 @@ class GlobalTopologyStateTest
         assertNull( state.retrieveCatchupServerAddress( coreId2 ) );
         assertNull( state.retrieveCatchupServerAddress( coreId3 ) );
         assertNull( state.retrieveCatchupServerAddress( readReplicaId2 ) );
+    }
+
+    @Test
+    void shouldIgnoreCoreTopologyThatDiffersOnlyInCanBeBootstrapped()
+    {
+        var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
+        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology2 = new CoreTopology( databaseId1, clusterId, true, coreMembers );
+
+        state.onTopologyUpdate( coreTopology1 );
+        state.onTopologyUpdate( coreTopology2 );
+
+        verify( listener ).accept( coreTopology1 );
+        verify( listener, never() ).accept( coreTopology2 );
     }
 
     private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )

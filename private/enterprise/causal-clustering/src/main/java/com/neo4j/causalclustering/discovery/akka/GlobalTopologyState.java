@@ -57,7 +57,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         DatabaseId databaseId = newCoreTopology.databaseId();
         CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
 
-        if ( !Objects.equals( currentCoreTopology, newCoreTopology ) )
+        if ( haveDifferentMembers( currentCoreTopology, newCoreTopology ) )
         {
             this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
             log.info( "Core topology for database %s changed from %s to %s", databaseId, currentCoreTopology, newCoreTopology );
@@ -150,5 +150,10 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             }
         }
         return unmodifiableMap( result );
+    }
+
+    private static boolean haveDifferentMembers( CoreTopology oldTopology, CoreTopology newTopology )
+    {
+        return oldTopology == null || !oldTopology.members().equals( newTopology.members() );
     }
 }
