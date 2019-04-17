@@ -31,7 +31,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -183,8 +182,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
             {
                 SplittableRandom rng = RNGState.newRandom( 0 );
                 ValueGeneratorFun values = randPropertyFor( CreateDeleteNodeProperties_type ).value().create();
-                File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath(), storeAndConfig.config() );
+                GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store(), storeAndConfig.config() );
                 List<String> keys = Stream.of( properties() ).map( PropertyDefinition::key ).collect( toList() );
                 TxBatch txBatch = new TxBatch( db, 1000 );
                 for ( int thread = 0; thread < threads; thread++ )

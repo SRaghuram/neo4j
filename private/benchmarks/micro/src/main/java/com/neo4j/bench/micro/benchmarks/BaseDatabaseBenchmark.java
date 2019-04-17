@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.micro.JMHResultUtil;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
@@ -23,7 +24,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
@@ -74,7 +74,7 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
         return managedStore.db();
     }
 
-    protected Path store()
+    protected Store store()
     {
         return managedStore.store();
     }

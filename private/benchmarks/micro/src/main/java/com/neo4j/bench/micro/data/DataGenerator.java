@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -217,16 +218,16 @@ public class DataGenerator
         return nodes * outRelationshipTypes.length;
     }
 
-    void generate( Path storeDir, Path neo4jConfig )
+    void generate( Store store, Path neo4jConfig )
     {
         long startTime = System.currentTimeMillis();
         switch ( graphWriter )
         {
         case TRANSACTIONAL:
-            innerTransactionalLastPhase( storeDir, neo4jConfig, innerTransactionalFirstPhase( storeDir, neo4jConfig ) );
+            innerTransactionalLastPhase( store, neo4jConfig, innerTransactionalFirstPhase( store, neo4jConfig ) );
             break;
         case BATCH:
-            innerTransactionalLastPhase( storeDir, neo4jConfig, innerBatchFirstPhase( storeDir, neo4jConfig ) );
+            innerTransactionalLastPhase( store, neo4jConfig, innerBatchFirstPhase( store, neo4jConfig ) );
             break;
         default:
             throw new RuntimeException( "Unrecognized graph writer: " + graphWriter );
@@ -235,7 +236,7 @@ public class DataGenerator
         System.out.println( "Generated store in: " + durationToString( finishTime - startTime ) );
     }
 
-    private long[] innerBatchFirstPhase( Path storeDir, Path neo4jConfig )
+    private long[] innerBatchFirstPhase( Store store, Path neo4jConfig )
     {
         BatchInserter inserter = null;
         try
@@ -243,7 +244,7 @@ public class DataGenerator
             long startTime = System.currentTimeMillis();
 
             Map<String,String> neo4jConfigMap = Neo4jConfig.fromFile( neo4jConfig ).toMap();
-            inserter = BatchInserters.inserter( DatabaseLayout.of( storeDir.toFile() ), neo4jConfigMap );
+            inserter = BatchInserters.inserter( DatabaseLayout.of( store.graphDbDirectory().toFile() ), neo4jConfigMap );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
@@ -306,14 +307,14 @@ public class DataGenerator
         }
     }
 
-    private long[] innerTransactionalFirstPhase( Path storeDir, Path neo4jConfig )
+    private long[] innerTransactionalFirstPhase( Store store, Path neo4jConfig )
     {
         GraphDatabaseService db = null;
         try
         {
             long startTime = System.currentTimeMillis();
 
-            db = ManagedStore.newDb( storeDir, neo4jConfig );
+            db = ManagedStore.newDb( store, neo4jConfig );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
@@ -376,12 +377,12 @@ public class DataGenerator
         }
     }
 
-    private void innerTransactionalLastPhase( Path storeDir, Path neo4jConfig, long[] nodeIds )
+    private void innerTransactionalLastPhase( Store store, Path neo4jConfig, long[] nodeIds )
     {
         GraphDatabaseService db = null;
         try
         {
-            db = ManagedStore.newDb( storeDir, neo4jConfig );
+            db = ManagedStore.newDb( store, neo4jConfig );
 
             System.out.printf( "Creating Temporary Node Label Files... " );
             long startTime = System.currentTimeMillis();

@@ -5,7 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.util.TestSupport;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.stream.IntStream;
 
@@ -57,7 +58,7 @@ class DataGeneratorDataCharacteristicsIT
     void shouldCreateEmptyGraph() throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withNeo4jConfig( NEO4J_CONFIG )
@@ -65,7 +66,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -83,7 +84,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateJustNodes( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -92,7 +93,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -110,7 +111,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldNotCrashWhenConfiguredToCreateJustRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -123,7 +124,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -141,7 +142,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateShuffledNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -187,7 +188,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -205,7 +206,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldOrderedNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -251,7 +252,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -269,7 +270,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateUniqueConstrainedAndIndexedNodeProperties( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -316,7 +317,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -335,7 +336,7 @@ class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -358,7 +359,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -376,7 +377,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateOrderedRelationshipPropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -399,7 +400,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -417,7 +418,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsCollocatedByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -428,7 +429,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -446,7 +447,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsScatteredByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -457,7 +458,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -475,7 +476,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -497,7 +498,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -515,7 +516,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -537,7 +538,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -555,7 +556,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -577,7 +578,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -595,7 +596,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -617,7 +618,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -636,7 +637,7 @@ class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -653,7 +654,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -671,7 +672,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        File storeDir = temporaryFolder.storeDir();
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -688,6 +689,6 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 }

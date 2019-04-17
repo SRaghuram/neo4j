@@ -134,8 +134,8 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     private void removeLastCheckpointRecordFromLastLogFile() throws IOException
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        File storeDir = managedStore.store().toFile();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDir, fileSystem ).build();
+        File graphDb = managedStore.store().graphDbDirectory().toFile();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( graphDb, fileSystem ).build();
         LogPosition checkpointPosition = null;
 
         LogFile logFile = logFiles.getLogFile();

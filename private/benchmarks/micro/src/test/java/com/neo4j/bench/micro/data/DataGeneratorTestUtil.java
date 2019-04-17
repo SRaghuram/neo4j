@@ -8,9 +8,9 @@ package com.neo4j.bench.micro.data;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -51,7 +51,7 @@ public class DataGeneratorTestUtil
     private static final Path NEO4J_CONFIG = Paths.get( "neo4j.config" );
 
     static void assertGraphStatsAreConsistentWithBuilderConfiguration(
-            File storeDir,
+            Store store,
             DataGeneratorConfigBuilder builder,
             double percentageTolerance ) throws IOException
     {
@@ -62,14 +62,14 @@ public class DataGeneratorTestUtil
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
         config.neo4jConfig().writeAsProperties( NEO4J_CONFIG );
 
-        generator.generate( storeDir.toPath(), NEO4J_CONFIG );
+        generator.generate( store, NEO4J_CONFIG );
 
         System.out.println( "Tolerance: " + percentageTolerance );
 
         GraphDatabaseService db = null;
         try
         {
-            db = ManagedStore.newDb( storeDir.toPath(), NEO4J_CONFIG );
+            db = ManagedStore.newDb( store, NEO4J_CONFIG );
 
             // check global counts
             assertThat( nodeCount( db ), equalTo( config.nodeCount() ) );

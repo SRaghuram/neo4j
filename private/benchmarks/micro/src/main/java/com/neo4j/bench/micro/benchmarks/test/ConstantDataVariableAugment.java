@@ -23,8 +23,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import java.io.File;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -82,8 +80,7 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
             @Override
             public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
-                File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath() );
+                GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store() );
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
