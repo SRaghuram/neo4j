@@ -9,7 +9,7 @@ import java.util
 import java.util.stream.{DoubleStream, IntStream, LongStream}
 import java.util.{PrimitiveIterator, ArrayList => JArrayList, HashMap => JHashMap, HashSet => JHashSet, Iterator => JIterator, Map => JMap, Set => JSet}
 
-import org.eclipse.collections.api.iterator.LongIterator
+import org.eclipse.collections.api.iterator.{LongIterator, MutableLongIterator}
 import org.eclipse.collections.impl.map.mutable.primitive.{LongIntHashMap, LongObjectHashMap}
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet
 import org.neo4j.codegen.Expression.{invoke, not, or, _}
@@ -796,7 +796,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       val localName = context.namer.newVarName()
       val variable = generator.declare(typeRef[LongIterator], localName)
       generator.assign(variable, invoke(generator.load(name),
-        method[LongHashSet, LongIterator]("longIterator")))
+        method[LongHashSet, MutableLongIterator]("longIterator")))
       using(generator.whileLoop(
         invoke(generator.load(localName), method[LongIterator, Boolean]("hasNext")))) { body =>
 
