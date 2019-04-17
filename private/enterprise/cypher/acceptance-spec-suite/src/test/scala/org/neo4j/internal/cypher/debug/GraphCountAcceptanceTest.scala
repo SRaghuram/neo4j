@@ -102,5 +102,12 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     executeSingle("MATCH (n:Car) RETURN n").toList should not be empty
     executeSingle("MATCH (n:Room) RETURN n").toList should not be empty
 
+    // Relationships
+    // We have only statistics for one label + type, thus no guarantee that both labels plus type exists
+    executeSingle("MATCH (u:User)-[:OWNS]->(n) RETURN u, n").toList should not be empty
+    executeSingle("MATCH (u:User)-[:STAYS_IN]->(n) RETURN u, n").toList should not be empty
+    executeSingle("MATCH (u)-[:OWNS]->(n:Car) RETURN u, n").toList should not be empty
+    executeSingle("MATCH (u)-[:OWNS]->(n:Room) RETURN u, n").toList should not be empty
+    executeSingle("MATCH (u)-[:STAYS_IN]->(n:Room) RETURN u, n").toList should not be empty
   }
 }
