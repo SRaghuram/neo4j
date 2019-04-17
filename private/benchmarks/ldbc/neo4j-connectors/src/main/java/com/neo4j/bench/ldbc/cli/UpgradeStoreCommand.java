@@ -28,7 +28,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.neo4j.bench.ldbc.cli.RunCommand.discoverSchema;
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
@@ -92,7 +91,7 @@ public class UpgradeStoreCommand implements Runnable
                 System.out.println( "Starting store and recreating Indexes..." );
                 Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile, null );
                 DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
-                GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+                GraphDatabaseService db = managementService.database( upgradedStore.graphDbDirectory().getFileName().toString() );
                 LdbcIndexer ldbcIndexer = new LdbcIndexer( neo4jSchema, true, false, true );
                 ldbcIndexer.createTransactional( db );
                 System.out.println( "Shutting down store..." );

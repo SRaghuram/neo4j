@@ -19,7 +19,6 @@ import java.util.List;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -30,7 +29,6 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Database implements AutoCloseable
 {
@@ -114,7 +112,7 @@ public class Database implements AutoCloseable
     {
         this.store = store;
         this.managementService = managementService;
-        this.db = managementService.database( DEFAULT_DATABASE_NAME );
+        this.db = managementService.database( store.topLevelDirectory().getFileName().toString() );
     }
 
     public boolean isRunning()
@@ -137,13 +135,9 @@ public class Database implements AutoCloseable
         switch ( edition )
         {
         case COMMUNITY:
-            return new DatabaseManagementServiceBuilder()
-                    .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
+            return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
         case ENTERPRISE:
-            return new CommercialDatabaseManagementServiceBuilder()
-                    .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
+            return new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }

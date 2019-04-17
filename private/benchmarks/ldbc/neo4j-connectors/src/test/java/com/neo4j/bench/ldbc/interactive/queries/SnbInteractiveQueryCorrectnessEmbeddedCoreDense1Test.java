@@ -120,7 +120,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -166,8 +165,9 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     @Override
     public Neo4jConnectionState openConnection( String path ) throws Exception
     {
-        DatabaseManagementService managementService = Neo4jDb.newDb( new File( path ), DriverConfigUtils.neo4jTestConfig() );
-        Neo4jConnectionState connection = new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
+        File dbDir = new File( path );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        Neo4jConnectionState connection = new Neo4jConnectionState( managementService, managementService.database( dbDir.getName() ),
                 null,
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),

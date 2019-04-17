@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.database.DatabaseManagementService;
@@ -121,7 +120,7 @@ public class Neo4jDb extends Db
                     SnbInteractiveCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
                             getCypherRuntimeOrFail( cypherRuntimeString )
-                                                          ),
+                    ),
                     doWarmup
             );
             break;
@@ -198,7 +197,7 @@ public class Neo4jDb extends Db
                         SnbInteractiveCypherQueries.createWith(
                                 getCypherPlannerOrFail( cypherPlannerString ),
                                 getCypherRuntimeOrFail( cypherRuntimeString )
-                                                              ),
+                        ),
                         null,
                         null
                 );
@@ -215,7 +214,7 @@ public class Neo4jDb extends Db
                         SnbInteractiveCypherQueries.createWith(
                                 getCypherPlannerOrFail( cypherPlannerString ),
                                 getCypherRuntimeOrFail( cypherRuntimeString )
-                                                              ),
+                        ),
                         dbDir,
                         configFile
                 );
@@ -249,7 +248,7 @@ public class Neo4jDb extends Db
                     SnbBiCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
                             getCypherRuntimeOrFail( cypherRuntimeString )
-                                                 ),
+                    ),
                     doWarmup
             );
             break;
@@ -423,8 +422,8 @@ public class Neo4jDb extends Db
 
     private static DatabaseManagementServiceInternalBuilder newDbBuilder( File dbDir, File configFile )
     {
-        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dbDir );
-        builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbDir.getParentFile().getAbsolutePath() );
+        File storeDir = dbDir.getParentFile();
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

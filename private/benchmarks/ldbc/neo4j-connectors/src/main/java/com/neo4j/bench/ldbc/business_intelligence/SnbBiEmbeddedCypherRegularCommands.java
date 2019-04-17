@@ -131,7 +131,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
     public void init() throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

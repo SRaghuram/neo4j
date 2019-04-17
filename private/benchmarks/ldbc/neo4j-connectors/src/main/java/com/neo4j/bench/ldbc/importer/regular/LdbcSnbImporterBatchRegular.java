@@ -180,7 +180,7 @@ public class LdbcSnbImporterBatchRegular extends LdbcSnbImporter
         batchInserter.shutdown();
 
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerPropertiesFile );
-        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
 
         indexer.createTransactional( db );
 

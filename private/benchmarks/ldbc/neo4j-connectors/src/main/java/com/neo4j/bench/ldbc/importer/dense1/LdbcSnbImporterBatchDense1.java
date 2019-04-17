@@ -33,7 +33,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class LdbcSnbImporterBatchDense1 extends LdbcSnbImporter
 {
@@ -176,7 +175,7 @@ public class LdbcSnbImporterBatchDense1 extends LdbcSnbImporter
         batchInserter.shutdown();
 
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerPropertiesFile );
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
 
         indexer.createTransactional( db );
 

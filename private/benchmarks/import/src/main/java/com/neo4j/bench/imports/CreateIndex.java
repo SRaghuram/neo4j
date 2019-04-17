@@ -5,16 +5,16 @@
  */
 package com.neo4j.bench.imports;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
-import java.io.File;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -31,10 +31,10 @@ public class CreateIndex
 {
     private void run( String storeDirString, List<String> indexPatterns )
     {
-        var storeDir = new File( storeDirString );
+        Store store = Store.createFrom( Paths.get( storeDirString ) );
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
+                .newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() )
+                .newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

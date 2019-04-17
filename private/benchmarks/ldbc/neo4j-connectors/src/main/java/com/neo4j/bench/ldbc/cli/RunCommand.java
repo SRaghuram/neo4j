@@ -389,7 +389,7 @@ public class RunCommand implements Runnable
         }
         Store store = Store.createFrom( storeDir.toPath() );
         DatabaseManagementService managementService = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
-        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( store.graphDbDirectory().getFileName().toString() );
         try
         {
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );

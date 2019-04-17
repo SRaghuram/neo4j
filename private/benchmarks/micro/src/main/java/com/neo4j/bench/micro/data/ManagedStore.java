@@ -15,7 +15,6 @@ import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceB
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
@@ -25,7 +24,6 @@ import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ManagedStore
 {
@@ -79,14 +77,14 @@ public class ManagedStore
 
     public static GraphDatabaseService newDb( Path dbPath, Path config )
     {
-        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dbPath.toFile() );
-        builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbPath.getParent().toAbsolutePath().toString() );
+        Path storeDir = dbPath.getParent();
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir.toFile() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
         }
         managementService = builder.newDatabaseManagementService();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return managementService.database( dbPath.getFileName().toString() );
     }
 
     public static DatabaseManagementService getManagementService()

@@ -54,11 +54,11 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
-                tempDirectory.toFile(), Config.defaults(), GraphDatabaseDependencies.newDependencies() );
-        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database(
-                Config.defaults().get( GraphDatabaseSettings.default_database ) );
-
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY,
+                                                                  TxProbingEditionModule::new ).newFacade( tempDirectory.toFile(),
+                                                                                                           Config.defaults(),
+                                                                                                           GraphDatabaseDependencies.newDependencies() );
+        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
     }
 

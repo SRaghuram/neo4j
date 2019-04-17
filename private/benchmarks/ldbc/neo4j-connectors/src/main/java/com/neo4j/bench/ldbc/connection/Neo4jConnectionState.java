@@ -56,7 +56,7 @@ public class Neo4jConnectionState extends DbConnectionState
 
     public Neo4jConnectionState( DatabaseManagementService managementService, GraphDatabaseService db, URI uri, AuthToken authToken,
             LoggingService loggingService, AnnotatedQueries annotatedQueries, final LdbcDateCodec.Format dateFormat,
-            final LdbcDateCodec.Resolution timestampResolution ) throws DbException
+            final LdbcDateCodec.Resolution timestampResolution )
     {
         this.managementService = managementService;
         this.db = db;
