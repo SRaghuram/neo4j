@@ -29,6 +29,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Database implements AutoCloseable
 {
@@ -112,7 +113,7 @@ public class Database implements AutoCloseable
     {
         this.store = store;
         this.managementService = managementService;
-        this.db = managementService.database( store.topLevelDirectory().getFileName().toString() );
+        this.db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     public boolean isRunning()
