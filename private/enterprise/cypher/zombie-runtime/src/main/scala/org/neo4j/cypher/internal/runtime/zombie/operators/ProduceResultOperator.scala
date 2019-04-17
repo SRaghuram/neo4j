@@ -130,41 +130,40 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
   // This operates on a single row only
   override def genOperate: IntermediateRepresentation = {
     def getLongAt(offset: Int) = codeGen.getLongAt(offset)
-    def getRefAt(offset: Int) = codeGen.getRefAt(offset)
+    def getRefAt(offset: Int) = {
+      val notPopulated = codeGen.getRefAt(offset)
+      ternary(PRE_POPULATE_RESULTS,
+              invokeStatic(method[ValuePopulation, AnyValue, AnyValue]("populate"),
+                           notPopulated), notPopulated)
+    }
+    def nodeFromSlot(offset: Int) = {
+      val notPopulated = invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
+      ternary(PRE_POPULATE_RESULTS,
+              invokeStatic(method[ValuePopulation, NodeValue, NodeValue]("populate"),
+                           notPopulated), notPopulated)
+    }
+    def relFromSlot(offset: Int) = {
+      val notPopulated = invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
+      ternary(PRE_POPULATE_RESULTS,
+              invokeStatic(method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"),
+                           notPopulated), notPopulated)
+    }
 
-    val nodeFromSlot = (offset: Int) =>
-      invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
-    val relFromSlot = (offset: Int) =>
-      invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
-
-
-    def getFromSlot(slot: Slot) = {
-      val (notPopulated, populateMethod) = slot match {
+    def getFromSlot(slot: Slot) = slot match {
         case LongSlot(offset, true, symbols.CTNode) =>
-          (ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset)),
-            method[ValuePopulation, NodeValue, NodeValue]("populate"))
+          ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
         case LongSlot(offset, false, symbols.CTNode) =>
-          (nodeFromSlot(offset), method[ValuePopulation, NodeValue, NodeValue]("populate"))
+          nodeFromSlot(offset)
         case LongSlot(offset, true, symbols.CTRelationship) =>
-          (ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset)),
-            method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"))
+          ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
         case LongSlot(offset, false, symbols.CTRelationship) =>
-          (relFromSlot(offset), method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"))
-        case RefSlot(offset, _, _) => (getRefAt(offset),
-          method[ValuePopulation, AnyValue, AnyValue]("populate"))
+          relFromSlot(offset)
+        case RefSlot(offset, _, _) =>
+          getRefAt(offset)
+
         case _ =>
           throw new InternalException(s"Do not know how to project $slot")
       }
-
-      /**
-        * {{{
-        *   prePopulateResults ? ValuePopulation.populate(results) : results
-        * }}}
-        */
-      ternary(PRE_POPULATE_RESULTS,
-              invokeStatic(populateMethod, notPopulated),
-              notPopulated)
-    }
 
     val project = block(columns.zipWithIndex.map {
       case (name, index) =>
