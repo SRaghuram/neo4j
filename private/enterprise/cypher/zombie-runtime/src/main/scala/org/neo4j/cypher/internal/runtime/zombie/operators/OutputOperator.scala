@@ -4,6 +4,9 @@ import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, Task}
 
 /**
@@ -34,7 +37,7 @@ trait PreparedOutput {
 
 // NO OUTPUT
 
-case object NoOutput extends OutputOperator with OutputOperatorState with PreparedOutput {
+case object NoOutputOperator extends OutputOperator with OutputOperatorState with PreparedOutput {
   override def outputBuffer: Option[BufferId] = None
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = this
   override def prepareOutput(outputMorsel: MorselExecutionContext,
@@ -48,7 +51,7 @@ case object NoOutput extends OutputOperator with OutputOperatorState with Prepar
 
 // MORSEL BUFFER OUTPUT
 
-case class MorselBufferOutput(bufferId: BufferId) extends OutputOperator {
+case class MorselBufferOutputOperator(bufferId: BufferId) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(bufferId.x, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
@@ -69,6 +72,29 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       outputMorsel: MorselExecutionContext) extends PreparedOutput {
   override def produce(): Unit =
     executionState.putMorsel(pipelineId, bufferId, outputMorsel)
+}
+
+// MORSEL BUFFER OUTPUT
+
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int) extends OutputOperator {
+  override def outputBuffer: Option[BufferId] = Some(bufferId)
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(bufferId.x, s"Output morsel grouped by argumentRowId $argumentSlotOffset to $bufferId")
+  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
+    MorselArgumentStateBufferOutputState(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId), argumentSlotOffset)
+}
+case class MorselArgumentStateBufferOutputState(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
+                                                argumentSlotOffset: Int) extends OutputOperatorState {
+  override def prepareOutput(outputMorsel: MorselExecutionContext,
+                             context: QueryContext,
+                             state: QueryState,
+                             resources: QueryResources): PreparedOutput = {
+    val viewsPerArgument = ArgumentStateMap.map(argumentSlotOffset, outputMorsel, morselView => morselView)
+    MorselArgumentStateBufferPreparedOutput(sink, viewsPerArgument)
+  }
+}
+case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
+                                                   data: IndexedSeq[PerArgument[MorselExecutionContext]]) extends PreparedOutput {
+  override def produce(): Unit = sink.put(data)
 }
 
 

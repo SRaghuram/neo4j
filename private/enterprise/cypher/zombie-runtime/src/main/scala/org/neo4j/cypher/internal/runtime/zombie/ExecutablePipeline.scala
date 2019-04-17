@@ -18,8 +18,6 @@ import org.neo4j.util.Preconditions
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
                               middleOperators: Array[MiddleOperator],
-                              produceResult: Option[ProduceResultOperator],
-                              workOnOutput: Option[HasWorkIdentity],
                               serial: Boolean,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
@@ -37,10 +35,10 @@ case class ExecutablePipeline(id: PipelineId,
                       executionState)
 
   override val workId: Int = start.workIdentity.workId
-  override val workDescription: String = composeWorkDescriptions(start, middleOperators ++ produceResult ++ workOnOutput)
+  override val workDescription: String = composeWorkDescriptions(start, middleOperators, outputOperator)
 
-  private def composeWorkDescriptions(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): String = {
-    val workIdentities = Seq(first) ++ others
+  private def composeWorkDescriptions(first: HasWorkIdentity, others: Seq[HasWorkIdentity], last: HasWorkIdentity): String = {
+    val workIdentities = Seq(first) ++ others ++ Seq(last)
     s"${workIdentities.map(_.workIdentity.workDescription).mkString(",")}"
   }
 

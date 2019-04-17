@@ -218,26 +218,17 @@ class OperatorFactory(val stateDefinition: StateDefinition,
       case plans.IndexOrderNone => kernel.api.IndexOrder.NONE
     }
 
-  def createOutput(maybePlan: Option[LogicalPlan],
-                   maybeOutputBuffer: Option[BufferDefinition]): OutputOperator = {
+  def createOutput(outputDefinition: OutputDefinition): OutputOperator = {
 
-    maybePlan match {
-      case None =>
-        maybeOutputBuffer match {
-          case None => NoOutput
-          case Some(b: BufferDefinition) => MorselBufferOutput(b.id)
-        }
-
-      case Some(p: plans.ProduceResult) =>
-        Preconditions.checkArgument(maybeOutputBuffer.isEmpty, s"Expected no outputBuffer, but found ${maybeOutputBuffer}")
-        createProduceResults(p)
-
-      case Some(plan) =>
+    outputDefinition match {
+      case NoOutput => NoOutputOperator
+      case MorselBufferOutput(bufferId) => MorselBufferOutputOperator(bufferId)
+      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset)
+      case ProduceResultOutput(p) => createProduceResults(p)
+      case ReduceOutput(outputBuffer, plan) =>
         val id = plan.id
         val slots = physicalPlan.slotConfigurations(id)
         generateSlotAccessorFunctions(slots)
-
-        val outputBuffer = maybeOutputBuffer.get
 
         plan match {
           case plans.Sort(_, sortItems) => {

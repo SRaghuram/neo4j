@@ -163,18 +163,20 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
   // We need to reference count both tasks and argument IDs on the RHS.
   // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
   // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
-  object RHSSink extends Sink[MorselExecutionContext] with AccumulatingBuffer {
+  object RHSSink extends Sink[IndexedSeq[PerArgument[MorselExecutionContext]]] with AccumulatingBuffer {
     override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
-    override def put(morsel: MorselExecutionContext): Unit = {
-      morsel.resetToFirstRow()
+    override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
       // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
-      rhsArgumentStateMap.update(morsel, (acc, morselView) => {
-        acc.put(morselView)
+      var i = 0
+      while (i < data.length) {
+        val argumentValue = data(i)
+        rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => acc.put(argumentValue.value))
         // Increment for a morsel in the RHS buffer
-        incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(acc.argumentRowId))
+        incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentValue.argumentRowId))
         tracker.increment()
-      })
+        i += 1
+      }
     }
 
     override def initiate(argumentRowId: Long): Unit = {
