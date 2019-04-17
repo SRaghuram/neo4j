@@ -86,6 +86,7 @@ import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommands
 {
@@ -119,7 +120,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         if ( null != dbDir )
         {
             DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).newDatabaseManagementService();
-            GraphDatabaseService db = managementService.database( dbDir.getName() );
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             LdbcIndexer.waitForIndexesToBeOnline( db );
             registerShutdownHook( managementService );
 

@@ -94,6 +94,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
 {
@@ -131,7 +132,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
     public void init() throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

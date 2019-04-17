@@ -81,6 +81,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
@@ -773,7 +774,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         startTime = System.currentTimeMillis();
 
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 

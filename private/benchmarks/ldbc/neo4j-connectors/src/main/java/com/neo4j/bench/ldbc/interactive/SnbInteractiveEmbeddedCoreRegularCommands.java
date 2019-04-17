@@ -85,6 +85,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommands
 {
@@ -110,7 +111,7 @@ public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommand
     public void init() throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

@@ -91,6 +91,7 @@ import static com.neo4j.bench.ldbc.Domain.WorksAt;
 import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
@@ -974,7 +975,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         startTime = System.currentTimeMillis();
 
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 

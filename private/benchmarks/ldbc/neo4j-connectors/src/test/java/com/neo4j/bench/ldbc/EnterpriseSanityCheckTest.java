@@ -28,6 +28,7 @@ import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirecto
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -64,7 +65,7 @@ public class EnterpriseSanityCheckTest
     {
         File dbDir = createTempDirectory( testFolder.absolutePath() );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile() );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
         Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
         result.accept( row -> true );

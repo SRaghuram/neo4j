@@ -107,6 +107,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -155,7 +156,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
                         "localhost",
                         0
                 ).newDatabaseManagementService();
-            GraphDatabaseService graphDatabase = managementService.database( dbDir.getName() );
+            GraphDatabaseService graphDatabase = managementService.database( DEFAULT_DATABASE_NAME );
             ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
             return new Neo4jConnectionState( managementService, graphDatabase,
                     URI.create( "bolt://" + portRegister.getLocalAddress( "bolt" ) ),

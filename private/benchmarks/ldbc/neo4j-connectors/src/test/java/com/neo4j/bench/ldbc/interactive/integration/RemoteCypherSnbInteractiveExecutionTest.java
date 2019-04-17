@@ -23,6 +23,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
@@ -64,7 +65,7 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
                 boltAddressWithoutPort,
                 port
         ).newDatabaseManagementService();
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String url = "bolt://" + boltAddressWithoutPort + ":" + port;
         return new DatabaseAndUrl( managementService, url );
     }

@@ -100,6 +100,7 @@ import java.util.List;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -148,7 +149,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     {
         File dbDir = new File( path );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
-        return new Neo4jConnectionState( managementService, managementService.database( dbDir.getName() ),
+        return new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
                 null,
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
