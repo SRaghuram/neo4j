@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.expressions
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized.MorselExecutionContext
@@ -24,14 +25,17 @@ abstract class MinOrMaxOperatorExpression(expression: Expression)
 case class MinOperatorExpression(expression: Expression) extends MinOrMaxOperatorExpression(expression) {
   override def createAggregationMapper: AggregationMapper = new MinMapper(expression)
   override def createAggregationReducer: AggregationReducer = new MinReducer
-  override def rewrite(f: (Expression) => Expression): Expression = f(MinOperatorExpression(expression.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(MinOperatorExpression(expression.rewrite(f)))
 
+  override def children: Seq[AstNode[_]] = Seq(expression)
 }
 
 case class MaxOperatorExpression(expression: Expression) extends MinOrMaxOperatorExpression(expression) {
   override def createAggregationMapper: AggregationMapper = new MaxMapper(expression)
   override def createAggregationReducer: AggregationReducer = new MaxReducer
-  override def rewrite(f: (Expression) => Expression): Expression = f(MaxOperatorExpression(expression.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(MaxOperatorExpression(expression.rewrite(f)))
+
+  override def children: Seq[AstNode[_]] = Seq(expression)
 }
 
 trait MinMaxChecker {

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.planner.v3_5.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedNodeProperty
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.AnyValue
@@ -20,6 +21,8 @@ case class SlottedCachedNodeProperty(nodeOffset: Int,
   override def getCachedProperty(ctx: ExecutionContext): AnyValue = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
   override def getPropertyKey(tokenContext: TokenContext): Int = propertyKey
+
+  override def children: Seq[AstNode[_]] = Seq.empty
 }
 
 case class SlottedCachedNodePropertyLate(nodeOffset: Int,
@@ -32,4 +35,6 @@ case class SlottedCachedNodePropertyLate(nodeOffset: Int,
 
   override def getPropertyKey(tokenContext: TokenContext): Int =
     tokenContext.getOptPropertyKeyId(propertyKey).getOrElse(StatementConstants.NO_SUCH_PROPERTY_KEY)
+
+  override def children: Seq[AstNode[_]] = Seq.empty
 }
