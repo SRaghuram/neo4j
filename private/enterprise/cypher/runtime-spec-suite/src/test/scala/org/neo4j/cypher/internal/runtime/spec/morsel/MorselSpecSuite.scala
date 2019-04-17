@@ -205,7 +205,7 @@ class MorselLabelScanCartesianStressTestBase(runtime: CypherRuntime[EnterpriseRu
 
 class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime) {
 
-  test("should support nested Cartesian Product") {
+  ignore("should support nested Cartesian Product") {
     // given
     init()
 

@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 import org.neo4j.graphdb.Node
 
 object ParallelStressSuite {
@@ -122,7 +122,7 @@ trait RHSOfApplyLeafStressSuite {
     */
   def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD
 
-  test("should work on RHS of apply with parallelism") {
+  ignore("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -170,7 +170,7 @@ trait RHSOfApplyOneChildStressSuite {
     */
   def rhsOfApplyOperator(variable: String): RHSOfApplyOneChildTD
 
-  test("should work on RHS of apply with parallelism") {
+  ignore("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -222,7 +222,7 @@ trait RHSOfCartesianLeafStressSuite {
     */
   def rhsOfCartesianLeaf(variable: String): RHSOfCartesianLeafTD
 
-  test("should work on RHS of cartesian product with parallelism") {
+  ignore("should work on RHS of cartesian product with parallelism") {
     // given
     init()
 
@@ -275,7 +275,7 @@ trait RHSOfCartesianOneChildStressSuite {
     */
   def rhsOfCartesianOperator(variable: String): RHSOfCartesianOneChildTD
 
-  test("should work on RHS of cartesian product with parallelism") {
+  ignore("should work on RHS of cartesian product with parallelism") {
     // given
     init()
 
@@ -333,7 +333,7 @@ trait OnTopOfParallelInputStressTest {
     */
   def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD
 
-  test("should work on top of input with parallelism") {
+  ignore("should work on top of input with parallelism") {
     // given
     init()
 
