@@ -24,15 +24,14 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MorselRuntimeStressIT
 {
     private static final int N_THREADS = 10;
     private static final int ITERATIONS = 10;
-    private static final int CHUNKS = 100;
     private static final int N_NODES = 100;
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String EXPAND_QUERY = "CYPHER runtime=morsel MATCH (:LABEL)-->(n:LABEL) RETURN n";
@@ -62,31 +61,55 @@ public class MorselRuntimeStressIT
     public final CommercialDbmsRule db = new CommercialDbmsRule();
 
     private ExecutorService service = Executors.newFixedThreadPool( N_THREADS );
-    private Runnable task = () -> {
 
-        for ( int i = 0; i < ITERATIONS; i++ )
+    private class Task implements Runnable
+    {
+        int i;
+
+        @Override
+        public void run()
         {
-            try
+            for ( i = 0; i < ITERATIONS; i++ )
             {
-                db.execute( query(), PARAMS ).accept( visitor() );
+                try
+                {
+                    db.execute( query(), PARAMS ).accept( visitor() );
+                }
+                catch ( Throwable t )
+                {
+                    //ignore
+                }
             }
-            catch ( Throwable t )
-            {
-                //ignore
-            }
+            counter.incrementAndGet();
         }
-        counter.incrementAndGet();
-    };
+
+        int iterationCount()
+        {
+            return i;
+        }
+    }
 
     @Test
     public void runTest() throws InterruptedException
     {
+        Task[] tasks = new Task[N_THREADS];
         for ( int i = 0; i < N_THREADS; i++ )
         {
-            service.submit( task );
+            tasks[i] = new Task();
+            service.submit( tasks[i] );
         }
-        service.awaitTermination( 10, TimeUnit.SECONDS );
-        assertThat( counter.get(), equalTo( N_THREADS ) );
+        service.shutdown();
+        boolean wasDone = service.awaitTermination( 20, TimeUnit.SECONDS );
+        int count = counter.get();
+        if ( !wasDone || count != N_THREADS )
+        {
+            StringBuilder b = new StringBuilder( String.format( "Was done: %b, count: %d, Task iterations finished: ", wasDone, count ) );
+            for ( int i = 0; i < N_THREADS; i++ )
+            {
+                b.append( tasks[i].iterationCount() ).append( ' ' );
+            }
+            fail( b.toString() );
+        }
     }
 
     private Result.ResultVisitor<RuntimeException> visitor()
@@ -124,20 +147,11 @@ public class MorselRuntimeStressIT
     @Before
     public void setup()
     {
-        Transaction tx = null;
+        Transaction tx = db.beginTx();
 
         Node previous = null;
         for ( int i = 0; i < N_NODES; i++ )
         {
-            if ( i % CHUNKS == 0 )
-            {
-                if ( tx != null )
-                {
-                    tx.success();
-                    tx.close();
-                }
-                tx = db.beginTx();
-            }
             Node node = db.createNode( LABEL );
             if ( previous != null )
             {
@@ -145,5 +159,7 @@ public class MorselRuntimeStressIT
             }
             previous = node;
         }
+        tx.success();
+        tx.close();
     }
 }
