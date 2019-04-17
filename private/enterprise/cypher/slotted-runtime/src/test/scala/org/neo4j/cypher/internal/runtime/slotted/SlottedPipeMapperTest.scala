@@ -9,7 +9,7 @@ import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand}
+import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, ForeachApply, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, com
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{LabelToken, SemanticDirection}
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, SemanticDirection}
 import org.neo4j.cypher.internal.v4_0.util.LabelId
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -147,6 +147,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         predicates.True()
       )()
     )
+    pipe.asInstanceOf[FilterPipe].predicate.owningPipe should equal(pipe)
   }
 
   test("single node with expand") {
@@ -366,6 +367,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       -1, -1,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
     )())
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
 
   test("single node with varlength expand into") {
@@ -421,6 +424,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SlottedPipeMapper.NO_PREDICATE_OFFSET, // no relationship predicate
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
 
   test("let's skip this one") {
@@ -520,6 +525,34 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size.zero)(),
       lhsLongCount = 1, lhsRefCount = 0, xProdSlots, argumentSize = Size.zero)()
     )
+  }
+
+  test("foreach") {
+    // given
+    val lhs = NodeByLabelScan("x", labelName("label1"), Set.empty)
+    val rhs = NodeByLabelScan("y", LabelName("label2")(pos), Set.empty) // This would be meaningless as a real-world example
+    val foreach = ForeachApply(lhs, rhs, "z", listOfInt(1, 2))
+
+    // when
+    val pipe = build(foreach)
+
+    // then
+    val lhsSlots = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
+      .newReference("z", nullable = true, CTAny)
+
+    val rhsSlots = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
+      .newReference("z", nullable = true, CTAny)
+      .newLong("y", nullable = false, CTNode)
+
+    pipe should equal(ForeachSlottedPipe(
+      NodesByLabelScanSlottedPipe("x", LazyLabel("label1"), lhsSlots, Size.zero)(),
+      NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size(nLongs = 1, nReferences = 1))(),
+      lhsSlots("z"),
+      commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2)))()
+    )
+    pipe.asInstanceOf[ForeachSlottedPipe].expression.owningPipe should equal(pipe)
   }
 
   test("that argument does not apply here") {
