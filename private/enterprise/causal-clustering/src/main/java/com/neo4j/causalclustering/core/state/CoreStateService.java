@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CommitProcessInstaller;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -30,7 +29,6 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKe
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedRelationshipTypeTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
-import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
@@ -64,10 +62,8 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
-import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.LocksFactory;
-import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -155,8 +151,8 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
                 .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
     }
 
-    public DatabaseCoreStateComponents create( DatabaseId databaseId,  DatabaseCoreStateComponents.LifecycleDependencies dependencies,
-            CommitProcessInstaller installer )
+    @Override
+    public DatabaseCoreStateComponents create( DatabaseId databaseId, DatabaseCoreStateComponents.LifecycleDependencies dependencies )
     {
         ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseId );
 
@@ -203,8 +199,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
-        CommitProcessFactory commitProcessFactory = ( appender, applier, ignored ) -> createCommitProcess( appender, applier, databaseId,
-                installer, panicker );
+        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, coreStateMachines, panicker );
 
         DatabaseCoreStateComponents dbState = new DatabaseCoreStateComponents( commitProcessFactory, coreStateMachines, tokenHolders,
                 idRangeAcquirer, lockManager, idContext );
@@ -222,13 +217,6 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     {
         StateStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseId, globalModule.getGlobalLife() );
         return new ReplicatedLockTokenStateMachine( lockTokenStorage );
-    }
-
-    private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, DatabaseId databaseId,
-            CommitProcessInstaller installer, Panicker panicker )
-    {
-        installer.install( appender, storageEngine );
-        return new ReplicatedTransactionCommitProcess( replicator, databaseId, panicker );
     }
 
     public void remove( DatabaseId databaseId )

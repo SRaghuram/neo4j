@@ -5,12 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.CommitProcessInstaller;
 import com.neo4j.causalclustering.core.state.DatabaseCoreStateComponents.LifecycleDependencies;
 
 import org.neo4j.kernel.database.DatabaseId;
 
 public interface CoreStateFactory
 {
-    DatabaseCoreStateComponents create( DatabaseId databaseId, LifecycleDependencies dependencies, CommitProcessInstaller installer );
+    DatabaseCoreStateComponents create( DatabaseId databaseId, LifecycleDependencies dependencies );
 }
