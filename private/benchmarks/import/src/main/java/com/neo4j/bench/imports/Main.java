@@ -32,7 +32,10 @@ import org.apache.commons.compress.utils.Sets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +51,8 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "import-benchmarks", description = "benchamrks for import performance" )
 public class Main
 {
+    private static final String[] sizes = {"100m", "1bn", "10bn", "100bn"};
+    private static final String forceBlockBasedSize = "100bn";
     private static final String IMPORT_OWNER = "neo-technology";
     private static final String NEO4J_ENTERPRISE = "Enterprise";
     private static final String NEO4J_COMMUNITY = "Community";
@@ -156,7 +161,6 @@ public class Main
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
 
-        String[] sizes = {"100m", "1bn", "10bn", "100bn"};
         for ( String size : sizes )
         {
             long startTime = System.currentTimeMillis();
@@ -186,9 +190,14 @@ public class Main
         indexPatterns.add( "Label3:date,other" );
         indexPatterns.add( "Label4:rank" );
         indexPatterns.add( "Label4:rank,other" );
+        String[] additionalJvmArgs = new String[0];
+        if ( forceBlockBasedSize.equals( size ) )
+        {
+            additionalJvmArgs = new String[]{"-Dorg.neo4j.kernel.impl.index.schema.GenericNativeIndexPopulator.blockBasedPopulation=true"};
+        }
         String[] indexCreateArgs = (String.format( "--storeDir %s %s", size, indexPatterns.toString() )).split( " " );
         Class<CreateIndex> targetClass = CreateIndex.class;
-        return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, targetClass );
+        return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, additionalJvmArgs, targetClass );
     }
 
     private int runImport( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
@@ -199,15 +208,15 @@ public class Main
                 "/relationships.csv --bad-tolerance true --skip-bad-relationships true --skip-duplicate-nodes true --additional-config " + csvLocation + size +
                 "/additional.conf --into " + size ).split( " " ); // todo set --high-io true
         Class<ImportTool> targetClass = ImportTool.class;
-        return runProcess( metrics, group, neo4jConfig, benchmark, importArgs, targetClass );
+        return runProcess( metrics, group, neo4jConfig, benchmark, importArgs, new String[0], targetClass );
     }
 
-    private int runProcess( BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig, Benchmark benchmark, String[] importArgs,
-            Class<?> targetClass ) throws IOException, InterruptedException
+    private int runProcess( BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig, Benchmark benchmark, String[] programArgs,
+            String[] jvmArgs, Class<?> targetClass ) throws IOException, InterruptedException
     {
         long startTime = System.currentTimeMillis();
-        String[] pbArgs = {ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(), targetClass.getCanonicalName()};
-        ProcessBuilder pb = new ProcessBuilder( Stream.of( pbArgs, importArgs ).flatMap( Stream::of ).toArray( String[]::new ) );
+        String[] pbArgs = processBuilderArguments( targetClass, programArgs, jvmArgs );
+        ProcessBuilder pb = new ProcessBuilder( pbArgs );
         pb.inheritIO();
         Process process = pb.start();
         int exitCode = process.waitFor();
@@ -219,6 +228,18 @@ public class Main
             metrics.add( group, benchmark, runMetrics, neo4jConfig );
         }
         return exitCode;
+    }
+
+    private String[] processBuilderArguments( Class<?> targetClass, String[] programArgs, String[] jvmArgs )
+    {
+        List<String> pbArgs = new ArrayList<>();
+        pbArgs.add( ProcessUtil.getJavaExecutable().toString() );
+        pbArgs.add( "-cp" );
+        pbArgs.add( ProcessUtil.getClassPath() );
+        pbArgs.addAll( Arrays.asList( jvmArgs ) );
+        pbArgs.add( targetClass.getCanonicalName() );
+        pbArgs.addAll( Arrays.asList( programArgs ) );
+        return pbArgs.toArray( new String[0] );
     }
 
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
