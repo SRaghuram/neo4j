@@ -13,12 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.event.DatabaseEventHandlerAdapter;
-import org.neo4j.graphdb.event.ErrorState;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.graphdb.event.DatabaseEventContext;
+import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
@@ -28,21 +25,18 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabasePanicIT
 {
     @Inject
     private TestDirectory testDirectory;
-    private GraphDatabaseService database;
     private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
         managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
-        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -52,46 +46,51 @@ class MultiDatabasePanicIT
     }
 
     @Test
-    void databasesPanicSeparately() throws DatabaseExistsException
+    void databasePanicNotification() throws DatabaseExistsException
     {
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( new DatabaseId( "first" ) ).databaseFacade();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
-        PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
-        PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener();
-        firstDatabase.registerDatabaseEventHandler( firstPanicListener );
-        secondDatabase.registerDatabaseEventHandler( secondPanicListener );
+        String firstDatabaseName = "first";
+        String secondDatabaseName = "second";
+        managementService.createDatabase( firstDatabaseName );
+        managementService.createDatabase( secondDatabaseName );
+        PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener( firstDatabaseName );
+        PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener( secondDatabaseName );
+        managementService.registerDatabaseEventListener( firstPanicListener );
+        managementService.registerDatabaseEventListener( secondPanicListener );
 
         assertFalse( firstPanicListener.isPanic() );
         assertFalse( secondPanicListener.isPanic() );
 
-        getDatabaseHealth( firstDatabase ).panic( new IllegalStateException() );
+        getDatabaseHealth( managementService.database( firstDatabaseName ) ).panic( new IllegalStateException() );
         assertTrue( firstPanicListener.isPanic() );
         assertFalse( secondPanicListener.isPanic() );
 
-        getDatabaseHealth( secondDatabase ).panic( new IllegalStateException() );
+        getDatabaseHealth( managementService.database( secondDatabaseName ) ).panic( new IllegalStateException() );
         assertTrue( firstPanicListener.isPanic() );
         assertTrue( secondPanicListener.isPanic() );
     }
 
-    private static Health getDatabaseHealth( GraphDatabaseFacade facade )
+    private static Health getDatabaseHealth( GraphDatabaseService service )
     {
-        return facade.getDependencyResolver().resolveDependency( DatabaseHealth.class );
+        return ((GraphDatabaseAPI) service).getDependencyResolver().resolveDependency( DatabaseHealth.class );
     }
 
-    private DatabaseManager<?> getDatabaseManager()
+    private static class PanicDatabaseEventListener extends DatabaseEventListenerAdapter
     {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
-    }
+        private final String databaseName;
+        private boolean panic;
 
-    private static class PanicDatabaseEventListener extends DatabaseEventHandlerAdapter
-    {
-        private volatile boolean panic;
+        PanicDatabaseEventListener( String databaseName )
+        {
+            this.databaseName = databaseName;
+        }
 
         @Override
-        public void panic( ErrorState error )
+        public void databasePanic( DatabaseEventContext eventContext )
         {
-            panic = true;
+            if ( databaseName.equals( eventContext.getDatabaseName() ) )
+            {
+                panic = true;
+            }
         }
 
         boolean isPanic()
