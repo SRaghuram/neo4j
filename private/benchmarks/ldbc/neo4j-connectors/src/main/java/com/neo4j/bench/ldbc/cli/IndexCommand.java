@@ -22,6 +22,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "index",
@@ -108,7 +109,7 @@ public class IndexCommand implements Runnable
             System.out.println( "Starting database..." );
             DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, dbConfigurationFile );
 
-            GraphDatabaseService db = managementService.database( dbDir.getName() );
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
             System.out.println( metadataProxy.toString() );
 

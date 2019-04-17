@@ -42,6 +42,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {TestDirectoryExtension.class, RandomExtension.class} )
 class ImportTest
@@ -867,7 +868,7 @@ class ImportTest
             LdbcDateCodec.Resolution timestampResolution ) throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution, new LdbcDateCodecUtil() );
 

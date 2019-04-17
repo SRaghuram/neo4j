@@ -25,6 +25,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public abstract class QueryGraphMaker
 {
@@ -60,7 +61,7 @@ public abstract class QueryGraphMaker
         System.out.println( queryGraphMaker.queryString() );
         File dbDir = new File( dbDirString );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createDbFromCypherQuery(
                 db,
                 queryGraphMaker.queryString(),
