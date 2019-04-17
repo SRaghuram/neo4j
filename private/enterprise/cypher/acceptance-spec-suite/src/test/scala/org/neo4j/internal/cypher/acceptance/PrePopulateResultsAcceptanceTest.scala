@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.ExecutionResult
 import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual._
@@ -72,8 +71,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
         val path = value.asInstanceOf[PathValue]
         for (n <- path.nodes()) assertPopulatedNode(n)
         for (r <- path.relationships()) assertPopulatedRelationship(r)
-      }
-                            )
+      })
   }
 
   test("should populate inside maps and lists if asked to") {
