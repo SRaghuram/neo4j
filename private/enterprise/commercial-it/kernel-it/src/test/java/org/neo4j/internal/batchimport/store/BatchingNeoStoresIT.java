@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.batchimport.store;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,7 +83,7 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

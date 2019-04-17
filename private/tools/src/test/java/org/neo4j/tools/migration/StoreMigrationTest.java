@@ -16,7 +16,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -43,7 +43,7 @@ class StoreMigrationTest
         StoreMigration.main( new String[]{directory.storeDir().getAbsolutePath()} );
 
         // after migration we can open store and do something
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( directory.storeDir() )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, directory.storeDir().getAbsolutePath() ).newDatabaseManagementService();

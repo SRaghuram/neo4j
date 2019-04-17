@@ -5,7 +5,7 @@
  */
 package com.neo4j.dmbs.database;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ public class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        databaseManagementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        databaseManagementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
     }
 
     @AfterEach

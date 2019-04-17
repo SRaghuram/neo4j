@@ -6,7 +6,7 @@
 package org.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +77,7 @@ class FulltextIndexBackupIT
     @BeforeEach
     void setUp()
     {
-        dbManagementService = new TestCommercialGraphDatabaseFactory()
+        dbManagementService = new TestCommercialDatabaseManagementServiceBuilder()
                     .newEmbeddedDatabaseBuilder( dir.storeDir() )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
         db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
@@ -194,7 +194,7 @@ class FulltextIndexBackupIT
 
     private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        backupManagementService = new TestCommercialGraphDatabaseFactory()
+        backupManagementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( backupDatabaseDir )
                 .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() ).newDatabaseManagementService();
         return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );

@@ -28,7 +28,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SecureClient;
 import org.neo4j.ssl.SslContextFactory;
 import org.neo4j.ssl.SslResource;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertFalse;
@@ -112,7 +112,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )

@@ -39,8 +39,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -64,7 +64,7 @@ import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
 import org.neo4j.test.mockito.matcher.RootCauseMatcher;
 import org.neo4j.test.rule.SuppressOutput;
@@ -161,8 +161,8 @@ public class StoreUpgradeIT
         {
             store.prepareDirectory( testDir.databaseDir() );
 
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -233,8 +233,8 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -260,8 +260,8 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
@@ -330,8 +330,8 @@ public class StoreUpgradeIT
             // migrate the store using a single instance
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -379,8 +379,8 @@ public class StoreUpgradeIT
                 }
             }
 
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();

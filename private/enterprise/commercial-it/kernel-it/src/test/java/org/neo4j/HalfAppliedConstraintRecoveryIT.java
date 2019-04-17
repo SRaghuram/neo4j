@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -44,7 +44,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.Barrier;
-import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.rule.OtherThreadRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
@@ -154,7 +153,8 @@ public class HalfAppliedConstraintRecoveryIT
         }
 
         // WHEN
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentService();
+        DatabaseManagementService managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
@@ -255,7 +255,8 @@ public class HalfAppliedConstraintRecoveryIT
 
         // WHEN
         {
-            DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentService();
+            DatabaseManagementService managementService =
+                    new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
             GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
@@ -324,7 +325,7 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs )
                 .setMonitors( monitors ).newImpermanentService();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
@@ -353,7 +354,8 @@ public class HalfAppliedConstraintRecoveryIT
     private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator ) throws Exception
     {
         // A separate db altogether
-        DatabaseManagementService managementService = ((TestGraphDatabaseFactory) new TestCommercialGraphDatabaseFactory()).newImpermanentService();
+        DatabaseManagementService managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().newImpermanentService();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

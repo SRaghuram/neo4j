@@ -12,17 +12,17 @@ import java.io.File;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
-public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
+public class CommercialDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
 {
     @Override
-    protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir, GraphDatabaseFactoryState state )
+    protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createDatabaseCreator( File storeDir, GraphDatabaseFactoryState state )
     {
         return new CommercialDatabaseCreator( storeDir, state );
     }
@@ -33,7 +33,7 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
         return Edition.COMMERCIAL.toString();
     }
 
-    private static class CommercialDatabaseCreator implements GraphDatabaseBuilder.DatabaseCreator
+    private static class CommercialDatabaseCreator implements DatabaseManagementServiceInternalBuilder.DatabaseCreator
     {
         private final File storeDir;
         private final GraphDatabaseFactoryState state;
@@ -47,7 +47,7 @@ public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
         @Override
         public DatabaseManagementService newDatabase( Config config )
         {
-            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
+            return new DatabaseManagementServiceFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
                     .initFacade( storeDir, config, state.databaseDependencies(), new GraphDatabaseFacade() );
         }
     }

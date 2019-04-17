@@ -5,7 +5,7 @@
  */
 package com.neo4j.commercial.edition;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ class CommercialSystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
@@ -189,7 +189,7 @@ class CommercialSystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
-            managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( disabledSystemDbDirectory );
+            managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( disabledSystemDbDirectory );
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );

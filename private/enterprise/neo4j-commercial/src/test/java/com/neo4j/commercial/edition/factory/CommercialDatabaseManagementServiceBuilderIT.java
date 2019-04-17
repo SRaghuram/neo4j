@@ -28,7 +28,7 @@ import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
-class CommercialGraphDatabaseFactoryIT
+class CommercialDatabaseManagementServiceBuilderIT
 {
     @Inject
     private FileSystemAbstraction fs;
@@ -41,7 +41,7 @@ class CommercialGraphDatabaseFactoryIT
         File factoryDir = testDirectory.storeDir();
         File databasesDir = testDirectory.directory( "my_databases" );
 
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( factoryDir )
                 .setConfig( databases_root_path, databasesDir.toString() )
                 .setConfig( online_backup_enabled, FALSE ).newDatabaseManagementService();
@@ -65,7 +65,7 @@ class CommercialGraphDatabaseFactoryIT
     {
         File factoryDir = testDirectory.storeDir();
 
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( factoryDir );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( factoryDir );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

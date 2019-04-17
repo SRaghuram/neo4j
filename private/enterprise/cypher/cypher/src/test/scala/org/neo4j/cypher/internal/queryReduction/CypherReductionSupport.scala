@@ -40,7 +40,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
 import org.neo4j.logging.NullLog
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.util.Try
@@ -84,7 +84,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
   override protected def initTest() {
     super.initTest()
-    managementService = new TestGraphDatabaseFactory().newImpermanentService()
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
     graph = new GraphDatabaseCypherService(managementService.database(DEFAULT_DATABASE_NAME))
     contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }

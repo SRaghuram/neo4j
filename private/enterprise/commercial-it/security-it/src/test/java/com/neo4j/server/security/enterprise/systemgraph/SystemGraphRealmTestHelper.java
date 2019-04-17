@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
 
@@ -45,7 +45,7 @@ class SystemGraphRealmTestHelper
 
         TestDatabaseManager( TestDirectory testDir )
         {
-            managementService = new TestCommercialGraphDatabaseFactory()
+            managementService = new TestCommercialDatabaseManagementServiceBuilder()
                     .newImpermanentDatabaseBuilder( testDir.databaseDir() )
                     .setConfig( GraphDatabaseSettings.auth_enabled, "false" ).newDatabaseManagementService();
             testSystemDb = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );

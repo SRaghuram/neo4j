@@ -27,7 +27,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -153,7 +153,7 @@ public class EagerProcedureIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.directory().getAbsolutePath() ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );

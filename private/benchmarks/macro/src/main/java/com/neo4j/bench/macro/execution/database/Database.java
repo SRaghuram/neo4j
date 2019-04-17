@@ -9,7 +9,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -23,8 +23,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 
@@ -124,7 +124,7 @@ public class Database implements AutoCloseable
 
     private static DatabaseManagementService newDb( Store store, Edition edition, Path neo4jConfig )
     {
-        GraphDatabaseBuilder builder = newBuilder( store, edition );
+        DatabaseManagementServiceInternalBuilder builder = newBuilder( store, edition );
         if ( null != neo4jConfig )
         {
             builder.loadPropertiesFromFile( neo4jConfig.toAbsolutePath().toString() );
@@ -132,16 +132,16 @@ public class Database implements AutoCloseable
         return builder.newDatabaseManagementService();
     }
 
-    private static GraphDatabaseBuilder newBuilder( Store store, Edition edition )
+    private static DatabaseManagementServiceInternalBuilder newBuilder( Store store, Edition edition )
     {
         switch ( edition )
         {
         case COMMUNITY:
-            return new GraphDatabaseFactory()
+            return new DatabaseManagementServiceBuilder()
                     .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
         case ENTERPRISE:
-            return new CommercialGraphDatabaseFactory()
+            return new CommercialDatabaseManagementServiceBuilder()
                     .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
         default:

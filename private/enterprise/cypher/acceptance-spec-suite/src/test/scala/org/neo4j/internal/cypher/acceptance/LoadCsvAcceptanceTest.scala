@@ -10,7 +10,7 @@ import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
 import java.nio.file.Files
 import java.util.Collections.emptyMap
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.JavaConverters._
@@ -597,7 +597,7 @@ class LoadCsvAcceptanceTest
           }
     })
 
-    val managementService = new TestGraphDatabaseFactory().addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
+    val managementService = new TestDatabaseManagementServiceBuilder().addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
       .newImpermanentDatabaseBuilder(acceptanceDbFolder).newDatabaseManagementService()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
 
@@ -767,7 +767,7 @@ class LoadCsvAcceptanceTest
   }
 
   private def acceptanceTestDatabaseBuilder = {
-    new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder(acceptanceDbFolder)
+    new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder(acceptanceDbFolder)
   }
 
   private def acceptanceDbFolder = {

@@ -14,37 +14,37 @@ import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.test.TestGraphDatabaseFacadeFactory;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.TestDatabaseManagementServiceFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 
 import static org.neo4j.configuration.Settings.FALSE;
 
-public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
+public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
 {
-    public TestCommercialGraphDatabaseFactory()
+    public TestCommercialDatabaseManagementServiceBuilder()
     {
         super();
     }
 
-    public TestCommercialGraphDatabaseFactory( LogProvider logProvider )
+    public TestCommercialDatabaseManagementServiceBuilder( LogProvider logProvider )
     {
         super( logProvider );
     }
 
     @Override
-    protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
+    protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
             GraphDatabaseFactoryState state )
     {
         return config ->
         {
             augmentConfig( config );
             TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
-            TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
+            TestCommercialDatabaseManagementServiceFactory facadeFactory = new TestCommercialDatabaseManagementServiceFactory( testState, false );
             return facadeFactory.newFacade( storeDir, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
@@ -60,13 +60,13 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     }
 
     @Override
-    protected GraphDatabaseBuilder.DatabaseCreator createImpermanentDatabaseCreator( final File storeDir,
+    protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createImpermanentDatabaseCreator( final File storeDir,
             final TestGraphDatabaseFactoryState state )
     {
         return config ->
         {
             augmentConfig( config );
-            return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
+            return new TestCommercialDatabaseManagementServiceFactory( state, true ).newFacade( storeDir, config,
                     GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
@@ -77,9 +77,9 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         return Edition.COMMERCIAL.toString();
     }
 
-    private static class TestCommercialGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
+    private static class TestCommercialDatabaseManagementServiceFactory extends TestDatabaseManagementServiceFactory
     {
-        TestCommercialGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
+        TestCommercialDatabaseManagementServiceFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
             super( state, impermanent, DatabaseInfo.COMMERCIAL, CommercialEditionModule::new );
         }

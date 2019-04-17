@@ -42,7 +42,7 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.ConstraintRule;
 import org.neo4j.storageengine.api.StorageIndexReference;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
 
@@ -65,7 +65,7 @@ public class UniquenessConstraintCreationIT
     private AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
 
     @Override
-    protected TestGraphDatabaseFactory configure( TestGraphDatabaseFactory factory )
+    protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
     {
         factory.setUserLogProvider( assertableLogProvider );
         factory.setInternalLogProvider( assertableLogProvider );

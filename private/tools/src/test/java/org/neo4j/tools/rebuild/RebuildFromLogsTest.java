@@ -35,7 +35,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -142,7 +142,7 @@ public class RebuildFromLogsTest
 
     private static GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .newDatabaseManagementService();

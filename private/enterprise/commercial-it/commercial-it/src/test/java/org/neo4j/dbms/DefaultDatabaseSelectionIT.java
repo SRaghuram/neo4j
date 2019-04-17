@@ -5,7 +5,7 @@
  */
 package org.neo4j.dbms;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +18,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
@@ -168,9 +168,9 @@ class DefaultDatabaseSelectionIT
         return managementService.database( databaseName );
     }
 
-    private GraphDatabaseBuilder getDatabaseBuilder()
+    private DatabaseManagementServiceInternalBuilder getDatabaseBuilder()
     {
-        return new CommercialGraphDatabaseFactory()
+        return new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }

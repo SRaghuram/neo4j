@@ -5,7 +5,7 @@
  */
 package org.neo4j.procedure;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -94,7 +94,7 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
                 record_id_batch_size, "1" ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -588,7 +588,7 @@ public class ProcedureIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newDatabaseManagementService();

@@ -10,7 +10,7 @@ import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
@@ -79,7 +79,7 @@ public class ManagedStore
 
     public static GraphDatabaseService newDb( Path dbPath, Path config )
     {
-        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbPath.toFile() );
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dbPath.toFile() );
         builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbPath.getParent().toAbsolutePath().toString() );
         if ( null != config )
         {

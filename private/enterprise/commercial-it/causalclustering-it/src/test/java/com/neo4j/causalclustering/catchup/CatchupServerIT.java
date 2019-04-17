@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,7 +93,7 @@ class CatchupServerIT
     void startDb() throws Throwable
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        managementService = new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );

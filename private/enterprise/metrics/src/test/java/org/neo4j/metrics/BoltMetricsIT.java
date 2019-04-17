@@ -23,7 +23,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -62,7 +62,7 @@ class BoltMetricsIT
     {
         // Given
         File metricsFolder = testDirectory.directory( "metrics" );
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )

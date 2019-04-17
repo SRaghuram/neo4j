@@ -5,7 +5,7 @@
  */
 package com.neo4j.graphdb;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -17,7 +17,7 @@ import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -86,7 +86,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommunityDatabase()
     {
-        managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( dir.storeDir() );
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( dir.storeDir() );
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -126,7 +126,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommercialDatabase()
     {
-        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

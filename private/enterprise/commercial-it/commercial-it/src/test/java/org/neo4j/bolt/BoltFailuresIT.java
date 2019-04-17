@@ -6,7 +6,7 @@
 package org.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,7 +26,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.IOUtils;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.rule.TestDirectory;
@@ -72,7 +72,7 @@ public class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new GraphDatabaseFactory().setMonitors( monitors ) );
+        db = startDbWithBolt( new DatabaseManagementServiceBuilder().setMonitors( monitors ) );
         try
         {
             // attempt to create a driver when server is unavailable
@@ -186,7 +186,7 @@ public class BoltFailuresIT
         return startDbWithBolt( newDbFactory().setMonitors( monitors ) );
     }
 
-    private GraphDatabaseService startDbWithBolt( GraphDatabaseFactory dbFactory )
+    private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )
     {
         managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
@@ -197,9 +197,9 @@ public class BoltFailuresIT
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static TestCommercialGraphDatabaseFactory newDbFactory()
+    private static TestCommercialDatabaseManagementServiceBuilder newDbFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     private static Driver createDriver( int port )

@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.api.integrationtest;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
@@ -89,9 +89,9 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Override
-    protected TestGraphDatabaseFactory createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     @Test

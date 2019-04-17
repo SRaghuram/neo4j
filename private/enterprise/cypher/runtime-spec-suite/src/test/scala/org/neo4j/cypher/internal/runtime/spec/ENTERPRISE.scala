@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
@@ -17,7 +17,7 @@ import org.neo4j.scheduler.JobScheduler
 //noinspection TypeAnnotation
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
-    new TestCommercialGraphDatabaseFactory(),
+    new TestCommercialDatabaseManagementServiceBuilder(),
     (runtimeConfig,resolver) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])

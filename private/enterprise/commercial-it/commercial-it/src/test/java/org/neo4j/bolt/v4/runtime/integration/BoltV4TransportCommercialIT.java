@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt.v4.runtime.integration;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,7 +64,7 @@ public class BoltV4TransportCommercialIT
 
     @Rule
     public final Neo4jWithSocket server =
-            new Neo4jWithSocket( getClass(), new TestCommercialGraphDatabaseFactory(), settings -> settings.put( auth_enabled.name(), "false" ) );
+            new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), settings -> settings.put( auth_enabled.name(), "false" ) );
 
     private HostnamePort address;
     private TransportConnection connection;

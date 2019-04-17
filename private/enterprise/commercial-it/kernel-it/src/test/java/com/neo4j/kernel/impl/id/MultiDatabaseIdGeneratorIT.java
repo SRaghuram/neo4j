@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.id;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ class MultiDatabaseIdGeneratorIT
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
-        managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );

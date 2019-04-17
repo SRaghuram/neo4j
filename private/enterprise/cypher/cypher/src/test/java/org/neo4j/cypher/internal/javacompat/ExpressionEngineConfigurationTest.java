@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.Matchers.anyOf;
@@ -100,7 +100,7 @@ class ExpressionEngineConfigurationTest
     private GraphDatabaseService withEngineAndLimit( String engine, int limit )
     {
 
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().
                 setInternalLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )

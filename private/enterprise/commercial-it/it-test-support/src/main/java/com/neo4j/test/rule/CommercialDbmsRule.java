@@ -5,9 +5,9 @@
  */
 package com.neo4j.test.rule;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -24,9 +24,9 @@ public class CommercialDbmsRule extends EmbeddedDbmsRule
     }
 
     @Override
-    protected GraphDatabaseFactory newFactory()
+    protected DatabaseManagementServiceBuilder newFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     @Override

@@ -13,7 +13,7 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import com.neo4j.server.security.enterprise.systemgraph.TestSystemGraphRealm;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import java.io.File;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -57,9 +57,9 @@ class SystemGraphInternalsTest
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         File storeDir = testDirectory.storeDir();
-        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        final DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         managementService = builder.newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );

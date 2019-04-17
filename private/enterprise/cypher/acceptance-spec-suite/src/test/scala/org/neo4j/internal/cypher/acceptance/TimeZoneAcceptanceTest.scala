@@ -12,7 +12,7 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.utils.TemporalParseException
 
@@ -99,7 +99,7 @@ class InvalidTimeZoneConfigTest extends CypherFunSuite with GraphIcing {
   test("invalid timezone should fail startup") {
     val invalidConfig: Map[Setting[_], String] = Map(GraphDatabaseSettings.db_temporal_timezone -> "Europe/Satia")
     a[TemporalParseException] should be thrownBy {
-      new TestGraphDatabaseFactory().newImpermanentService(invalidConfig.asJava)
+      new TestDatabaseManagementServiceBuilder().newImpermanentService(invalidConfig.asJava)
     }
   }
 }

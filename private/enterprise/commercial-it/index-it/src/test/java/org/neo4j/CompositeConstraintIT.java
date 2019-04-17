@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -40,7 +40,7 @@ class CompositeConstraintIT
     @Test
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
 

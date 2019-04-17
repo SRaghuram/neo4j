@@ -6,7 +6,7 @@
 package org.neo4j.batchinsert;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,7 +89,7 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( directory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -181,7 +181,7 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.record_format, recordFormat ).newDatabaseManagementService();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

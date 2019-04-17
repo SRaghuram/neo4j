@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -39,7 +39,7 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( rootDirectory )

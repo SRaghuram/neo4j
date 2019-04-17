@@ -24,8 +24,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
@@ -54,7 +54,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
-        managementService = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new ).newFacade(
                 tempDirectory.toFile(), Config.defaults(), GraphDatabaseDependencies.newDependencies() );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database(
                 Config.defaults().get( GraphDatabaseSettings.default_database ) );

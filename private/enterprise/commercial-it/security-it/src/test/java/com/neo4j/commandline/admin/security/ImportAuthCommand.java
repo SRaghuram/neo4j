@@ -11,7 +11,7 @@ import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -199,7 +199,7 @@ public class ImportAuthCommand implements AdminCommand
     private static GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         managementService = factory.newEmbeddedDatabaseBuilder( databaseDir )
                 .setConfig( default_database, IMPORT_SYSTEM_DATABASE_NAME )
                 .newDatabaseManagementService();

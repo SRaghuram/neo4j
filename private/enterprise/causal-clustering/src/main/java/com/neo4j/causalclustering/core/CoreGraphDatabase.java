@@ -11,8 +11,8 @@ import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -32,7 +32,7 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
             DiscoveryServiceFactory discoveryServiceFactory,
             CoreEditionModuleFactory editionModuleFactory )
     {
-        managementService = new GraphDatabaseFacadeFactory( DatabaseInfo.CORE,
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
                 .initFacade( storeDir, config, dependencies, this );
     }

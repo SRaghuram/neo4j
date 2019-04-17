@@ -52,7 +52,7 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -340,7 +340,7 @@ class FunctionIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
@@ -844,7 +844,7 @@ class FunctionIT
     {
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )

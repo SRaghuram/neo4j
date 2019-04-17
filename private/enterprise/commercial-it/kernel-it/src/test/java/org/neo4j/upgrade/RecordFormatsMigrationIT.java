@@ -29,7 +29,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
@@ -41,7 +41,7 @@ import org.neo4j.kernel.impl.storemigration.StoreUpgrader.UnexpectedUpgradingSto
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -158,9 +158,9 @@ class RecordFormatsMigrationIT
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseBuilder getGraphDatabaseBuilder()
+    private DatabaseManagementServiceInternalBuilder getGraphDatabaseBuilder()
     {
-        return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        return new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }

@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
@@ -31,7 +31,7 @@ import org.neo4j.function.Factory;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgFailure;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
@@ -75,9 +75,9 @@ public class ActiveDirectoryAuthenticationIT
         };
     }
 
-    protected TestGraphDatabaseFactory getTestGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder getTestGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     protected Consumer<Map<Setting<?>,String>> getSettingsFunction()
@@ -107,7 +107,7 @@ public class ActiveDirectoryAuthenticationIT
         settings.put( SecuritySettings.ldap_authorization_system_password, "ProudListingsMedia1" );
     };
 
-    public Factory<TransportConnection> cf = (Factory<TransportConnection>) SecureSocketConnection::new;
+    public Factory<TransportConnection> cf = SecureSocketConnection::new;
 
     private HostnamePort address;
     private TransportConnection client;

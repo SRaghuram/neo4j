@@ -21,12 +21,12 @@ import org.neo4j.commandline.admin.RealOutsideWorld;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -57,10 +57,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public final CommercialDbmsRule db = new CommercialDbmsRule( testDirectory )
     {
         @Override
-        protected void configure( GraphDatabaseFactory databaseFactory )
+        protected void configure( DatabaseManagementServiceBuilder databaseFactory )
         {
             super.configure( databaseFactory );
-            ((TestGraphDatabaseFactory) databaseFactory).setInternalLogProvider( logProvider );
+            ((TestDatabaseManagementServiceBuilder) databaseFactory).setInternalLogProvider( logProvider );
         }
     }.startLazily();
 

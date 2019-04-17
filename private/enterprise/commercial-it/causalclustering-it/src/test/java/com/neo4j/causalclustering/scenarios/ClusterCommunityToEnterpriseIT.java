@@ -22,7 +22,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -67,7 +67,7 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        DatabaseManagementService managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.storeDir() )
+        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDir.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).newDatabaseManagementService();

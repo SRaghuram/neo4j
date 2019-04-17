@@ -5,7 +5,7 @@
  */
 package org.neo4j.kernel.builtinprocs;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -36,7 +36,7 @@ import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
@@ -416,8 +416,8 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     }
 
     @Override
-    protected TestGraphDatabaseFactory createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 }

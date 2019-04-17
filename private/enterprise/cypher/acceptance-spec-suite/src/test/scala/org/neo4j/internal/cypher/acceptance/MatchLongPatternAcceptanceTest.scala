@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -269,7 +269,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
     val config: util.Map[Setting[_], String] = m.toMap.asJava
-    val managementService = new TestGraphDatabaseFactory().newImpermanentService(config)
+    val managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService(config)
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     val graph = new GraphDatabaseCypherService(database)
     try {

@@ -5,7 +5,7 @@
  */
 package com.neo4j.dmbs.database;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
                 .newDatabaseManagementService();

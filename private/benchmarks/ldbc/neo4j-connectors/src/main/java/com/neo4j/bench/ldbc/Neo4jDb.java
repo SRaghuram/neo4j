@@ -24,7 +24,7 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -40,7 +40,7 @@ import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 
 import static java.lang.String.format;
 
@@ -421,9 +421,9 @@ public class Neo4jDb extends Db
         return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
     }
 
-    private static GraphDatabaseBuilder newDbBuilder( File dbDir, File configFile )
+    private static DatabaseManagementServiceInternalBuilder newDbBuilder( File dbDir, File configFile )
     {
-        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbDir );
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dbDir );
         builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbDir.getParentFile().getAbsolutePath() );
         if ( null != configFile )
         {
@@ -432,11 +432,11 @@ public class Neo4jDb extends Db
         return builder;
     }
 
-    public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
+    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
         String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ":" );
-        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1, withoutProtocol.length() ) );
+        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1 ) );
         return newDbBuilderForBolt(
                 dbDir,
                 configFile,
@@ -444,7 +444,7 @@ public class Neo4jDb extends Db
                 port );
     }
 
-    public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
+    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
                 .setConfig( Neo4jDb.boltConnector().enabled, "true" )

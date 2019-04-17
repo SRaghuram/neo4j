@@ -25,7 +25,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -33,7 +33,7 @@ import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.locker.StoreLocker;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -165,7 +165,7 @@ class RestoreDatabaseCommandIT
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
 
         // then
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( toStoreLayout.storeDirectory() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( toStoreLayout.storeDirectory() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
         GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -283,7 +283,7 @@ class RestoreDatabaseCommandIT
     private static GraphDatabaseService createDatabase( File databasePath )
     {
         File storeDir = databasePath.getParentFile();
-        managementService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        managementService = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
                 .setConfig( default_database, databasePath.getName() )
@@ -296,7 +296,7 @@ class RestoreDatabaseCommandIT
         File storeDir = databaseLayout.getStoreLayout().storeDirectory();
         String txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath();
         managementService =
-                new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).setConfig(
+                new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir ).setConfig(
                         OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                         .setConfig( transaction_logs_root_path, txRootDirectory )
                         .setConfig( default_database, databaseLayout.getDatabaseName() )

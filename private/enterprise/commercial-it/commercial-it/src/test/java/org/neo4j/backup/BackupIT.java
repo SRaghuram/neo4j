@@ -8,7 +8,7 @@ package org.neo4j.backup;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.TestWithRecordFormats;
 import org.eclipse.collections.impl.factory.Maps;
 import org.junit.jupiter.api.AfterEach;
@@ -53,7 +53,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
@@ -1093,7 +1093,7 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
     {
-        GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
+        DatabaseManagementServiceInternalBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path );
 
         settings.putIfAbsent( online_backup_enabled, TRUE );
         for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )

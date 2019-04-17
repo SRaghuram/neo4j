@@ -17,13 +17,13 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -99,9 +99,9 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
     }
 
-    protected GraphDatabaseFactory newGraphDatabaseFactory()
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory()
     {
-        return new TestGraphDatabaseFactory();
+        return new TestDatabaseManagementServiceBuilder();
     }
 
     private String boltAddress()
@@ -121,7 +121,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceInternalBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );

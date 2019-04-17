@@ -34,7 +34,7 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.apache.commons.lang3.SystemUtils.JAVA_IO_TMPDIR;
 import static org.junit.Assert.assertEquals;
@@ -75,7 +75,7 @@ public class LucenePartitionedIndexStressTesting
         System.out.println( String.format( "Starting database at: %s", storeDir ) );
 
         populators = Executors.newFixedThreadPool( NUMBER_OF_POPULATORS );
-        managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

@@ -5,7 +5,7 @@
  */
 package org.neo4j.consistency;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -52,7 +52,7 @@ class HalfCreatedConstraintIT
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        DatabaseManagementService managementService = new TestCommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

@@ -16,7 +16,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
@@ -30,7 +30,7 @@ import org.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static java.lang.Integer.parseInt;
@@ -80,7 +80,7 @@ public class CheckPointingLogRotationStressTesting
         }
 
         System.out.println( "2/6\tStarting database..." );
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceInternalBuilder builder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )

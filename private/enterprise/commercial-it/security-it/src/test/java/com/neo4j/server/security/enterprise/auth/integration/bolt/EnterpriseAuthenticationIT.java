@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,14 +15,14 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.v1.transport.integration.AuthenticationIT;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class EnterpriseAuthenticationIT extends AuthenticationIT
 {
     @Override
-    protected TestGraphDatabaseFactory getTestGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder getTestGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory( logProvider );
+        return new TestCommercialDatabaseManagementServiceBuilder( logProvider );
     }
 
     @Override

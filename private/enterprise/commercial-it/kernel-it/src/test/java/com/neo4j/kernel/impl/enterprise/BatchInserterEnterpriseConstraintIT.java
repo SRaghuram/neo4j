@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -34,7 +34,7 @@ class BatchInserterEnterpriseConstraintIT
     {
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
         DatabaseManagementService
-                managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( databaseLayout.databaseDirectory() );
+                managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( databaseLayout.databaseDirectory() );
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {

@@ -5,7 +5,7 @@
  */
 package org.neo4j.backup;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.eclipse.collections.impl.factory.Sets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -172,7 +172,7 @@ class BackupSchemaIT
 
     private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
     {
-        managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( dir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) )
                 .setConfig( transaction_logs_root_path, dir.getAbsolutePath() ).newDatabaseManagementService();

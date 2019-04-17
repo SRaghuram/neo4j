@@ -30,7 +30,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.logging.Log;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -299,7 +299,7 @@ class AggregationFunctionIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();

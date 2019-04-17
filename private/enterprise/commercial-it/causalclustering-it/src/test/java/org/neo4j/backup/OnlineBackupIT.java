@@ -6,7 +6,7 @@
 package org.neo4j.backup;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +77,7 @@ class OnlineBackupIT
         backupsDir = testDirectory.directory( "backups" ).toPath();
         defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
-        managementService = new TestCommercialGraphDatabaseFactory()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( online_backup_enabled, TRUE ).newDatabaseManagementService();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

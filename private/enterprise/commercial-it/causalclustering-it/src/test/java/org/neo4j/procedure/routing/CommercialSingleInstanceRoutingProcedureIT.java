@@ -5,15 +5,15 @@
  */
 package org.neo4j.procedure.routing;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 
 class CommercialSingleInstanceRoutingProcedureIT extends CommunitySingleInstanceRoutingProcedureIT
 {
     @Override
-    protected GraphDatabaseFactory newGraphDatabaseFactory()
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 }

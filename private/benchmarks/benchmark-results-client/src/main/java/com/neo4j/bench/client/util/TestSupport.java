@@ -6,7 +6,7 @@
 package com.neo4j.bench.client.util;
 
 import com.neo4j.bench.client.database.Store;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;
 
@@ -19,7 +19,7 @@ public class TestSupport
     {
         Path graphDbDir = storeDir.resolve( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         BenchmarkUtil.assertDoesNotExist( graphDbDir );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( graphDbDir.toFile() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toAbsolutePath().toString() ).newDatabaseManagementService();
         managementService.shutdown();

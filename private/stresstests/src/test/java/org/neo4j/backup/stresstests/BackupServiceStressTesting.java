@@ -7,7 +7,7 @@ package org.neo4j.backup.stresstests;
 
 import com.neo4j.causalclustering.stresstests.Config;
 import com.neo4j.causalclustering.stresstests.Control;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helper.Workload;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
@@ -66,7 +66,7 @@ class BackupServiceStressTesting
         File storeDir = testDirectory.storeDir( DEFAULT_DATABASE_NAME );
         File backupsDir = testDirectory.directory( "backups" );
 
-        GraphDatabaseBuilder graphDatabaseBuilder = new CommercialGraphDatabaseFactory()
+        DatabaseManagementServiceInternalBuilder databaseManagementServiceInternalBuilder = new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( online_backup_enabled, TRUE )
                 .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
@@ -80,7 +80,7 @@ class BackupServiceStressTesting
         ExecutorService executor = Executors.newCachedThreadPool( new DaemonThreadFactory() );
         try
         {
-            DatabaseManagementService managementService = graphDatabaseBuilder.newDatabaseManagementService();
+            DatabaseManagementService managementService = databaseManagementServiceInternalBuilder.newDatabaseManagementService();
             managementRef.set( managementService );
             dbRef.set( managementService.database( DEFAULT_DATABASE_NAME ) );
 

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.imports;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.util.Arrays;
@@ -32,7 +32,7 @@ public class CreateIndex
     private void run( String storeDirString, List<String> indexPatterns )
     {
         var storeDir = new File( storeDirString );
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory()
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() ).newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

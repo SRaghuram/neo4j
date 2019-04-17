@@ -5,7 +5,7 @@
  */
 package org.neo4j.multidatabase.stresstest;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +49,7 @@ class MultiDatabaseCreationStressTesting
         deleteRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
-        DatabaseManagementService managementService = new CommercialGraphDatabaseFactory().newDatabaseManagementService( storeDirectory );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
         GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );

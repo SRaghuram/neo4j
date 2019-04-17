@@ -5,7 +5,7 @@
  */
 package com.neo4j.org.neo4j.store.watch;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class MultiDatabaseFileWatchIT
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newDatabaseManagementService(
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).newDatabaseManagementService(
                 testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();

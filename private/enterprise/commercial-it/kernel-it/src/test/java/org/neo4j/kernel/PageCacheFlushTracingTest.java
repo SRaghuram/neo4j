@@ -13,7 +13,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -30,7 +30,7 @@ class PageCacheFlushTracingTest
     void tracePageCacheFlushProgress()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
                                             .newEmbeddedDatabaseBuilder( testDirectory.directory() )
                                             .setConfig( GraphDatabaseSettings.tracer, "verbose" ).newDatabaseManagementService();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.locks;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,7 @@ class MultiDatabaseLockManagerIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialGraphDatabaseFactory().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

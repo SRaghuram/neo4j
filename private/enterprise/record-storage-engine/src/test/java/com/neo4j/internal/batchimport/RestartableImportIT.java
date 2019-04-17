@@ -25,7 +25,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -97,7 +97,7 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            DatabaseManagementService managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory )
+            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( databaseDirectory )
                         .setConfig( transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
                     .newDatabaseManagementService();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

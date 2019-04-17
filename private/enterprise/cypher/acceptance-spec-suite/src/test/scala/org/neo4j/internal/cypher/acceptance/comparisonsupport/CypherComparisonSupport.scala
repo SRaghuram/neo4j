@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
@@ -16,7 +16,7 @@ import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.virtual.MapValue
 
 import scala.util.{Failure, Success, Try}
@@ -54,7 +54,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
     )
   }
 
-  override protected def createDatabaseFactory(): TestGraphDatabaseFactory = new TestCommercialGraphDatabaseFactory()
+  override protected def createDatabaseFactory(): TestDatabaseManagementServiceBuilder = new TestCommercialDatabaseManagementServiceBuilder()
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport {

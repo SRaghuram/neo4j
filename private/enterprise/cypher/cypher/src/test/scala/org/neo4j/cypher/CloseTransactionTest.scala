@@ -23,7 +23,7 @@ import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.{CallableProcedure, Context, GlobalProcedures}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.procedure.Mode
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
@@ -40,7 +40,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   override protected def initTest(): Unit = {
     super.initTest()
-    managementService = new TestGraphDatabaseFactory().newImpermanentService()
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
     db = managementService.database(DEFAULT_DATABASE_NAME)
   }
 

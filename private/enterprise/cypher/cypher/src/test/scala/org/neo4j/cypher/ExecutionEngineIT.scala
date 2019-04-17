@@ -18,7 +18,7 @@ import org.neo4j.internal.kernel.api.procs._
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.{CallableProcedure, Context}
 import org.neo4j.procedure.Mode
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
@@ -29,7 +29,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
   test("should be possible to close compiled result after it is consumed") {
     // given
-    val db = new TestGraphDatabaseFactory().newImpermanentService().database(DEFAULT_DATABASE_NAME)
+    val db = new TestDatabaseManagementServiceBuilder().newImpermanentService().database(DEFAULT_DATABASE_NAME)
 
     // when
     val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")

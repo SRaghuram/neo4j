@@ -25,7 +25,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -178,7 +178,7 @@ class BackupCopyServiceTest
 
     private static void startAndStopDb( File databaseDir )
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory().newDatabaseManagementService( databaseDir );
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( databaseDir );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {

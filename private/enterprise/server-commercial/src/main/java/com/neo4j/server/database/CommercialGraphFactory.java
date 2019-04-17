@@ -18,8 +18,8 @@ import java.io.File;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.GraphFactory;
@@ -40,7 +40,7 @@ public class CommercialGraphFactory implements GraphFactory
             return new ReadReplicaGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(),
                     ReadReplicaEditionModule::new ).getManagementService();
         default:
-            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
+            return new DatabaseManagementServiceFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
                     .initFacade( storeDir, config, dependencies, new GraphDatabaseFacade() );
         }
     }

@@ -26,7 +26,7 @@ import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
 
@@ -67,7 +67,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
   }
 
   test("should profile hash join") {
-    val managementService = new TestGraphDatabaseFactory().newImpermanentService()
+    val managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
     //given
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     try {

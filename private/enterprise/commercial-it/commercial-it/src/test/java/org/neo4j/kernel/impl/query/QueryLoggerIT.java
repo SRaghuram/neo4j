@@ -9,7 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,7 +41,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -89,7 +89,7 @@ public class QueryLoggerIT
     @Rule
     public final ExpectedException expectedException = ExpectedException.none();
 
-    private GraphDatabaseBuilder databaseBuilder;
+    private DatabaseManagementServiceInternalBuilder databaseBuilder;
     private static final String QUERY = "CREATE (n:Foo {bar: 'baz'})";
 
     private File logsDirectory;
@@ -105,7 +105,7 @@ public class QueryLoggerIT
         logsDirectory = new File( testDirectory.storeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        databaseBuilder = new TestCommercialGraphDatabaseFactory()
+        databaseBuilder = new TestCommercialDatabaseManagementServiceBuilder()
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem.get() ) )
                 .setInternalLogProvider( inMemoryLog )
                 .newImpermanentDatabaseBuilder( testDirectory.storeDir() );

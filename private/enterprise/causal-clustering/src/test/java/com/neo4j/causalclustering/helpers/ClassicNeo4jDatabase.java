@@ -23,7 +23,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
@@ -131,7 +131,7 @@ public class ClassicNeo4jDatabase
         public ClassicNeo4jDatabase build() throws IOException
         {
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
-            managementService = new TestGraphDatabaseFactory()
+            managementService = new TestDatabaseManagementServiceBuilder()
                         .setFileSystem( fileSystem )
                         .newEmbeddedDatabaseBuilder( databasesRootDirectoryAbsolute )
                         .setConfig( GraphDatabaseSettings.record_format, recordFormat )

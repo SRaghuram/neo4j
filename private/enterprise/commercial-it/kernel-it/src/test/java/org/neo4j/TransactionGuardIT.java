@@ -40,9 +40,9 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -64,7 +64,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.SimpleGraphFactory;
 import org.neo4j.server.web.HttpHeaderUtils;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -517,8 +517,8 @@ public class TransactionGuardIT
 
     private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,String> configMap )
     {
-        CustomClockCommercialFacadeFactory customClockCommercialFacadeFactory = new CustomClockCommercialFacadeFactory();
-        GraphDatabaseBuilder databaseBuilder = new CustomGuardTestGraphDatabaseFactory( customClockCommercialFacadeFactory )
+        CustomClockCommercialManagementServiceFactory customClockCommercialFacadeFactory = new CustomClockCommercialManagementServiceFactory();
+        DatabaseManagementServiceInternalBuilder databaseBuilder = new CustomGuardTestDatabaseManagementServiceBuilder( customClockCommercialFacadeFactory )
                 .newImpermanentDatabaseBuilder( storeDir );
         configMap.forEach( databaseBuilder::setConfig );
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
@@ -594,18 +594,18 @@ public class TransactionGuardIT
         }
     }
 
-    private class CustomGuardTestGraphDatabaseFactory extends TestGraphDatabaseFactory
+    private class CustomGuardTestDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
     {
 
-        private final GraphDatabaseFacadeFactory customFacadeFactory;
+        private final DatabaseManagementServiceFactory customFacadeFactory;
 
-        CustomGuardTestGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
+        CustomGuardTestDatabaseManagementServiceBuilder( DatabaseManagementServiceFactory customFacadeFactory )
         {
             this.customFacadeFactory = customFacadeFactory;
         }
 
         @Override
-        protected GraphDatabaseBuilder.DatabaseCreator createImpermanentDatabaseCreator( File storeDir,
+        protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createImpermanentDatabaseCreator( File storeDir,
                 TestGraphDatabaseFactoryState state )
         {
             return config -> customFacadeFactory.newFacade( storeDir, config,
@@ -631,10 +631,10 @@ public class TransactionGuardIT
         }
     }
 
-    private class CustomClockCommercialFacadeFactory extends GraphDatabaseFacadeFactory
+    private class CustomClockCommercialManagementServiceFactory extends DatabaseManagementServiceFactory
     {
 
-        CustomClockCommercialFacadeFactory()
+        CustomClockCommercialManagementServiceFactory()
         {
             // XXX: This has to be a Function, JVM crashes with ClassFormatError if you pass a lambda here
             super( DatabaseInfo.COMMERCIAL, new Function<GlobalModule,AbstractEditionModule>() // Don't make a lambda

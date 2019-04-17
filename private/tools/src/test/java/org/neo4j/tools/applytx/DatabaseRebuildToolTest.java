@@ -28,7 +28,7 @@ import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -193,7 +193,7 @@ class DatabaseRebuildToolTest
 
     private static void databaseWithSomeTransactions( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" ).newDatabaseManagementService();

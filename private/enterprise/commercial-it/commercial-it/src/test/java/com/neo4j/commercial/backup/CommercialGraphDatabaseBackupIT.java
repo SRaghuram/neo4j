@@ -6,7 +6,7 @@
 package com.neo4j.commercial.backup;
 
 import com.neo4j.backup.BackupTestUtil;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -94,9 +94,9 @@ class CommercialGraphDatabaseBackupIT
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static GraphDatabaseBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
+    private static DatabaseManagementServiceInternalBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
     {
-        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        return new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) );
     }
 

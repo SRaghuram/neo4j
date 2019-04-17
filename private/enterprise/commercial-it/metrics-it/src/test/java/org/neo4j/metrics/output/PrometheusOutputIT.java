@@ -5,7 +5,7 @@
  */
 package org.neo4j.metrics.output;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import org.neo4j.configuration.Settings;
@@ -44,7 +45,7 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( prometheusEnabled, Settings.TRUE )
                 .setConfig( prometheusEndpoint, "localhost:0" ).newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );
@@ -63,7 +64,7 @@ class PrometheusOutputIT
         URLConnection connection = new URL( url ).openConnection();
         connection.setDoOutput( true );
         connection.connect();
-        Scanner s = new Scanner( connection.getInputStream(), "UTF-8" ).useDelimiter( "\\A" );
+        Scanner s = new Scanner( connection.getInputStream(), StandardCharsets.UTF_8 ).useDelimiter( "\\A" );
 
         assertTrue( s.hasNext() );
         String response = s.next();

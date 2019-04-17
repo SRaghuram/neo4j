@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -307,7 +307,7 @@ public class PropertyConstraintValidationIT
         @Override
         protected DatabaseManagementService createDatabaseService()
         {
-            return new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
+            return new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( testDir.getFileSystem() )
                         .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
         }
 

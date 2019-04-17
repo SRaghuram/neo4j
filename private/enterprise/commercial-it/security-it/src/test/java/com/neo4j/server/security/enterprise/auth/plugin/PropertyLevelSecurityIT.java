@@ -9,7 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -67,7 +67,7 @@ class PropertyLevelSecurityIT
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestGraphDatabaseFactory s = new TestCommercialGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder s = new TestCommercialDatabaseManagementServiceBuilder();
         managementService = s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )

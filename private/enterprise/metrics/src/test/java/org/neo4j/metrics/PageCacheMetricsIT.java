@@ -21,7 +21,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -51,7 +51,7 @@ class PageCacheMetricsIT
     void setUp()
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        managementService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( MetricsSettings.metricsEnabled, Settings.FALSE  )
                 .setConfig( MetricsSettings.neoPageCacheEnabled, Settings.TRUE  )
                 .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
