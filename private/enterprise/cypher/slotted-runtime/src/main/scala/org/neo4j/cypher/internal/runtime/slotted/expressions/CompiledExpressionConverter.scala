@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
@@ -137,7 +138,9 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
 
   override def rewrite(f: Expression => Expression): Expression = f(this)
 
-  override def arguments: Seq[Expression] = legacy.arguments
+  override def arguments: Seq[Expression] = Seq(legacy)
+
+  override def children: Seq[AstNode[_]] = Seq(legacy)
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
     ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)

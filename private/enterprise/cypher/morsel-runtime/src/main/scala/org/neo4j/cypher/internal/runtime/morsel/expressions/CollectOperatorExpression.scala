@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, CollectFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
@@ -28,6 +29,8 @@ case class CollectOperatorExpression(innerMapperExpression: Expression) extends 
   override def createAggregationMapper: AggregationFunction = new CollectFunction(innerMapperExpression)
 
   override def createAggregationReducer(expression: Expression): AggregationFunction = new CollectReducer(expression)
+
+  override def children: Seq[AstNode[_]] = Seq(innerMapperExpression)
 }
 
 private class CollectReducer(expression: Expression) extends AggregationFunction {

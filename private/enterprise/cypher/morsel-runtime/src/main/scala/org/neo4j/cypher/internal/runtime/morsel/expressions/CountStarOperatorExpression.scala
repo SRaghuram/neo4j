@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, CountStarFunction, SumFunction}
 
@@ -22,4 +23,6 @@ case object CountStarOperatorExpression extends AggregationExpressionOperator {
   override def arguments: Seq[Expression] = Seq.empty
 
   override def symbolTableDependencies: Set[String] = Set.empty
+
+  override def children: Seq[AstNode[_]] = Seq.empty
 }

@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExpressionVariable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
@@ -57,4 +58,6 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
   override def symbolTableDependencies: Set[String] = Set()
 
   override def toString: String = s"NestedExpression()"
+
+  override def children: Seq[AstNode[_]] = Seq(inner) ++ availableExpressionVariables
 }

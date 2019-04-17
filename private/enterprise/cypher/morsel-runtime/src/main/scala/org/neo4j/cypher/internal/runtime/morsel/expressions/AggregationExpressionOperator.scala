@@ -35,7 +35,7 @@ abstract class AggregationExpressionOperatorWithInnerExpression(innerMapperExpre
 
   def expectedInnerType: CypherType
 
-  def arguments: Seq[Expression] = Seq(innerMapperExpression)
+  override def arguments: Seq[Expression] = Seq(innerMapperExpression)
 
-  def symbolTableDependencies: Set[String] = innerMapperExpression.symbolTableDependencies
+  override def symbolTableDependencies: Set[String] = innerMapperExpression.symbolTableDependencies
 }

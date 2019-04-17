@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, MaxFunction, MinFunction}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{AnyType, CTAny}
@@ -22,10 +23,14 @@ case class MinOperatorExpression(innerMapperExpression: Expression) extends MinO
   override def createAggregationMapper: AggregationFunction = new MinFunction(innerMapperExpression)
   override def createAggregationReducer(expression: Expression): AggregationFunction = new MinFunction(expression)
   override def rewrite(f: Expression => Expression): Expression = f(MinOperatorExpression(innerMapperExpression.rewrite(f)))
+
+  override def children: Seq[AstNode[_]] = Seq(innerMapperExpression)
 }
 
 case class MaxOperatorExpression(innerMapperExpression: Expression) extends MinOrMaxOperatorExpression(innerMapperExpression) {
   override def createAggregationMapper: AggregationFunction = new MaxFunction(innerMapperExpression)
   override def createAggregationReducer(expression: Expression): AggregationFunction = new MaxFunction(expression)
   override def rewrite(f: Expression => Expression): Expression = f(MaxOperatorExpression(innerMapperExpression.rewrite(f)))
+
+  override def children: Seq[AstNode[_]] = Seq(innerMapperExpression)
 }

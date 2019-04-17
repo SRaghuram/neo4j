@@ -6,13 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, AvgFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{AnyType, CTAny}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{LongValue, Values}
 import org.neo4j.values.storable.Values.longValue
+import org.neo4j.values.storable.{LongValue, Values}
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
 /*
@@ -27,6 +28,8 @@ case class AvgOperatorExpression(innerMapperExpression: Expression) extends Aggr
   override def createAggregationMapper: AggregationFunction = new AvgMapper(new AvgFunction(innerMapperExpression))
 
   override def createAggregationReducer(expression: Expression): AggregationFunction = new AvgReducer(expression)
+
+  override def children: Seq[AstNode[_]] = Seq(innerMapperExpression)
 }
 
 class AvgMapper(func: AvgFunction) extends AggregationFunction {
