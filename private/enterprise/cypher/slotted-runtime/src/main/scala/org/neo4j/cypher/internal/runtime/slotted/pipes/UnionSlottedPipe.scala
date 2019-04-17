@@ -10,7 +10,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.RowMapping
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-case class UnionSlottedPipe(lhs: Pipe, rhs: Pipe,
+case class UnionSlottedPipe(lhs: Pipe,
+                            rhs: Pipe,
                             lhsMapping: RowMapping,
                             rhsMapping: RowMapping)
                            (val id: Id = Id.INVALID_ID) extends Pipe {

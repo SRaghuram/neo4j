@@ -7,13 +7,12 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
-import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.kernel.api.StatementConstants.{NO_SUCH_NODE, NO_SUCH_RELATIONSHIP}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, LenientCreateRelationship}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, InvalidSemanticsException}
+import org.neo4j.kernel.api.StatementConstants.{NO_SUCH_NODE, NO_SUCH_RELATIONSHIP}
 
 /**
   * Extends BaseCreatePipe with slotted methods to create nodes and relationships.
@@ -88,6 +87,8 @@ case class CreateSlottedPipe(source: Pipe,
                              relationships: IndexedSeq[CreateRelationshipSlottedCommand])
                             (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
+  nodes.foreach(_.properties.foreach(_.registerOwningPipe(this)))
+  relationships.foreach(_.properties.foreach(_.registerOwningPipe(this)))
 
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
@@ -125,6 +126,8 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
                                      (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
 
+  command.properties.foreach(_.registerOwningPipe(this))
+
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
       row =>
@@ -144,6 +147,8 @@ case class MergeCreateRelationshipSlottedPipe(source: Pipe,
                                               command: CreateRelationshipSlottedCommand)
                                              (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
+
+  command.properties.foreach(_.registerOwningPipe(this))
 
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
