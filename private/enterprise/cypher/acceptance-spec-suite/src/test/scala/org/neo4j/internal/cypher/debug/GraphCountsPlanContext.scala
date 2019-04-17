@@ -99,20 +99,24 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
     override def cardinalityByLabelsAndRelationshipType(fromLabel: Option[LabelId],
                                                         relTypeId: Option[RelTypeId],
                                                         toLabel: Option[LabelId]): Cardinality = {
+      val fromName = fromLabel.map(x => getLabelName(x.id))
+      val relName = relTypeId.map(x => getRelTypeName(x.id))
+      val toName = toLabel.map(x => getLabelName(x.id))
 
       if (relTypeId.isEmpty) {
         val relDefs = relationships.filter(r =>
-                                           r.startLabel == fromLabel.map(x => getLabelName(x.id)) &&
-                                           r.endLabel == toLabel.map(x => getLabelName(x.id)))
+                                           r.startLabel == fromName &&
+                                           r.endLabel == toName)
 
         Cardinality(relDefs.map(_.count).sum)
 
       } else {
-        val relDef = relationships.find(r =>
-                             r.relationshipType == relTypeId.map(x => getRelTypeName(x.id)) &&
-                             r.startLabel == fromLabel.map(x => getLabelName(x.id)) &&
-                             r.endLabel == toLabel.map(x => getLabelName(x.id))).get
-        Cardinality(relDef.count)
+        val count = relationships.find(r =>
+          r.relationshipType == relName &&
+            r.startLabel == fromName &&
+            r.endLabel == toName)
+          .map(_.count).getOrElse(0L)
+        Cardinality(count)
       }
     }
 
