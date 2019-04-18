@@ -73,10 +73,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("CREATE DATABASE foo")
 
-      fail("Expected error \"Can't create already existing database\" but succeeded.")
+      fail("Expected error \"Cannot create already existing database\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Can't create already existing database") =>
+      case e :Exception if e.getMessage.equals("Cannot create already existing database") =>
     }
   }
 
