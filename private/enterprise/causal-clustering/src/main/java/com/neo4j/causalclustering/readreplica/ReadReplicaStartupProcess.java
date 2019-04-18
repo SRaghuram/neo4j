@@ -54,9 +54,9 @@ class ReadReplicaStartupProcess implements Lifecycle
     private final TopologyService topologyService;
 
     private final CatchupComponentsRepository catchupComponents;
-    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager clusteredDatabaseManager;
 
-    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<?> clusteredDatabaseManager,
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager clusteredDatabaseManager,
             Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategyPipeline, LogProvider debugLogProvider,
             LogProvider userLogProvider, TopologyService topologyService, CatchupComponentsRepository catchupComponents )
     {
@@ -64,7 +64,7 @@ class ReadReplicaStartupProcess implements Lifecycle
                 catchupComponents, new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS ) );
     }
 
-    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<?> clusteredDatabaseManager,
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager clusteredDatabaseManager,
             Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider, LogProvider userLogProvider,
             TopologyService topologyService, CatchupComponentsRepository catchupComponents, TimeoutStrategy syncRetryStrategy )
     {
@@ -122,7 +122,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         catchupProcessManager.start();
     }
 
-    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
+    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( Map<DatabaseId,ClusteredDatabaseContext> dbsToSync )
     {
         CompletableFuture<Map<DatabaseId,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
         for ( var nameDbEntry : dbsToSync.entrySet() )

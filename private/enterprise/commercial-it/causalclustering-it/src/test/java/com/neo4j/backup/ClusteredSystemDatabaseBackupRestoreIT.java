@@ -7,7 +7,6 @@ package com.neo4j.backup;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.CoreDatabaseManager;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -192,7 +190,8 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception
     {
-        DatabaseManager<CoreDatabaseContext> databaseManager = cluster.awaitLeader().database()
+        var databaseManager = cluster.awaitLeader()
+                .database()
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 

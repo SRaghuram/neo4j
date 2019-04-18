@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.function.BooleanSupplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseExistsException;
@@ -33,7 +32,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<ClusteredDatabaseContext>
+public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
     private boolean isStoppedForSomeReason;
@@ -145,7 +144,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
-                config.logProvider, config.isAvailable, config.catchupComponentsFactory );
+                config.logProvider, config.catchupComponentsFactory );
 
         if ( config.storeId != null )
         {
@@ -164,7 +163,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         private DatabaseId databaseId;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
-        private BooleanSupplier isAvailable = StubClusteredDatabaseManager.this::globalAvailability;
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.DatabaseCatchupComponents.class );
         private StoreId storeId;
         private Dependencies dependencies;
@@ -218,12 +216,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         public DatabaseContextConfig withLogProvider( LogProvider logProvider )
         {
             this.logProvider = logProvider;
-            return this;
-        }
-
-        public DatabaseContextConfig withAvailabilitySupplier( BooleanSupplier availabilitySupplier )
-        {
-            this.isAvailable = availabilitySupplier;
             return this;
         }
 

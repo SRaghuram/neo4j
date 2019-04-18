@@ -13,7 +13,7 @@ import org.neo4j.monitoring.Health;
 /**
  * A ClusteredDatabaseManager allows for the creation and retrieval of new clustered Neo4j databases, as well as some limited lifecycle management.
  */
-public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> extends DatabaseManager<DB>
+public interface ClusteredDatabaseManager extends DatabaseManager<ClusteredDatabaseContext>
 {
     /**
      * Stop all databases in order to perform a store copy. This will raise a {@link DatabaseAvailabilityGuard} with a more human-readable blocking requirement.

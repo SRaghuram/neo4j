@@ -38,7 +38,7 @@ public class ReplicationModule
 
     ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
             Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageFactory storageFactory, LogProvider logProvider,
-            CompositeDatabaseAvailabilityGuard globalAvailabilityGuard, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager,
+            CompositeDatabaseAvailabilityGuard globalAvailabilityGuard, ClusteredDatabaseManager databaseManager,
             DatabaseId defaultDatabaseId )
     {
         StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( defaultDatabaseId,

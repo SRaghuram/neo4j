@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
@@ -19,11 +18,10 @@ import java.util.function.Consumer;
 
 class AggregateStateMachinesCommandDispatcher implements CommandDispatcher
 {
-    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final CoreStateRepository coreStateRepository;
 
-    AggregateStateMachinesCommandDispatcher( ClusteredDatabaseManager<CoreDatabaseContext> databaseManager,
-            CoreStateRepository coreStateRepository )
+    AggregateStateMachinesCommandDispatcher( ClusteredDatabaseManager databaseManager, CoreStateRepository coreStateRepository )
     {
         this.databaseManager = databaseManager;
         this.coreStateRepository = coreStateRepository;

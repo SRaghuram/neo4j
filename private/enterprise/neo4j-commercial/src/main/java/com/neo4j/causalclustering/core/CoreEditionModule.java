@@ -75,10 +75,10 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.InternalOperator;
-import com.neo4j.dbms.OperatorState;
-import com.neo4j.dbms.OperatorConnector;
-import com.neo4j.dbms.ReconcilingDatabaseOperator;
 import com.neo4j.dbms.LocalOperator;
+import com.neo4j.dbms.OperatorConnector;
+import com.neo4j.dbms.OperatorState;
+import com.neo4j.dbms.ReconcilingDatabaseOperator;
 import com.neo4j.dbms.SystemOperator;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
@@ -361,13 +361,13 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem,
-            CoreSnapshotService snapshotService, DatabaseManager<CoreDatabaseContext> databaseManager )
+            CoreSnapshotService snapshotService, DatabaseManager<?> databaseManager )
     {
         return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem, snapshotService );
     }
 
     private ClusteringModule getClusteringModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager,
+            CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager databaseManager,
             IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( identityModule.myself(), databaseManager );
@@ -378,7 +378,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 databaseManager, temporaryDatabaseFactory, sslPolicyLoader, databaseInitializer );
     }
 
-    private void createDatabaseManagerDependentModules( final ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager )
+    private void createDatabaseManagerDependentModules( final ClusteredMultiDatabaseManager databaseManager )
     {
         final LifeSupport globalLife = globalModule.getGlobalLife();
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
@@ -457,9 +457,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
-        ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
+        var databaseManager = new CoreDatabaseManager( platform, this, log, facade,
                 this::coreStateService, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),
                 platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig(), globalHealth );
         createDatabaseManagerDependentModules( databaseManager );

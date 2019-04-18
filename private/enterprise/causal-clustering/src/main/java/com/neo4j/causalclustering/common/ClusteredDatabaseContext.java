@@ -13,7 +13,6 @@ import java.io.IOException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -23,12 +22,9 @@ import org.neo4j.storageengine.api.StoreId;
  * Instances are responsible for the lifecycle management of per-database components, as well as exposing
  * per database dependency management, monitoring and io operations.
  *
- * TODO: Stop ClusteredDatabaseContext from being lifecycle and just manage the parts which need it in the database manager. Probably requires
- *  a Core and RR DatabaseManager, which is frustrating, but most of the implementation will be in the abstract version
- *
  * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
  */
-public interface ClusteredDatabaseContext extends Lifecycle, DatabaseContext
+public interface ClusteredDatabaseContext extends DatabaseContext
 {
     /**
      * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.

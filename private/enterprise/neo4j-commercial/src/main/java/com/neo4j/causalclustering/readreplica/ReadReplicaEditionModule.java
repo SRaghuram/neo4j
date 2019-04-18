@@ -190,16 +190,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<ReadReplicaDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
-         ClusteredMultiDatabaseManager<ReadReplicaDatabaseContext> databaseManager = new ClusteredMultiDatabaseManager<>( platform, this, log, facade,
-                 ReadReplicaDatabaseContext::new, catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
-                 logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
+        var databaseManager = new ClusteredMultiDatabaseManager( platform, this, log, facade,
+                catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
+                logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( ClusteredDatabaseManager<ReadReplicaDatabaseContext> databaseManager )
+    private void createDatabaseManagerDependentModules( ClusteredDatabaseManager databaseManager )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         Dependencies dependencies = globalModule.getGlobalDependencies();
@@ -274,7 +274,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new SecurePipelineFactory();
     }
 
-    private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<ReadReplicaDatabaseContext> databaseManager )
+    private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<?> databaseManager )
     {
         return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
     }

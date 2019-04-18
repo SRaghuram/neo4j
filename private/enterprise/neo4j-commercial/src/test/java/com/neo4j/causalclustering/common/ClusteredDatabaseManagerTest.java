@@ -41,7 +41,7 @@ class ClusteredDatabaseManagerTest
     {
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
-        ClusteredDatabaseManager<StubClusteredDatabaseContext> clusteredDatabaseManager = newDatabaseManager( guard );
+        ClusteredDatabaseManager clusteredDatabaseManager = newDatabaseManager( guard );
 
         assertNotNull( clusteredDatabaseManager );
         assertFalse( guard.isAvailable() );
@@ -53,7 +53,7 @@ class ClusteredDatabaseManagerTest
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        ClusteredDatabaseManager<StubClusteredDatabaseContext> clusteredDatabaseManager = newDatabaseManager( guard );
+        ClusteredDatabaseManager clusteredDatabaseManager = newDatabaseManager( guard );
         assertFalse( guard.isAvailable() );
 
         clusteredDatabaseManager.start();
@@ -66,7 +66,7 @@ class ClusteredDatabaseManagerTest
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        ClusteredDatabaseManager<StubClusteredDatabaseContext> clusteredDatabaseManager = newDatabaseManager( guard );
+        ClusteredDatabaseManager clusteredDatabaseManager = newDatabaseManager( guard );
         assertFalse( guard.isAvailable() );
 
         clusteredDatabaseManager.start();
@@ -83,7 +83,7 @@ class ClusteredDatabaseManagerTest
         DatabaseAvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        ClusteredDatabaseManager<StubClusteredDatabaseContext> clusteredDatabaseManager = newDatabaseManager( guard );
+        ClusteredDatabaseManager clusteredDatabaseManager = newDatabaseManager( guard );
         assertFalse( guard.isAvailable() );
 
         clusteredDatabaseManager.start();
@@ -147,9 +147,9 @@ class ClusteredDatabaseManagerTest
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
     }
 
-    private ClusteredDatabaseManager<StubClusteredDatabaseContext> newDatabaseManager( AvailabilityGuard availabilityGuard )
+    private ClusteredDatabaseManager newDatabaseManager( AvailabilityGuard availabilityGuard )
     {
-        return new ClusteredMultiDatabaseManager<>( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Log.class ),
+        return new ClusteredMultiDatabaseManager( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Log.class ),
                 mock( GraphDatabaseFacade.class ), StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
                 mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), Config.defaults(),
                 mock( DatabaseHealth.class ), availabilityGuard );

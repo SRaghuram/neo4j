@@ -79,7 +79,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Log log;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
-    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager clusteredDatabaseManager;
     private final CatchupProcessFactory catchupProcessFactory;
     private final Health databaseHealth;
 
@@ -88,7 +88,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private Timer timer;
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager<?> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            ClusteredDatabaseManager clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, VersionContextSupplier versionContextSupplier, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
@@ -99,7 +99,7 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager<?> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            ClusteredDatabaseManager clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             CatchupProcessFactory catchupProcessFactory, LogProvider logProvider, VersionContextSupplier versionContextSupplier,

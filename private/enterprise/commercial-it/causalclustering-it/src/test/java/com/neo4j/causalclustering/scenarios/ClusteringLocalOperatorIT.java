@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -78,22 +77,21 @@ class ClusteringLocalOperatorIT
         return member.database().getDependencyResolver().resolveDependency( LocalOperator.class );
     }
 
-    private ClusteredDatabaseManager<? extends ClusteredDatabaseContext> databaseManager( ClusterMember<? extends GraphDatabaseAPI> member )
+    private ClusteredDatabaseManager databaseManager( ClusterMember<? extends GraphDatabaseAPI> member )
     {
-        return (ClusteredDatabaseManager<? extends ClusteredDatabaseContext>) member
-                .database()
+        return member.database()
                 .getDependencyResolver()
-                .resolveDependency( DatabaseManager.class );
+                .resolveDependency( ClusteredDatabaseManager.class );
     }
 
-    private Optional<? extends ClusteredDatabaseContext> databaseContext( ClusterMember<? extends GraphDatabaseAPI> member, String databaseName )
+    private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember<? extends GraphDatabaseAPI> member, String databaseName )
     {
         return databaseManager( member ).getDatabaseContext( new DatabaseId( databaseName ) );
     }
 
     private DatabaseAvailabilityGuard availabilityGuard( ClusterMember<? extends GraphDatabaseAPI> member, String databaseName )
     {
-        Optional<? extends ClusteredDatabaseContext> optContext = databaseContext( member, databaseName );
+        Optional<ClusteredDatabaseContext> optContext = databaseContext( member, databaseName );
         assertTrue( optContext.isPresent() );
 
         ClusteredDatabaseContext context = optContext.get();

@@ -26,7 +26,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class CoreBootstrapper
 {
-    private final ClusteredDatabaseManager<?> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
     private final Function<DatabaseId,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
@@ -35,7 +35,7 @@ public class CoreBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    CoreBootstrapper( ClusteredDatabaseManager<?> databaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
+    CoreBootstrapper( ClusteredDatabaseManager databaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
             Function<DatabaseId,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider,
             PageCache pageCache, StorageEngineFactory storageEngineFactory )
     {

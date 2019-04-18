@@ -8,10 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 
-import java.util.Map;
-
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -28,12 +25,12 @@ import static java.lang.String.format;
  */
 public class IdFilesSanitationModule extends LifecycleAdapter
 {
-    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
     private final StartupCoreStateCheck startupCoreStateCheck;
 
-    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager,
+    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, ClusteredDatabaseManager databaseManager,
             FileSystemAbstraction fileSystem, LogProvider logProvider )
     {
         this.startupCoreStateCheck = startupCoreStateCheck;
@@ -50,7 +47,7 @@ public class IdFilesSanitationModule extends LifecycleAdapter
             return;
         }
 
-        for ( Map.Entry<DatabaseId,CoreDatabaseContext> dbEntry : databaseManager.registeredDatabases().entrySet() )
+        for ( var dbEntry : databaseManager.registeredDatabases().entrySet() )
         {
             if ( IdFilesDeleter.deleteIdFiles( dbEntry.getValue().databaseLayout(), fileSystem ) )
             {

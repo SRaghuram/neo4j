@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BooleanSupplier;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -32,7 +31,6 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Database database;
     private final GraphDatabaseFacade facade;
     private final LogProvider logProvider;
-    private final BooleanSupplier isAvailable;
     private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
     private boolean isEmpty;
     private StoreId storeId;
@@ -41,14 +39,13 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final LogFiles logFiles;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
         this.logProvider = logProvider;
         this.storeFiles = storeFiles;
         this.logFiles = logFiles;
-        this.isAvailable = isAvailable;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = new Monitors();

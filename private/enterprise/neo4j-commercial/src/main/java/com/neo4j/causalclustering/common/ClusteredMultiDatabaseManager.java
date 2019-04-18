@@ -32,18 +32,18 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Health;
+import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
 
-public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> extends MultiDatabaseManager<DB>
-        implements ClusteredDatabaseManager<DB>
+public class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext> implements ClusteredDatabaseManager
 {
     public static final String STOPPED_MSG = "Local databases are stopped";
     public static final String COPYING_STORE_MSG = "Local databases are stopped to copy a store from another cluster member";
     private static final AvailabilityRequirement notStoppedReq = () -> STOPPED_MSG;
     private static final AvailabilityRequirement notCopyingReq = () -> COPYING_STORE_MSG;
 
-    private final ClusteredDatabaseContextFactory<DB> contextFactory;
+    private final ClusteredDatabaseContextFactory contextFactory;
     private final LogProvider logProvider;
     private final AvailabilityGuard availabilityGuard;
     private final FileSystemAbstraction fs;
@@ -57,7 +57,16 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     private volatile AvailabilityRequirement currentRequirement;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
-            ClusteredDatabaseContextFactory<DB> contextFactory, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
+            CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
+            PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths, AvailabilityGuard availabilityGuard )
+    {
+        this( globalModule, edition, log, facade, DefaultClusteredDatabaseContext::new, catchupComponentsFactory, fs, pageCache,
+                logProvider, config, globalHealths, availabilityGuard );
+    }
+
+    @VisibleForTesting // allows to inject a ClusteredDatabaseContextFactory
+    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
+            ClusteredDatabaseContextFactory contextFactory, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths, AvailabilityGuard availabilityGuard )
     {
 
@@ -138,21 +147,21 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    public Optional<DB> getDatabaseContext( DatabaseId databaseId )
+    public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
     {
         return Optional.ofNullable( databaseMap.get( databaseId ) );
     }
 
-    protected DB createNewDatabaseContext( DatabaseId databaseId )
+    protected ClusteredDatabaseContext createNewDatabaseContext( DatabaseId databaseId )
     {
         return super.createNewDatabaseContext( databaseId );
     }
 
     @Override
-    protected DB createDatabaseContext( Database database, GraphDatabaseFacade facade )
+    protected ClusteredDatabaseContext createDatabaseContext( Database database, GraphDatabaseFacade facade )
     {
         LogFiles transactionLogs = buildTransactionLogs( database.getDatabaseLayout() );
-        return contextFactory.create( database, facade, transactionLogs, storeFiles, logProvider, this::isAvailable, catchupComponentsFactory );
+        return contextFactory.create( database, facade, transactionLogs, storeFiles, logProvider, catchupComponentsFactory );
     }
 
     private LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
@@ -191,12 +200,11 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         whilst our contexts are themselves lifecycles. Context's must be stopped *before* the underlying database, and started *after*.
      */
     @Override
-    protected void startDatabase( DatabaseId databaseId, DB context )
+    protected void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
             super.startDatabase( databaseId, context );
-            context.start();
         }
         catch ( Throwable t )
         {
@@ -205,20 +213,15 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    protected void stopDatabase( DatabaseId databaseId, DB context )
+    protected void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         stopDatabase( databaseId, context, false );
     }
 
-    private void stopDatabase( DatabaseId databaseId, DB context, boolean storeCopying )
+    protected void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context, boolean storeCopying )
     {
         try
         {
-            //TODO: This is terrible, but will go away as soon as we stop Clustered contexts from being lifecycles, in a follow on PR.
-            if ( !storeCopying )
-            {
-                context.stop();
-            }
             super.stopDatabase( databaseId, context );
         }
         catch ( Throwable t )
@@ -228,12 +231,11 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    protected void dropDatabase( DatabaseId databaseId, DB context )
+    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
             //TODO: Should clean up cluster state here for core members
-            context.stop();
             super.dropDatabase( databaseId, context );
         }
         catch ( Throwable t )

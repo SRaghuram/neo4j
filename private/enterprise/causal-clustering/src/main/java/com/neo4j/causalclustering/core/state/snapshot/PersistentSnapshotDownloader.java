@@ -39,7 +39,7 @@ public class PersistentSnapshotDownloader implements Runnable
     private final CommandApplicationProcess applicationProcess;
     private final CatchupAddressProvider addressProvider;
     private final Suspendable auxiliaryServices;
-    private final ClusteredDatabaseManager<?> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final CoreDownloader downloader;
     private final CoreSnapshotService snapshotService;
     private final Log log;
@@ -50,7 +50,7 @@ public class PersistentSnapshotDownloader implements Runnable
     private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, Suspendable auxiliaryServices,
-            ClusteredDatabaseManager<?> databaseManager, CoreDownloader downloader, CoreSnapshotService snapshotService,
+            ClusteredDatabaseManager databaseManager, CoreDownloader downloader, CoreSnapshotService snapshotService,
             Log log, TimeoutStrategy backoffStrategy, Panicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;

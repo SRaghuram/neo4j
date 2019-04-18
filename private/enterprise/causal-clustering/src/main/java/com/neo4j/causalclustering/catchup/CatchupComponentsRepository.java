@@ -24,9 +24,9 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public class CatchupComponentsRepository
 {
-    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager clusteredDatabaseManager;
 
-    public CatchupComponentsRepository( ClusteredDatabaseManager<?> clusteredDatabaseManager )
+    public CatchupComponentsRepository( ClusteredDatabaseManager clusteredDatabaseManager )
     {
         this.clusteredDatabaseManager = clusteredDatabaseManager;
     }

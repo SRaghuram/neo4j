@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.identity.BoundState;
@@ -24,7 +23,7 @@ import org.neo4j.scheduler.JobHandle;
 public class CoreLife extends SafeLifecycle
 {
     private final RaftMachine raftMachine;
-    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final ClusterBinder clusterBinder;
 
     private final CommandApplicationProcess applicationProcess;
@@ -33,7 +32,7 @@ public class CoreLife extends SafeLifecycle
     private final CoreDownloaderService downloadService;
     private final RecoveryFacade recoveryFacade;
 
-    public CoreLife( RaftMachine raftMachine, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, ClusterBinder clusterBinder,
+    public CoreLife( RaftMachine raftMachine, ClusteredDatabaseManager databaseManager, ClusterBinder clusterBinder,
             CommandApplicationProcess commandApplicationProcess, LifecycleMessageHandler<?> raftMessageHandler,
             CoreSnapshotService snapshotService, CoreDownloaderService downloadService, LogProvider logProvider,
             RecoveryFacade recoveryFacade )

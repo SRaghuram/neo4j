@@ -24,7 +24,7 @@ public class ReadReplicaServerModule
     private final CatchupComponentsRepository catchupComponents;
     private final CatchupClientFactory catchupClientFactory;
 
-    ReadReplicaServerModule( ClusteredDatabaseManager<ReadReplicaDatabaseContext> databaseManager, CatchupComponentsProvider catchupComponentsProvider,
+    ReadReplicaServerModule( ClusteredDatabaseManager databaseManager, CatchupComponentsProvider catchupComponentsProvider,
             CatchupHandlerFactory handlerFactory )
     {
         CatchupServerHandler catchupServerHandler = handlerFactory.create( null );

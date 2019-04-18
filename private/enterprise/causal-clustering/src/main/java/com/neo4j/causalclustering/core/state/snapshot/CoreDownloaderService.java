@@ -28,7 +28,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final JobScheduler jobScheduler;
     private final CoreDownloader downloader;
     private final Suspendable suspendOnStoreCopy;
-    private final ClusteredDatabaseManager<?> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
@@ -41,7 +41,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private Panicker panicker;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, CoreSnapshotService snapshotService, Suspendable suspendOnStoreCopy,
-            ClusteredDatabaseManager<?> databaseManager, CommandApplicationProcess applicationProcess,
+            ClusteredDatabaseManager databaseManager, CommandApplicationProcess applicationProcess,
             LogProvider logProvider, TimeoutStrategy backoffStrategy,
             Panicker panicker, Monitors monitors )
     {

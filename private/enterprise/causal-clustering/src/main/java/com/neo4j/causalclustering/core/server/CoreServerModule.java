@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
@@ -53,7 +52,7 @@ public class CoreServerModule implements CatchupServerProvider
     private final IdentityModule identityModule;
     private final RaftGroup raftGroup;
     private final ClusteringModule clusteringModule;
-    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final ClusteredDatabaseManager databaseManager;
     private final Health kernelDatabaseHealth;
     private final CommandApplicationProcess commandApplicationProcess;
     private final CoreSnapshotService snapshotService;
@@ -69,7 +68,7 @@ public class CoreServerModule implements CatchupServerProvider
 
     public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, RaftGroup raftGroup,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule,
-            ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, Health kernelDatabaseHealth,
+            ClusteredDatabaseManager databaseManager, Health kernelDatabaseHealth,
             CatchupComponentsProvider catchupComponentsProvider, InstalledProtocolHandler installedProtocolsHandler,
             CatchupHandlerFactory handlerFactory, Panicker panicker )
     {

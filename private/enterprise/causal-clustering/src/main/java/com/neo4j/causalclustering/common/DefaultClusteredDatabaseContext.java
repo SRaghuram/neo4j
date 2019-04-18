@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.BooleanSupplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -19,7 +18,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -32,13 +30,12 @@ import org.neo4j.storageengine.api.StoreId;
  *
  * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
  */
-public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter implements ClusteredDatabaseContext
+public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 {
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
     private final DatabaseId databaseId;
-    private final BooleanSupplier isAvailable;
     private final LogFiles txLogs;
     private final Database database;
     private final GraphDatabaseFacade facade;
@@ -47,8 +44,8 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
 
     private volatile StoreId storeId;
 
-    public AbstractClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
+    public DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+            CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
@@ -56,32 +53,9 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
         this.storeFiles = storeFiles;
         this.txLogs = txLogs;
         this.databaseId = database.getDatabaseId();
-        this.isAvailable = isAvailable;
         this.log = logProvider.getLog( getClass() );
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
-
-    @Override
-    public final void start() throws Exception
-    {
-        if ( isAvailable.getAsBoolean() )
-        {
-            return;
-        }
-        storeId = storeId();
-        log.info( "Initialising with storeId: " + storeId );
-        start0();
-    }
-
-    protected abstract void start0() throws Exception;
-
-    @Override
-    public final void stop() throws Exception
-    {
-        stop0();
-    }
-
-    protected abstract void stop0() throws Exception;
 
     /**
      * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.
@@ -89,16 +63,13 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
      * @return store id for this database
      */
     @Override
-    public synchronized StoreId storeId()
+    public StoreId storeId()
     {
-        if ( isAvailable.getAsBoolean() )
+        if ( storeId == null )
         {
-            return storeId;
+            storeId = readStoreIdFromDisk();
         }
-        else
-        {
-            return readStoreIdFromDisk();
-        }
+        return storeId;
     }
 
     private StoreId readStoreIdFromDisk()

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
@@ -116,7 +115,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     private final AggregateStateMachinesCommandDispatcher dispatchers;
 
     public CoreStateService( MemberId myself, GlobalModule globalModule, CoreStateStorageFactory storageFactory, Config config,
-            RaftMachine raftMachine, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, ReplicationModule replicationModule,
+            RaftMachine raftMachine, ClusteredDatabaseManager databaseManager, ReplicationModule replicationModule,
             StateStorage<Long> lastFlushedStorage, Panicker panicker )
     {
         this.logging = globalModule.getLogService();

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
@@ -46,7 +45,7 @@ public class ClusteringModule
     private final ClusterBinder clusterBinder;
 
     public ClusteringModule( DatabaseId databaseId, DiscoveryServiceFactory discoveryServiceFactory, DiscoveryMember myself, GlobalModule globalModule,
-            CoreStateStorageFactory storageFactory, ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager,
+            CoreStateStorageFactory storageFactory, ClusteredDatabaseManager clusteredDatabaseManager,
             TemporaryDatabaseFactory temporaryDatabaseFactory, SslPolicyLoader sslPolicyLoader, Function<DatabaseId,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
