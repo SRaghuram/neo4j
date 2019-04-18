@@ -101,6 +101,10 @@ class RaftOutcomeApplier implements LeaderLocator
             raftMessageTimerResetMonitor.timerReset();
             leaderAvailabilityTimers.renewElection();
         }
+        else if ( outcome.isSteppingDown() )
+        {
+            raftMessageTimerResetMonitor.timerReset();
+        }
     }
 
     private void handleLogShipping( Outcome outcome )

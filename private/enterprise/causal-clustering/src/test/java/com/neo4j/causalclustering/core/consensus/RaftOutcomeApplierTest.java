@@ -14,11 +14,9 @@ import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -53,7 +51,7 @@ class RaftOutcomeApplierTest
     private OutcomeBuilder outcomeBuilder = OutcomeBuilder.builder();
 
     @Test
-    void shouldUpdateState() throws Throwable
+    void shouldUpdateState() throws IOException
     {
         var outcome = outcomeBuilder.build();
 
@@ -63,7 +61,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldSendMessages() throws Throwable
+    void shouldSendMessages() throws IOException
     {
         var outgoingMessages = Stream.generate( UUID::randomUUID )
                 .map( MemberId::new )
@@ -79,7 +77,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldResetRaftMessageResetMonitorIfElectionRenewed() throws Throwable
+    void shouldResetRaftMessageResetMonitorIfElectionRenewed() throws IOException
     {
         var outcome = outcomeBuilder.setRenewElectionTimeout( true ).build();
 
@@ -89,17 +87,17 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldRenewLeaderAvailabilityTimerIfElectionRenewed() throws Throwable
+    void shouldRenewLeaderAvailabilityTimerIfSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setRenewElectionTimeout( true ).build();
+        var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.of( 3L ) ).build();
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( leaderAvailabilityTimers ).renewElection();
+        verify( raftMessageTimerResetMonitor ).timerReset();
     }
 
     @Test
-    void shouldNotResetRaftMessageResetMonitorIfElectionNotRenewed() throws Throwable
+    void shouldNotResetRaftMessageResetMonitorIfElectionNotRenewedAndNotSteppingDown() throws IOException
     {
         var outcome = outcomeBuilder.setRenewElectionTimeout( false ).build();
 
@@ -109,7 +107,17 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotRenewLeaderAvailabilityTimerIfElectionNotRenewed() throws Throwable
+    void shouldRenewLeaderAvailabilityTimerIfElectionRenewed() throws IOException
+    {
+        var outcome = outcomeBuilder.setRenewElectionTimeout( true ).build();
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( leaderAvailabilityTimers ).renewElection();
+    }
+
+    @Test
+    void shouldNotRenewLeaderAvailabilityTimerIfElectionNotRenewed() throws IOException
     {
         var outcome = outcomeBuilder.setRenewElectionTimeout( false ).build();
 
@@ -119,7 +127,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldResumeLogShippingIfElectedLeader() throws Throwable
+    void shouldResumeLogShippingIfElectedLeader() throws IOException
     {
         var outcome = outcomeBuilder
                 .setElectedLeader( true )
@@ -133,7 +141,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotResumeLogShippingIfNotElectedLeader() throws Throwable
+    void shouldNotResumeLogShippingIfNotElectedLeader() throws IOException
     {
         var outcome = outcomeBuilder
                 .setElectedLeader( false )
@@ -147,7 +155,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldPauseIfSteppingDown() throws Throwable
+    void shouldPauseIfSteppingDown() throws IOException
     {
         var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.of( 0L ) ).build();
 
@@ -157,7 +165,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotPauseIfNotSteppingDown() throws Throwable
+    void shouldNotPauseIfNotSteppingDown() throws IOException
     {
         var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.empty() ).build();
 
@@ -167,7 +175,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldHandleLogShippingCommandsIfLeader() throws Throwable
+    void shouldHandleLogShippingCommandsIfLeader() throws IOException
     {
         var outcome = outcomeBuilder
                 .setNextRole( Role.LEADER )
@@ -181,7 +189,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotHandleLogShippingCommandsIfNotLeader() throws Throwable
+    void shouldNotHandleLogShippingCommandsIfNotLeader() throws IOException
     {
         var outcome = outcomeBuilder
                 .setNextRole( Role.FOLLOWER )
@@ -195,7 +203,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldSetLeader() throws Throwable
+    void shouldSetLeader() throws IOException, NoLeaderFoundException
     {
         var outcome = outcomeBuilder.build();
 
@@ -205,7 +213,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotifyLeaderChangesIfNewLeader() throws Throwable
+    void shouldNotifyLeaderChangesIfNewLeader() throws IOException
     {
         when( raftState.leader() ).thenReturn( new MemberId( UUID.randomUUID() ) );
         var outcome = outcomeBuilder.build();
@@ -218,7 +226,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotNotifyLeaderChangesIfNoNewLeader() throws Throwable
+    void shouldNotNotifyLeaderChangesIfNoNewLeader() throws IOException
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
@@ -232,7 +240,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotifyLeaderChangesIfNullNewLeader() throws Throwable
+    void shouldNotifyLeaderChangesIfNullNewLeader() throws IOException
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
@@ -246,7 +254,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotifyLeaderChangesIfNullOldLeader() throws Throwable
+    void shouldNotifyLeaderChangesIfNullOldLeader() throws IOException
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( null );
@@ -260,7 +268,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldDriveMembership() throws Throwable
+    void shouldDriveMembership() throws IOException
     {
         var outcome = outcomeBuilder.setCommitIndex( 78798L ).build();
 
@@ -271,7 +279,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldDriveMembershipFollowerStateIfLeader() throws Throwable
+    void shouldDriveMembershipFollowerStateIfLeader() throws IOException
     {
         var outcome = outcomeBuilder.setNextRole( Role.LEADER ).build();
 
@@ -281,7 +289,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldNotDriveMembershipFollowerStateIfNotLeader() throws Throwable
+    void shouldNotDriveMembershipFollowerStateIfNotLeader() throws IOException
     {
         var outcome = outcomeBuilder.setNextRole( Role.FOLLOWER ).build();
 
@@ -291,7 +299,7 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldReturnNextRole() throws Throwable
+    void shouldReturnNextRole() throws IOException
     {
         var outcome = outcomeBuilder.setNextRole( Role.CANDIDATE ).build();
 
