@@ -481,7 +481,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     // This fails on slotted (falls back on interpreted)
     // because both NodeUniqueIndexSeek on s tries to cache s.name and s.surname
     // it behaves the same for index and query on just :User(surname)
-    val result = executeWith(Configs.InterpretedRuntime, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("Apply")
           .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
