@@ -8,8 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan, RefSlot, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, _}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -24,10 +23,10 @@ import org.neo4j.internal.kernel
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
   */
-class OperatorFactory(stateDefinition: StateDefinition,
-                      converters: ExpressionConverters,
-                      readOnly: Boolean,
-                      queryIndexes: QueryIndexes) {
+class OperatorFactory(val stateDefinition: StateDefinition,
+                      val converters: ExpressionConverters,
+                      val readOnly: Boolean,
+                      val queryIndexes: QueryIndexes) {
   private val physicalPlan = stateDefinition.physicalPlan
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {

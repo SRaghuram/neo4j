@@ -7,24 +7,20 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.Pipeline
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, Pipeline}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.FuseOperators.FUSE_LIMIT
-import org.neo4j.cypher.internal.runtime.zombie.operators._
+import org.neo4j.cypher.internal.runtime.zombie.operators.{SingleThreadedAllNodeScanTaskTemplate, _}
 
 class FuseOperators(operatorFactory: OperatorFactory,
-                    physicalPlan: PhysicalPlan,
-                    converters: ExpressionConverters,
-                    readOnly: Boolean,
-                    queryIndexes: QueryIndexes,
                     fusingEnabled: Boolean,
                     tokenContext: TokenContext) {
+
+  private val physicalPlan = operatorFactory.stateDefinition.physicalPlan
 
   def compilePipeline(p: Pipeline): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
@@ -40,10 +36,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
       middleOperators,
       produceResultOperator,
       p.serial,
-      physicalPlan.slotConfigurations(p.headPlan.id),
+     operatorFactory.stateDefinition.physicalPlan.slotConfigurations(p.headPlan.id),
       p.inputBuffer,
       p.outputBuffer)
   }
+
 
   private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
 
@@ -69,21 +66,23 @@ class FuseOperators(operatorFactory: OperatorFactory,
       new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
     }).getOrElse(innermostTemplate)
 
-    val reversePlans = middlePlans.foldLeft(List(headPlan))((acc, p) => p :: acc)
+    val reversePlans = (headPlan +: middlePlans).reverse
 
-    //noinspection VariablePatternShadow
-    val (operatorTaskTemplate, fusedPlans, unhandledPlans, unhandledProduceResult) =
-      reversePlans.foldLeft(
-        // Accumulator start values:
-        // operatorTaskTemplate             , fusedPlans,                            , unhandledPlans         , unhandledProduceResult
-        (innerTemplate: OperatorTaskTemplate, produceResult.toList: List[LogicalPlan], List.empty[LogicalPlan], None: Option[ProduceResult])
-      ) {
-        case ((innerTemplate, fusedPlans, unhandledPlans, unhandledProduceResult), p) => p match {
+    val fusedPipeline =
+      reversePlans.foldLeft(FusedPipeline(innerTemplate, produceResult.toList, List.empty, None)) {
+        case (acc, nextPlan) => nextPlan match {
 
           case plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
-            (new SingleThreadedAllNodeScanTaskTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize)(expressionCompiler),
-              p :: fusedPlans, unhandledPlans, unhandledProduceResult)
+            val newTemplate =
+              new SingleThreadedAllNodeScanTaskTemplate(acc.template,
+                                                        innermostTemplate,
+                                                        nodeVariableName,
+                                                        slots.getLongOffsetFor(nodeVariableName),
+                                                        argumentSize)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)
@@ -101,40 +100,48 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
-            (new ExpandAllOperatorTaskTemplate(innerTemplate,
-                                               innermostTemplate,
-                                               fromOffset,
-                                               relOffset,
-                                               toOffset,
-                                               dir,
-                                               typeTokens.toArray,
-                                               missingTypes.toArray)(expressionCompiler),
-              p :: fusedPlans, unhandledPlans, unhandledProduceResult)
+            val newTemplate = new ExpandAllOperatorTaskTemplate(acc.template,
+                                                                innermostTemplate,
+                                                                fromOffset,
+                                                                relOffset,
+                                                                toOffset,
+                                                                dir,
+                                                                typeTokens.toArray,
+                                                                missingTypes.toArray)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plans.Selection(predicate, _) =>
             val compiledPredicate = () => expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
-              return (None, middlePlans, unhandledProduceResult)
+              return (None, middlePlans, acc.unhandledProduceResult)
             )
-            (new FilterOperatorTemplate(innerTemplate, compiledPredicate), p :: fusedPlans, unhandledPlans, unhandledProduceResult)
+            acc.copy(
+              template = new FilterOperatorTemplate(acc.template, compiledPredicate),
+              fusedPlans = nextPlan :: acc.fusedPlans)
 
           case _ =>
             // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
-            (innermostTemplate, List.empty, p :: unhandledPlans, produceResult)
+            acc.copy(
+              template = innermostTemplate,
+              fusedPlans = List.empty,
+              unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]):::acc.unhandledPlans,
+              produceResult)
         }
       }
 
     // Did we find any sequence of operators that we can fuse with the headPlan?
-    if (fusedPlans.length < FUSE_LIMIT) {
+    if (fusedPipeline.fusedPlans.length < FUSE_LIMIT) {
       (None, middlePlans, produceResult)
     } else {
       // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
-      dprintln(() => s"@@@ Fused plans ${fusedPlans.map(_.getClass.getSimpleName)}")
+      dprintln(() => s"@@@ Fused plans ${fusedPipeline.fusedPlans.map(_.getClass.getSimpleName)}")
 
-      val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
-      val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
+      val workIdentity = WorkIdentity.fromFusedPlans(fusedPipeline.fusedPlans)
+      val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate)
-      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans, unhandledProduceResult)
+      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), fusedPipeline.unhandledPlans, fusedPipeline.unhandledProduceResult)
     }
   }
 }
@@ -142,3 +149,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
 object FuseOperators {
   private val FUSE_LIMIT = 2
 }
+
+case class FusedPipeline(template: OperatorTaskTemplate,
+                         fusedPlans: List[LogicalPlan],
+                         unhandledPlans: List[LogicalPlan] = List.empty,
+                         unhandledProduceResult: Option[ProduceResult] = None)
