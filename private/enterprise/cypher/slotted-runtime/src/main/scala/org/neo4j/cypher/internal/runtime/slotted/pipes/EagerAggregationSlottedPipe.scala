@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import java.util.function
+
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -13,8 +15,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.Aggregati
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-
-import scala.collection.mutable.ArrayBuffer
 
 // Eager aggregation means that this pipe will eagerly load the whole resulting sub graphs before starting
 // to emit aggregated results.
@@ -33,6 +33,8 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     val (a,b) = aggregations.unzip
     (a.toIndexedSeq, b.toIndexedSeq)
   }
+  private val computeAggregations: function.Function[ groupingExpression.KeyType,Seq[AggregationFunction]] =
+    (_: groupingExpression.KeyType) => aggregationFunctions.map(_.createAggregationFunction)
 
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
@@ -63,11 +65,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     // Consume all input and aggregate
     input.foreach(ctx => {
       val groupingValue = groupingExpression.computeGroupingKey(ctx, state)
-      var functions = result.get(groupingValue)
-      if ( functions == null ) {
-        functions = aggregationFunctions.map(_.createAggregationFunction)
-        result.put(groupingValue, functions)
-      }
+      val functions = result.computeIfAbsent(groupingValue, computeAggregations)
       functions.foreach(func => func(ctx, state))
     })
 
@@ -75,13 +73,14 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     if (result.isEmpty && groupingExpression.isEmpty) {
       createEmptyResult()
     } else {
-      val buffer = ArrayBuffer.empty[ExecutionContext]
       val iterator = result.entrySet().iterator()
-      while (iterator.hasNext) {
-        val entry = iterator.next()
-        buffer.append(writeAggregationResultToContext(entry.getKey, entry.getValue))
+      new Iterator[ExecutionContext] {
+        override def hasNext: Boolean = iterator.hasNext
+        override def next(): ExecutionContext = {
+          val entry = iterator.next()
+          writeAggregationResultToContext(entry.getKey, entry.getValue)
+        }
       }
-      buffer.toIterator
     }
   }
 }
