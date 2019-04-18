@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.election;
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class DisconnectLeaderScenario
 
     private long oneIteration( long leaderStabilityMaxTimeMillis ) throws InterruptedException, TimeoutException
     {
-        List<RaftMachine> rafts = fixture.rafts.stream().map( Fixture.RaftFixture::raftMachine ).collect( toList() );
+        List<RaftMachine> rafts = fixture.rafts.stream().map( RaftMachineBuilder.RaftFixture::raftMachine ).collect( toList() );
         MemberId oldLeader = ElectionUtil.waitForLeaderAgreement( rafts, leaderStabilityMaxTimeMillis );
         long startTime = System.currentTimeMillis();
 

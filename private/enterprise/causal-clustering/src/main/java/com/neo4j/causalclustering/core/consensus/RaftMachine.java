@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
-import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
@@ -24,7 +23,6 @@ import java.util.Set;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static java.lang.String.format;
@@ -170,12 +168,6 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
     public MemberId identity()
     {
         return myself;
-    }
-
-    @VisibleForTesting
-    public RaftLogShippingManager logShippingManager()
-    {
-        return outcomeApplier.logShippingManager();
     }
 
     @Override

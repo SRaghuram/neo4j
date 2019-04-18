@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.election;
 
-import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder;
+import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder.RaftFixture;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
@@ -59,7 +59,7 @@ public class Fixture
             bootstrapWaiters.add( waiter );
 
             InMemoryRaftLog raftLog = new InMemoryRaftLog();
-            RaftMachine raftMachine =
+            RaftFixture raftFixture =
                     new RaftMachineBuilder( member, memberIds.size(), RaftTestMemberSetBuilder.INSTANCE )
                             .electionTimeout( electionTimeout )
                             .heartbeatInterval( heartbeatInterval )
@@ -68,9 +68,9 @@ public class Fixture
                             .timerService( timerService )
                             .raftLog( raftLog )
                             .commitListener( waiter )
-                            .build();
+                            .buildFixture();
 
-            rafts.add( new RaftFixture( raftMachine, raftLog ) );
+            rafts.add( raftFixture );
         }
     }
 
@@ -88,7 +88,7 @@ public class Fixture
         {
             raft.raftLog().append( new RaftLogEntry( 0, new MemberIdSet( asSet( members ) ) ) );
             raft.raftMachine().installCoreState( new RaftCoreState( new MembershipEntry( 0, members ) ) );
-            raft.raftMachine.postRecoveryActions();
+            raft.raftMachine().postRecoveryActions();
         }
         net.start();
         awaitBootstrapped();
@@ -99,7 +99,7 @@ public class Fixture
         net.stop();
         for ( RaftFixture raft : rafts )
         {
-            raft.raftMachine().logShippingManager().stop();
+            raft.logShipping().stop();
         }
         scheduler.stop();
         scheduler.shutdown();
@@ -139,28 +139,5 @@ public class Fixture
             }
             return true;
         }, 30, SECONDS, 100, MILLISECONDS );
-    }
-
-    class RaftFixture
-    {
-
-        private final RaftMachine raftMachine;
-        private final InMemoryRaftLog raftLog;
-
-        RaftFixture( RaftMachine raftMachine, InMemoryRaftLog raftLog )
-        {
-            this.raftMachine = raftMachine;
-            this.raftLog = raftLog;
-        }
-
-        public RaftMachine raftMachine()
-        {
-            return raftMachine;
-        }
-
-        public InMemoryRaftLog raftLog()
-        {
-            return raftLog;
-        }
     }
 }

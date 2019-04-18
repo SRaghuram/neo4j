@@ -77,6 +77,11 @@ public class RaftMachineBuilder
 
     public RaftMachine build()
     {
+        return buildFixture().raftMachine;
+    }
+
+    public RaftFixture buildFixture()
+    {
         termState.update( term );
         LeaderAvailabilityTimers
                 leaderAvailabilityTimers = new LeaderAvailabilityTimers( Duration.ofMillis( electionTimeout ), Duration.ofMillis( heartbeatInterval ), clock,
@@ -118,7 +123,7 @@ public class RaftMachineBuilder
             throw new RuntimeException( e );
         }
 
-        return raft;
+        return new RaftFixture( raft, logShipping, raftLog );
     }
 
     public RaftMachineBuilder electionTimeout( long electionTimeout )
@@ -193,5 +198,34 @@ public class RaftMachineBuilder
          * Called when the highest committed index increases.
          */
         void notifyCommitted( long commitIndex );
+    }
+
+    public static class RaftFixture
+    {
+        private final RaftMachine raftMachine;
+        private final RaftLogShippingManager logShipping;
+        private final RaftLog raftLog;
+
+        public RaftFixture( RaftMachine raft, RaftLogShippingManager logShipping, RaftLog raftLog )
+        {
+            raftMachine = raft;
+            this.logShipping = logShipping;
+            this.raftLog = raftLog;
+        }
+
+        public RaftMachine raftMachine()
+        {
+            return raftMachine;
+        }
+
+        public RaftLog raftLog()
+        {
+            return raftLog;
+        }
+
+        public RaftLogShippingManager logShipping()
+        {
+            return logShipping;
+        }
     }
 }
