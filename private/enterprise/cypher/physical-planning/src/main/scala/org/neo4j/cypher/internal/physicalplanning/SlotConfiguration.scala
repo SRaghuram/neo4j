@@ -185,12 +185,13 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   }
 
   def newCachedProperty(key: CachedNodeProperty): SlotConfiguration = {
+    val slot = RefSlot(numberOfReferences, nullable = false, CTAny)
     cachedProperties.get(key) match {
-      case Some(existingSlot) =>
-        throw new InternalException(s"Tried overwriting already taken cached node property $key!")
+      case Some(_) =>
+        // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
 
       case None =>
-        cachedProperties.put(key, RefSlot(numberOfReferences, nullable = false, CTAny))
+        cachedProperties.put(key, slot)
         numberOfReferences = numberOfReferences + 1
     }
     this

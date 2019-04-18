@@ -9,8 +9,8 @@ import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
-class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
-  with CypherComparisonSupport {
+class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
+                          with CypherComparisonSupport {
 
   test("multiple merges after each other") {
     1 to 100 foreach { prop =>
@@ -84,5 +84,23 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
       "Failed to create relationship `r`, node `a` is missing. " +
         "If you prefer to simply ignore rows where a relationship node is missing, " +
         "set 'cypher.lenient_create_relationship = true' in neo4j.conf"))
+  }
+
+  test("should handle cached node properties with merge relationship") {
+    graph.createUniqueIndex("User", "surname")
+    val n1 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Smoke"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+    relate(n2, n1, "Knows")
+
+    val q =
+      """
+        |MATCH (n:User)
+        |WHERE n.surname = 'Soap'
+        |MERGE (n)-[r:Knows]->(s:User {surname: 'Smoke'})
+        |RETURN s.surname AS name
+      """.stripMargin
+
+    val r = executeWith(Configs.InterpretedAndSlotted, q)
+    r.toList should equal(List(Map("name" -> "Smoke")))
   }
 }
