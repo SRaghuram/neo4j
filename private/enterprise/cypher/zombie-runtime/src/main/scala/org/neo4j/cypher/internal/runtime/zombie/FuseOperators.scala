@@ -133,7 +133,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
       val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
-      val taskFactory = ContinuableOperatorTaskWithMorselGenerator.generateClassAndTaskFactory(operatorTaskWithMorselTemplate)
+      val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate)
       (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans, unhandledProduceResult)
     }
   }

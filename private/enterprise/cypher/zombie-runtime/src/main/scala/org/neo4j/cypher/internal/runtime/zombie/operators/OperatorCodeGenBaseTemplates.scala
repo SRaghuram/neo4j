@@ -46,7 +46,7 @@ object ContinuableOperatorTaskWithMorselGenerator {
   /**
     * Responsible for generating a tailored class and creates a factory for creating new instances of the class
     */
-  def generateClassAndTaskFactory(template: ContinuableOperatorTaskWithMorselTemplate): CompiledTaskFactory = {
+  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate): CompiledTaskFactory = {
     val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className()))
     val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
 
