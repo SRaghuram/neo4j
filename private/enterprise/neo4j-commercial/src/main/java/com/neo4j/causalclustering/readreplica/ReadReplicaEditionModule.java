@@ -29,7 +29,6 @@ import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
-import com.neo4j.causalclustering.helper.CompositeSuspendable;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.causalclustering.net.Server;
@@ -172,8 +171,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         // order matters
         panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( allHealths ) );
-        panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( catchupServer ) );
-        backupServer.ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( server ) ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( catchupServer ) );
+        backupServer.ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( server ) ) );
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
     }
 
@@ -222,10 +221,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
                 createUpstreamDatabaseStrategySelector( myself, globaConfig, logProvider, topologyService, defaultStrategy );
 
-        CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
-
         CatchupProcessManager catchupProcessManager =
-                new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseManager, servicesToStopOnStoreCopy,
+                new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseManager,
                         globalHealth, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
                         commandIndexTracker, internalLogProvider, globalModule.getVersionContextSupplier(),
                         globalModule.getTracers().getPageCursorTracerSupplier(), globaConfig );
@@ -235,9 +232,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         globalModule.getGlobalLife().add( new ReadReplicaStartupProcess( catchupExecutor, databaseManager, catchupProcessManager,
                 upstreamDatabaseStrategySelector, logProvider, userLogProvider, topologyService, serverModule.catchupComponents() ) );
-
-        servicesToStopOnStoreCopy.add( serverModule.catchupServer() );
-        serverModule.backupServer().ifPresent( servicesToStopOnStoreCopy::add );
 
         globalLife.add( serverModule.catchupServer() ); // must start last and stop first, since it handles external requests
         serverModule.backupServer().ifPresent( globalLife::add );

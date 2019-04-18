@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -54,11 +53,10 @@ class PersistentSnapshotDownloaderTest
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
 
     private final StubClusteredDatabaseManager clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
-    private final Suspendable auxiliaryServices = mock( Suspendable.class );
 
     private PersistentSnapshotDownloader createDownloader()
     {
-        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, auxiliaryServices, clusteredDatabaseManager,
+        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, clusteredDatabaseManager,
                 coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
@@ -81,16 +79,14 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        InOrder inOrder = inOrder( applicationProcess, clusteredDatabaseManager, auxiliaryServices, coreDownloader );
+        InOrder inOrder = inOrder( applicationProcess, clusteredDatabaseManager, coreDownloader );
 
         inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        inOrder.verify( auxiliaryServices ).disable();
         inOrder.verify( clusteredDatabaseManager ).stopForStoreCopy();
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
         inOrder.verify( clusteredDatabaseManager ).start();
-        inOrder.verify( auxiliaryServices ).enable();
         inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );

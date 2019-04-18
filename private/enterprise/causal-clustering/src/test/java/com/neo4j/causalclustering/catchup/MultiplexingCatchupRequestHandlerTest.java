@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.util.function.Function;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
@@ -23,11 +24,13 @@ import org.neo4j.logging.NullLogProvider;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final DatabaseId EXISTING_DB_NAME = new DatabaseId( "existing.neo4j" );
-    private static final DatabaseId NON_EXISTING_DB_NAME = new DatabaseId( "non.existing.neo4j" );
+    private static final DatabaseId EXISTING_DB_ID = new DatabaseId( "existing.neo4j" );
+    private static final DatabaseId NON_EXISTING_DB_ID = new DatabaseId( "non.existing.neo4j" );
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();
@@ -42,7 +45,7 @@ class MultiplexingCatchupRequestHandlerTest
     void shouldReportErrorWhenDatabaseDoesNotExist()
     {
         channel.pipeline().addLast( newMultiplexingHandler() );
-        CatchupProtocolMessage request = newCatchupRequest( NON_EXISTING_DB_NAME );
+        var request = newCatchupRequest( NON_EXISTING_DB_ID );
 
         channel.writeInbound( request );
 
@@ -51,11 +54,14 @@ class MultiplexingCatchupRequestHandlerTest
     }
 
     @Test
-    void shouldReportErrorWhenPerDatabaseHandlerCantBeCreated()
+    void shouldReportErrorWhenDatabaseIsShutdown()
     {
-        Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory = ignore -> null;
-        channel.pipeline().addLast( newMultiplexingHandler( handlerFactory ) );
-        CatchupProtocolMessage request = newCatchupRequest( EXISTING_DB_NAME );
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        doReturn( true ).when( availabilityGuard ).isShutdown();
+        var databaseManager = newDbManager( availabilityGuard );
+        var handler = newMultiplexingHandler( databaseManager );
+        channel.pipeline().addLast( handler );
+        var request = newCatchupRequest( EXISTING_DB_ID );
 
         channel.writeInbound( request );
 
@@ -67,7 +73,7 @@ class MultiplexingCatchupRequestHandlerTest
     void shouldInvokePerDatabaseHandler()
     {
         channel.pipeline().addLast( newMultiplexingHandler() );
-        CatchupProtocolMessage request = newCatchupRequest( EXISTING_DB_NAME );
+        var request = newCatchupRequest( EXISTING_DB_ID );
 
         channel.writeInbound( request );
 
@@ -76,9 +82,17 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static DatabaseManager<?> newDbManager()
     {
-        StubClusteredDatabaseManager dbManager = new StubClusteredDatabaseManager();
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        doReturn( false ).when( availabilityGuard ).isShutdown();
+        return newDbManager( availabilityGuard );
+    }
+
+    private static DatabaseManager<?> newDbManager( DatabaseAvailabilityGuard existingDbAvailabilityGuard )
+    {
+        var dbManager = new StubClusteredDatabaseManager();
         dbManager.givenDatabaseWithConfig()
-                .withDatabaseId( EXISTING_DB_NAME )
+                .withDatabaseId( EXISTING_DB_ID )
+                .withDatabaseAvailabilityGuard( existingDbAvailabilityGuard )
                 .register();
         return dbManager;
     }
@@ -88,16 +102,27 @@ class MultiplexingCatchupRequestHandlerTest
         return newMultiplexingHandler( MultiplexingCatchupRequestHandlerTest::newHandlerFactory );
     }
 
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler( DatabaseManager<?> databaseManager )
+    {
+        return newMultiplexingHandler( databaseManager, MultiplexingCatchupRequestHandlerTest::newHandlerFactory );
+    }
+
     private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler(
             Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
     {
-        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), newDbManager(), handlerFactory,
+        return newMultiplexingHandler( newDbManager(), handlerFactory );
+    }
+
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler( DatabaseManager<?> databaseManager,
+            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
+    {
+        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), databaseManager, handlerFactory,
                 CatchupProtocolMessage.class, NullLogProvider.getInstance() );
     }
 
     private static SimpleChannelInboundHandler<CatchupProtocolMessage> newHandlerFactory( Database db )
     {
-        assertEquals( EXISTING_DB_NAME, db.getDatabaseId() );
+        assertEquals( EXISTING_DB_ID, db.getDatabaseId() );
         return new CatchupProtocolMessageHandler();
     }
 

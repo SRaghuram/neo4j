@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.catchup.error.StoppedDatabaseHandler;
+import com.neo4j.causalclustering.catchup.error.UnknownDatabaseHandler;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -44,14 +46,22 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extend
     protected void channelRead0( ChannelHandlerContext ctx, T request ) throws Exception
     {
         var databaseId = request.databaseId();
-
-        SimpleChannelInboundHandler<T> handler = databaseManager
-                .getDatabaseContext( databaseId )
-                .map( DatabaseContext::database )
-                .map( handlerFactory )
-                .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol, logProvider ) );
-
+        var databaseContext = databaseManager.getDatabaseContext( databaseId ).orElse( null );
+        var handler = createHandler( databaseContext );
         handler.channelRead( ctx, request );
+    }
+
+    private SimpleChannelInboundHandler<T> createHandler( DatabaseContext databaseContext )
+    {
+        if ( databaseContext == null )
+        {
+            return new UnknownDatabaseHandler<>( messageType, protocol, logProvider );
+        }
+        if ( databaseContext.database().getDatabaseAvailabilityGuard().isShutdown() )
+        {
+            return new StoppedDatabaseHandler<>( messageType, protocol, logProvider );
+        }
+        return handlerFactory.apply( databaseContext.database() );
     }
 }
 

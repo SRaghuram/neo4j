@@ -27,7 +27,6 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.core.state.snapshot.SnapshotDownloader;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloader;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.CompositeSuspendable;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -85,7 +84,6 @@ public class CoreServerModule implements CatchupServerProvider
 
         final Dependencies globalDependencies = globalModule.getGlobalDependencies();
         final Monitors globalMonitors = globalModule.getGlobalMonitors();
-        CompositeSuspendable suspendOnStoreCopy = new CompositeSuspendable();
 
         commandApplicationProcess = new CommandApplicationProcess(
                 raftGroup.raftLog(),
@@ -108,7 +106,7 @@ public class CoreServerModule implements CatchupServerProvider
         CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
-        this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseManager,
+        this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, databaseManager,
                 commandApplicationProcess, logProvider, backoffStrategy, panicker, globalMonitors );
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( snapshotService );
@@ -120,9 +118,6 @@ public class CoreServerModule implements CatchupServerProvider
 
         globalLife.add( new PruningScheduler( raftLogPruner, jobScheduler,
                 globalConfig.get( CausalClusteringSettings.raft_log_pruning_frequency ).toMillis(), logProvider ) );
-
-        suspendOnStoreCopy.add( this.catchupServer );
-        backupServer.ifPresent( suspendOnStoreCopy::add );
     }
 
     public CatchupComponentsRepository catchupComponents()

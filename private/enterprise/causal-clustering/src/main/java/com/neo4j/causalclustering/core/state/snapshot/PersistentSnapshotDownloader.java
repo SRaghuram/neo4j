@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
 import java.io.IOException;
@@ -38,7 +37,6 @@ public class PersistentSnapshotDownloader implements Runnable
 
     private final CommandApplicationProcess applicationProcess;
     private final CatchupAddressProvider addressProvider;
-    private final Suspendable auxiliaryServices;
     private final ClusteredDatabaseManager databaseManager;
     private final CoreDownloader downloader;
     private final CoreSnapshotService snapshotService;
@@ -49,13 +47,12 @@ public class PersistentSnapshotDownloader implements Runnable
     private volatile State state;
     private volatile boolean stopped;
 
-    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, Suspendable auxiliaryServices,
+    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess,
             ClusteredDatabaseManager databaseManager, CoreDownloader downloader, CoreSnapshotService snapshotService,
             Log log, TimeoutStrategy backoffStrategy, Panicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
-        this.auxiliaryServices = auxiliaryServices;
         this.databaseManager = databaseManager;
         this.downloader = downloader;
         this.snapshotService = snapshotService;
@@ -86,7 +83,6 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.startedDownloadingSnapshot();
             applicationProcess.pauseApplier( OPERATION_NAME );
 
-            auxiliaryServices.disable();
             databaseManager.stopForStoreCopy();
 
             // iteration over all databases should go away once we have separate database lifecycles
@@ -125,7 +121,6 @@ public class PersistentSnapshotDownloader implements Runnable
                 /* Starting the databases will invoke the commit process factory in the CoreEditionModule, which has important side-effects. */
                 log.info( "Starting local databases" );
                 databaseManager.start();
-                auxiliaryServices.enable();
             }
         }
         catch ( InterruptedException e )

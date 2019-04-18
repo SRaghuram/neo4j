@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
 import java.util.Optional;
@@ -27,7 +26,6 @@ public class CoreDownloaderService extends LifecycleAdapter
 {
     private final JobScheduler jobScheduler;
     private final CoreDownloader downloader;
-    private final Suspendable suspendOnStoreCopy;
     private final ClusteredDatabaseManager databaseManager;
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
@@ -40,7 +38,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private boolean stopped;
     private Panicker panicker;
 
-    public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, CoreSnapshotService snapshotService, Suspendable suspendOnStoreCopy,
+    public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, CoreSnapshotService snapshotService,
             ClusteredDatabaseManager databaseManager, CommandApplicationProcess applicationProcess,
             LogProvider logProvider, TimeoutStrategy backoffStrategy,
             Panicker panicker, Monitors monitors )
@@ -48,7 +46,6 @@ public class CoreDownloaderService extends LifecycleAdapter
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;
         this.snapshotService = snapshotService;
-        this.suspendOnStoreCopy = suspendOnStoreCopy;
         this.databaseManager = databaseManager;
         this.applicationProcess = applicationProcess;
         this.log = logProvider.getLog( getClass() );
@@ -66,7 +63,7 @@ public class CoreDownloaderService extends LifecycleAdapter
 
         if ( currentJob == null || currentJob.hasCompleted() )
         {
-            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, suspendOnStoreCopy, databaseManager, downloader,
+            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, databaseManager, downloader,
                     snapshotService, log, backoffStrategy, panicker, monitors );
             jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, currentJob );
             return Optional.of( jobHandle );

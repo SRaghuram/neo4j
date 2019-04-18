@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -61,7 +60,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final ClusteredDatabaseManager clusteredDatabaseManager;
     private final CatchupAddressProvider catchupAddressProvider;
     private final Log log;
-    private final Suspendable enableDisableOnStoreCopy;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
     private final Panicker panicker;
@@ -74,7 +72,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private volatile long latestTxIdOfUpStream;
 
     public CatchupPollingProcess( Executor executor, DatabaseId databaseId, ClusteredDatabaseManager clusteredDatabaseManager,
-            Suspendable enableDisableOnSoreCopy, CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
+            CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
             StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
@@ -82,7 +80,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
         this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.catchupAddressProvider = catchupAddressProvider;
         this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new );
-        this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
         this.applier = applier;
         this.pullRequestMonitor = monitors.newMonitor( PullRequestMonitor.class );
@@ -281,7 +278,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             clusteredDatabaseManager.stopForStoreCopy();
-            enableDisableOnStoreCopy.disable();
         }
         catch ( Throwable throwable )
         {
@@ -296,7 +292,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             clusteredDatabaseManager.start();
-            enableDisableOnStoreCopy.enable();
         }
         catch ( Throwable throwable )
         {

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.helper.SuspendableLifeCycle;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
@@ -21,12 +20,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
 
-public class Server extends SuspendableLifeCycle
+public class Server extends LifecycleAdapter
 {
     private final Log debugLog;
     private final Log userLog;
@@ -46,7 +46,6 @@ public class Server extends SuspendableLifeCycle
             ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
             BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
-        super( debugLogProvider.getLog( Server.class ) );
         this.childInitializer = childInitializer;
         this.parentHandler = parentHandler;
         this.listenAddress = listenAddress;
@@ -59,13 +58,7 @@ public class Server extends SuspendableLifeCycle
     }
 
     @Override
-    protected void init0()
-    {
-        // do nothing
-    }
-
-    @Override
-    protected void start0()
+    public void start()
     {
         if ( channel != null )
         {
@@ -104,7 +97,7 @@ public class Server extends SuspendableLifeCycle
     }
 
     @Override
-    protected void stop0()
+    public void stop()
     {
         if ( channel == null )
         {
@@ -136,12 +129,6 @@ public class Server extends SuspendableLifeCycle
             }
         }
         workerGroup = null;
-    }
-
-    @Override
-    protected void shutdown0()
-    {
-        // do nothing
     }
 
     public String name()

@@ -3,8 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.catchup;
+package com.neo4j.causalclustering.catchup.error;
 
+import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
+import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
+import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,12 +15,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-class UnknownDatabaseHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
+abstract class ErrorReportingHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
     private final Log log;
 
-    UnknownDatabaseHandler( Class<T> messageType, CatchupServerProtocol protocol, LogProvider logProvider )
+    ErrorReportingHandler( Class<T> messageType, CatchupServerProtocol protocol, LogProvider logProvider )
     {
         super( messageType );
         this.protocol = protocol;
@@ -25,7 +28,7 @@ class UnknownDatabaseHandler<T extends CatchupProtocolMessage> extends SimpleCha
     }
 
     @Override
-    protected void channelRead0( ChannelHandlerContext ctx, T request )
+    protected final void channelRead0( ChannelHandlerContext ctx, T request )
     {
         CatchupErrorResponse errorResponse = newErrorResponse( request );
         log.warn( errorResponse.message() );
@@ -34,9 +37,5 @@ class UnknownDatabaseHandler<T extends CatchupProtocolMessage> extends SimpleCha
         protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
     }
 
-    private CatchupErrorResponse newErrorResponse( T request )
-    {
-        return new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN,
-                String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", request, request.databaseId().name() ) );
-    }
+    abstract CatchupErrorResponse newErrorResponse( T request );
 }

@@ -31,9 +31,9 @@ public final class PanicEventHandlers
         return new RaiseAvailabilityGuardEventHandler( availabilityGuard );
     }
 
-    public static DisableServerEventHandler disableServerEventHandler( Server server )
+    public static StopServerEventHandler stopServerEventHandler( Server server )
     {
-        return new DisableServerEventHandler( server );
+        return new StopServerEventHandler( server );
     }
 
     public static ShutdownLifeCycle shutdownLifeCycle( LifeSupport life )
@@ -74,12 +74,11 @@ public final class PanicEventHandlers
         }
     }
 
-    private static class DisableServerEventHandler implements PanicEventHandler
+    private static class StopServerEventHandler implements PanicEventHandler
     {
-
         private final Server server;
 
-        private DisableServerEventHandler( Server server )
+        private StopServerEventHandler( Server server )
         {
             this.server = server;
         }
@@ -89,7 +88,7 @@ public final class PanicEventHandlers
         {
             try
             {
-                server.disable();
+                server.stop();
             }
             catch ( Throwable throwable )
             {

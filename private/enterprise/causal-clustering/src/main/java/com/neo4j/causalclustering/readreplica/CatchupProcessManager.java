@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import java.util.Map;
@@ -64,7 +63,6 @@ public class CatchupProcessManager extends SafeLifecycle
         TX_PULLER_TIMER
     }
 
-    private final Suspendable servicesToStopOnStoreCopy;
     private final TopologyService topologyService;
     private final CatchupClientFactory catchupClient;
     private final UpstreamDatabaseStrategySelector selectionStrategyPipeline;
@@ -88,18 +86,18 @@ public class CatchupProcessManager extends SafeLifecycle
     private Timer timer;
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            ClusteredDatabaseManager clusteredDatabaseManager,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, VersionContextSupplier versionContextSupplier, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
     {
-        this( executor, catchupComponents, clusteredDatabaseManager, servicesToStopOnStoreCopy, databaseHealth, topologyService,
+        this( executor, catchupComponents, clusteredDatabaseManager, databaseHealth, topologyService,
                 catchUpClient, selectionStrategyPipeline, timerService, commandIndexTracker, null, logProvider,
                 versionContextSupplier, pageCursorTracerSupplier, config );
     }
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            ClusteredDatabaseManager clusteredDatabaseManager,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             CatchupProcessFactory catchupProcessFactory, LogProvider logProvider, VersionContextSupplier versionContextSupplier,
@@ -116,7 +114,6 @@ public class CatchupProcessManager extends SafeLifecycle
         this.executor = executor;
         this.catchupComponents = catchupComponents;
         this.clusteredDatabaseManager = clusteredDatabaseManager;
-        this.servicesToStopOnStoreCopy = servicesToStopOnStoreCopy;
         this.databaseHealth = databaseHealth;
         this.topologyService = topologyService;
         this.catchupClient = catchUpClient;
@@ -191,7 +188,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 writableCommitProcess, databaseContext.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext.databaseId(), clusteredDatabaseManager,
-                servicesToStopOnStoreCopy, catchupClient, batchingTxApplier, databaseContext.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider,
+                catchupClient, batchingTxApplier, databaseContext.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider,
                 this::panic, new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         databaseContext.dependencies().satisfyDependencies( catchupProcess );

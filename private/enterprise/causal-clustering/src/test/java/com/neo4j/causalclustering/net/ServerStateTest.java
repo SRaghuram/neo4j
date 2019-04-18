@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.helper.SuspendableLifeCycleLifeStateChangeTest;
-import com.neo4j.causalclustering.helper.SuspendableLifeCycleSuspendedStateChangeTest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -35,10 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * More generalized state tests of SuspendableLifeCycle can be found {@link SuspendableLifeCycleLifeStateChangeTest} and
- * {@link SuspendableLifeCycleSuspendedStateChangeTest}
- */
 class ServerStateTest
 {
     private static final String SERVER_NAME = "serverName";
@@ -102,41 +96,6 @@ class ServerStateTest
     void shouldStartServerNormally() throws Throwable
     {
         server.start();
-        assertTrue( canConnect() );
-    }
-
-    @Test
-    void canDisableAndEnableServer() throws Throwable
-    {
-        server.start();
-        assertTrue( canConnect() );
-
-        server.disable();
-        assertFalse( canConnect() );
-
-        server.enable();
-        assertTrue( canConnect() );
-    }
-
-    @Test
-    void serverCannotBeEnabledIfLifeCycleHasNotStarted() throws Throwable
-    {
-        server.enable();
-        assertFalse( canConnect() );
-
-        server.start();
-        assertTrue( canConnect() );
-    }
-
-    @Test
-    void serverCannotStartIfDisabled() throws Throwable
-    {
-        server.disable();
-
-        server.start();
-        assertFalse( canConnect() );
-
-        server.enable();
         assertTrue( canConnect() );
     }
 

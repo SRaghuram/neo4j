@@ -18,6 +18,8 @@ import java.util.TreeMap;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.availability.DatabaseAvailability;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -142,6 +144,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         Database db = mock( Database.class );
         when( db.getDatabaseId() ).thenReturn( config.databaseId );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
+        when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
                 config.logProvider, config.catchupComponentsFactory );
@@ -169,6 +172,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         private JobScheduler jobScheduler = new FakeJobScheduler();
         private StoreFiles storeFiles = mock( StoreFiles.class );
         private LogFiles logFiles = mock( LogFiles.class );
+        private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
 
         private DatabaseContextConfig()
         {
@@ -234,6 +238,12 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         public DatabaseContextConfig withLogFiles( LogFiles logFiles )
         {
             this.logFiles = logFiles;
+            return this;
+        }
+
+        public DatabaseContextConfig withDatabaseAvailabilityGuard( DatabaseAvailabilityGuard availabilityGuard )
+        {
+            this.availabilityGuard = availabilityGuard;
             return this;
         }
 

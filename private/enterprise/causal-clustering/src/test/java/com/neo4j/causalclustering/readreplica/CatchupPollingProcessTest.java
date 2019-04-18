@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +59,6 @@ class CatchupPollingProcessTest
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
-    private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
     private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
@@ -85,7 +83,7 @@ class CatchupPollingProcessTest
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseId, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
+        txPuller = new CatchupPollingProcess( executor, databaseId, databaseService, catchupClientFactory, txApplier, new Monitors(),
                 storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
     }
 
@@ -174,10 +172,8 @@ class CatchupPollingProcessTest
 
         // then
         verify( databaseService ).stopForStoreCopy();
-        verify( startStopOnStoreCopy ).disable();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
         verify( databaseService, atLeast( 1 ) ).start();
-        verify( startStopOnStoreCopy ).enable();
         verify( txApplier ).refreshFromNewStore();
 
         // then
@@ -200,10 +196,8 @@ class CatchupPollingProcessTest
 
         // then
         verify( databaseService ).stopForStoreCopy();
-        verify( startStopOnStoreCopy ).disable();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
         verify( databaseService ).start();
-        verify( startStopOnStoreCopy ).enable();
         verify( txApplier ).refreshFromNewStore();
 
         // then

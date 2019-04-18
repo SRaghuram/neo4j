@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.junit.Before;
@@ -56,7 +55,6 @@ public class CatchupProcessManagerTest
     private final CatchupClientFactory catchUpClient = mock( CatchupClientFactory.class );
     private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
     private final TopologyService topologyService = mock( TopologyService.class );
-    private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
     private final Health databaseHealth = mock( DatabaseHealth.class );
     private final VersionContextSupplier versionContextSupplier = mock( VersionContextSupplier.class );
@@ -80,7 +78,7 @@ public class CatchupProcessManagerTest
         when( catchupComponents.componentsFor( any( DatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
 
         //Construct the manager under test
-        catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
+        catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() ) );
     }
@@ -121,7 +119,7 @@ public class CatchupProcessManagerTest
             when( catchupProcess.upToDateFuture() ).thenReturn( CompletableFuture.completedFuture( true ) );
             return catchupProcess;
         };
-        catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
+        catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 factory, NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() );
         // when

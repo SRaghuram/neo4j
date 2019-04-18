@@ -279,8 +279,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( globalHealth ) );
         panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
         panicService.addPanicEventHandler( raftGroup.raftMachine() );
-        panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( coreServerModule.catchupServer() ) );
-        coreServerModule.backupServer().ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( server ) ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( coreServerModule.catchupServer() ) );
+        coreServerModule.backupServer().ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( server ) ) );
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
     }
 

@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +45,6 @@ public class CoreDownloaderServiceTest
     private final CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-    private final Suspendable suspendedServices = mock( Suspendable.class );
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
@@ -64,7 +62,7 @@ public class CoreDownloaderServiceTest
 
     private CoreDownloaderService createDownloader()
     {
-        return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, suspendedServices, databaseService, applicationProcess,
+        return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, databaseService, applicationProcess,
                 logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
     }
 
@@ -97,7 +95,7 @@ public class CoreDownloaderServiceTest
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
         CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, snapshotService,
-                suspendedServices, databaseService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
+                databaseService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         Thread.sleep( 50 );

@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +49,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCauseMessage;
@@ -166,7 +166,7 @@ class CatchupServerIT
         simpleCatchupClient.close();
 
         // then the response is not a list of files but an error
-        assertEquals( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH, prepareStoreCopyResponse.status() );
+        assertEquals( Status.E_STORE_ID_MISMATCH, prepareStoreCopyResponse.status() );
 
         // and the list of files is empty because the request should have failed
         File[] remoteFiles = prepareStoreCopyResponse.getFiles();
@@ -235,18 +235,24 @@ class CatchupServerIT
         }
     }
 
+    @Test
+    void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
+    {
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+
+        try ( var catchupClient = newSimpleCatchupClient( databaseId ) )
+        {
+            managementService.shutdownDatabase( databaseId.name() );
+
+            var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
+            assertThat( getRootCauseMessage( error ), containsString( "database " + DEFAULT_DATABASE_NAME + " is stopped" ) );
+        }
+    }
+
     private void assertTransactionIdMatches( long lastTxId )
     {
         long expectedTransactionId = getCheckPointer( db ).lastCheckPointedTransactionId();
         assertEquals( expectedTransactionId, lastTxId);
-    }
-
-    private void fileContentEquals( Collection<File> countStore ) throws IOException
-    {
-        for ( File file : countStore )
-        {
-            fileContentEquals( databaseFileToClientFile( file ), file );
-        }
     }
 
     private File databaseFileToClientFile( File file ) throws IOException

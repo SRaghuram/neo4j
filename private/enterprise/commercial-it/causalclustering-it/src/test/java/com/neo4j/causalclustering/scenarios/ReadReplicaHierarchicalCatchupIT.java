@@ -66,7 +66,7 @@ public class ReadReplicaHierarchicalCatchupIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().disable();
+            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().stop();
         }
 
         // 5, 6 are other DCs
