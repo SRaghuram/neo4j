@@ -89,7 +89,7 @@ public abstract class SnbBiExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),

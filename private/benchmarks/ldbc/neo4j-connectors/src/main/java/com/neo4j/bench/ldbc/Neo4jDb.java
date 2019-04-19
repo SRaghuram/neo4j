@@ -11,6 +11,7 @@ import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
+import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
@@ -29,19 +30,25 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import org.neo4j.batchinsert.BatchInserter;
+import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Neo4jDb extends Db
 {
@@ -415,6 +422,28 @@ public class Neo4jDb extends Db
     // ==========================================  UTILS  =============================================================
     // ================================================================================================================
 
+    public static DatabaseLayout layoutWithTxLogLocation( File storeDir )
+    {
+        File txLogsDir = new File( storeDir, "data/tx-logs/" );
+        return DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+    }
+
+    public static BatchInserter newInserter( File storeDir, File importerPropertiesFile )
+    {
+        try
+        {
+            Map<String,String> importerConfig = MapUtils.loadPropertiesToMap( importerPropertiesFile );
+            File txLogsDir = new File( storeDir, "data/tx-logs/" );
+            DatabaseLayout layout = DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+            return BatchInserters.inserter( layout, importerConfig );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "Error creating batch inserter\n" +
+                                            "Store directory: " + storeDir.getAbsolutePath(), e );
+        }
+    }
+
     public static DatabaseManagementService newDb( File dbDir, File configFile )
     {
         return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
@@ -562,7 +591,7 @@ public class Neo4jDb extends Db
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 

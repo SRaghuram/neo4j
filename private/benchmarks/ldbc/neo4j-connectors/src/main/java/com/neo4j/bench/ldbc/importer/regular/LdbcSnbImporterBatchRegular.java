@@ -6,7 +6,6 @@
 package com.neo4j.bench.ldbc.importer.regular;
 
 import com.ldbc.driver.DbException;
-import com.ldbc.driver.util.MapUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
@@ -23,15 +22,11 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.batchinsert.BatchInserter;
-import org.neo4j.batchinsert.BatchInserters;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -42,7 +37,7 @@ public class LdbcSnbImporterBatchRegular extends LdbcSnbImporter
 
     @Override
     public void load(
-            File dbDir,
+            File storeDir,
             File csvDataDir,
             File importerPropertiesFile,
             LdbcDateCodec.Format fromCsvFormat,
@@ -52,19 +47,18 @@ public class LdbcSnbImporterBatchRegular extends LdbcSnbImporter
             boolean withMandatory ) throws IOException, DbException
     {
         LOGGER.info( format( "Source CSV Dir:        %s", csvDataDir ) );
-        LOGGER.info( format( "Target DB Dir:         %s", dbDir ) );
+        LOGGER.info( format( "Target DB Dir:         %s", storeDir ) );
         LOGGER.info( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
         LOGGER.info( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
         LOGGER.info( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
         LOGGER.info( format( "With Unique:           %s", withUnique ) );
         LOGGER.info( format( "With Mandatory:        %s", withMandatory ) );
 
-        LOGGER.info( format( "Clear DB directory: %s", dbDir ) );
-        FileUtils.deleteDirectory( dbDir );
+        LOGGER.info( format( "Clear DB directory: %s", storeDir ) );
+        FileUtils.deleteDirectory( storeDir );
 
         LOGGER.info( "Instantiating Neo4j BatchInserter" );
-        Map<String,String> importerConfig = MapUtils.loadPropertiesToMap( importerPropertiesFile );
-        BatchInserter batchInserter = BatchInserters.inserter( DatabaseLayout.of( dbDir ), importerConfig );
+        BatchInserter batchInserter = Neo4jDb.newInserter( storeDir, importerPropertiesFile );
 
         GraphMetadataTracker metadataTracker = new GraphMetadataTracker(
                 toNeo4JFormat,
@@ -180,6 +174,7 @@ public class LdbcSnbImporterBatchRegular extends LdbcSnbImporter
         // Create Indexes
         batchInserter.shutdown();
 
+        File dbDir = new File( storeDir, DEFAULT_DATABASE_NAME );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerPropertiesFile );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 

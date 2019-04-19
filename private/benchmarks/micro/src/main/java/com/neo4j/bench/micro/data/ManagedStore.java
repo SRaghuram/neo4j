@@ -86,8 +86,7 @@ public class ManagedStore
         }
         managementService = builder.newDatabaseManagementService();
 
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
-        return db;
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     public static DatabaseManagementService getManagementService()

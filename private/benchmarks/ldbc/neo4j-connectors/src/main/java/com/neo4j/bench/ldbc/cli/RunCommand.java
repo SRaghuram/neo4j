@@ -42,6 +42,7 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "run",
@@ -389,7 +390,7 @@ public class RunCommand implements Runnable
         }
         Store store = Store.createFrom( storeDir.toPath() );
         DatabaseManagementService managementService = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
-        GraphDatabaseService db = managementService.database( store.graphDbDirectory().getFileName().toString() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );

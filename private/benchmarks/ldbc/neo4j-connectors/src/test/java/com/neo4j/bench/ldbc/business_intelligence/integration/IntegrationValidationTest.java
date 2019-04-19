@@ -18,6 +18,7 @@ import com.ldbc.driver.temporal.TimeSource;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
@@ -78,7 +79,7 @@ public class IntegrationValidationTest
 
     private void doShouldCreatePublicValidationSet( Scenario scenario ) throws Exception
     {
-        File dbDir;
+        File storeDir;
 
         /*
         CREATE VALIDATION PARAMETERS FOR USE IN VALIDATING OTHER IMPLEMENTATIONS
@@ -139,14 +140,14 @@ public class IntegrationValidationTest
                 scenario.paramsDir().getAbsolutePath()
         );
 
-        dbDir = createTempDirectory( temporaryFolder.absolutePath() );
+        storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                dbDir,
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -156,13 +157,15 @@ public class IntegrationValidationTest
                 false
         );
 
+        Store store = Store.createFrom( storeDir.toPath() );
+
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs(
                 Neo4jDb.neo4jConnectorPropertiesFor(
                         scenario.neo4jApi(),
                         scenario.planner(),
                         scenario.runtime(),
                         scenario.neo4jSchema(),
-                        dbDir,
+                        store.graphDbDirectory().toFile(),
                         DriverConfigUtils.neo4jTestConfig(),
                         LdbcSnbBiWorkload.class,
                         null

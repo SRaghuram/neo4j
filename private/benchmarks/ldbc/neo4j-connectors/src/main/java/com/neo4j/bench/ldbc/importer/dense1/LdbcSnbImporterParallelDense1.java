@@ -99,7 +99,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 
     @Override
     public void load(
-            File dbDir,
+            File storeDir,
             File csvDataDir,
             File importerProperties,
             LdbcDateCodec.Format fromCsvFormat,
@@ -114,15 +114,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         }
 
         System.out.println( format( "Source CSV Dir:        %s", csvDataDir ) );
-        System.out.println( format( "Target DB Dir:         %s", dbDir ) );
+        System.out.println( format( "Target DB Dir:         %s", storeDir ) );
         System.out.println( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
         System.out.println( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
         System.out.println( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
         System.out.println( format( "With Unique:           %s", withUnique ) );
         System.out.println( format( "With Mandatory:        %s", withMandatory ) );
 
-        System.out.println( format( "Clear DB directory: %s", dbDir ) );
-        FileUtils.deleteDirectory( dbDir );
+        System.out.println( format( "Clear DB directory: %s", storeDir ) );
+        FileUtils.deleteDirectory( storeDir );
 
         TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
                 new TimeStampedRelationshipTypesCache();
@@ -920,9 +920,6 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 
         // note: assumes input factories are called in order they are given, and two times: first->last, first->last
 
-        int denseNodeThreshold = 1;
-        org.neo4j.internal.batchimport.Configuration batchImporterConfiguration = new LdbcImporterConfig();
-
         Input input = new CsvInput(
                 nodeDataFactories,
                 new LdbcHeaderFactory( nodeHeaders.stream().toArray( Header[]::new ) ),
@@ -939,13 +936,13 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
-        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
+        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( 1 ) );
         Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(
-                DatabaseLayout.of( dbDir ),
+                Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
                 null,
-                batchImporterConfiguration,
+                new LdbcImporterConfig(),
                 logService,
                 ExecutionMonitors.defaultVisible( jobScheduler ),
                 AdditionalInitialIds.EMPTY,
@@ -974,6 +971,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         System.out.println( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
+        File dbDir = new File( storeDir, DEFAULT_DATABASE_NAME );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 

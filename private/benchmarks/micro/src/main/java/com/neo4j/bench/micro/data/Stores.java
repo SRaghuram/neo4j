@@ -16,7 +16,7 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -203,7 +203,7 @@ public class Stores
         tryMkDir( topLevelStoreDir );
 
         // will create an empty database directory under top level
-        new CommercialGraphDatabaseFactory()
+        new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( topLevelStoreDir.toFile() )
                 .newDatabaseManagementService()
                 .shutdown();

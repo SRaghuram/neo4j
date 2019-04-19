@@ -21,6 +21,7 @@ import java.io.File;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -57,7 +58,7 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
     @Override
     DatabaseAndUrl createRemoteConnector( File dbDir )
     {
-        int port = 7687;
+        int port = PortAuthority.allocatePort();
         String boltAddressWithoutPort = "localhost";
         DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt(
                 dbDir,

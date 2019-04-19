@@ -28,7 +28,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
@@ -124,7 +123,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -258,7 +257,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -406,7 +405,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
