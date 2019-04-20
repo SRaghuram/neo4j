@@ -230,6 +230,8 @@ public class IntegrationValidationTest
         );
     }
 
+    // TODO un-ignore Cypher validation test. currently disabled to because it takes too long to run.
+    @Disabled
     @Test
     public void shouldValidateAgainstPublicNeo4jValidationSetCypherDefault() throws Exception
     {
@@ -248,7 +250,7 @@ public class IntegrationValidationTest
         );
     }
 
-    // TODO un-ignore Cypher validation test. currently disabled to speed up LDBC automation development.
+    // TODO un-ignore Cypher validation test. currently disabled to because it takes too long to run.
     @Disabled
     @Test
     public void shouldValidateAgainstPublicNeo4jValidationSetCypherRemote() throws Exception
