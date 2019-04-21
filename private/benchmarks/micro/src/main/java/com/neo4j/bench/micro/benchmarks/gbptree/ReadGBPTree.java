@@ -148,7 +148,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         {
             while ( seek.next() )
             {
-                bh.consume( seek.get() );
+                bh.consume( seek.key() );
                 count++;
             }
         }
@@ -166,7 +166,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         {
             while ( seek.next() )
             {
-                bh.consume( seek.get() );
+                bh.consume( seek.key() );
                 count++;
             }
         }
