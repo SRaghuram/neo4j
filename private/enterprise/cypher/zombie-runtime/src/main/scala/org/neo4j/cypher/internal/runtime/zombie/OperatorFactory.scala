@@ -8,18 +8,22 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
+=======
+import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.runtime.QueryIndexes
+>>>>>>> Zombie Aggregation! only count(*) so far...
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
+import org.neo4j.cypher.internal.runtime.zombie.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.zombie.operators._
-import org.neo4j.cypher.internal.runtime.{QueryIndexes, slotted}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.cypher.internal.v4_0.util.symbols.CTInteger
 import org.neo4j.internal.kernel
-import org.neo4j.util.Preconditions
 
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
@@ -28,7 +32,9 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
                       val queryIndexes: QueryIndexes) {
+
   private val physicalPlan = stateDefinition.physicalPlan
+  private val aggregatorFactory = AggregatorFactory(physicalPlan, converters)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id
@@ -172,6 +178,23 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                               ordering,
                               argumentSlot)
 
+      case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
+        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        val aggregators = Array.newBuilder[Aggregator]
+        val outputSlots = Array.newBuilder[Int]
+
+        aggregationExpression.foreach {
+          case (key, astExpression) =>
+            val outputSlot = slots.get(key).get
+            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression)
+            aggregators += aggregator
+            outputSlots += outputSlot.offset
+        }
+        new AggregationReduceOperatorNoGrouping(argumentStateMapId,
+                                                WorkIdentity.fromPlan(plan),
+                                                aggregators.result(),
+                                                outputSlots.result())
+
       case plan: plans.ProduceResult => createProduceResults(plan)
 
       case _: plans.Argument =>
@@ -237,6 +260,26 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             val ordering = sortItems.map(translateColumnOrder(slots, _))
             new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, outputBuffer.id, ordering)
           }
+
+          case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
+            val argumentDepth = physicalPlan.applyPlans(id)
+            val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+            val aggregators = Array.newBuilder[Aggregator]
+            val expressions = Array.newBuilder[Expression]
+
+            aggregationExpression.foreach {
+              case (key, astExpression) =>
+                val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
+                aggregators += aggregator
+                expressions += expression
+              }
+
+            new AggregationMapperOperatorNoGrouping(WorkIdentity.fromPlan(plan),
+                                                    argumentSlotOffset,
+                                                    outputBuffer.id,
+                                                    aggregators.result(),
+                                                    expressions.result())
+
         }
     }
   }

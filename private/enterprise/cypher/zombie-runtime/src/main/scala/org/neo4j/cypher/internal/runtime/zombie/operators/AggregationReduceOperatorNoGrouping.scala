@@ -8,21 +8,21 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.morsel.operators.AggregationOffsets
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.cypher.internal.runtime.zombie.aggregators.{AggregatingAccumulator, Aggregator, Updater}
 
-/*
-Responsible for reducing the output of AggregationMapperOperatorNoGrouping
- */
+/**
+  * Operator which streams aggregated data, built by [[AggregationMapperOperatorNoGrouping]] and [[AggregatingAccumulator]].
+  */
 class AggregationReduceOperatorNoGrouping(val argumentStateMapId: ArgumentStateMapId,
                                           val workIdentity: WorkIdentity,
-                                          aggregations: Array[AggregationOffsets])
-  extends Operator with ReduceOperatorState[AggregatingAccumulator] {
+                                          aggregations: Array[Aggregator],
+                                          reducerOutputSlots: Array[Int])
+  extends Operator
+     with ReduceOperatorState[Array[Updater], AggregatingAccumulator] {
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[AggregatingAccumulator] = {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations))
     this
   }
@@ -31,47 +31,24 @@ class AggregationReduceOperatorNoGrouping(val argumentStateMapId: ArgumentStateM
                          state: QueryState,
                          input: AggregatingAccumulator,
                          resources: QueryResources
-                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[AggregatingAccumulator]] = {
+                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator]] = {
     Array(new OTask(input))
   }
 
-  class OTask(override val accumulator: AggregatingAccumulator) extends ContinuableOperatorTaskWithAccumulator[AggregatingAccumulator] {
+  class OTask(override val accumulator: AggregatingAccumulator) extends ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator] {
 
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots))
-
-      val reducers = aggregations.map(_.createReducer)
-
-      //Go through the morsels and collect the output from the map step
-      //and reduce the values
-//      var i = 0
-//      while (i < inputMorsels.length) {
-//        val currentInputRow = inputMorsels(i)
-//        var j = 0
-//        while (j < aggregations.length) {
-//          reducers(j).apply(currentInputRow, queryState)
-//          j += 1
-//        }
-//        i += 1
-//      }
-//
-//      //Write the reduced value to output
-//      i = 0
-//      while (i < accumulator.aggregations.length) {
-//        currentRow.setRefAt(aggregations(i).reducerOutputSlot, reducers(i).result(queryState))
-//        i += 1
-//      }
-//      outputRow.moveToNextRow()
-//      outputRow.finishedWriting()
+      var i = 0
+      while (i < aggregations.length) {
+        outputRow.setRefAt(reducerOutputSlots(i), accumulator.result(i))
+        i += 1
+      }
+      outputRow.moveToNextRow()
+      outputRow.finishedWriting()
     }
 
     // This operator will never continue since it will always write a single row

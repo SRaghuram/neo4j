@@ -254,7 +254,8 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           source
         }
 
-      case _: Sort =>
+      case _: Sort |
+           _: Aggregation =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           val argumentStateBuffer = outputToArgumentStateBuffer(source, plan, argument, argument.argumentSlotOffset)
