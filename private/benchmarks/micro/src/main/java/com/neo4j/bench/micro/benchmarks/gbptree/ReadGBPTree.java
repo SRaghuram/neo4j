@@ -20,9 +20,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.IOException;
 import java.util.Random;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 
 import static com.neo4j.bench.micro.Main.run;
 
@@ -145,8 +144,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( seekerState.from, exactMatch );
         layout.keyWithSeed( seekerState.to, exactMatch );
         long count = 0;
-        try ( RawCursor<Hit<AdaptableKey,AdaptableValue>,IOException> seek =
-                      seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
+        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
         {
             while ( seek.next() )
             {
@@ -164,8 +162,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( seekerState.from, Long.MIN_VALUE );
         layout.keyWithSeed( seekerState.to, Long.MAX_VALUE );
         long count = 0;
-        try ( RawCursor<Hit<AdaptableKey,AdaptableValue>,IOException> seek =
-                      seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
+        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
         {
             while ( seek.next() )
             {
