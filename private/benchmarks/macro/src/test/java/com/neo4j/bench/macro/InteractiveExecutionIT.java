@@ -23,9 +23,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class InteractiveExecutionIT
@@ -39,14 +37,6 @@ public class InteractiveExecutionIT
     public void executeWorkloadInteractivelyWithEmbedded() throws Exception
     {
         executeWorkloadInteractively( WORKLOAD, Neo4jDeployment.embedded() );
-    }
-
-    @Test
-    public void executeWorkloadInteractivelyWithServer() throws Exception
-    {
-        String neo4jDirString = System.getenv( "NEO4J_DIR" );
-        Path neo4jDir = Paths.get( Objects.requireNonNull( neo4jDirString ) );
-        executeWorkloadInteractively( WORKLOAD, Neo4jDeployment.server( neo4jDir ) );
     }
 
     private void executeWorkloadInteractively( String workloadName, Neo4jDeployment deployment ) throws Exception
