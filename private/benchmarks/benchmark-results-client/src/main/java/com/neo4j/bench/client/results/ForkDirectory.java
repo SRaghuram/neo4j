@@ -7,6 +7,7 @@ package com.neo4j.bench.client.results;
 
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
@@ -22,14 +23,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor.Match.IS_SANITIZED;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDoesNotExist;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertFileExists;
@@ -77,6 +79,43 @@ public class ForkDirectory
         this.forkDescription = loadDescription( dir );
     }
 
+    public void unsanitizeProfilerRecordingsFor( BenchmarkGroup benchmarkGroup,
+                                                 Benchmark benchmark,
+                                                 ProfilerType profilerType,
+                                                 Parameters additionalParameters )
+    {
+        for ( RunPhase runPhase : RunPhase.values() )
+        {
+            ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                                  benchmark,
+                                                                                                  runPhase,
+                                                                                                  profilerType,
+                                                                                                  additionalParameters );
+            unsanitizeProfilerRecordingsFor( recordingDescriptor );
+        }
+    }
+
+    private void unsanitizeProfilerRecordingsFor( ProfilerRecordingDescriptor recordingDescriptor )
+    {
+        try
+        {
+            for ( RecordingType recordingType : recordingDescriptor.recordingTypes() )
+            {
+                Path sanitizedFile = pathFor( recordingDescriptor.sanitizedFilename( recordingType ) );
+                if ( Files.exists( sanitizedFile ) )
+                {
+                    Files.move( sanitizedFile,
+                                pathFor( recordingDescriptor.filename( recordingType ) ),
+                                StandardCopyOption.REPLACE_EXISTING );
+                }
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "Error while try to rename recordings for:\n" + recordingDescriptor, e );
+        }
+    }
+
     public String name()
     {
         return forkDescription.name();
@@ -89,25 +128,35 @@ public class ForkDirectory
 
     void copyProfilerRecordings( BenchmarkGroup benchmarkGroup, Benchmark benchmark, Path targetDir, Set<RecordingType> excluding )
     {
-        Set<Path> validRecordingFiles = new HashSet<>();
-        for ( ProfilerType profilerType : profilers() )
-        {
-            ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, RunPhase.MEASUREMENT, profilerType );
-            // copy all profiler recordings, except those that are explicitly excluded
-            List<RecordingType> recordingTypes = profilerType.allRecordingTypes()
-                                                             .stream()
-                                                             .filter( recordingType -> !excluding.contains( recordingType ) )
-                                                             .collect( Collectors.toList() );
-            for ( RecordingType recordingType : recordingTypes )
-            {
-                String recordingFilename = recordingDescriptor.filename( recordingType );
-                Path validRecordingFile = dir.resolve( recordingFilename );
-                validRecordingFiles.add( validRecordingFile );
-            }
-        }
         try
         {
-            Files.walkFileTree( dir, new CopyMatchedFilesVisitor( targetDir, validRecordingFiles::contains ) );
+            // copy all profiler recordings, except those that are explicitly excluded
+            List<RecordingType> recordingTypes = profilers().stream()
+                                                            .flatMap( profilerType -> profilerType.allRecordingTypes().stream() )
+                                                            .filter( recordingType -> !excluding.contains( recordingType ) )
+                                                            .collect( Collectors.toList() );
+
+            PathMatcher pathMatcher = path -> {
+                for ( RecordingType recordingType : recordingTypes )
+                {
+                    ProfilerRecordingDescriptor.ParseResult parsedRecording = ProfilerRecordingDescriptor.tryParse( path.getFileName().toString(),
+                                                                                                                    recordingType,
+                                                                                                                    benchmarkGroup,
+                                                                                                                    benchmark,
+                                                                                                                    RunPhase.MEASUREMENT );
+                    if ( parsedRecording.isMatch() )
+                    {
+                        return true;
+                    }
+                    else if ( parsedRecording.match().equals( IS_SANITIZED ) )
+                    {
+                        throw new RuntimeException( "Found an un-sanitized profiler recording: " + path.toAbsolutePath() );
+                    }
+                }
+                return false;
+            };
+
+            Files.walkFileTree( dir, new CopyMatchedFilesVisitor( targetDir, pathMatcher ) );
         }
         catch ( IOException e )
         {
@@ -177,7 +226,7 @@ public class ForkDirectory
 
     public Path pathFor( ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        return pathFor( profilerRecordingDescriptor.filename() );
+        return pathFor( profilerRecordingDescriptor.sanitizedFilename() );
     }
 
     public Path pathFor( String filename )

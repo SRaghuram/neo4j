@@ -7,6 +7,7 @@ package com.neo4j.bench.client.profiling;
 
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.process.ProcessWrapper;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JvmVersion;
@@ -23,23 +24,37 @@ public class VmStatTracer implements ExternalProfiler
     private ProcessWrapper vmstat;
 
     @Override
-    public List<String> jvmInvokeArgs( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> invokeArgs( ForkDirectory forkDirectory,
+                                    BenchmarkGroup benchmarkGroup,
+                                    Benchmark benchmark,
+                                    Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> jvmArgs( JvmVersion jvmVersion,
+                                 ForkDirectory forkDirectory,
+                                 BenchmarkGroup benchmarkGroup,
+                                 Benchmark benchmark,
+                                 Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public void beforeProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void beforeProcess( ForkDirectory forkDirectory,
+                               BenchmarkGroup benchmarkGroup,
+                               Benchmark benchmark,
+                               Parameters additionalParameters )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, ProfilerType.VM_STAT );
+        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                              benchmark,
+                                                                                              MEASUREMENT,
+                                                                                              ProfilerType.VM_STAT,
+                                                                                              additionalParameters );
 
-        Path vmstatLog = forkDirectory.pathFor( recordingDescriptor.filename( RecordingType.TRACE_VMSTAT ) );
+        Path vmstatLog = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.TRACE_VMSTAT ) );
         vmstat = ProcessWrapper.start( new ProcessBuilder()
                                                .command( "vmstat", "2", "-t", "-w", "-S", "M" )
                                                .redirectOutput( vmstatLog.toFile() )
@@ -47,7 +62,10 @@ public class VmStatTracer implements ExternalProfiler
     }
 
     @Override
-    public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void afterProcess( ForkDirectory forkDirectory,
+                              BenchmarkGroup benchmarkGroup,
+                              Benchmark benchmark,
+                              Parameters additionalParameters )
     {
         vmstat.stop();
     }

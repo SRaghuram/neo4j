@@ -8,6 +8,7 @@ package com.neo4j.bench.client.profiling;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.Benchmark.Mode;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
@@ -48,20 +49,20 @@ public class JfrProfilerTest
     }
 
     @Test
-    public void jvmArgsForPreJdk11() throws Exception
+    public void jvmArgsForPreJdk11()
     {
-        JvmVersion jvmVersion = JvmVersion.create( 8, JvmVersion.JAVA_TM_SE_RUNTIME_ENVIRONMENT);
+        JvmVersion jvmVersion = JvmVersion.create( 8, JvmVersion.JAVA_TM_SE_RUNTIME_ENVIRONMENT );
         JfrProfiler profiler = new JfrProfiler();
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.SERVER );
         assertThat( jvmArgs, hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
     }
 
     @Test
-    public void jvmArgsForPostJdk11() throws Exception
+    public void jvmArgsForPostJdk11()
     {
         JvmVersion jvmVersion = JvmVersion.create( 11, "" );
         JfrProfiler profiler = new JfrProfiler();
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
         assertThat( jvmArgs, not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );
     }
 }
