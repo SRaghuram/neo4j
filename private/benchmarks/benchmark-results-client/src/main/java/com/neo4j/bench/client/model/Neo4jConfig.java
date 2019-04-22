@@ -8,17 +8,22 @@ package com.neo4j.bench.client.model;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.apache.commons.configuration.PropertiesConfiguration;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
 
-import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
@@ -26,6 +31,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allo
 
 public class Neo4jConfig
 {
+    private static final String BOLT_ADDRESS_SETTING = "dbms.connector.bolt.listen_address";
 
     public static Neo4jConfig withDefaults()
     {
@@ -35,7 +41,7 @@ public class Neo4jConfig
 
     public static Neo4jConfig empty()
     {
-        return new Neo4jConfig( emptyMap() );
+        return new Neo4jConfig();
     }
 
     public static Neo4jConfig fromFile( File neo4jConfigFile )
@@ -45,9 +51,37 @@ public class Neo4jConfig
 
     public static Neo4jConfig fromFile( Path neo4jConfigFile )
     {
-        return (null == neo4jConfigFile)
-               ? empty()
-               : new Neo4jConfig( BenchmarkUtil.propertiesPathToMap( neo4jConfigFile ) );
+        Neo4jConfig neo4jConfig = Neo4jConfig.empty();
+        if ( null == neo4jConfigFile )
+        {
+            return neo4jConfig;
+        }
+        try
+        {
+            PropertiesConfiguration config = new PropertiesConfiguration( neo4jConfigFile.toFile() );
+            Iterator<String> keys = config.getKeys();
+            while ( keys.hasNext() )
+            {
+                String settingName = keys.next();
+                if ( settingName.startsWith( ExternalSettings.additionalJvm.name() ) )
+                {
+                    for ( Object settingValue : config.getList( settingName ) )
+                    {
+                        neo4jConfig = neo4jConfig.addJvmArg( (String) settingValue );
+                    }
+                }
+                else
+                {
+                    String settingValue = config.getString( settingName );
+                    neo4jConfig = neo4jConfig.withStringSetting( settingName, settingValue );
+                }
+            }
+            return neo4jConfig;
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( "Error loading neo4j configuration from: " + neo4jConfigFile.toAbsolutePath(), e );
+        }
     }
 
     public static Neo4jConfig fromJson( String json )
@@ -56,19 +90,26 @@ public class Neo4jConfig
     }
 
     private final Map<String,String> config;
+    private final List<String> jvmArgs;
 
     /**
      * WARNING: Never call this explicitly.
      * No-params constructor is only used for JSON (de)serialization.
      */
-    public Neo4jConfig()
+    private Neo4jConfig()
     {
-        this( emptyMap() );
+        this( new HashMap<>(), new ArrayList<>() );
     }
 
     public Neo4jConfig( Map<String,String> config )
     {
+        this( requireNonNull( config ), new ArrayList<>() );
+    }
+
+    private Neo4jConfig( Map<String,String> config, List<String> jvmArgs )
+    {
         this.config = requireNonNull( config );
+        this.jvmArgs = requireNonNull( jvmArgs );
     }
 
     public Map<String,String> toMap()
@@ -76,18 +117,46 @@ public class Neo4jConfig
         return unmodifiableMap( config );
     }
 
+    public List<String> getJvmArgs()
+    {
+        return Collections.unmodifiableList( jvmArgs );
+    }
+
+    public Neo4jConfig addJvmArgs( List<String> additionalJvmArgs )
+    {
+        Neo4jConfig newNeo4jConig = new Neo4jConfig( new HashMap<>( config ), new ArrayList<>( jvmArgs ) );
+        for ( String jvmArg : additionalJvmArgs )
+        {
+            newNeo4jConig = newNeo4jConig.addJvmArg( jvmArg );
+        }
+        return newNeo4jConig;
+    }
+
+    public Neo4jConfig addJvmArg( String additionalJvmArg )
+    {
+        List<String> newJvmArgs = new ArrayList<>( jvmArgs );
+        if ( !newJvmArgs.contains( additionalJvmArg ) )
+        {
+            newJvmArgs.add( additionalJvmArg );
+        }
+        return new Neo4jConfig( new HashMap<>( config ), newJvmArgs );
+    }
+
+    public Neo4jConfig setJvmArgs( List<String> newJvmArgs )
+    {
+        return new Neo4jConfig( new HashMap<>( config ), newJvmArgs );
+    }
+
     public Neo4jConfig withSetting( Setting setting, String value )
     {
-        HashMap<String,String> newConfig = new HashMap<>( config );
-        newConfig.put( setting.name(), value );
-        return new Neo4jConfig( newConfig );
+        return withStringSetting( setting.name(), value );
     }
 
     public Neo4jConfig removeSetting( Setting setting )
     {
         HashMap<String,String> newConfig = new HashMap<>( config );
         newConfig.remove( setting.name() );
-        return new Neo4jConfig( newConfig );
+        return new Neo4jConfig( newConfig, new ArrayList<>( jvmArgs ) );
     }
 
     public Neo4jConfig setDense( boolean isDense )
@@ -104,21 +173,37 @@ public class Neo4jConfig
     public Neo4jConfig setTransactionMemory( String setting )
     {
         String translatedValue = setting.equals( "on_heap" )
-                ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
-                : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
+                                 ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
+                                 : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
         return withSetting( tx_state_memory_allocation, translatedValue );
+    }
+
+    public Neo4jConfig setBoltUri( String boltUri )
+    {
+        return withStringSetting( BOLT_ADDRESS_SETTING, boltUri );
+    }
+
+    private Neo4jConfig withStringSetting( String setting, String value )
+    {
+        HashMap<String,String> newConfig = new HashMap<>( config );
+        newConfig.put( setting, value );
+        return new Neo4jConfig( newConfig, new ArrayList<>( jvmArgs ) );
     }
 
     public Neo4jConfig mergeWith( Neo4jConfig otherNeo4jConfig )
     {
-        HashMap<String,String> newConfig = new HashMap<>( config );
-        newConfig.putAll( otherNeo4jConfig.config );
-        return new Neo4jConfig( newConfig );
+        Neo4jConfig newNeo4jConfig = new Neo4jConfig( new HashMap<>( config ), new ArrayList<>( jvmArgs ) );
+        newNeo4jConfig.config.putAll( otherNeo4jConfig.config );
+        return newNeo4jConfig.addJvmArgs( otherNeo4jConfig.jvmArgs );
     }
 
-    public void writeAsProperties( Path file )
+    public void writeToFile( Path file )
     {
-        BenchmarkUtil.mapToFile( config, file );
+        List<String> lines = new ArrayList<>();
+        config.forEach( ( key, value ) -> lines.add( key + "=" + value ) );
+        jvmArgs.forEach( jvmArg -> lines.add( ExternalSettings.additionalJvm.name() + "=" + jvmArg ) );
+        String contents = String.join( "\n", lines ) + "\n";
+        BenchmarkUtil.stringToFile( contents, file );
     }
 
     public String toJson()
@@ -150,6 +235,8 @@ public class Neo4jConfig
     @Override
     public String toString()
     {
-        return BenchmarkUtil.prettyPrint( config ) ;
+        return getClass().getSimpleName() + ":\n" +
+               "JVM Args: " + jvmArgs + "\n" +
+               BenchmarkUtil.prettyPrint( config );
     }
 }

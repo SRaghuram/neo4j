@@ -41,14 +41,13 @@ import static org.hamcrest.Matchers.nullValue;
 import static java.util.stream.Collectors.toList;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class WorkloadTest
+class WorkloadTest
 {
-
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void allWorkloadsShouldHaveUniqueName()
+    void allWorkloadsShouldHaveUniqueName()
     {
         try ( Resources resources = new Resources() )
         {
@@ -64,7 +63,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void allWorkloadsShouldHaveConfigurationFile() throws Exception
+    void allWorkloadsShouldHaveConfigurationFile() throws Exception
     {
         try ( Resources resources = new Resources() )
         {
@@ -79,7 +78,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void workloadsShouldHaveCorrectName()
+    void workloadsShouldHaveCorrectName()
     {
         try ( Resources resources = new Resources() )
         {
@@ -99,7 +98,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void workloadsShouldHaveAtLeastOneQuery()
+    void workloadsShouldHaveAtLeastOneQuery()
     {
         try ( Resources resources = new Resources() )
         {
@@ -108,7 +107,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void workloadQueriesShouldHaveAllFieldsPopulated()
+    void workloadQueriesShouldHaveAllFieldsPopulated()
     {
         try ( Resources resources = new Resources() )
         {
@@ -130,7 +129,7 @@ public class WorkloadTest
 
     // This test can be removed once procedure support is added
     @Test
-    public void queriesShouldNotCallProcedures()
+    void queriesShouldNotCallProcedures()
     {
         try ( Resources resources = new Resources() )
         {
@@ -160,7 +159,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldParseAllParameterFiles()
+    void shouldParseAllParameterFiles()
     {
         try ( Resources resources = new Resources() )
         {
@@ -189,7 +188,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldParseValidWorkload() throws Exception
+    void shouldParseValidWorkload() throws Exception
     {
         try ( Resources resources = new Resources() )
         {
@@ -280,7 +279,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenEmptyQueries()
+    void shouldFailToParseWhenEmptyQueries()
     {
         try ( Resources resources = new Resources() )
         {
@@ -293,7 +292,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenMissingParamFile()
+    void shouldFailToParseWhenMissingParamFile()
     {
         try ( Resources resources = new Resources() )
         {
@@ -309,7 +308,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenMissingQueryFile()
+    void shouldFailToParseWhenMissingQueryFile()
     {
         try ( Resources resources = new Resources() )
         {
@@ -322,7 +321,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenMissingSchemaFile()
+    void shouldFailToParseWhenMissingSchemaFile()
     {
         try ( Resources resources = new Resources() )
         {
@@ -335,7 +334,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoParamFile()
+    void shouldFailToParseWhenNoParamFile()
     {
         try ( Resources resources = new Resources() )
         {
@@ -348,7 +347,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoQueries()
+    void shouldFailToParseWhenNoQueries()
     {
         try ( Resources resources = new Resources() )
         {
@@ -361,7 +360,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoQueryFile()
+    void shouldFailToParseWhenNoQueryFile()
     {
         try ( Resources resources = new Resources() )
         {
@@ -374,7 +373,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoQueryName()
+    void shouldFailToParseWhenNoQueryName()
     {
         try ( Resources resources = new Resources() )
         {
@@ -387,7 +386,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoSchema()
+    void shouldFailToParseWhenNoSchema()
     {
         try ( Resources resources = new Resources() )
         {
@@ -400,7 +399,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenNoWorkloadName()
+    void shouldFailToParseWhenNoWorkloadName()
     {
         try ( Resources resources = new Resources() )
         {
@@ -413,7 +412,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenInvalidQueryKey()
+    void shouldFailToParseWhenInvalidQueryKey()
     {
         try ( Resources resources = new Resources() )
         {
@@ -426,7 +425,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void shouldFailToParseWhenInvalidWorkloadKey()
+    void shouldFailToParseWhenInvalidWorkloadKey()
     {
         try ( Resources resources = new Resources() )
         {
