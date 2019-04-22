@@ -63,6 +63,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -289,7 +290,7 @@ class EndToEndIT
         Path recordingDir = recordingDirs.get( 0 );
         assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(), anExistingFile() );
 
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload workload = Workload.fromName( "zero", resources, deployment );
             // should find at least one recording per profiler per benchmark -- there may be more, due to secondary recordings

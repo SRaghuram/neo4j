@@ -6,7 +6,7 @@
 package com.neo4j.bench.client.profiling;
 
 import com.google.common.reflect.ClassPath;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,13 +15,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
-public class ProfilersTest
+class ProfilersTest
 {
     @Test
-    public void internalProfilersShouldBeStateless()
+    void internalProfilersShouldBeStateless()
     {
         List<Class> profilers = classesThatInherit( InternalProfiler.class );
         // sanity check

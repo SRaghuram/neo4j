@@ -331,7 +331,7 @@ public class RunWorkloadCommand implements Runnable
     {
         Neo4jDeployment neo4jDeployment = Neo4jDeployment.parse( deploymentMode );
 
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( workDir.toPath() ) )
         {
             List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
             for ( ProfilerType profiler : profilers )

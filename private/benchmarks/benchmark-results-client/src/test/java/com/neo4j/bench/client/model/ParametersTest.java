@@ -5,19 +5,19 @@
  */
 package com.neo4j.bench.client.model;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.client.model.Parameters.fromMap;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
-public class ParametersTest
+class ParametersTest
 {
     @Test
-    public void shouldDoEquality()
+    void shouldDoEquality()
     {
         assertThat( Parameters.NONE, equalTo( fromMap( emptyMap() ) ) );
         assertThat( Parameters.CLIENT, equalTo( fromMap( singletonMap( "process", "client" ) ) ) );
@@ -27,7 +27,7 @@ public class ParametersTest
     }
 
     @Test
-    public void shouldSerializeAndDeserialize()
+    void shouldSerializeAndDeserialize()
     {
         doShouldSerializeAndDeserialize( Parameters.NONE );
         doShouldSerializeAndDeserialize( Parameters.CLIENT );

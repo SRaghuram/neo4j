@@ -39,6 +39,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
 
@@ -134,7 +135,7 @@ class ConvenientLocalExecutionIT
     @Test
     void executeQuery() throws Exception
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT.mode() );
             Query query = workload.queries()

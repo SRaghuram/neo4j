@@ -168,7 +168,6 @@ public class AddProfilesIT
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1A = new ProfilerRecordings()
                     .with( JFR, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR ) )
-                    .with( JFR_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR_FLAMEGRAPH ) )
                     .with( ASYNC, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC ) )
                     .with( ASYNC_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC_FLAMEGRAPH ) )
                     .with( GC_LOG, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_LOG ) )
@@ -190,8 +189,7 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_2, BENCHMARK_2_A )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings2A = new ProfilerRecordings()
-                    .with( JFR, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR ) )
-                    .with( JFR_FLAMEGRAPH, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR_FLAMEGRAPH ) );
+                    .with( JFR, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR ) );
             assertThat( actualProfilerRecordings2A, equalTo( expectedProfilerRecordings2A ) );
 
             // there should be exactly two profiles
@@ -222,7 +220,6 @@ public class AddProfilesIT
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1A = new ProfilerRecordings()
                     .with( JFR, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR ) )
-                    .with( JFR_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR_FLAMEGRAPH ) )
                     .with( ASYNC, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC ) )
                     .with( ASYNC_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC_FLAMEGRAPH ) )
                     .with( GC_LOG, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_LOG ) )

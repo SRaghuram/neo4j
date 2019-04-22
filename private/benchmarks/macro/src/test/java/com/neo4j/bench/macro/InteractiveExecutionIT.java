@@ -17,36 +17,43 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class InteractiveExecutionIT
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
+
+@ExtendWith( TestDirectoryExtension.class )
+class InteractiveExecutionIT
 {
     private static final String WORKLOAD = "zero";
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void executeWorkloadInteractivelyWithEmbedded() throws Exception
+    void executeWorkloadInteractivelyWithEmbedded() throws Exception
     {
         executeWorkloadInteractively( WORKLOAD, Neo4jDeployment.embedded() );
     }
 
     private void executeWorkloadInteractively( String workloadName, Neo4jDeployment deployment ) throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
             Store store = createEmptyStoreFor( workload );
 
-            Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+            Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
             Neo4jConfig.withDefaults().writeToFile( neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()
                     .withNeo4jConfig( neo4jConfigFile )
@@ -59,7 +66,7 @@ public class InteractiveExecutionIT
 
             for ( Query query : workload.queries() )
             {
-                Path outputDir = temporaryFolder.newFolder().toPath();
+                Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
                 Options options = optionsBuilder
                         .withOutputDir( outputDir )
                         .withStoreDir( store.topLevelDirectory() )
@@ -74,8 +81,8 @@ public class InteractiveExecutionIT
     private Store createEmptyStoreFor( Workload workload ) throws IOException
     {
         Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
+        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
         EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
         return store;
     }

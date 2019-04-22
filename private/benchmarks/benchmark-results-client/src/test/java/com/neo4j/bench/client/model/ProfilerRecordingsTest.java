@@ -10,7 +10,7 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.results.RunPhase;
 import com.neo4j.bench.client.util.BenchmarkUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,13 +19,13 @@ import java.util.Map;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static java.util.Collections.singletonMap;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
-public class ProfilerRecordingsTest
+class ProfilerRecordingsTest
 {
     @Test
-    public void shouldWorkInRegularCase()
+    void shouldWorkInRegularCase()
     {
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
@@ -71,17 +71,17 @@ public class ProfilerRecordingsTest
     }
 
     @Test
-    public void shouldDisallowDuplicateEntriesForSameBenchmarkAndParameters()
+    void shouldDisallowDuplicateEntriesForSameBenchmarkAndParameters()
     {
         ProfilerRecordings profilerRecordings = new ProfilerRecordings();
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
-        RecordingType recordingType = RecordingType.JFR_FLAMEGRAPH;
+        RecordingType recordingType = RecordingType.ASYNC_FLAMEGRAPH;
 
         String filename = ProfilerRecordingDescriptor.create( benchmarkGroup,
                                                               benchmark,
                                                               RunPhase.MEASUREMENT,
-                                                              ProfilerType.JFR,
+                                                              ProfilerType.ASYNC,
                                                               Parameters.CLIENT ).sanitizedFilename( recordingType );
 
         // add client process recording
@@ -93,11 +93,11 @@ public class ProfilerRecordingsTest
     }
 
     @Test
-    public void shouldDisallowPoorlyFormedPath()
+    void shouldDisallowPoorlyFormedPath()
     {
         ProfilerRecordings profilerRecordings = new ProfilerRecordings();
 
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> profilerRecordings.with( RecordingType.JFR_FLAMEGRAPH, Parameters.CLIENT, "path_with_no_folder_prefix" ) );
+                                       () -> profilerRecordings.with( RecordingType.ASYNC_FLAMEGRAPH, Parameters.CLIENT, "path_with_no_folder_prefix" ) );
     }
 }

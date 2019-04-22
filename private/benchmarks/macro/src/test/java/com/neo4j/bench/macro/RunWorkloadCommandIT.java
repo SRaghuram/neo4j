@@ -26,10 +26,9 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,23 +40,30 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
-public class RunWorkloadCommandIT
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+
+@ExtendWith( TestDirectoryExtension.class )
+class RunWorkloadCommandIT
 {
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";
     private static final String WRITE_WORKLOAD = "pokec_write";
     private static final String READ_WORKLOAD = "generated_queries";
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    private TestDirectory temporaryFolder;
 
     // <><><><><><><><><><><><> Forked - Embedded <><><><><><><><><><><><>
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeReadWorkloadForkedWithEmbedded() throws Exception
+    void executeReadWorkloadForkedWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -67,9 +73,9 @@ public class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeWriteWorkloadForkedWithEmbedded() throws Exception
+    void executeWriteWorkloadForkedWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -80,7 +86,7 @@ public class RunWorkloadCommandIT
     }
 
     @Test
-    public void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
+    void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -92,9 +98,9 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeReadWorkloadForkedWithServer() throws Exception
+    void executeReadWorkloadForkedWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -104,9 +110,9 @@ public class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeWriteWorkloadsForkedWithServer() throws Exception
+    void executeWriteWorkloadsForkedWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -117,7 +123,7 @@ public class RunWorkloadCommandIT
     }
 
     @Test
-    public void executeLoadCsvWorkloadsForkedWithServer() throws Exception
+    void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
@@ -129,9 +135,9 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Embedded <><><><><><><><><><><><>
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeReadWorkloadInProcessWithEmbedded() throws Exception
+    void executeReadWorkloadInProcessWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -142,9 +148,9 @@ public class RunWorkloadCommandIT
                                    0 );
     }
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeWriteWorkloadInProcessWithEmbedded() throws Exception
+    void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -156,7 +162,7 @@ public class RunWorkloadCommandIT
     }
 
     @Test
-    public void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
+    void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -169,9 +175,9 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeReadWorkloadInProcessWithServer() throws Exception
+    void executeReadWorkloadInProcessWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -182,9 +188,9 @@ public class RunWorkloadCommandIT
                                    0 );
     }
 
-    @Ignore
+    @Disabled
     @Test
-    public void executeWriteWorkloadInProcessWithServer() throws Exception
+    void executeWriteWorkloadInProcessWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -196,7 +202,7 @@ public class RunWorkloadCommandIT
     }
 
     @Test
-    public void executeLoadCsvWorkloadInProcessWithServer() throws Exception
+    void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
@@ -213,15 +219,15 @@ public class RunWorkloadCommandIT
                                             ArrayList<ProfilerType> profilers,
                                             int minimumExpectedProfilerRecordingCount ) throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path outputDir = temporaryFolder.newFolder().toPath();
+            Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
             Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
             Store store = createEmptyStoreFor( workload );
 
-            Path neo4jConfiguration = temporaryFolder.newFile().toPath();
+            Path neo4jConfiguration = createTempFilePath( temporaryFolder.absolutePath() );
             Neo4jConfig.withDefaults().writeToFile( neo4jConfiguration );
-            Path resultsJson = temporaryFolder.newFile().toPath();
+            Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );
             boolean skipFlameGraphs = true;
@@ -312,8 +318,8 @@ public class RunWorkloadCommandIT
     private Store createEmptyStoreFor( Workload workload ) throws IOException
     {
         Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
+        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
         EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
         return store;
     }
