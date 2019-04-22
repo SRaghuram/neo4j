@@ -13,12 +13,17 @@ import java.util.function.Supplier;
 
 public class ChangingQueryString extends QueryString
 {
-    static ChangingQueryString atDefaults( Supplier<String> values )
+    interface ValueSupplier extends Supplier<String>
+    {
+        String stableTemplate();
+    }
+
+    static ChangingQueryString atDefaults( ValueSupplier values )
     {
         return new ChangingQueryString( Planner.DEFAULT, Runtime.DEFAULT, Options.ExecutionMode.EXECUTE, values, false );
     }
 
-    private final Supplier<String> values;
+    private final ValueSupplier values;
 
     private final boolean isPeriodicCommit;
 
@@ -26,11 +31,18 @@ public class ChangingQueryString extends QueryString
             Planner planner,
             Runtime runtime,
             Options.ExecutionMode executionMode,
-            Supplier<String> values, boolean isPeriodicCommit )
+            ValueSupplier values,
+            boolean isPeriodicCommit )
     {
         super( planner, runtime, executionMode );
         this.values = values;
         this.isPeriodicCommit = isPeriodicCommit;
+    }
+
+    @Override
+    protected String stableValue()
+    {
+        return values.stableTemplate();
     }
 
     @Override

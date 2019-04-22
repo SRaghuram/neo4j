@@ -15,6 +15,8 @@ import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.macro.execution.database.PlanCreator;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -31,7 +33,8 @@ public class ForkRunner
 {
     private static final com.neo4j.bench.client.model.Neo4jConfig NO_NEO4J_CONFIG = com.neo4j.bench.client.model.Neo4jConfig.empty();
 
-    public static BenchmarkDirectory runForksFor( BenchmarkGroupDirectory groupDir,
+    public static BenchmarkDirectory runForksFor( DatabaseLauncher<?> launcher,
+                                                  BenchmarkGroupDirectory groupDir,
                                                   Query query,
                                                   Store store,
                                                   Edition edition,
@@ -39,11 +42,10 @@ public class ForkRunner
                                                   List<ProfilerType> profilers,
                                                   Jvm jvm,
                                                   int measurementForkCount,
-                                                  int warmupCount,
-                                                  int measurementCount,
                                                   TimeUnit unit,
                                                   BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
-                                                  List<String> jvmArgs ) throws ForkFailureException
+                                                  List<String> jvmArgs,
+                                                  Resources resources ) throws ForkFailureException
     {
         BenchmarkDirectory benchmarkDir = groupDir.findOrCreate( query.benchmark() );
         boolean doFork = measurementForkCount != 0;
@@ -55,20 +57,17 @@ public class ForkRunner
                 String forkName = "profiler-fork-" + profiler.name().toLowerCase();
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, singletonList( profiler ) );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-                neo4jConfig.writeAsProperties( neo4jConfigFile );
-                RunnableFork profilerFork = fork( query,
+                neo4jConfig.writeToFile( neo4jConfigFile );
+                RunnableFork profilerFork = fork( launcher,
+                                                  query,
                                                   store,
-                                                  edition,
                                                   neo4jConfigFile,
                                                   forkDirectory,
                                                   singletonList( profiler ),
                                                   jvm,
                                                   doFork,
-                                                  warmupCount,
-                                                  measurementCount,
                                                   jvmArgs,
-                                                  // no need to export logical plan in profiling runs
-                                                  false );
+                                                  resources );
 
                 runFork( query, unit, metricsPrinter, forkName, profilerFork );
             }
@@ -79,20 +78,27 @@ public class ForkRunner
                 String forkName = "measurement-fork-" + forkNumber;
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, emptyList() );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-                neo4jConfig.writeAsProperties( neo4jConfigFile );
-                RunnableFork measurementFork = fork( query,
+                neo4jConfig.writeToFile( neo4jConfigFile );
+
+                // Export logical plan -- only necessary to do so once, every fork should produce the same plan
+                // NOTE: this will use main process to create and export plans, if it becomes a problem an "export plan" command can be created
+                if ( forkNumber == 0 )
+                {
+                    System.out.println( "Generating plan for : " + query.name() );
+                    Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile, query );
+                    System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+                }
+
+                RunnableFork measurementFork = fork( launcher,
+                                                     query,
                                                      store,
-                                                     edition,
                                                      neo4jConfigFile,
                                                      forkDirectory,
                                                      new ArrayList<>(),
                                                      jvm,
                                                      doFork,
-                                                     warmupCount,
-                                                     measurementCount,
                                                      jvmArgs,
-                                                     // only necessary to export logical plans from one measurement fork
-                                                     forkNumber == 0 );
+                                                     resources );
 
                 runFork( query, unit, metricsPrinter, forkName, measurementFork );
             }
@@ -118,41 +124,36 @@ public class ForkRunner
         System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
     }
 
-    private static RunnableFork fork( Query query,
+    private static RunnableFork fork( DatabaseLauncher<?> launcher,
+                                      Query query,
                                       Store store,
-                                      Edition edition,
                                       Path neo4jConfigFile,
                                       ForkDirectory forkDirectory,
                                       List<ProfilerType> profilers,
                                       Jvm jvm,
                                       boolean doFork,
-                                      int warmupCount,
-                                      int measurementCount,
                                       List<String> jvmArgs,
-                                      boolean doExportPlan )
+                                      Resources resources )
     {
         return doFork
-               ? new ForkingRunnable( query,
-                                      forkDirectory,
-                                      profilers,
-                                      store,
-                                      edition,
-                                      neo4jConfigFile,
-                                      jvm,
-                                      warmupCount,
-                                      measurementCount,
-                                      jvmArgs,
-                                      doExportPlan )
-               : new NonForkingRunnable( query,
-                                         forkDirectory,
-                                         profilers,
-                                         store,
-                                         edition,
-                                         neo4jConfigFile,
-                                         warmupCount,
-                                         measurementCount,
-                                         doExportPlan,
-                                         jvm );
+               ? new ForkingRunnable<>( launcher,
+                                        query,
+                                        forkDirectory,
+                                        profilers,
+                                        store,
+                                        neo4jConfigFile,
+                                        jvm,
+                                        jvmArgs,
+                                        resources )
+               : new NonForkingRunnable<>( launcher,
+                                           query,
+                                           forkDirectory,
+                                           profilers,
+                                           store,
+                                           neo4jConfigFile,
+                                           jvm,
+                                           jvmArgs,
+                                           resources );
     }
 }
 

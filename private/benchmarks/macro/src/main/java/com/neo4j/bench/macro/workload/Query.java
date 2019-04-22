@@ -10,6 +10,7 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
+import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 
 import java.nio.file.Files;
@@ -20,7 +21,6 @@ import java.util.Set;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.fileToString;
 import static com.neo4j.bench.client.util.BenchmarkUtil.sanitize;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
@@ -58,10 +58,11 @@ public class Query
     private final boolean isSingleShot;
     private final boolean isMutating;
     private final Parameters parameters;
+    private final DeploymentMode deployment;
 
     // TODO write detailed comments about interplay between: has warmup, is single shot, periodic commit, is mutating
 
-    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir )
+    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode deployment )
     {
         try
         {
@@ -89,7 +90,8 @@ public class Query
                     (boolean) configEntry.getOrDefault( IS_SINGLE_SHOT, DEFAULT_IS_SINGLE_SHOT ),
                     (boolean) configEntry.getOrDefault( HAS_WARMUP, DEFAULT_HAS_WARMUP ),
                     (boolean) configEntry.getOrDefault( IS_MUTATING, DEFAULT_IS_MUTATING ),
-                    parameters );
+                    parameters,
+                    deployment );
         }
         catch ( WorkloadConfigException we )
         {
@@ -146,7 +148,8 @@ public class Query
            boolean isSingleShot,
            boolean hasWarmup,
            boolean isMutating,
-           Parameters parameters )
+           Parameters parameters,
+           DeploymentMode deployment )
     {
         this.group = group;
         this.name = name;
@@ -157,6 +160,7 @@ public class Query
         this.isSingleShot = isSingleShot;
         this.hasWarmup = hasWarmup;
         this.isMutating = isMutating;
+        this.deployment = deployment;
     }
 
     public BenchmarkGroup benchmarkGroup()
@@ -171,7 +175,8 @@ public class Query
         params.put( "planner", queryString.planner().name() );
         params.put( "runtime", queryString.runtime().name() );
         params.put( "execution_mode", queryString.executionMode().name() );
-        return Benchmark.benchmarkFor( description, simpleName, Benchmark.Mode.LATENCY, params, queryString.value() );
+        params.put( "deployment", deployment.name() );
+        return Benchmark.benchmarkFor( description, simpleName, Benchmark.Mode.LATENCY, params, queryString.stableValue() );
     }
 
     public String name()
@@ -219,7 +224,8 @@ public class Query
                           isSingleShot,
                           hasWarmup,
                           isMutating,
-                          parameters );
+                          parameters,
+                          deployment );
     }
 
     public Query copyWith( Runtime newRuntime )
@@ -232,7 +238,8 @@ public class Query
                           isSingleShot,
                           hasWarmup,
                           isMutating,
-                          parameters );
+                          parameters,
+                          deployment );
     }
 
     public Query copyWith( ExecutionMode newExecutionMode )
@@ -245,7 +252,8 @@ public class Query
                           isSingleShot,
                           hasWarmup,
                           isMutating,
-                          parameters );
+                          parameters,
+                          deployment );
     }
 
     public Parameters parameters()
@@ -276,6 +284,7 @@ public class Query
                "\tsingle shot     : " + isSingleShot + "\n" +
                "\thas warmup      : " + hasWarmup + "\n" +
                "\tis mutating     : " + isMutating + "\n" +
-               "\tparameters      : " + parameters;
+               "\tparameters      : " + parameters + "\n" +
+               "\tdeployment      : " + deployment;
     }
 }

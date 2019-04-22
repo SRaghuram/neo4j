@@ -10,6 +10,7 @@ import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.macro.execution.Options;
 import org.junit.Test;
 
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static org.junit.Assert.assertEquals;
 
 public class QueryTest
@@ -24,7 +25,8 @@ public class QueryTest
             true,
             true,
             false,
-            Parameters.empty()
+            Parameters.empty(),
+            DeploymentMode.EMBEDDED
     );
 
     @Test

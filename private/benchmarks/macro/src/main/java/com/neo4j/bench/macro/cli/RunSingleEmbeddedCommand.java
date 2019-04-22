@@ -9,39 +9,35 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.InternalProfiler;
+import com.neo4j.bench.client.process.HasPid;
+import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
-import com.neo4j.bench.macro.execution.database.PlanCreator;
-import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
+import com.neo4j.bench.macro.execution.QueryRunner;
+import com.neo4j.bench.macro.execution.database.Database;
+import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.macro.workload.Workload;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.and;
-import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.ofCount;
-import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.ofDuration;
-import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.or;
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
+import static java.util.Collections.singletonMap;
 
-import static java.time.Duration.ofSeconds;
-import static java.util.stream.Collectors.toList;
-
-@Command( name = "run-single", description = "runs one query in a new process for a single workload" )
-public class RunSingleCommand implements Runnable
+@Command( name = "run-single-embedded", description = "runs one query in a new process for a single workload" )
+public class RunSingleEmbeddedCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
@@ -134,7 +130,6 @@ public class RunSingleCommand implements Runnable
             required = true )
     private int measurementCount;
 
-    // TODO add to run workload?
     private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MIN_MEASUREMENT_SECONDS},
@@ -142,20 +137,12 @@ public class RunSingleCommand implements Runnable
             required = false )
     private int minMeasurementSeconds = 30; // 30 seconds
 
-    // TODO add to run workload?
     private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MAX_MEASUREMENT_SECONDS},
             title = "Max measurement execution duration, in seconds",
             required = false )
     private int maxMeasurementSeconds = 10 * 60; // 10 minutes
-
-    private static final String CMD_EXPORT_PLAN = "--export-plan";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_EXPORT_PLAN},
-            title = "Specifies if a logical plan should be exported",
-            required = false )
-    private boolean doExportPlan;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
@@ -165,89 +152,55 @@ public class RunSingleCommand implements Runnable
             required = true )
     private File jvmFile;
 
+    private static final String CMD_WORK_DIR = "--work-dir";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_WORK_DIR},
+            description = "Work directory",
+            title = "Work directory",
+            required = true )
+    private File workDir = new File( System.getProperty( "user.dir" ) );
+
     @Override
     public void run()
     {
-        Jvm jvm = Jvm.bestEffortOrFail( jvmFile );
-
-        ForkDirectory forkDir = ForkDirectory.openAt( outputDir.toPath() );
-
         // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-        try ( Store store = Store.createFrom( storeDir.toPath() );
-              Resources resources = new Resources() )
+        try ( Store store = Store.createFrom( storeDir.toPath() ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources );
-            Query query = workload.queryForName( queryName )
-                                  .copyWith( planner )
-                                  .copyWith( runtime )
-                                  .copyWith( executionMode );
-            List<ProfilerType> profilerTypes = ProfilerType.deserializeProfilers( profilerNames );
-
-            List<ProfilerType> internalProfilerTypes = profilerTypes.stream().filter( ProfilerType::isInternal ).collect( toList() );
-            profilerTypes.removeAll( internalProfilerTypes );
-            if ( !profilerTypes.isEmpty() )
-            {
-                throw new RuntimeException( "Command only supports 'internal' profilers\n" +
-                                            "But received the following non-internal profilers : " + profilerTypes + "\n" +
-                                            "Complete list of valid internal profilers         : " + ProfilerType.internalProfilers() + "\n" +
-                                            "Complete list of valid external profilers         : " + ProfilerType.externalProfilers() );
-            }
-
-            List<InternalProfiler> internalProfilers = internalProfilerTypes.stream()
-                                                                            .map( ProfilerType::create )
-                                                                            .map( profiler -> (InternalProfiler) profiler )
-                                                                            .collect( toList() );
-
             if ( neo4jConfigFile != null )
             {
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             }
             Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
-
-            if ( doExportPlan )
-            {
-                System.out.println( "Generating plan for : " + query.name() );
-                Path planFile = PlanCreator.exportPlan( forkDir, store, edition, null == neo4jConfigFile ? null : neo4jConfigFile.toPath(), query );
-                System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
-            }
-
-            QueryRunner queryRunner = QueryRunner.runnerFor( executionMode );
-            queryRunner.run( jvm,
-                             store,
-                             edition,
-                             neo4jConfig,
-                             internalProfilers,
-                             query,
-                             forkDir,
-                             measurementControlFor( warmupCount ),
-                             measurementControlFor( measurementCount ) );
-
-            /*
-            This command does not export summary of results as JSON. This is because it has two purposes and neither of them requires it:
-              (1) Interactive execution, locally by developers. Result logs and console output should suffice.
-              (2) Invoked from 'run-workload'. Multiple forks for same query, so result log merging needs to happen before constructing summary.
-            */
-        }
-        catch ( Exception e )
-        {
-            Path errorFile = forkDir.logError( e );
-            throw new RuntimeException( "Error running query\n" +
-                                        "Workload          : " + workloadName + "\n" +
-                                        "Query             : " + queryName + "\n" +
-                                        "See error file at : " + errorFile.toAbsolutePath().toString(), e );
+            QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
+                                                                  forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
+            Pid clientPid = HasPid.getPid();
+            QueryRunner.runSingleCommand( queryRunner,
+                                          Jvm.bestEffortOrFail( jvmFile ),
+                                          ForkDirectory.openAt( outputDir.toPath() ),
+                                          workloadName,
+                                          queryName,
+                                          planner,
+                                          runtime,
+                                          executionMode,
+                                          singletonMap( clientPid, Parameters.NONE ),
+                                          singletonMap( clientPid, ProfilerType.deserializeProfilers( profilerNames ) ),
+                                          warmupCount,
+                                          minMeasurementSeconds,
+                                          maxMeasurementSeconds,
+                                          measurementCount,
+                                          DeploymentMode.EMBEDDED,
+                                          workDir.toPath() );
         }
     }
 
-    private MeasurementControl measurementControlFor( int minCount )
+    private static Database createDatabase( Store store,
+                                            Edition edition,
+                                            Neo4jConfig neo4jConfig,
+                                            ForkDirectory forkDirectory )
     {
-        return and( // minimum duration
-                    ofDuration( ofSeconds( minMeasurementSeconds ) ),
-
-                    // count or maximum duration, whichever happens first
-                    or( // minimum number of query executions
-                        ofCount( minCount ),
-                        // maximum duration
-                        ofDuration( ofSeconds( maxMeasurementSeconds ) ) ) );
+        Path neo4jConfigFile = forkDirectory.create( "neo4j-executing.conf" );
+        neo4jConfig.writeToFile( neo4jConfigFile );
+        return EmbeddedDatabase.startWith( store, edition, neo4jConfigFile );
     }
 
     public static List<String> argsFor(
@@ -259,11 +212,13 @@ public class RunSingleCommand implements Runnable
             List<ProfilerType> internalProfilers,
             int warmupCount,
             int measurementCount,
-            boolean doExportPlan,
-            Jvm jvm )
+            Duration minMeasurementDuration,
+            Duration maxMeasurementDuration,
+            Jvm jvm,
+            Path workDir )
     {
         ArrayList<String> args = Lists.newArrayList(
-                "run-single",
+                "run-single-embedded",
                 CMD_WORKLOAD,
                 query.benchmarkGroup().name(),
                 CMD_QUERY,
@@ -284,12 +239,14 @@ public class RunSingleCommand implements Runnable
                 Integer.toString( warmupCount ),
                 CMD_MEASUREMENT_COUNT,
                 Integer.toString( measurementCount ),
+                CMD_MIN_MEASUREMENT_SECONDS,
+                Long.toString( minMeasurementDuration.getSeconds() ),
+                CMD_MAX_MEASUREMENT_SECONDS,
+                Long.toString( maxMeasurementDuration.getSeconds() ),
                 CMD_JVM_PATH,
-                jvm.launchJava() );
-        if ( doExportPlan )
-        {
-            args.add( CMD_EXPORT_PLAN );
-        }
+                jvm.launchJava(),
+                CMD_WORK_DIR,
+                workDir.toAbsolutePath().toString() );
         if ( !internalProfilers.isEmpty() )
         {
             args.add( CMD_PROFILERS );
