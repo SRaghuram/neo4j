@@ -29,6 +29,12 @@ public class StaticQueryString extends QueryString
     }
 
     @Override
+    protected String stableValue()
+    {
+        return value;
+    }
+
+    @Override
     protected String rawValue()
     {
         return value;
