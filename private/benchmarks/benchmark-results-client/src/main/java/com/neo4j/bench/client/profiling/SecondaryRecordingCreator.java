@@ -75,10 +75,10 @@ abstract class SecondaryRecordingCreator
             {
                 GcLog gcLog = GcLog.parse( gcLogFile );
 
-                Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.filename( RecordingType.GC_SUMMARY ) );
+                Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_SUMMARY ) );
                 JsonUtil.serializeJson( gcLogJson, gcLog );
 
-                Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.filename( RecordingType.GC_CSV ) );
+                Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_CSV ) );
                 gcLog.toCSV( gcLogCsv );
             }
             catch ( IOException e )
@@ -124,7 +124,7 @@ abstract class SecondaryRecordingCreator
                                                     "-f",
                                                     profilerRecording.toAbsolutePath().toString(),
                                                     "-i" );
-            SecondaryRecordingCreator.waitOnProcess( args, jfrFlameGraphDir, recordingDescriptor.profiler(), profilerRecording, flameGraphSvg );
+            SecondaryRecordingCreator.waitOnProcess( args, jfrFlameGraphDir, ProfilerType.JFR, profilerRecording, flameGraphSvg );
         }
     }
 
@@ -154,13 +154,13 @@ abstract class SecondaryRecordingCreator
                                                     "flamegraph.pl",
                                                     "--colors=java",
                                                     profilerRecording.toAbsolutePath().toString() );
-            SecondaryRecordingCreator.waitOnProcess( args, asyncFlameGraphDir, recordingDescriptor.profiler(), profilerRecording, flameGraphSvg );
+            SecondaryRecordingCreator.waitOnProcess( args, asyncFlameGraphDir, ProfilerType.ASYNC, profilerRecording, flameGraphSvg );
         }
     }
 
     private static Path getFlameGraphSvg( ForkDirectory forkDirectory, ProfilerRecordingDescriptor recordingDescriptor, RecordingType recordingType )
     {
-        Path flameGraphSvg = forkDirectory.pathFor( recordingDescriptor.filename( recordingType ) );
+        Path flameGraphSvg = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( recordingType ) );
         BenchmarkUtil.assertDoesNotExist( flameGraphSvg );
         return flameGraphSvg;
     }

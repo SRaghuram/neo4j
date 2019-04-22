@@ -6,21 +6,20 @@
 package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.profiling.RecordingType;
+import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.S3Util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class ProfilerRecordings
 {
-    private final String jfr;
-    private final String jfrFlamegraph;
-    private final String async;
-    private final String asyncFlamegraph;
-    private final String gcLog;
-    private final String gcSummary;
-    private final String gcCsv;
+    // NOTE: could use one map of maps here, with parameters as key of inner maps, but JSON (de)serializing needs to be updated for that
+    private final Map<RecordingType,List<Parameters>> recordingParameters;
+    private final Map<RecordingType,List<String>> recordingFilenames;
 
     /**
      * WARNING: Never call this explicitly.
@@ -28,57 +27,63 @@ public class ProfilerRecordings
      */
     public ProfilerRecordings()
     {
-        this( "", "", "", "", "", "", "" );
+        this( new HashMap<>(), new HashMap<>() );
     }
 
-    private ProfilerRecordings(
-            String jfr,
-            String jfrFlamegraph,
-            String async,
-            String asyncFlamegraph,
-            String gcLog,
-            String gcSummary,
-            String gcCsv )
+    private ProfilerRecordings( Map<RecordingType,List<Parameters>> recordingParameters, Map<RecordingType,List<String>> recordingFilenames )
     {
-        this.jfr = jfr;
-        this.jfrFlamegraph = jfrFlamegraph;
-        this.async = async;
-        this.asyncFlamegraph = asyncFlamegraph;
-        this.gcLog = gcLog;
-        this.gcSummary = gcSummary;
-        this.gcCsv = gcCsv;
+        this.recordingParameters = recordingParameters;
+        this.recordingFilenames = recordingFilenames;
         // sanity check, to make sure the same names (paths) are never assigned to multiple properties
-        assertNoDuplicatePaths();
+        assertNoDuplicatePaths( toMap( recordingFilenames, recordingParameters ) );
     }
 
-    public ProfilerRecordings with( RecordingType property, String path )
+    public ProfilerRecordings with( RecordingType recordingType, Parameters parameters, String path )
     {
         // S3 path should be of the form <bucket>/<remainder>, not s3://<bucket>/<remainder>
         S3Util.assertSaneS3Path( path );
-        switch ( property )
+
+        List<String> filenamesList = recordingFilenames.computeIfAbsent( recordingType, r -> new ArrayList<>() );
+        List<Parameters> parametersList = recordingParameters.computeIfAbsent( recordingType, r -> new ArrayList<>() );
+
+        if ( parametersList.contains( parameters ) )
         {
-        case JFR:
-            return new ProfilerRecordings( path, jfrFlamegraph, async, asyncFlamegraph, gcLog, gcSummary, gcCsv );
-        case ASYNC:
-            return new ProfilerRecordings( jfr, jfrFlamegraph, path, asyncFlamegraph, gcLog, gcSummary, gcCsv );
-        case JFR_FLAMEGRAPH:
-            return new ProfilerRecordings( jfr, path, async, asyncFlamegraph, gcLog, gcSummary, gcCsv );
-        case ASYNC_FLAMEGRAPH:
-            return new ProfilerRecordings( jfr, jfrFlamegraph, async, path, gcLog, gcSummary, gcCsv );
-        case GC_LOG:
-            return new ProfilerRecordings( jfr, jfrFlamegraph, async, asyncFlamegraph, path, gcSummary, gcCsv );
-        case GC_SUMMARY:
-            return new ProfilerRecordings( jfr, jfrFlamegraph, async, asyncFlamegraph, gcLog, path, gcCsv );
-        case GC_CSV:
-            return new ProfilerRecordings( jfr, jfrFlamegraph, async, asyncFlamegraph, gcLog, gcSummary, path );
-        default:
-            throw new RuntimeException( "Unrecognized property name: " + property );
+            String oldFilename = filenamesList.get( parametersList.indexOf( parameters ) );
+            throw new RuntimeException( "Duplicate entry!\n" +
+                                        "Recording:  " + recordingType + "\"" +
+                                        "Parameters: '" + parameters.toString() + "'\n" +
+                                        "Old path:   '" + oldFilename + "'\n" +
+                                        "New path:   '" + path + "'" );
         }
+
+        filenamesList.add( path );
+        parametersList.add( parameters );
+        return this;
     }
 
-    private void assertNoDuplicatePaths()
+    private static Map<String,String> toMap( Map<RecordingType,List<String>> recordingFilenames,
+                                             Map<RecordingType,List<Parameters>> recordingParameters )
     {
-        Map<String,String> map = toMap();
+        Map<String,String> map = new HashMap<>();
+        for ( RecordingType recordingType : recordingFilenames.keySet() )
+        {
+            List<String> filenameList = recordingFilenames.get( recordingType );
+            List<Parameters> parametersList = recordingParameters.get( recordingType );
+            for ( int i = 0; i < filenameList.size(); i++ )
+            {
+                String filename = filenameList.get( i );
+                Parameters parameters = parametersList.get( i );
+                String propertyKey = parameters.isEmpty()
+                                     ? recordingType.propertyKey()
+                                     : recordingType.propertyKey() + "_" + parameters.toString();
+                map.put( propertyKey, filename );
+            }
+        }
+        return map;
+    }
+
+    private static void assertNoDuplicatePaths( Map<String,String> map )
+    {
         if ( map.size() != map.values().stream().distinct().count() )
         {
             throw new RuntimeException( "Found duplicate paths in profile: " + map.toString() );
@@ -87,36 +92,7 @@ public class ProfilerRecordings
 
     public Map<String,String> toMap()
     {
-        Map<String,String> map = new HashMap<>();
-        if ( null != jfr && !jfr.isEmpty() )
-        {
-            map.put( RecordingType.JFR.propertyKey(), jfr );
-        }
-        if ( null != async && !async.isEmpty() )
-        {
-            map.put( RecordingType.ASYNC.propertyKey(), async );
-        }
-        if ( null != jfrFlamegraph && !jfrFlamegraph.isEmpty() )
-        {
-            map.put( RecordingType.JFR_FLAMEGRAPH.propertyKey(), jfrFlamegraph );
-        }
-        if ( null != asyncFlamegraph && !asyncFlamegraph.isEmpty() )
-        {
-            map.put( RecordingType.ASYNC_FLAMEGRAPH.propertyKey(), asyncFlamegraph );
-        }
-        if ( null != gcLog && !gcLog.isEmpty() )
-        {
-            map.put( RecordingType.GC_LOG.propertyKey(), gcLog );
-        }
-        if ( null != gcSummary && !gcSummary.isEmpty() )
-        {
-            map.put( RecordingType.GC_SUMMARY.propertyKey(), gcSummary );
-        }
-        if ( null != gcCsv && !gcCsv.isEmpty() )
-        {
-            map.put( RecordingType.GC_CSV.propertyKey(), gcCsv );
-        }
-        return map;
+        return toMap( recordingFilenames, recordingParameters );
     }
 
     @Override
@@ -130,33 +106,20 @@ public class ProfilerRecordings
         {
             return false;
         }
-        ProfilerRecordings profilerRecordings = (ProfilerRecordings) o;
-        return Objects.equals( jfr, profilerRecordings.jfr ) &&
-               Objects.equals( jfrFlamegraph, profilerRecordings.jfrFlamegraph ) &&
-               Objects.equals( async, profilerRecordings.async ) &&
-               Objects.equals( asyncFlamegraph, profilerRecordings.asyncFlamegraph ) &&
-               Objects.equals( gcLog, profilerRecordings.gcLog ) &&
-               Objects.equals( gcSummary, profilerRecordings.gcSummary ) &&
-               Objects.equals( gcCsv, profilerRecordings.gcCsv );
+        ProfilerRecordings that = (ProfilerRecordings) o;
+        return Objects.equals( recordingParameters, that.recordingParameters ) &&
+               Objects.equals( recordingFilenames, that.recordingFilenames );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( jfr, jfrFlamegraph, async, asyncFlamegraph, gcLog, gcSummary, gcCsv );
+        return Objects.hash( recordingParameters, recordingFilenames );
     }
 
     @Override
     public String toString()
     {
-        return "Profiles{" +
-               "jfr='" + jfr + '\'' +
-               ", jfrFlamegraph='" + jfrFlamegraph + '\'' +
-               ", async='" + async + '\'' +
-               ", asyncFlamegraph='" + asyncFlamegraph + '\'' +
-               ", gcLog='" + gcLog + '\'' +
-               ", gcSummary='" + gcSummary + '\'' +
-               ", gcCsv='" + gcCsv + '\'' +
-               '}';
+        return BenchmarkUtil.prettyPrint( toMap() );
     }
 }

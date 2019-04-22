@@ -7,6 +7,17 @@ package com.neo4j.bench.client.results;
 
 public enum RunPhase
 {
-    WARMUP,
-    MEASUREMENT
+    WARMUP( "_WARMUP" ),
+    MEASUREMENT( "" );
+    private final String nameModifier;
+
+    RunPhase( String nameModifier )
+    {
+        this.nameModifier = nameModifier;
+    }
+
+    public String nameModifier()
+    {
+        return nameModifier;
+    }
 }

@@ -8,6 +8,7 @@ package com.neo4j.bench.client.profiling;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.Benchmark.Mode;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
@@ -49,20 +50,20 @@ public class GcProfilerTest
     }
 
     @Test
-    public void jvmArgsForJdk8() throws Exception
+    public void jvmArgsForJdk8()
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 8, "" );
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.CLIENT );
         assertThat( jvmArgs, hasItem( equalTo( "-XX:+PrintGC" ) ) );
     }
 
     @Test
-    public void jvmArgsForJdk9() throws Exception
+    public void jvmArgsForJdk9()
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
         System.out.println( jvmArgs );
         assertThat( jvmArgs, hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
     }
