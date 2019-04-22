@@ -5,9 +5,10 @@
  */
 package com.neo4j.bench.client.model;
 
-import com.google.common.collect.Sets;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor;
+import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
+import com.neo4j.bench.client.results.RunPhase;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import static com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor.tryParse;
 import static java.lang.String.format;
 
 public class ProfileLoader
@@ -44,22 +46,33 @@ public class ProfileLoader
             String filename = path.getFileName().toString();
             for ( BenchmarkGroupBenchmark benchmarkGroupBenchmark : benchmarkGroupBenchmarks )
             {
-                for ( RecordingType recordingType : RecordingType.values() )
+                for ( ProfilerType profilerType : ProfilerType.values() )
                 {
-                    // Some tools need to sanitize filenames due to requirements from, for example, JFR/Async
-                    FullBenchmarkName benchmarkName = FullBenchmarkName.from( benchmarkGroupBenchmark );
-                    Set<String> expectedFilenames = Sets.newHashSet(
-                            benchmarkName.name() + recordingType.extension(),
-                            benchmarkName.sanitizedName() + recordingType.extension() );
-                    if ( expectedFilenames.contains( filename ) )
+                    for ( RecordingType recordingType : profilerType.allRecordingTypes() )
                     {
-                        ProfilerRecordings profilerRecordings = benchmarkProfiles.computeIfAbsent(
-                                benchmarkGroupBenchmark,
-                                bgb -> new ProfilerRecordings() );
-                        benchmarkProfiles.put(
-                                benchmarkGroupBenchmark,
-                                profilerRecordings.with( recordingType, s3Bucket + filename ) );
-                        found = true;
+                        ProfilerRecordingDescriptor.ParseResult parseResult = tryParse( filename,
+                                                                                        recordingType,
+                                                                                        benchmarkGroupBenchmark.benchmarkGroup(),
+                                                                                        benchmarkGroupBenchmark.benchmark(),
+                                                                                        RunPhase.MEASUREMENT );
+                        if ( parseResult.isMatch() )
+                        {
+                            Parameters additionalParameters = parseResult.additionalParameters();
+                            ProfilerRecordings profilerRecordings = benchmarkProfiles.computeIfAbsent(
+                                    benchmarkGroupBenchmark,
+                                    bgb -> new ProfilerRecordings() );
+                            benchmarkProfiles.put(
+                                    benchmarkGroupBenchmark,
+                                    profilerRecordings.with( recordingType, additionalParameters, s3Bucket + filename ) );
+                            found = true;
+
+                            if ( parseResult.match() == ProfilerRecordingDescriptor.Match.IS_SANITIZED )
+                            {
+                                errors.add( format( "WARNING: Found un-sanitized profiler recording filename\n" +
+                                                    "\tFilename: %s", filename ) );
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -82,11 +95,7 @@ public class ProfileLoader
             throw new UncheckedIOException( e );
         }
 
-        if ( errors.isEmpty() )
-        {
-            return benchmarkProfiles;
-        }
-        else if ( ignoreUnrecognizedFiles )
+        if ( errors.isEmpty() || ignoreUnrecognizedFiles )
         {
             errors.forEach( System.out::println );
             return benchmarkProfiles;

@@ -10,6 +10,7 @@ import com.neo4j.bench.client.util.Resources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +23,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;
@@ -39,9 +41,9 @@ class WorkloadTest
     private TestDirectory temporaryFolder;
 
     @Test
-    void allWorkloadsShouldHaveUniqueName()
+    void allWorkloadsShouldHaveUniqueName() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                                                                  .collect( Collectors.groupingBy( Workload::name ) );
@@ -57,9 +59,9 @@ class WorkloadTest
     @Test
     void allWorkloadsShouldHaveConfigurationFile() throws Exception
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadsDir = resources.resourceFile( "/workloads" );
+            Path workloadsDir = resources.getResourceFile( "/workloads" );
             try ( Stream<Path> workloadDirs = Files.list( workloadsDir )
                                                    .filter( Files::isDirectory ) )
             {
@@ -70,9 +72,9 @@ class WorkloadTest
     }
 
     @Test
-    void workloadsShouldHaveCorrectName()
+    void workloadsShouldHaveCorrectName() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
                     .forEach( workload ->
@@ -93,18 +95,18 @@ class WorkloadTest
     }
 
     @Test
-    void workloadsShouldHaveAtLeastOneQuery()
+    void workloadsShouldHaveAtLeastOneQuery() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
         }
     }
 
     @Test
-    void workloadQueriesShouldHaveAllFieldsPopulated()
+    void workloadQueriesShouldHaveAllFieldsPopulated() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                     .flatMap( workload -> workload.queries().stream() )
@@ -124,9 +126,9 @@ class WorkloadTest
 
     // This test can be removed once procedure support is added
     @Test
-    void queriesShouldNotCallProcedures()
+    void queriesShouldNotCallProcedures() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                     .flatMap( workload -> workload.queries().stream() )
@@ -139,9 +141,9 @@ class WorkloadTest
     }
 
     @Test
-    void shouldParseAllParameterFiles()
+    void shouldParseAllParameterFiles() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
                     .forEach( workload ->
@@ -149,7 +151,7 @@ class WorkloadTest
                                   for ( Query query : workload.queries() )
                                   {
                                       Parameters parameters = query.parameters();
-                                      try ( ParametersReader parametersReader = parameters.create( null ) )
+                                      try ( ParametersReader parametersReader = parameters.create() )
                                       {
                                           for ( int i = 0; i < 10_000 && parametersReader.hasNext(); i++ )
                                           {
@@ -173,9 +175,9 @@ class WorkloadTest
     @Test
     void shouldParseValidWorkload() throws Exception
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadDir = resources.resourceFile( "/test_workloads/test" );
+            Path workloadDir = resources.getResourceFile( "/test_workloads/test" );
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
             Workload workload = Workload.fromFile( validWorkloadConfig, DeploymentMode.EMBEDDED );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
@@ -200,7 +202,7 @@ class WorkloadTest
             assertThat( BenchmarkUtil.lessWhiteSpace( query1.queryString().value().trim() ), equalTo( "MATCH (n) RETURN n LIMIT 1" ) );
 
             assertTrue( query1.parameters().isLoopable() );
-            ParametersReader parameters1 = query1.parameters().create( null );
+            ParametersReader parameters1 = query1.parameters().create();
             assertTrue( parameters1.hasNext() );
             Map<String,Object> paramMap1 = parameters1.next();
             assertThat( paramMap1.get( "Param1" ), equalTo( "a" ) );
@@ -217,7 +219,7 @@ class WorkloadTest
             assertThat( BenchmarkUtil.lessWhiteSpace( query2.queryString().value().trim() ), equalTo( "MATCH (n) RETURN count(n)" ) );
 
             assertFalse( query2.parameters().isLoopable() );
-            ParametersReader parameters2 = query2.parameters().create( null );
+            ParametersReader parameters2 = query2.parameters().create();
             assertTrue( parameters2.hasNext() );
             Map<String,Object> paramMap2 = parameters2.next();
             assertThat( paramMap2.get( "Param1" ), equalTo( "a" ) );
@@ -234,7 +236,7 @@ class WorkloadTest
             assertThat( query3.queryString().value().trim(), equalTo( "MATCH (n) RETURN n.foo" ) );
 
             assertThat( query3.parameters().isLoopable(), equalTo( Parameters.IS_LOOPABLE_DEFAULT ) );
-            ParametersReader parameters3 = query3.parameters().create( null );
+            ParametersReader parameters3 = query3.parameters().create();
             assertTrue( parameters3.hasNext() );
             Map<String,Object> paramMap3 = parameters3.next();
             assertThat( paramMap3.get( "Param1" ), equalTo( "a" ) );
@@ -251,7 +253,7 @@ class WorkloadTest
             assertThat( query4.queryString().value().trim(), equalTo( "MATCH (n) RETURN n.bar" ) );
 
             assertThat( query4.parameters().isLoopable(), equalTo( Parameters.IS_LOOPABLE_DEFAULT ) );
-            ParametersReader parameters4 = query4.parameters().create( null );
+            ParametersReader parameters4 = query4.parameters().create();
             int forever = 10;
             for ( int i = 0; i < forever; i++ )
             {
@@ -262,11 +264,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenEmptyQueries()
+    void shouldFailToParseWhenEmptyQueries() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_empty_queries.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_empty_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -275,27 +277,27 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenMissingParamFile()
+    void shouldFailToParseWhenMissingParamFile() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_parameters_file.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_parameters_file.json" );
 
             for ( Query query : Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ).queries() )
             {
                 WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                           () -> query.parameters().create( null ) );
+                                                                           () -> query.parameters().create() );
                 assertThat( e.error(), equalTo( WorkloadConfigError.PARAM_FILE_NOT_FOUND ) );
             }
         }
     }
 
     @Test
-    void shouldFailToParseWhenMissingQueryFile()
+    void shouldFailToParseWhenMissingQueryFile() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_query_file.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -304,11 +306,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenMissingSchemaFile()
+    void shouldFailToParseWhenMissingSchemaFile() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_schema_file.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_schema_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -317,11 +319,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoParamFile()
+    void shouldFailToParseWhenNoParamFile() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_parameters_file.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_parameters_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -330,11 +332,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoQueries()
+    void shouldFailToParseWhenNoQueries() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_queries.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -343,11 +345,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoQueryFile()
+    void shouldFailToParseWhenNoQueryFile() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_query_file.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -356,11 +358,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoQueryName()
+    void shouldFailToParseWhenNoQueryName() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_query_name.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -369,11 +371,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoSchema()
+    void shouldFailToParseWhenNoSchema() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_schema.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_schema.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -382,11 +384,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenNoWorkloadName()
+    void shouldFailToParseWhenNoWorkloadName() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_workload_name.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_workload_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -395,11 +397,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenInvalidQueryKey()
+    void shouldFailToParseWhenInvalidQueryKey() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_query_key.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_query_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
@@ -408,11 +410,11 @@ class WorkloadTest
     }
 
     @Test
-    void shouldFailToParseWhenInvalidWorkloadKey()
+    void shouldFailToParseWhenInvalidWorkloadKey() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
-            Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_workload_key.json" );
+            Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_workload_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
