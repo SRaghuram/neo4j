@@ -193,7 +193,7 @@ public class BenchmarkGroupBenchmarkMetrics
 
         public AnnotatedMetrics()
         {
-            this( new Metrics(), new Neo4jConfig() );
+            this( new Metrics(), Neo4jConfig.empty() );
         }
 
         AnnotatedMetrics( Metrics metrics, Neo4jConfig neo4jConfig )
