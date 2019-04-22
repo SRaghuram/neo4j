@@ -10,9 +10,10 @@ import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.macro.execution.Options;
 import org.junit.jupiter.api.Test;
 
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class QueryTest
+class QueryTest
 {
     private static final QueryString queryString = StaticQueryString.atDefaults( "RETURN 1" );
     private static final Query baseQuery = new Query(
@@ -24,11 +25,12 @@ public class QueryTest
             true,
             true,
             false,
-            Parameters.empty()
+            Parameters.empty(),
+            DeploymentMode.EMBEDDED
     );
 
     @Test
-    public void copyWithPlannerShouldChangePlanner()
+    void copyWithPlannerShouldChangePlanner()
     {
         Query copiedQuery = baseQuery.copyWith( Planner.COST );
         assertEquals( Planner.COST, copiedQuery.queryString().planner() );
@@ -36,7 +38,7 @@ public class QueryTest
     }
 
     @Test
-    public void copyWithRuntimeShouldChangePlanner()
+    void copyWithRuntimeShouldChangePlanner()
     {
         Query copiedQuery = baseQuery.copyWith( Runtime.SLOTTED );
         assertEquals( Runtime.SLOTTED, copiedQuery.queryString().runtime() );
@@ -44,7 +46,7 @@ public class QueryTest
     }
 
     @Test
-    public void copyWithExecutionModeShouldChangePlanner()
+    void copyWithExecutionModeShouldChangePlanner()
     {
         Query copiedQuery = baseQuery.copyWith( Options.ExecutionMode.EXECUTE );
         assertEquals( Options.ExecutionMode.EXECUTE, copiedQuery.queryString().executionMode() );

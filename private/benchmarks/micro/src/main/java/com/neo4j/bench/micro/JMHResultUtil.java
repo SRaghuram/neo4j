@@ -17,7 +17,6 @@ import com.neo4j.bench.micro.config.ParameterValue;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.util.Statistics;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.micro.config.Annotations.descriptionFor;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.simplifyParamName;
-
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -36,7 +34,6 @@ public class JMHResultUtil
 {
     private static final double ERROR_CONFIDENCE = 0.999;
     static final String THREADS_PARAM = "threads";
-    static final String MODE_PARAM = "mode";
 
     public static BenchmarkGroup toBenchmarkGroup( BenchmarkParams benchmarkParams )
     {
@@ -60,16 +57,11 @@ public class JMHResultUtil
         List<String> simpleBenchmarkNames = Lists.newArrayList( simpleBenchmarkName );
         // thread group labels will be empty for 'symmetric' (non-@Group) benchmarks
         benchmarkParams.getThreadGroupLabels().stream()
-                .map( label -> simpleBenchmarkName + ":" + label )
-                .forEach( simpleBenchmarkNames::add );
+                       .map( label -> simpleBenchmarkName + ":" + label )
+                       .forEach( simpleBenchmarkNames::add );
 
         // all benchmark methods for a given class (regardless of @Group/non-@Group) have the same parameters
         List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams );
-        String parameterizedNameSuffix = toNameSuffix( parameterValues, mode );
-
-        List<String> parameterizedBenchmarkNames = simpleBenchmarkNames.stream()
-                .map( name -> name + parameterizedNameSuffix )
-                .collect( toList() );
 
         Benchmarks benchmarks = new Benchmarks(
                 Benchmark.benchmarkFor( benchmarkDescription,
@@ -90,7 +82,7 @@ public class JMHResultUtil
     static Map<String,String> parametersAsMap( List<ParameterValue> parameterValues )
     {
         return assertNoDuplicates( requireNonNull( parameterValues ) ).stream()
-                .collect( toMap( ParameterValue::param, ParameterValue::value ) );
+                                                                      .collect( toMap( ParameterValue::param, ParameterValue::value ) );
     }
 
     private static List<ParameterValue> assertNoDuplicates( List<ParameterValue> parameterValues )
@@ -127,22 +119,12 @@ public class JMHResultUtil
     static List<ParameterValue> extractParameterValues( BenchmarkParams benchmarkParams )
     {
         List<ParameterValue> parameterValues = benchmarkParams.getParamsKeys().stream()
-                .filter( param -> !JmhOptionsUtil.GLOBAL_PARAMS.contains( param ) )
-                .map( param -> new ParameterValue( simplifyParamName( param ), benchmarkParams.getParam( param ) ) )
-                .collect( toList() );
+                                                              .filter( param -> !JmhOptionsUtil.GLOBAL_PARAMS.contains( param ) )
+                                                              .map( param -> new ParameterValue( simplifyParamName( param ),
+                                                                                                 benchmarkParams.getParam( param ) ) )
+                                                              .collect( toList() );
         parameterValues.add( new ParameterValue( THREADS_PARAM, Integer.toString( benchmarkParams.getThreads() ) ) );
         return parameterValues;
-    }
-
-    // orders parameters to achieve determinism, names are used as keys in results store
-    static String toNameSuffix( List<ParameterValue> parameterValues, Mode mode )
-    {
-        Collections.sort( parameterValues );
-        return parameterValues.stream()
-                .filter( parameterValue -> !JmhOptionsUtil.GLOBAL_PARAMS.contains( parameterValue.param() ) )
-                .map( parameterValue -> format( "_(%s,%s)", parameterValue.param(), parameterValue.value() ) )
-                .reduce( "", ( name, parameterValueString ) -> name + parameterValueString )
-                .concat( format( "_(%s,%s)", MODE_PARAM, mode.name() ) );
     }
 
     private static Metrics toMetrics(

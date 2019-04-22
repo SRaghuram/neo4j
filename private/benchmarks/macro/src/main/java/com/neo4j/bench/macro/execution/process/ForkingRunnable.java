@@ -6,17 +6,15 @@
 package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.process.JvmArgs;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.process.JvmProcess;
 import com.neo4j.bench.client.process.JvmProcessArgs;
 import com.neo4j.bench.client.profiling.ExternalProfiler;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.Main;
-import com.neo4j.bench.macro.cli.RunSingleCommand;
-import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -25,118 +23,94 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 
-import static com.neo4j.bench.client.util.Args.concatArgs;
 import static java.util.stream.Collectors.toList;
 
-public class ForkingRunnable implements RunnableFork
+public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable> extends RunnableFork<LAUNCHER,CONNECTION>
 {
-    private final Query query;
-    private final ForkDirectory forkDirectory;
-    private final List<ProfilerType> profilerTypes;
-    private final Store originalStore;
-    private final Edition edition;
-    private final Path neo4jConfigFile;
-    private final Jvm jvm;
-    private final int warmupCount;
-    private final int measurementCount;
-    private final List<String> jvmArgs;
-    private final boolean doExportPlan;
-
-    ForkingRunnable( Query query,
+    ForkingRunnable( LAUNCHER launcher,
+                     Query query,
                      ForkDirectory forkDirectory,
                      List<ProfilerType> profilerTypes,
                      Store originalStore,
-                     Edition edition,
                      Path neo4jConfigFile,
                      Jvm jvm,
-                     int warmupCount,
-                     int measurementCount,
                      List<String> jvmArgs,
-                     boolean doExportPlan )
+                     Resources resources )
     {
-        this.query = query;
-        this.forkDirectory = forkDirectory;
-        this.profilerTypes = profilerTypes;
-        this.originalStore = originalStore;
-        this.edition = edition;
-        this.neo4jConfigFile = neo4jConfigFile;
-        this.jvm = jvm;
-        this.warmupCount = warmupCount;
-        this.measurementCount = measurementCount;
-        this.jvmArgs = jvmArgs;
-        this.doExportPlan = doExportPlan;
+        super( launcher,
+               query,
+               forkDirectory,
+               profilerTypes,
+               originalStore,
+               neo4jConfigFile,
+               jvm,
+               jvmArgs,
+               resources );
     }
 
     @Override
-    public Results run()
+    protected Results runFork( LAUNCHER launcher,
+                               CONNECTION connection,
+                               Query query,
+                               ForkDirectory forkDirectory,
+                               List<ProfilerType> profilerTypes,
+                               Jvm jvm,
+                               Path neo4jConfigFile,
+                               List<String> jvmArgs,
+                               Parameters clientParameters,
+                               Resources resources )
     {
-        try ( Store store = (query.isMutating() && !query.queryString().executionMode().equals( ExecutionMode.PLAN ))
-                            ? originalStore.makeTemporaryCopy()
-                            : originalStore )
-        {
-            List<ProfilerType> internalProfilerTypes = profilerTypes.stream().filter( ProfilerType::isInternal ).collect( toList() );
-            List<ProfilerType> externalProfilerTypes = profilerTypes.stream().filter( ProfilerType::isExternal ).collect( toList() );
-            List<ExternalProfiler> externalProfilers = externalProfilerTypes.stream()
-                                                                            .map( ProfilerType::create )
-                                                                            .map( profiler -> (ExternalProfiler) profiler )
-                                                                            .collect( toList() );
+        ProfilerType.assertInternal( profilerTypes );
+        boolean isClientForked = true;
+        List<String> commandArgs = launcher.toolArgs( query,
+                                                      connection,
+                                                      forkDirectory,
+                                                      profilerTypes,
+                                                      isClientForked,
+                                                      neo4jConfigFile,
+                                                      resources );
+        // retrieves same external profiler _instances_ that were already used -- because external profilers are allowed to be stateful
+        List<ExternalProfiler> externalProfilers = externalProfilers();
+        List<String> clientInvokeArgs = externalProfilers.stream()
+                                                         .map( profiler -> profiler.invokeArgs( forkDirectory,
+                                                                                                query.benchmarkGroup(),
+                                                                                                query.benchmark(),
+                                                                                                clientParameters ) )
+                                                         .flatMap( Collection::stream )
+                                                         .distinct()
+                                                         .collect( toList() );
 
-            List<String> jvmInvokeArgs = externalProfilers.stream()
-                                                          .map( profiler -> profiler.jvmInvokeArgs( forkDirectory,
-                                                                                                    query.benchmarkGroup(),
-                                                                                                    query.benchmark() ) )
-                                                          .flatMap( Collection::stream )
-                                                          .distinct()
-                                                          .collect( toList() );
-
-            List<String> combinedJvmArgs = concatArgs( JvmArgs.standardArgs( forkDirectory ), jvmArgs );
-            externalProfilers.stream()
-                             .map( profiler -> profiler.jvmArgs( jvm.version(),
-                                                                 forkDirectory,
-                                                                 query.benchmarkGroup(),
-                                                                 query.benchmark() ) )
-                             .flatMap( Collection::stream )
-                             .filter( profilerJvmArg -> !combinedJvmArgs.contains( profilerJvmArg ) )
-                             .forEach( combinedJvmArgs::add );
-
-            List<String> toolCommandArgs = RunSingleCommand.argsFor( query,
-                                                                     store,
-                                                                     edition,
-                                                                     neo4jConfigFile,
-                                                                     forkDirectory,
-                                                                     internalProfilerTypes,
-                                                                     warmupCount,
-                                                                     measurementCount,
-                                                                     doExportPlan,
-                                                                     jvm );
-
-            JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( jvmInvokeArgs,
+        List<String> clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
                                                                               jvm,
-                                                                              combinedJvmArgs,
-                                                                              toolCommandArgs,
-                                                                              Main.class );
+                                                                              forkDirectory,
+                                                                              query,
+                                                                              clientParameters,
+                                                                              jvmArgs );
 
-            List<ExternalProfiler> profilers = profilerTypes.stream()
-                                                            .filter( ProfilerType::isExternal )
-                                                            .map( ProfilerType::create )
-                                                            .map( profiler -> (ExternalProfiler) profiler )
-                                                            .collect( toList() );
+        JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
+                                                                          jvm,
+                                                                          clientJvmArgs,
+                                                                          commandArgs,
+                                                                          Main.class );
 
-            profilers.forEach( profiler -> profiler.beforeProcess( forkDirectory,
-                                                                   query.benchmarkGroup(),
-                                                                   query.benchmark() ) );
+        externalProfilers.forEach( profiler -> profiler.beforeProcess( forkDirectory,
+                                                                       query.benchmarkGroup(),
+                                                                       query.benchmark(),
+                                                                       clientParameters ) );
 
-            JvmProcess.start( jvmProcessArgs,
-                              // inherit output
-                              Redirect.INHERIT,
-                              // redirect error to file
-                              Redirect.to( forkDirectory.newErrorLog().toFile() ) ).waitFor();
+        // inherit output
+        Redirect outputRedirect = Redirect.INHERIT;
+        // redirect error to file
+        Redirect errorRedirect = Redirect.to( forkDirectory.newErrorLog().toFile() );
+        JvmProcess.start( jvmProcessArgs,
+                          outputRedirect,
+                          errorRedirect ).waitFor();
 
-            profilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
-                                                                  query.benchmarkGroup(),
-                                                                  query.benchmark() ) );
+        externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
+                                                                      query.benchmarkGroup(),
+                                                                      query.benchmark(),
+                                                                      clientParameters ) );
 
-            return Results.loadFrom( forkDirectory, Results.Phase.MEASUREMENT );
-        }
+        return Results.loadFrom( forkDirectory, Results.Phase.MEASUREMENT );
     }
 }

@@ -5,40 +5,32 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-
-import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
 class WorkloadTest
@@ -51,7 +43,7 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources ).stream()
+            Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                                                                  .collect( Collectors.groupingBy( Workload::name ) );
 
             List<String> duplicateWorkloadNames = workloadsByName.keySet().stream()
@@ -72,7 +64,7 @@ class WorkloadTest
                                                    .filter( Files::isDirectory ) )
             {
                 workloadDirs.forEach( workloadDir -> assertTrue( containsAtLeastOneConfigurationFile( workloadDir ),
-                        "Workload directory did not contain config file" + workloadDir.toAbsolutePath() ) );
+                                                                 "Workload directory did not contain config file" + workloadDir.toAbsolutePath() ) );
             }
         }
     }
@@ -82,18 +74,21 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Workload.allWorkloads( resources ).forEach( workload ->
-                                                        {
-                                                            String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
-                                                            assertThat( String.format( "Workload with config: %s%n" +
-                                                                                       "Should have name: %s%n" +
-                                                                                       "But had name: %s",
-                                                                                       workload.configFile(),
-                                                                                       expectedWorkloadName,
-                                                                                       workload.name() ),
-                                                                        workload.name(),
-                                                                        equalTo( expectedWorkloadName ) );
-                                                        } );
+            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
+                    .forEach( workload ->
+                              {
+                                  String expectedWorkloadName =
+                                          workload.configFile().getFileName().toString().replace( ".json",
+                                                                                                  "" );
+                                  assertThat( String.format( "Workload with config: %s%n" +
+                                                             "Should have name: %s%n" +
+                                                             "But had name: %s",
+                                                             workload.configFile(),
+                                                             expectedWorkloadName,
+                                                             workload.name() ),
+                                              workload.name(),
+                                              equalTo( expectedWorkloadName ) );
+                              } );
         }
     }
 
@@ -102,7 +97,7 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Workload.allWorkloads( resources ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
+            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
         }
     }
 
@@ -111,7 +106,7 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Workload.allWorkloads( resources ).stream()
+            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                     .flatMap( workload -> workload.queries().stream() )
                     .forEach( query ->
                               {
@@ -133,28 +128,13 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Workload.allWorkloads( resources ).stream()
+            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
                     .flatMap( workload -> workload.queries().stream() )
                     .forEach( query ->
-                    {
-                        assertFalse( query.queryString().value().contains( "CALL " ) );
-                        assertFalse( query.warmupQueryString().value().contains( "CALL " ) );
-                    } );
-        }
-    }
-
-    private ForkDirectory forkDirectoryFor( Query query )
-    {
-        try
-        {
-            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory
-                    .createAt( createTempDirectoryPath( temporaryFolder.absolutePath() ), query.benchmarkGroup() );
-            BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( query.benchmark() );
-            return benchmarkDir.create( UUID.randomUUID().toString(), new ArrayList<>() );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
+                              {
+                                  assertFalse( query.queryString().value().contains( "CALL " ) );
+                                  assertFalse( query.warmupQueryString().value().contains( "CALL " ) );
+                              } );
         }
     }
 
@@ -163,27 +143,30 @@ class WorkloadTest
     {
         try ( Resources resources = new Resources() )
         {
-            Workload.allWorkloads( resources ).forEach( workload ->
-                                                        {
-                                                            for ( Query query : workload.queries() )
-                                                            {
-                                                                ForkDirectory forkDirectory = forkDirectoryFor( query );
-                                                                Parameters parameters = query.parameters();
-                                                                try ( ParametersReader parametersReader = parameters.create( forkDirectory ) )
-                                                                {
-                                                                    for ( int i = 0; i < 10_000 && parametersReader.hasNext(); i++ )
-                                                                    {
-                                                                        assertThat( parametersReader.next(), not( is( nullValue() ) ) );
-                                                                    }
-                                                                }
-                                                                catch ( Exception e )
-                                                                {
-                                                                    throw new RuntimeException( "Could not parse parameters\n" +
-                                                                                                "Workload : " + workload.configFile().toAbsolutePath() + "\n" +
-                                                                                                "Query    : " + query.name(), e );
-                                                                }
-                                                            }
-                                                        } );
+            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
+                    .forEach( workload ->
+                              {
+                                  for ( Query query : workload.queries() )
+                                  {
+                                      Parameters parameters = query.parameters();
+                                      try ( ParametersReader parametersReader = parameters.create( null ) )
+                                      {
+                                          for ( int i = 0; i < 10_000 && parametersReader.hasNext(); i++ )
+                                          {
+                                              assertThat( parametersReader.next(),
+                                                          not( is( nullValue() ) ) );
+                                          }
+                                      }
+                                      catch ( Exception e )
+                                      {
+                                          throw new RuntimeException( "Could not parse parameters\n" +
+                                                                      "Workload : " +
+                                                                      workload.configFile().toAbsolutePath() +
+                                                                      "\n" +
+                                                                      "Query    : " + query.name(), e );
+                                      }
+                                  }
+                              } );
         }
     }
 
@@ -194,7 +177,7 @@ class WorkloadTest
         {
             Path workloadDir = resources.resourceFile( "/test_workloads/test" );
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
-            Workload workload = Workload.fromFile( validWorkloadConfig );
+            Workload workload = Workload.fromFile( validWorkloadConfig, DeploymentMode.EMBEDDED );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
             assertThat( String.format( "Workload with config: %s%n" +
                                        "Should have name: %s%n" +
@@ -286,7 +269,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_empty_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.EMPTY_QUERIES ) );
         }
     }
@@ -298,7 +281,7 @@ class WorkloadTest
         {
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_parameters_file.json" );
 
-            for ( Query query : Workload.fromFile( workloadConfigurationFile ).queries() )
+            for ( Query query : Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ).queries() )
             {
                 WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                            () -> query.parameters().create( null ) );
@@ -315,7 +298,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.QUERY_FILE_NOT_FOUND ) );
         }
     }
@@ -328,7 +311,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_missing_schema_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.SCHEMA_FILE_NOT_FOUND ) );
         }
     }
@@ -341,7 +324,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_parameters_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_PARAM_FILE ) );
         }
     }
@@ -354,7 +337,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERIES ) );
         }
     }
@@ -367,7 +350,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERY_FILE ) );
         }
     }
@@ -380,7 +363,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_query_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERY_NAME ) );
         }
     }
@@ -393,7 +376,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_schema.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_SCHEMA ) );
         }
     }
@@ -406,7 +389,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_no_workload_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_WORKLOAD_NAME ) );
         }
     }
@@ -419,7 +402,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_query_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_QUERY_FIELD ) );
         }
     }
@@ -432,7 +415,7 @@ class WorkloadTest
             Path workloadConfigurationFile = resources.resourceFile( "/test_workloads/test/invalid_workload_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_WORKLOAD_FIELD ) );
         }
     }

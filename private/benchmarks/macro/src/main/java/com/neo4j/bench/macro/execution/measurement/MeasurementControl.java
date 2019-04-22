@@ -7,8 +7,22 @@ package com.neo4j.bench.macro.execution.measurement;
 
 import java.time.Duration;
 
+import static java.time.Duration.ofSeconds;
+
 public interface MeasurementControl
 {
+    static MeasurementControl compositeOf( int minCount, int minSeconds, int maxSeconds )
+    {
+        return and( // minimum duration
+                    ofDuration( ofSeconds( minSeconds ) ),
+
+                    // count or maximum duration, whichever happens first
+                    or( // minimum number of query executions
+                        ofCount( minCount ),
+                        // maximum duration
+                        ofDuration( ofSeconds( maxSeconds ) ) ) );
+    }
+
     static MeasurementControl none()
     {
         return ofCount( 0 );

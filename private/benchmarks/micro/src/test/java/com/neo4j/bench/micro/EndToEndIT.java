@@ -17,6 +17,7 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import com.neo4j.bench.micro.config.BenchmarkConfigFile;
 import com.neo4j.bench.micro.config.SuiteDescription;
 import com.neo4j.bench.micro.config.Validation;
@@ -34,7 +35,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -87,7 +88,7 @@ class EndToEndIT
     void setUp( GraphDatabaseService databaseService )
     {
         HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
-                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+                                                                   .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
         boltUri = URI.create( "bolt://" + address.toString() );
     }
 
@@ -102,16 +103,14 @@ class EndToEndIT
     @Tag( "endtoend" )
     void runReportBenchmarks() throws Exception
     {
-
-        System.out.println("Working Directory = " +
-                System.getProperty("user.dir"));
+        System.out.println( "Working Directory = " + System.getProperty( "user.dir" ) );
 
         // fail fast, check if we have proper artifacts in place
         Path baseDir = Paths.get( System.getProperty( "user.dir" ) ).toAbsolutePath();
         Path runReportScript = baseDir.resolve( RUN_REPORT_BENCHMARKS_SH );
 
         // we can be running in forked process (if run from Maven) look for base dir
-        while ( baseDir != null && !Files.isRegularFile( runReportScript ) )
+        while ( !Files.isRegularFile( runReportScript ) )
         {
             baseDir = baseDir.getParent();
             runReportScript = baseDir.resolve( RUN_REPORT_BENCHMARKS_SH );
@@ -134,14 +133,10 @@ class EndToEndIT
         Files.copy( microJar, workPath.resolve( "micro/target/micro-benchmarks.jar" ) );
 
         // assert if environment is setup
-        List<ProfilerType> profilers = asList( ProfilerType.ASYNC );
-        for ( ProfilerType profiler : profilers )
-        {
-            profiler.assertEnvironmentVariablesPresent( true );
-        }
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC );
 
         assertSysctlParameter( 1, "kernel.perf_event_paranoid" );
-        assertSysctlParameter( 0, "kernel.kptr_restrict");
+        assertSysctlParameter( 0, "kernel.kptr_restrict" );
 
         // setup results store schema
         try ( StoreClient storeClient = StoreClient.connect( boltUri, "", "" ) )
@@ -158,63 +153,65 @@ class EndToEndIT
         // make sure we have a s3 bucket created
         String endpointUrl = String.format( "http://localhost:%d", s3Port );
         EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
-        AmazonS3 client = AmazonS3ClientBuilder.standard().withPathStyleAccessEnabled( true )
-                .withEndpointConfiguration( endpoint )
-                .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) ).build();
+        AmazonS3 client = AmazonS3ClientBuilder.standard()
+                                               .withPathStyleAccessEnabled( true )
+                                               .withEndpointConfiguration( endpoint )
+                                               .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
+                                               .build();
         client.createBucket( "benchmarking.neo4j.com" );
 
         // prepare neo4j config file
         Path neo4jConfig = temporaryFolder.file( "neo4j.config" ).toPath();
-        Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
+        Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
 
         File benchmarkConfig = createBenchmarkConfig();
 
         File tarball = createNeo4jArchive();
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
-                // neo4j_version
-                "3.3.0",
-                // neo4j_commit
-                "neo4j_commit",
-                // neo4j_branch
-                "neo4j_branch",
-                // neo4j_branch_owner
-                "neo4j_branch_owner",
-                // tool_branch
-                "tool_branch",
-                // tool_branch_owner
-                "tool_branch_owner",
-                // tool_commit
-                "tool_commit",
-                // results_store_uri
-                boltUri.toString(),
-                // results_store_user
-                "neo4j",
-                // results_store_password
-                "neo4j",
-                // benchmark_config
-                benchmarkConfig.toString(),
-                // teamcity_build_id
-                "0",
-                // parent_teamcity_build_id
-                "1",
-                // tarball
-                tarball.getAbsolutePath(),
-                // jvm_args
-                "",
-                // jmh_args
-                "",
-                // neo4j_config_path
-                neo4jConfig.toString(),
-                // jvm_path
-                Jvm.defaultJvmOrFail().launchJava(),
-                // with_jfr
-                "true",
-                // with_async
-                "true",
-                // triggered_by
-                "triggered_by",
-                endpointUrl ) )
+                                                                    // neo4j_version
+                                                                    "3.3.0",
+                                                                    // neo4j_commit
+                                                                    "neo4j_commit",
+                                                                    // neo4j_branch
+                                                                    "neo4j_branch",
+                                                                    // neo4j_branch_owner
+                                                                    "neo4j_branch_owner",
+                                                                    // tool_branch
+                                                                    "tool_branch",
+                                                                    // tool_branch_owner
+                                                                    "tool_branch_owner",
+                                                                    // tool_commit
+                                                                    "tool_commit",
+                                                                    // results_store_uri
+                                                                    boltUri.toString(),
+                                                                    // results_store_user
+                                                                    "neo4j",
+                                                                    // results_store_password
+                                                                    "neo4j",
+                                                                    // benchmark_config
+                                                                    benchmarkConfig.toString(),
+                                                                    // teamcity_build_id
+                                                                    "0",
+                                                                    // parent_teamcity_build_id
+                                                                    "1",
+                                                                    // tarball
+                                                                    tarball.getAbsolutePath(),
+                                                                    // jvm_args
+                                                                    "",
+                                                                    // jmh_args
+                                                                    "",
+                                                                    // neo4j_config_path
+                                                                    neo4jConfig.toString(),
+                                                                    // jvm_path
+                                                                    Jvm.defaultJvmOrFail().launchJava(),
+                                                                    // with_jfr
+                                                                    Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
+                                                                    // with_async
+                                                                    Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
+                                                                    // triggered_by
+                                                                    "triggered_by",
+                                                                    endpointUrl ) )
                 .directory( workPath.toFile() )
                 .redirectOutput( Redirect.PIPE )
                 .redirectErrorStream( true );
@@ -237,18 +234,18 @@ class EndToEndIT
 
         BenchmarkConfigFile.write(
                 SuiteDescription.byReflection( new Validation() ),
-                ImmutableSet.of( "com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark" ),
+                ImmutableSet.of( NoOpBenchmark.class.getName() ),
                 false,
                 false,
-                benchmarkConfig.toPath());
+                benchmarkConfig.toPath() );
         return benchmarkConfig;
     }
 
-    private File createNeo4jArchive( ) throws IOException, FileNotFoundException
+    private File createNeo4jArchive() throws IOException
     {
         Path neo4jConfigArchive = Files.write(
                 Files.createTempFile( temporaryFolder.absolutePath().toPath(), "", "" ),
-                Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ) );
+                Arrays.asList( ExternalSettings.additionalJvm.name() + "=-Xmx1g\n" ) );
         File tarball = temporaryFolder.file( "neo4jArchive.tgz" );
 
         try ( FileOutputStream fileOutput = new FileOutputStream( tarball );
@@ -274,16 +271,16 @@ class EndToEndIT
 
     private static void assertSysctlParameter( int expectecKernelParemeterValue, String kernelParameter ) throws IOException
     {
-        ProcessBuilder processBuilder = new ProcessBuilder( "sysctl",kernelParameter ) ;
+        ProcessBuilder processBuilder = new ProcessBuilder( "sysctl", kernelParameter );
         try ( BufferedReader reader =
-                new BufferedReader( new InputStreamReader( processBuilder.start().getInputStream() ) ) )
+                      new BufferedReader( new InputStreamReader( processBuilder.start().getInputStream() ) ) )
         {
             Integer kernelParameterValue = reader.lines()
-            .findFirst()
-            .map( s -> s.split( " = " ) )
-            .flatMap( s -> s.length == 2 ? Optional.of( s[1] ) : Optional.empty() )
-            .map( Integer::parseInt )
-            .orElseThrow( () -> new RuntimeException( "sysctl output is not parsable" ));
+                                                 .findFirst()
+                                                 .map( s -> s.split( " = " ) )
+                                                 .flatMap( s -> s.length == 2 ? Optional.of( s[1] ) : Optional.empty() )
+                                                 .map( Integer::parseInt )
+                                                 .orElseThrow( () -> new RuntimeException( "sysctl output is not parsable" ) );
             assertEquals( expectecKernelParemeterValue, kernelParameterValue.intValue(),
                           format( "incorrect value of kernel parameter %s = %d", kernelParameter, kernelParameterValue ) );
         }
@@ -301,26 +298,25 @@ class EndToEndIT
 
         assertEquals( 1, recordingDirs.size() );
         Path recordingDir = recordingDirs.get( 0 );
-        assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(),anExistingFile() );
+        assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(), anExistingFile() );
 
         // all recordings
         List<Path> recordings = Files.list( recordingDir ).collect( Collectors.toList() );
 
         // all expected recordings
         long expectedRecordingsCount = profilers.stream()
-            .mapToLong( profiler -> profiler.allRecordingTypes().size() )
-            .sum();
+                                                .mapToLong( profiler -> profiler.allRecordingTypes().size() )
+                                                .sum();
 
         long existingRecordingsCount = profilers.stream()
-            .flatMap( profiler -> profiler.allRecordingTypes().stream() )
-            .filter( recording ->
-            {
-                return recordings.stream().anyMatch( file -> file.getFileName().toString().endsWith( recording.extension() ) );
-            })
-            .count();
+                                                .flatMap( profiler -> profiler.allRecordingTypes().stream() )
+                                                .filter( recording ->
+                                                                 recordings.stream()
+                                                                           .map( file -> file.getFileName().toString() )
+                                                                           .anyMatch( filename -> filename.endsWith( recording.extension() ) ) )
+                                                .count();
 
-        assertEquals( expectedRecordingsCount, existingRecordingsCount, "number of existing recordings differs from expected numner of recordings" );
-
+        assertEquals( expectedRecordingsCount, existingRecordingsCount, "number of existing recordings differs from expected number of recordings" );
     }
 
     private static int randomLocalPort() throws IOException
