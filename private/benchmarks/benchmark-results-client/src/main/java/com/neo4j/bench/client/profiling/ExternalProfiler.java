@@ -7,6 +7,7 @@ package com.neo4j.bench.client.profiling;
 
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JvmVersion;
 
@@ -14,36 +15,63 @@ import java.util.List;
 
 public interface ExternalProfiler extends Profiler
 {
-    List<String> jvmInvokeArgs( ForkDirectory forkDirectory,
-                                BenchmarkGroup benchmarkGroup,
-                                Benchmark benchmark );
+    /**
+     * Returns any additional command line arguments, that will prefix the normal command used to launch the process that is being benchmarked.
+     *
+     * @param forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @return command line prefix
+     */
+    List<String> invokeArgs( ForkDirectory forkDirectory,
+                             BenchmarkGroup benchmarkGroup,
+                             Benchmark benchmark,
+                             Parameters additionalParameters );
 
+    /**
+     * Returns additional JVM arguments for launching a Java process.
+     * This is additive, i.e., the returned arguments will be added to the list of JVM arguments that would otherwise already be used.
+     *
+     * @param jvmVersion the version of JVM that was used to launch the benchmarked process
+     * @param forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @return additional JVM arguments
+     */
     List<String> jvmArgs( JvmVersion jvmVersion,
                           ForkDirectory forkDirectory,
                           BenchmarkGroup benchmarkGroup,
-                          Benchmark benchmark );
+                          Benchmark benchmark,
+                          Parameters additionalParameters );
 
     /**
-     * Called before fork process is created.
+     * Will be called before benchmark process is launched.
+     * Any initializing/starting of the profiler should be done here before returning.
+     * This method must be non-blocking, i.e., should start a profiler that runs concurrently with the profiled process.
      *
-     * @param forkDirectory
-     * @param benchmarkGroup
-     * @param benchmark
+     * @param forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
      */
     void beforeProcess( ForkDirectory forkDirectory,
                         BenchmarkGroup benchmarkGroup,
-                        Benchmark benchmark );
+                        Benchmark benchmark,
+                        Parameters additionalParameters );
 
     /**
-     * Called after fork process has terminated.
-     * <p>
-     * Perform cleanup tasks in here, e.g., renaming log files.
+     * Will be called after benchmark process terminates.
+     * Any stopping/dumping related to the profiler should be done here before returning.
      *
-     * @param forkDirectory
-     * @param benchmarkGroup
-     * @param benchmark
+     * @param forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
      */
     void afterProcess( ForkDirectory forkDirectory,
                        BenchmarkGroup benchmarkGroup,
-                       Benchmark benchmark );
+                       Benchmark benchmark,
+                       Parameters additionalParameters );
 }

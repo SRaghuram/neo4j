@@ -23,11 +23,10 @@ import java.util.Map;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class SerializationTest
 {
@@ -355,15 +354,15 @@ public class SerializationTest
         benchmarkGroupBenchmarkMetrics.add( benchmarkGroup2, benchmark2a, metrics, neo4jConfig );
 
         ProfilerRecordings profilerRecordings1A = new ProfilerRecordings()
-                .with( RecordingType.JFR, "bucket/jfrName1a" )
-                .with( RecordingType.ASYNC, "bucket/asyncName1a" )
-                .with( RecordingType.JFR_FLAMEGRAPH, "bucket/jfrFlamegraph1a" )
-                .with( RecordingType.ASYNC_FLAMEGRAPH, "bucket/asyncFlamegraph1a" );
+                .with( RecordingType.JFR, Parameters.NONE, "bucket/jfrName1a" )
+                .with( RecordingType.ASYNC, Parameters.NONE, "bucket/asyncName1a" )
+                .with( RecordingType.JFR_FLAMEGRAPH, Parameters.NONE, "bucket/jfrFlamegraph1a" )
+                .with( RecordingType.ASYNC_FLAMEGRAPH, Parameters.NONE, "bucket/asyncFlamegraph1a" );
         ProfilerRecordings profilerRecordings2A = new ProfilerRecordings()
-                .with( RecordingType.JFR, "bucket/jfrName2a" )
-                .with( RecordingType.ASYNC, "bucket/asyncName2a" )
-                .with( RecordingType.JFR_FLAMEGRAPH, "bucket/jfrFlamegraph2a" )
-                .with( RecordingType.ASYNC_FLAMEGRAPH, "bucket/asyncFlamegraph2a" );
+                .with( RecordingType.JFR, Parameters.NONE, "bucket/jfrName2a" )
+                .with( RecordingType.ASYNC, Parameters.NONE, "bucket/asyncName2a" )
+                .with( RecordingType.JFR_FLAMEGRAPH, Parameters.NONE, "bucket/jfrFlamegraph2a" )
+                .with( RecordingType.ASYNC_FLAMEGRAPH, Parameters.NONE, "bucket/asyncFlamegraph2a" );
 
         benchmarkGroupBenchmarkMetrics.attachProfilerRecording( benchmarkGroup1, benchmark1a, profilerRecordings1A );
         benchmarkGroupBenchmarkMetrics.attachProfilerRecording( benchmarkGroup2, benchmark2a, profilerRecordings2A );
@@ -395,10 +394,29 @@ public class SerializationTest
     {
         // given
         ProfilerRecordings profilerRecordings = new ProfilerRecordings()
-                .with( RecordingType.JFR, "bucket/jfrName" )
-                .with( RecordingType.ASYNC, "bucket/asyncName" )
-                .with( RecordingType.JFR_FLAMEGRAPH, "bucket/jfrFlamegraph" )
-                .with( RecordingType.ASYNC_FLAMEGRAPH, "bucket/asyncFlamegraph" );
+                .with( RecordingType.JFR, Parameters.NONE, "bucket/jfrName" )
+                .with( RecordingType.ASYNC, Parameters.NONE, "bucket/asyncName" )
+                .with( RecordingType.JFR_FLAMEGRAPH, Parameters.NONE, "bucket/jfrFlamegraph" )
+                .with( RecordingType.ASYNC_FLAMEGRAPH, Parameters.NONE, "bucket/asyncFlamegraph" );
+
+        // then
+        shouldSerializeAndDeserialize( profilerRecordings );
+    }
+
+    @Test
+    public void shouldSerializeProfilesWithParameters() throws IOException
+    {
+        Map<String,String> parametersMap = new HashMap<>();
+        parametersMap.put( "k1", "v1" );
+        parametersMap.put( "k2", "v2" );
+        parametersMap.put( "k3", "v3" );
+        Parameters parameters = Parameters.fromMap( parametersMap );
+        // given
+        ProfilerRecordings profilerRecordings = new ProfilerRecordings()
+                .with( RecordingType.JFR, parameters, "bucket/jfrName" )
+                .with( RecordingType.ASYNC, parameters, "bucket/asyncName" )
+                .with( RecordingType.JFR_FLAMEGRAPH, parameters, "bucket/jfrFlamegraph" )
+                .with( RecordingType.ASYNC_FLAMEGRAPH, parameters, "bucket/asyncFlamegraph" );
 
         // then
         shouldSerializeAndDeserialize( profilerRecordings );

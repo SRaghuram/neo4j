@@ -8,6 +8,8 @@ package com.neo4j.bench.client.profiling;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
+import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.JvmVersion;
@@ -24,14 +26,25 @@ import static com.neo4j.bench.client.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.client.results.RunPhase.WARMUP;
 import static com.neo4j.bench.client.util.BenchmarkUtil.appendFile;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDoesNotExist;
-
 import static java.lang.String.format;
 
 public class JfrProfiler implements InternalProfiler, ExternalProfiler
 {
     private static final boolean DUMP_ON_EXIT = false;
-    private static final String JFR_PROFILER_LOG = "jfr-profiler.log";
-    private static final String JFR_LOG = "jfr.log";
+
+    // profiler log -- used by this class only
+    private static String jfrProfilerLogName( Parameters parameters )
+    {
+        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
+        return "jfr-profiler" + additionalParametersString + ".log";
+    }
+
+    // JFR profiler log -- used as redirect for the process that starts the JFR recording
+    private static String jfrLogName( Parameters parameters )
+    {
+        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
+        return "jfr" + additionalParametersString + ".log";
+    }
 
     /*
         // start profiling
@@ -48,13 +61,20 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     */
 
     @Override
-    public List<String> jvmInvokeArgs( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> invokeArgs( ForkDirectory forkDirectory,
+                                    BenchmarkGroup benchmarkGroup,
+                                    Benchmark benchmark,
+                                    Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> jvmArgs( JvmVersion jvmVersion,
+                                 ForkDirectory forkDirectory,
+                                 BenchmarkGroup benchmarkGroup,
+                                 Benchmark benchmark,
+                                 Parameters additionalParameters )
     {
         ArrayList<String> argsTail = Lists.newArrayList(
                 "-XX:+UnlockDiagnosticVMOptions",
@@ -73,7 +93,10 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     }
 
     @Override
-    public void beforeProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void beforeProcess( ForkDirectory forkDirectory,
+                               BenchmarkGroup benchmarkGroup,
+                               Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }
@@ -82,61 +105,83 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     public void onWarmupBegin(
             Jvm jvm,
             ForkDirectory forkDirectory,
-            long pid,
+            Pid pid,
             BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark )
+            Benchmark benchmark,
+            Parameters additionalParameters )
     {
-        startJfr( jvm, forkDirectory, pid, new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, WARMUP, JFR ) );
+        startJfr( jvm,
+                  forkDirectory,
+                  pid,
+                  ProfilerRecordingDescriptor.create( benchmarkGroup, benchmark, WARMUP, JFR, additionalParameters ) );
     }
 
     @Override
     public void onWarmupFinished(
             Jvm jvm,
             ForkDirectory forkDirectory,
-            long pid,
+            Pid pid,
             BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark )
+            Benchmark benchmark,
+            Parameters additionalParameters )
     {
-        stopJfr( jvm, forkDirectory, pid, new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, WARMUP, JFR ) );
+        stopJfr( jvm,
+                 forkDirectory,
+                 pid,
+                 ProfilerRecordingDescriptor.create( benchmarkGroup, benchmark, WARMUP, JFR, additionalParameters ) );
     }
 
     @Override
     public void onMeasurementBegin(
             Jvm jvm,
             ForkDirectory forkDirectory,
-            long pid,
+            Pid pid,
             BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark )
+            Benchmark benchmark,
+            Parameters additionalParameters )
     {
-        startJfr( jvm, forkDirectory, pid, new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, JFR ) );
+        startJfr( jvm,
+                  forkDirectory,
+                  pid,
+                  ProfilerRecordingDescriptor.create( benchmarkGroup, benchmark, MEASUREMENT, JFR, additionalParameters ) );
     }
 
     @Override
     public void onMeasurementFinished(
             Jvm jvm,
             ForkDirectory forkDirectory,
-            long pid,
+            Pid pid,
             BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark )
+            Benchmark benchmark,
+            Parameters additionalParameters )
     {
-        stopJfr( jvm, forkDirectory, pid, new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, JFR ) );
+        stopJfr( jvm,
+                 forkDirectory,
+                 pid,
+                 ProfilerRecordingDescriptor.create( benchmarkGroup, benchmark, MEASUREMENT, JFR, additionalParameters ) );
     }
 
     @Override
-    public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void afterProcess( ForkDirectory forkDirectory,
+                              BenchmarkGroup benchmarkGroup,
+                              Benchmark benchmark,
+                              Parameters additionalParameters )
     {
         // do nothing
     }
 
-    private void startJfr( Jvm jvm, ForkDirectory forkDirectory, long pid, ProfilerRecordingDescriptor recordingDescriptor )
+    private void startJfr( Jvm jvm,
+                           ForkDirectory forkDirectory,
+                           Pid pid,
+                           ProfilerRecordingDescriptor recordingDescriptor )
     {
         try
         {
             // profiler log -- used by this class only
-            Path profilerLog = forkDirectory.findOrCreate( JFR_PROFILER_LOG );
+            Path profilerLog = forkDirectory.findOrCreate( jfrProfilerLogName( recordingDescriptor.additionalParams() ) );
 
-            // JFR profiler log -- used by JFR
-            Path jfrLog = forkDirectory.findOrCreate( JFR_LOG );
+            // JFR profiler log -- used as redirect for the process that starts the JFR recording
+            Path jfrLog = forkDirectory.findOrCreate( jfrLogName( recordingDescriptor.additionalParams() ) );
 
             // -----------------------------------------------------------------------------------------------
             // ------------------------------------- start JFR profiler --------------------------------------
@@ -144,10 +189,10 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
             // NOTE: sometimes interesting things occur after benchmark, e.g., db shutdown takes long time. dumponexit setting helps investigate those cases.
             String[] startJfrCommand = !DUMP_ON_EXIT ? new String[6] : new String[7];
             startJfrCommand[0] = jvm.launchJcmd();
-            startJfrCommand[1] = Long.toString( pid );
+            startJfrCommand[1] = Long.toString( pid.get() );
             startJfrCommand[2] = "JFR.start";
             startJfrCommand[3] = "settings=profile";
-            startJfrCommand[4] = "name=" + recordingDescriptor.name();
+            startJfrCommand[4] = "name=" + recordingDescriptor.sanitizedName();
             startJfrCommand[5] = "dumponexit=" + DUMP_ON_EXIT;
             if ( DUMP_ON_EXIT )
             {
@@ -190,17 +235,20 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
         }
     }
 
-    private void stopJfr( Jvm jvm, ForkDirectory forkDirectory, long pid, ProfilerRecordingDescriptor recordingDescriptor )
+    private void stopJfr( Jvm jvm,
+                          ForkDirectory forkDirectory,
+                          Pid pid,
+                          ProfilerRecordingDescriptor recordingDescriptor )
     {
         try
         {
             Path jfrProfilerOutput = forkDirectory.pathFor( recordingDescriptor );
 
             // profiler log -- used by this class only
-            Path profilerLog = forkDirectory.findOrFail( JFR_PROFILER_LOG );
+            Path profilerLog = forkDirectory.findOrFail( jfrProfilerLogName( recordingDescriptor.additionalParams() ) );
 
-            // JFR profiler log -- used by JFR
-            Path jfrLog = forkDirectory.findOrFail( JFR_LOG );
+            // JFR profiler log -- used as redirect for the process that starts the JFR recording
+            Path jfrLog = forkDirectory.findOrFail( jfrLogName( recordingDescriptor.additionalParams() ) );
 
             assertDoesNotExist( jfrProfilerOutput );
 
@@ -210,9 +258,9 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
 
             String[] dumpJfrCommand = {
                     jvm.launchJcmd(),
-                    Long.toString( pid ),
+                    Long.toString( pid.get() ),
                     "JFR.dump",
-                    format( "name=%s", recordingDescriptor.name() ),
+                    format( "name=%s", recordingDescriptor.sanitizedName() ),
                     format( "filename='%s'", jfrProfilerOutput.toAbsolutePath() )};
 
             appendFile( profilerLog,
@@ -251,9 +299,9 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
 
             String[] stopJfrCommand = {
                     "jcmd",
-                    Long.toString( pid ),
+                    Long.toString( pid.get() ),
                     "JFR.stop",
-                    format( "name=%s", recordingDescriptor.name() )};
+                    format( "name=%s", recordingDescriptor.sanitizedName() )};
 
             appendFile( profilerLog,
                         Instant.now(),
@@ -283,9 +331,8 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                         "Profiling complete: " + jfrProfilerOutput.toAbsolutePath(),
                         "-------------------------------" );
 
-            recordingDescriptor.profiler()
-                               .maybeSecondaryRecordingCreator()
-                               .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
+            JFR.maybeSecondaryRecordingCreator()
+               .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
         }
         catch ( Exception e )
         {

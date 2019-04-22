@@ -11,7 +11,7 @@ public class S3Util
     {
         for ( String s3Path : s3Paths )
         {
-            if ( s3Path.startsWith( "http" ) || s3Path.startsWith( "s3" ) )
+            if ( s3Path.startsWith( "http://" ) || s3Path.startsWith( "s3://" ) )
             {
                 throw new RuntimeException( "S3 path should not include protocol: " + s3Path );
             }

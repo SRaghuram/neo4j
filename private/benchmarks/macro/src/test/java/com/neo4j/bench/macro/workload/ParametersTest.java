@@ -10,28 +10,33 @@ import com.neo4j.bench.client.util.Resources;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Map;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ParametersTest
 {
     @Rule
     public final ExpectedException exception = ExpectedException.none();
 
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
-    public void shouldParseParameters()
+    public void shouldParseParameters() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Path parametersFile = resources.resourceFile( "/test_workloads/test/parameters/valid_param_types.txt" );
+            Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/valid_param_types.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )
             {
                 assertTrue( reader.hasNext() );
@@ -106,22 +111,22 @@ public class ParametersTest
     }
 
     @Test
-    public void shouldFailToParseParameterFilesWithInvalidParameterTypes()
+    public void shouldFailToParseParameterFilesWithInvalidParameterTypes() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Path parametersFile = resources.resourceFile( "/test_workloads/test/parameters/invalid_param_types.txt" );
+            Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_types.txt" );
             BenchmarkUtil.assertException( RuntimeException.class,
                                            () -> new FileParametersReader( parametersFile ) );
         }
     }
 
     @Test
-    public void shouldFailToParseParameterFilesWithInvalidColumnCounts()
+    public void shouldFailToParseParameterFilesWithInvalidColumnCounts() throws IOException
     {
-        try ( Resources resources = new Resources() )
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Path parametersFile = resources.resourceFile( "/test_workloads/test/parameters/invalid_param_column_numbers.txt" );
+            Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_column_numbers.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )
             {
                 BenchmarkUtil.assertException( RuntimeException.class, reader::hasNext );
