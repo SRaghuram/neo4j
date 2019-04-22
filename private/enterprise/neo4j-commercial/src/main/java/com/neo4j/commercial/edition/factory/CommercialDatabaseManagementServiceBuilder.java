@@ -7,48 +7,31 @@ package com.neo4j.commercial.edition.factory;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
 
-import java.io.File;
+import java.util.function.Function;
 
 import org.neo4j.common.Edition;
-import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
+import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class CommercialDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
 {
-    @Override
-    protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createDatabaseCreator( File storeDir, GraphDatabaseFactoryState state )
-    {
-        return new CommercialDatabaseCreator( storeDir, state );
-    }
-
     @Override
     public String getEdition()
     {
         return Edition.COMMERCIAL.toString();
     }
 
-    private static class CommercialDatabaseCreator implements DatabaseManagementServiceInternalBuilder.DatabaseCreator
+    @Override
+    protected DatabaseInfo getDatabaseInfo()
     {
-        private final File storeDir;
-        private final GraphDatabaseFactoryState state;
+        return DatabaseInfo.COMMERCIAL;
+    }
 
-        CommercialDatabaseCreator( File storeDir, GraphDatabaseFactoryState state )
-        {
-            this.storeDir = storeDir;
-            this.state = state;
-        }
-
-        @Override
-        public DatabaseManagementService newDatabase( Config config )
-        {
-            return new DatabaseManagementServiceFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
-                    .initFacade( storeDir, config, state.databaseDependencies(), new GraphDatabaseFacade() );
-        }
+    @Override
+    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+    {
+        return CommercialEditionModule::new;
     }
 }
