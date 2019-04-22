@@ -24,7 +24,7 @@ import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
@@ -107,9 +107,8 @@ public class BookmarkIT
 
     private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
-        GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
         DatabaseManagementServiceFactory facadeFactory = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        managementService = facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), state.databaseDependencies() );
+        managementService = facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
         return (GraphDatabaseAPI) managementService.database(
                 GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
