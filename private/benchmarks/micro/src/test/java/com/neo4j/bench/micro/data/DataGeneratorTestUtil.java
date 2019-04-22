@@ -62,7 +62,7 @@ public class DataGeneratorTestUtil
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
-        config.neo4jConfig().writeAsProperties( NEO4J_CONFIG );
+        config.neo4jConfig().writeToFile( NEO4J_CONFIG );
 
         generator.generate( storeDir.toPath(), NEO4J_CONFIG );
 

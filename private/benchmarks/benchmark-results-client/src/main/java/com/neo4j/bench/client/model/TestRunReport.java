@@ -36,7 +36,7 @@ public class TestRunReport
                 new TestRun(),
                 new BenchmarkConfig(),
                 Sets.newHashSet( new Project() ),
-                new Neo4jConfig(),
+                Neo4jConfig.empty(),
                 new Environment(),
                 new BenchmarkGroupBenchmarkMetrics(),
                 new BenchmarkTool(),
