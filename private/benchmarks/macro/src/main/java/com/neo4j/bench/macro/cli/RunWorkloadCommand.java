@@ -35,8 +35,8 @@ import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.macro.execution.Options;
-import com.neo4j.bench.macro.execution.database.Database;
+import com.neo4j.bench.macro.execution.Neo4jDeployment;
+import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
@@ -59,6 +59,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
+import static com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.load_csv_file_url_root;
@@ -136,6 +137,20 @@ public class RunWorkloadCommand implements Runnable
             required = true )
     private int measurementCount;
 
+    private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_MIN_MEASUREMENT_SECONDS},
+            title = "Min measurement execution duration, in seconds",
+            required = false )
+    private int minMeasurementSeconds = 30; // 30 seconds
+
+    private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_MAX_MEASUREMENT_SECONDS},
+            title = "Max measurement execution duration, in seconds",
+            required = false )
+    private int maxMeasurementSeconds = 10 * 60; // 10 minutes
+
     private static final String CMD_FORKS = "--forks";
     @Option( type = OptionType.COMMAND,
             name = {CMD_FORKS},
@@ -181,7 +196,7 @@ public class RunWorkloadCommand implements Runnable
             description = "How to execute: run VS plan",
             title = "Run vs Plan",
             required = false )
-    private Options.ExecutionMode executionMode = Options.ExecutionMode.EXECUTE;
+    private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
     private static final String CMD_ERROR_POLICY = "--error-policy";
     @Option( type = OptionType.COMMAND,
@@ -295,7 +310,7 @@ public class RunWorkloadCommand implements Runnable
             required = false )
     private boolean skipFlameGraphs;
 
-    static final String CMD_TRIGGERED_BY = "--triggered-by";
+    private static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TRIGGERED_BY},
             description = "Specifies user that triggered this build",
@@ -303,10 +318,20 @@ public class RunWorkloadCommand implements Runnable
             required = true )
     private String triggeredBy;
 
+    private static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_NEO4J_DEPLOYMENT},
+            description = "Valid values: 'embedded' or 'server:<path_to_neo4j_server>'",
+            title = "Deployment mode",
+            required = true )
+    private String deploymentMode;
+
     @Override
     public void run()
     {
-        try ( Resources resources = new Resources() )
+        Neo4jDeployment neo4jDeployment = Neo4jDeployment.parse( deploymentMode );
+
+        try ( Resources resources = new Resources( workDir.toPath() ) )
         {
             List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
             for ( ProfilerType profiler : profilers )
@@ -315,7 +340,7 @@ public class RunWorkloadCommand implements Runnable
                 profiler.assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
             }
 
-            Workload workload = Workload.fromName( workloadName, resources );
+            Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.mode() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir.toPath(), workload.benchmarkGroup() );
             Jvm jvm = Jvm.bestEffort( this.jvmFile );
             List<String> jvmArgsList = jvmArgsFromString( this.jvmArgs );
@@ -331,20 +356,24 @@ public class RunWorkloadCommand implements Runnable
                                                  .mergeWith( Neo4jConfig.fromFile( neo4jConfigPath ) )
                                                  .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
                                                  .removeSetting( load_csv_file_url_root );
+            if ( executionMode.equals( ExecutionMode.PLAN ) )
+            {
+                neo4jConfig = neo4jConfig.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
+            }
 
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 
             System.out.println( "Verifying store..." );
             try ( Store store = Store.createFrom( storeDir.toPath() ) )
             {
-                Database.verifySchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
+                EmbeddedDatabase.verifySchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
                 if ( recreateSchema )
                 {
                     System.out.println( "Preparing to recreate schema..." );
-                    Database.recreateSchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
+                    EmbeddedDatabase.recreateSchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
-                Database.verifyStoreFormat( store.graphDbDirectory().toFile() );
+                EmbeddedDatabase.verifyStoreFormat( store );
             }
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
@@ -358,7 +387,13 @@ public class RunWorkloadCommand implements Runnable
             {
                 try
                 {
-                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( groupDir,
+                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment.launcherFor( neo4jEdition,
+                                                                                                           warmupCount,
+                                                                                                           measurementCount,
+                                                                                                           Duration.ofSeconds( minMeasurementSeconds ),
+                                                                                                           Duration.ofSeconds( maxMeasurementSeconds ),
+                                                                                                           jvm ),
+                                                                              groupDir,
                                                                               query,
                                                                               Store.createFrom( storeDir.toPath().toAbsolutePath() ),
                                                                               neo4jEdition,
@@ -366,11 +401,10 @@ public class RunWorkloadCommand implements Runnable
                                                                               profilers,
                                                                               jvm,
                                                                               measurementForkCount,
-                                                                              warmupCount,
-                                                                              measurementCount,
                                                                               unit,
                                                                               conciseMetricsPrinter,
-                                                                              jvmArgsList );
+                                                                              jvmArgsList,
+                                                                              resources );
 
                     BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
                     queryResults.add( query.benchmarkGroup(),
@@ -380,10 +414,9 @@ public class RunWorkloadCommand implements Runnable
                     results.addAll( queryResults );
 
                     List<Path> planFiles = benchmarkDir.plans();
-                    // TODO this check can maybe be removed in the future, e.g., if it is too restrictive, but for now it is a useful sanity check
+                    // Just sanity check to avoid unnecessary/redundant plan creation
                     if ( planFiles.size() != 1 )
                     {
-                        // sanity check to avoid unnecessary/redundant plan creation
                         throw new RuntimeException( "Expected to find exactly one exported plan but found: " + planFiles.size() );
                     }
                     // current policy is to retrieve one/any of the serialized plans,
@@ -500,7 +533,7 @@ public class RunWorkloadCommand implements Runnable
     public static List<String> argsFor(
             Runtime runtime,
             Planner planner,
-            Options.ExecutionMode executionMode,
+            ExecutionMode executionMode,
             String workloadName,
             Store store,
             Path neo4jConfig,
@@ -518,6 +551,8 @@ public class RunWorkloadCommand implements Runnable
             int warmupCount,
             int measurementCount,
             int measurementForkCount,
+            Duration minMeasurementDuration,
+            Duration maxMeasurementDuration,
             Path resultsJson,
             TimeUnit unit,
             ErrorPolicy errorPolicy,
@@ -526,7 +561,9 @@ public class RunWorkloadCommand implements Runnable
             String jvmArgs,
             boolean recreateSchema,
             Path profilerRecordingsOutput,
-            boolean skipFlameGraphs )
+            boolean skipFlameGraphs,
+            Neo4jDeployment neo4jDeployment,
+            String triggeredBy )
     {
         ArrayList<String> args = Lists.newArrayList(
                 "run-workload",
@@ -542,6 +579,10 @@ public class RunWorkloadCommand implements Runnable
                 Integer.toString( warmupCount ),
                 CMD_MEASUREMENT,
                 Integer.toString( measurementCount ),
+                CMD_MIN_MEASUREMENT_SECONDS,
+                Long.toString( minMeasurementDuration.getSeconds() ),
+                CMD_MAX_MEASUREMENT_SECONDS,
+                Long.toString( maxMeasurementDuration.getSeconds() ),
                 CMD_FORKS,
                 Integer.toString( measurementForkCount ),
                 CMD_TIME_UNIT,
@@ -573,7 +614,11 @@ public class RunWorkloadCommand implements Runnable
                 CMD_TEAMCITY_BUILD,
                 Long.toString( teamcityBuild ),
                 CMD_JVM_ARGS,
-                jvmArgs );
+                jvmArgs,
+                CMD_NEO4J_DEPLOYMENT,
+                neo4jDeployment.toString(),
+                CMD_TRIGGERED_BY,
+                triggeredBy );
         if ( recreateSchema )
         {
             args.add( CMD_RECREATE_SCHEMA );

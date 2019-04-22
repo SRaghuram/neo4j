@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import com.neo4j.bench.macro.execution.database.Schema;
 
 import java.io.BufferedReader;
@@ -41,12 +42,12 @@ public class Workload
     private final Path configFile;
     private final Schema schema;
 
-    public static Workload fromName( String workloadName, Resources resources )
+    public static Workload fromName( String workloadName, Resources resources, DeploymentMode deployment )
     {
-        return fromFile( workloadFileForName( workloadName, resources ) );
+        return fromFile( workloadFileForName( workloadName, resources, deployment ), deployment );
     }
 
-    private static Path workloadFileForName( String workloadName, Resources resources )
+    private static Path workloadFileForName( String workloadName, Resources resources, DeploymentMode deployment )
     {
         List<Path> allWorkloadFiles = allWorkloadFiles( resources );
         return allWorkloadFiles.stream()
@@ -54,15 +55,15 @@ public class Workload
                                .findFirst()
                                .orElseThrow( () -> new RuntimeException( "No workload found for name: " + workloadName + "\n" +
                                                                          "Valid workloads:\n\t" +
-                                                                         allWorkloads( resources ).stream()
-                                                                                                  .map( Workload::name )
-                                                                                                  .collect( joining( "\n\t" ) ) ) );
+                                                                         allWorkloads( resources, deployment ).stream()
+                                                                                                              .map( Workload::name )
+                                                                                                              .collect( joining( "\n\t" ) ) ) );
     }
 
-    static List<Workload> allWorkloads( Resources resources )
+    static List<Workload> allWorkloads( Resources resources, DeploymentMode deployment )
     {
         return allWorkloadFiles( resources ).stream()
-                                            .map( Workload::fromFile )
+                                            .map( path -> Workload.fromFile( path, deployment ) )
                                             .collect( toList() );
     }
 
@@ -96,10 +97,10 @@ public class Workload
 
     private static Path workloadsDir( Resources resources )
     {
-        return resources.resourceFile( "/workloads" );
+        return resources.getResourceFile( "/workloads" );
     }
 
-    static Workload fromFile( Path workloadConfigFile )
+    static Workload fromFile( Path workloadConfigFile, DeploymentMode deployment )
     {
         try
         {
@@ -108,10 +109,13 @@ public class Workload
             Map<String,Object> config = deserializeGroupConfigJson( workloadConfigFile );
             assertConfigHasAllAndOnlyExpectedKeys( config );
             String workloadName = ((String) config.get( NAME )).trim();
-            List<Query> queries = AdditionalQueries.queriesFor( workloadName );
+            List<Query> queries = AdditionalQueries.queriesFor( workloadName, deployment );
             if ( config.containsKey( QUERIES ) )
             {
-                List<Query> staticQueries = getQueries( (List<Map<String,Object>>) config.get( QUERIES ), workloadName, workloadConfigFile.getParent() );
+                List<Query> staticQueries = getQueries( (List<Map<String,Object>>) config.get( QUERIES ),
+                                                        workloadName,
+                                                        workloadConfigFile.getParent(),
+                                                        deployment );
                 queries.addAll( staticQueries );
             }
             // if there are no "additional queries", it is compulsory that static queries are configured.
@@ -136,10 +140,13 @@ public class Workload
         }
     }
 
-    private static List<Query> getQueries( List<Map<String,Object>> queryConfigurations, String workloadName, Path workloadDir )
+    private static List<Query> getQueries( List<Map<String,Object>> queryConfigurations,
+                                           String workloadName,
+                                           Path workloadDir,
+                                           DeploymentMode deployment )
     {
         return queryConfigurations.stream()
-                                  .map( queryConfig -> Query.from( queryConfig, workloadName, workloadDir ) )
+                                  .map( queryConfig -> Query.from( queryConfig, workloadName, workloadDir, deployment ) )
                                   .collect( toList() );
     }
 

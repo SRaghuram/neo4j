@@ -11,7 +11,7 @@ set -u
 
 if [ $# -lt 31 ] ; then
     echo "Expected at least 31 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy"
+    echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment"
     exit -1
 fi
 
@@ -47,12 +47,13 @@ planner="${28}"
 runtime="${29}"
 triggered_by="${30}"
 error_policy="${31}"
+deployment="${32}"
 
 # here we are checking for optional AWS endpoint URL, 
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
-if [[ $# -eq 32 ]]; then
-	AWS_EXTRAS="--endpoint-url=${32}"
+if [[ $# -eq 33 ]]; then
+	AWS_EXTRAS="--endpoint-url=${33}"
 fi
 if [[ -z "$JAVA_HOME" ]]; then
     echo "JAVA_HOME not set, bye, bye"
@@ -99,6 +100,7 @@ echo "Path to the jar                                                : ${jar_pat
 echo "Profiler Recording directory                                   : ${profiler_recording_output_dir}"
 echo "Triggered by                                                   : ${triggered_by}"
 echo "Error policy                                                   : ${error_policy}"
+echo "Neo4j Directory                                                : ${deployment}"
 
 function runExport {
     #shellcheck disable=SC2068
@@ -128,9 +130,9 @@ function runExport {
             --jvm-args "${jvm_args}" \
             --planner "${planner}" \
             --runtime "${runtime}" \
-            --skip-flamegraphs \
             --profiler-recordings-dir "${profiler_recording_output_dir}" \
             --triggered-by "${triggered_by}" \
+            --neo4j-deployment "${deployment}" \
             $@
 }
 

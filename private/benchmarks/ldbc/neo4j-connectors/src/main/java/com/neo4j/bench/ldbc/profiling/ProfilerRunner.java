@@ -12,10 +12,13 @@ import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.temporal.TemporalUtil;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
+import com.neo4j.bench.client.process.JpsPid;
+import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.profiling.ExternalProfiler;
 import com.neo4j.bench.client.profiling.InternalProfiler;
+import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Jvm;
 
 import java.io.File;
@@ -25,7 +28,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -34,13 +36,11 @@ import static com.ldbc.driver.client.ResultsDirectory.BenchmarkPhase.MEASUREMENT
 import static com.ldbc.driver.client.ResultsDirectory.BenchmarkPhase.MEASUREMENT_FINISHED;
 import static com.ldbc.driver.client.ResultsDirectory.BenchmarkPhase.WARMUP;
 import static com.ldbc.driver.client.ResultsDirectory.BenchmarkPhase.WARMUP_FINISHED;
-import static com.ldbc.driver.util.FileUtils.inputStringToString;
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.time.temporal.ChronoUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class ProfilerRunner
@@ -59,47 +59,80 @@ public class ProfilerRunner
     {
         try
         {
-            Optional<Integer> maybePid = processPid( start, Duration.of( 1, MINUTES ), processName );
-            if ( !maybePid.isPresent() )
+            // If process is still alive, reset start time and wait another timeout
+            JpsPid jpsPid = JpsPid.tryFindFor( jvm, now(), Duration.of( 10, SECONDS ), processName );
+            if ( !jpsPid.pid().isPresent() )
             {
                 throw new RuntimeException( "Process '" + processName + "' not found!!" );
             }
+            Pid pid = new Pid( jpsPid.pid().get() );
 
-            waitForWarmupToBegin( start, forkDirectory, processName );
+            waitForWarmupToBegin( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin..." );
-                                           internalProfiler.onWarmupBegin( jvm, forkDirectory, maybePid.get(), benchmarkGroup, benchmark );
+                                           internalProfiler.onWarmupBegin( jvm,
+                                                                           forkDirectory,
+                                                                           pid,
+                                                                           benchmarkGroup,
+                                                                           benchmark,
+                                                                           Parameters.NONE );
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin - DONE" );
                                        } );
 
-            waitForWarmupToComplete( start, forkDirectory, processName );
+            waitForWarmupToComplete( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished..." );
-                                           internalProfiler.onWarmupFinished( jvm, forkDirectory, maybePid.get(), benchmarkGroup, benchmark );
+                                           internalProfiler.onWarmupFinished( jvm,
+                                                                              forkDirectory,
+                                                                              pid,
+                                                                              benchmarkGroup,
+                                                                              benchmark,
+                                                                              Parameters.NONE );
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished - DONE" );
                                        } );
 
-            waitForMeasurementToBegin( start, forkDirectory, processName );
+            waitForMeasurementToBegin( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin..." );
-                                           internalProfiler.onMeasurementBegin( jvm, forkDirectory, maybePid.get(), benchmarkGroup, benchmark );
+                                           internalProfiler.onMeasurementBegin( jvm,
+                                                                                forkDirectory,
+                                                                                pid,
+                                                                                benchmarkGroup,
+                                                                                benchmark,
+                                                                                Parameters.NONE );
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin - DONE" );
                                        } );
 
-            waitForMeasurementToComplete( start, forkDirectory, processName );
+            waitForMeasurementToComplete( jvm, start, forkDirectory, processName );
             // Race condition here
             assertProcessAlive( process );
             internalProfilers.forEach( internalProfiler ->
                                        {
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished..." );
-                                           internalProfiler.onMeasurementFinished( jvm, forkDirectory, maybePid.get(), benchmarkGroup, benchmark );
+                                           internalProfiler.onMeasurementFinished( jvm,
+                                                                                   forkDirectory,
+                                                                                   pid,
+                                                                                   benchmarkGroup,
+                                                                                   benchmark,
+                                                                                   Parameters.NONE );
                                            System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished - DONE" );
                                        } );
             // Race condition here
             assertProcessAlive( process );
+
+            for ( InternalProfiler internalProfiler : internalProfilers )
+            {
+                ProfilerType profilerType = ProfilerType.typeOf( internalProfiler );
+                if ( !profilerType.isExternal() )
+                {
+                    // profiler recording cleanup should only happen once
+                    // if profiler is both internal and external, cleanup will happen in afterTrial()
+                    forkDirectory.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
+                }
+            }
         }
         catch ( Exception e )
         {
@@ -116,7 +149,7 @@ public class ProfilerRunner
         externalProfilers.forEach( externalProfiler ->
                                    {
                                        System.out.println( "Before Process (START):  " + externalProfiler.description() );
-                                       externalProfiler.beforeProcess( forkDirectory, benchmarkGroup, benchmark );
+                                       externalProfiler.beforeProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
                                        System.out.println( "Before Process (FINISH): " + externalProfiler.description() );
                                    } );
     }
@@ -130,17 +163,25 @@ public class ProfilerRunner
         externalProfilers.forEach( externalProfiler ->
                                    {
                                        System.out.println( "After Process (START):  " + externalProfiler.description() );
-                                       externalProfiler.afterProcess( forkDirectory, benchmarkGroup, benchmark );
+                                       externalProfiler.afterProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
                                        System.out.println( "After Process (FINISH): " + externalProfiler.description() );
                                    } );
+
+        for ( ExternalProfiler externalProfiler : externalProfilers )
+        {
+            ProfilerType profilerType = ProfilerType.typeOf( externalProfiler );
+            forkDirectory.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
+        }
     }
 
     private static void waitForWarmupToBegin(
+            Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
             String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
     {
         waitFor(
+                jvm,
                 start,
                 forkDirectory,
                 processName,
@@ -149,11 +190,13 @@ public class ProfilerRunner
     }
 
     private static void waitForWarmupToComplete(
+            Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
             String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
     {
         waitFor(
+                jvm,
                 start,
                 forkDirectory,
                 processName,
@@ -162,11 +205,13 @@ public class ProfilerRunner
     }
 
     private static void waitForMeasurementToBegin(
+            Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
             String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
     {
         waitFor(
+                jvm,
                 start,
                 forkDirectory,
                 processName,
@@ -175,11 +220,13 @@ public class ProfilerRunner
     }
 
     private static void waitForMeasurementToComplete(
+            Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
             String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
     {
         waitFor(
+                jvm,
                 start,
                 forkDirectory,
                 processName,
@@ -188,6 +235,7 @@ public class ProfilerRunner
     }
 
     private static void waitFor(
+            Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
             String processName,
@@ -201,7 +249,7 @@ public class ProfilerRunner
         while ( !validEndPhases.contains( phase ) )
         {
             Thread.sleep( 1000 );
-            start = checkTimeoutAndMaybeReset( start, processName );
+            start = checkTimeoutAndMaybeReset( jvm, start, processName );
             phase = ResultsDirectory.phase( resultsDir );
         }
         System.out.println( soFar( start ) + " - Fork status: " + phase );
@@ -233,13 +281,14 @@ public class ProfilerRunner
         }
     }
 
-    private static Instant checkTimeoutAndMaybeReset( Instant start, String processName )
+    private static Instant checkTimeoutAndMaybeReset( Jvm jvm, Instant start, String processName )
     {
         Duration durationWaited = between( start, now() );
         if ( durationWaited.compareTo( CHECK_ALIVE_TIMEOUT ) >= 0 )
         {
             // If process is still alive, reset start time and wait another timeout
-            boolean processIsAlive = processPid( now(), Duration.of( 10, SECONDS ), processName ).isPresent();
+            JpsPid jpsPid = JpsPid.tryFindFor( jvm, now(), Duration.of( 10, SECONDS ), processName );
+            boolean processIsAlive = jpsPid.pid().isPresent();
             if ( processIsAlive )
             {
                 System.out.println( "Process `" + processName + "` is still alive" );
@@ -266,67 +315,5 @@ public class ProfilerRunner
     private static String durationString( Duration duration )
     {
         return new TemporalUtil().milliDurationToString( duration.toMillis() );
-    }
-
-    private static Optional<Integer> processPid( Instant start, Duration timeout, String processName )
-    {
-        try
-        {
-            while ( true )
-            {
-                Optional<Integer> maybePid = processPid( processName );
-                if ( maybePid.isPresent() )
-                {
-                    return maybePid;
-                }
-                checkTimeout( start, timeout );
-                Thread.sleep( 1000 );
-            }
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error retrieving PID for process: " + processName, e );
-        }
-    }
-
-    private static Optional<Integer> processPid( String processName ) throws IOException, InterruptedException
-    {
-        String[] command = {"jps", "-v"};
-        Process process = new ProcessBuilder( command ).start();
-        int resultCode = process.waitFor();
-        if ( resultCode != 0 )
-        {
-            throw new RuntimeException( "Bad things happened when invoking JPS. Code: " + resultCode );
-        }
-        String processOutput = inputStringToString( process.getInputStream() );
-        return (processOutput.contains( processName ))
-               ? Optional.of( pidFromJpsOutput( processOutput, processName ) )
-               : Optional.empty();
-    }
-
-    private static int pidFromJpsOutput( String jpsOutput, String processName )
-    {
-        String sanitizedJpsOutput = BenchmarkUtil.lessWhiteSpace( jpsOutput );
-        int indexOfProcessName = sanitizedJpsOutput.indexOf( "-Dname=" + processName );
-        // remove anything that appears after the process name we want
-        String[] jpsOutputTokens = sanitizedJpsOutput.substring( 0, indexOfProcessName ).split( " " );
-        // take the last number token, the one that appears just before our process name
-        List<Integer> pids = Arrays.stream( jpsOutputTokens )
-                                   .filter( ProfilerRunner::isPid )
-                                   .map( Integer::parseInt )
-                                   .collect( toList() );
-        return pids.get( pids.size() - 1 );
-    }
-
-    private static boolean isPid( String value )
-    {
-        try
-        {
-            return Integer.parseInt( value ) >= 0;
-        }
-        catch ( NumberFormatException e )
-        {
-            return false;
-        }
     }
 }
