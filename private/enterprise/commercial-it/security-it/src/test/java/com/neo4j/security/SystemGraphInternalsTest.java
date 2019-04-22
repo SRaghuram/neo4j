@@ -24,7 +24,7 @@ import java.io.File;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -59,7 +59,7 @@ class SystemGraphInternalsTest
     {
         TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         File storeDir = testDirectory.storeDir();
-        final DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        final DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         managementService = builder.newDatabaseManagementService();
         database = managementService.database( DEFAULT_DATABASE_NAME );

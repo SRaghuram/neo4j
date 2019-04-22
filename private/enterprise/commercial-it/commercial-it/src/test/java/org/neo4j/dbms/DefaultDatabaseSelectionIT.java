@@ -18,7 +18,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
@@ -168,7 +168,7 @@ class DefaultDatabaseSelectionIT
         return managementService.database( databaseName );
     }
 
-    private DatabaseManagementServiceInternalBuilder getDatabaseBuilder()
+    private DatabaseManagementServiceBuilder getDatabaseBuilder()
     {
         return new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )

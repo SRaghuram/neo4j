@@ -41,7 +41,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -89,7 +89,7 @@ public class QueryLoggerIT
     @Rule
     public final ExpectedException expectedException = ExpectedException.none();
 
-    private DatabaseManagementServiceInternalBuilder databaseBuilder;
+    private DatabaseManagementServiceBuilder databaseBuilder;
     private static final String QUERY = "CREATE (n:Foo {bar: 'baz'})";
 
     private File logsDirectory;

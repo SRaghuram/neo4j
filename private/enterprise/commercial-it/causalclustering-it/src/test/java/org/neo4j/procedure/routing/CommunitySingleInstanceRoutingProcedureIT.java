@@ -18,7 +18,6 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -121,7 +120,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        DatabaseManagementServiceInternalBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );

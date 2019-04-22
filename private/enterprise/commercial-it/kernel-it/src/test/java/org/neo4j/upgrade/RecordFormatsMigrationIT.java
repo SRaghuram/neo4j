@@ -29,7 +29,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
@@ -158,7 +158,7 @@ class RecordFormatsMigrationIT
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private DatabaseManagementServiceInternalBuilder getGraphDatabaseBuilder()
+    private DatabaseManagementServiceBuilder getGraphDatabaseBuilder()
     {
         return new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )

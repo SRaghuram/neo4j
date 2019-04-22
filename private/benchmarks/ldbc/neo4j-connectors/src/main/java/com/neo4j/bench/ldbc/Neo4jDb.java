@@ -44,7 +44,7 @@ import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
@@ -449,10 +449,10 @@ public class Neo4jDb extends Db
         return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
     }
 
-    private static DatabaseManagementServiceInternalBuilder newDbBuilder( File dbDir, File configFile )
+    private static DatabaseManagementServiceBuilder newDbBuilder( File dbDir, File configFile )
     {
         File storeDir = dbDir.getParentFile();
-        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );
@@ -460,7 +460,7 @@ public class Neo4jDb extends Db
         return builder;
     }
 
-    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
+    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
         String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ":" );
@@ -472,7 +472,7 @@ public class Neo4jDb extends Db
                 port );
     }
 
-    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
+    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
                 .setConfig( Neo4jDb.boltConnector().enabled, "true" )

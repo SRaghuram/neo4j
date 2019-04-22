@@ -40,7 +40,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -162,7 +161,7 @@ public class StoreUpgradeIT
             store.prepareDirectory( testDir.databaseDir() );
 
             DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -234,7 +233,7 @@ public class StoreUpgradeIT
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
             DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -261,7 +260,7 @@ public class StoreUpgradeIT
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
             DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
@@ -331,7 +330,7 @@ public class StoreUpgradeIT
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
             DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();
@@ -380,7 +379,7 @@ public class StoreUpgradeIT
             }
 
             DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.newDatabaseManagementService();

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -94,7 +94,7 @@ class CommercialGraphDatabaseBackupIT
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static DatabaseManagementServiceInternalBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
+    private static DatabaseManagementServiceBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
     {
         return new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) );

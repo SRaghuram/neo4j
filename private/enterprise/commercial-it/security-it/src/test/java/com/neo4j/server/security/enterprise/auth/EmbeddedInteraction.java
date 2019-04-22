@@ -19,7 +19,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -44,11 +44,11 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
         TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
-        DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         init( builder, config );
     }
 
-    private void init( DatabaseManagementServiceInternalBuilder builder, Map<String,String> config ) throws Throwable
+    private void init( DatabaseManagementServiceBuilder builder, Map<String,String> config ) throws Throwable
     {
         builder.setConfig( new BoltConnector( "bolt" ).type, "BOLT" );
         builder.setConfig( new BoltConnector( "bolt" ).enabled, "true" );

@@ -53,7 +53,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
@@ -1093,7 +1093,7 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
     {
-        DatabaseManagementServiceInternalBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path );
+        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path );
 
         settings.putIfAbsent( online_backup_enabled, TRUE );
         for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )

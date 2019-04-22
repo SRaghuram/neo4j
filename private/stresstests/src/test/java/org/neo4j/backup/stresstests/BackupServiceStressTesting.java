@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helper.Workload;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
@@ -66,7 +66,7 @@ class BackupServiceStressTesting
         File storeDir = testDirectory.storeDir( DEFAULT_DATABASE_NAME );
         File backupsDir = testDirectory.directory( "backups" );
 
-        DatabaseManagementServiceInternalBuilder databaseManagementServiceInternalBuilder = new CommercialDatabaseManagementServiceBuilder()
+        DatabaseManagementServiceBuilder databaseManagementServiceBuilder = new CommercialDatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( online_backup_enabled, TRUE )
                 .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
@@ -80,7 +80,7 @@ class BackupServiceStressTesting
         DatabaseManagementService managementService = null;
         try
         {
-            managementService = databaseManagementServiceInternalBuilder.newDatabaseManagementService();
+            managementService = databaseManagementServiceBuilder.newDatabaseManagementService();
             dbRef.set( managementService.database( DEFAULT_DATABASE_NAME ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );

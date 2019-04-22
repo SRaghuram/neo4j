@@ -42,7 +42,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.helpers.collection.MapUtil;
@@ -521,7 +521,7 @@ public class TransactionGuardIT
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystemRule.get() ) );
 
-        DatabaseManagementServiceInternalBuilder databaseBuilder = new TestCommercialDatabaseManagementServiceBuilder()
+        DatabaseManagementServiceBuilder databaseBuilder = new TestCommercialDatabaseManagementServiceBuilder()
                 .setClock( fakeClock )
                 .setExternalDependencies( dependencies )
                 .setFileSystem( fileSystemRule.get() )

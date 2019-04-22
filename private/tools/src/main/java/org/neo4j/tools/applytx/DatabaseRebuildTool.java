@@ -20,7 +20,6 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
@@ -90,7 +89,7 @@ public class DatabaseRebuildTool
         File toPath = getTo( args );
         String databaseName = toPath.getName();
         File storeDir = toPath.getParentFile();
-        DatabaseManagementServiceInternalBuilder dbBuilder = newDbBuilder( storeDir, databaseName, args );
+        DatabaseManagementServiceBuilder dbBuilder = newDbBuilder( storeDir, databaseName, args );
         boolean interactive = args.getBoolean( "i" );
         if ( interactive && !args.orphans().isEmpty() )
         {
@@ -143,9 +142,9 @@ public class DatabaseRebuildTool
         return DatabaseLayout.of( sourceDirectory, () -> Optional.of( txRootDirectory ) );
     }
 
-    private static DatabaseManagementServiceInternalBuilder newDbBuilder( File storeDir, String databaseName, Args args )
+    private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        DatabaseManagementServiceInternalBuilder builder = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {
@@ -166,7 +165,7 @@ public class DatabaseRebuildTool
         private final DatabaseLayout databaseLayout;
         private final DatabaseManagementService managementService;
 
-        Store( DatabaseManagementServiceInternalBuilder dbBuilder, String databaseName )
+        Store( DatabaseManagementServiceBuilder dbBuilder, String databaseName )
         {
             managementService = dbBuilder.newDatabaseManagementService();
             this.db = (GraphDatabaseAPI) managementService.database( databaseName );
@@ -181,7 +180,7 @@ public class DatabaseRebuildTool
         }
     }
 
-    private ConsoleInput console( final DatabaseLayout fromLayout, final DatabaseManagementServiceInternalBuilder dbBuilder, String databaseName,
+    private ConsoleInput console( final DatabaseLayout fromLayout, final DatabaseManagementServiceBuilder dbBuilder, String databaseName,
             InputStream in, Listener<PrintStream> prompt, LifeSupport life )
     {
         // We must have this indirection here since in order to perform CC (one of the commands) we must shut down

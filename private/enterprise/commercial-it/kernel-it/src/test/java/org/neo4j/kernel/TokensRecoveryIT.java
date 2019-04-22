@@ -14,7 +14,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -99,7 +99,7 @@ class TokensRecoveryIT
     private GraphDatabaseService startDatabase( EphemeralFileSystemAbstraction fs )
     {
         TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
-        DatabaseManagementServiceInternalBuilder builder = factory.setFileSystem( fs ).newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = factory.setFileSystem( fs ).newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( online_backup_enabled, "false" );
         builder.setConfig( GraphDatabaseSettings.check_point_policy, "periodic" );
         managementService = builder.newDatabaseManagementService();
