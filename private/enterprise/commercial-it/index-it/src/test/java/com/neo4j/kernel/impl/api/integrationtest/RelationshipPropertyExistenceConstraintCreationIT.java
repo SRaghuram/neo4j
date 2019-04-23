@@ -14,7 +14,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.DefaultRelationTypeSchemaDescriptor;
+import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.RelExistenceConstraintDescriptor;
@@ -22,7 +22,7 @@ import org.neo4j.internal.schema.constraints.RelExistenceConstraintDescriptor;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
 public class RelationshipPropertyExistenceConstraintCreationIT
-        extends AbstractConstraintCreationIT<ConstraintDescriptor,DefaultRelationTypeSchemaDescriptor>
+        extends AbstractConstraintCreationIT<ConstraintDescriptor,RelationTypeSchemaDescriptor>
 {
     @Override
     int initializeLabelOrRelType( TokenWrite tokenWrite, String name ) throws KernelException
@@ -32,7 +32,7 @@ public class RelationshipPropertyExistenceConstraintCreationIT
 
     @Override
     ConstraintDescriptor createConstraint( SchemaWrite writeOps,
-            DefaultRelationTypeSchemaDescriptor descriptor ) throws Exception
+            RelationTypeSchemaDescriptor descriptor ) throws Exception
     {
         return writeOps.relationshipPropertyExistenceConstraintCreate( descriptor );
     }
@@ -44,7 +44,7 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     }
 
     @Override
-    RelExistenceConstraintDescriptor newConstraintObject( DefaultRelationTypeSchemaDescriptor descriptor )
+    RelExistenceConstraintDescriptor newConstraintObject( RelationTypeSchemaDescriptor descriptor )
     {
         return ConstraintDescriptorFactory.existsForSchema( descriptor );
     }
@@ -75,7 +75,7 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     }
 
     @Override
-    DefaultRelationTypeSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
+    RelationTypeSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
         return SchemaDescriptorFactory.forRelTypeNoIndex( typeId, propertyKeyId );
     }
