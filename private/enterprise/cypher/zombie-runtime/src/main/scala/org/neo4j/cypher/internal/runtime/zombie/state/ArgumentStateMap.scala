@@ -19,10 +19,8 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
     * Update the [[ArgumentState]] related to `argument` and decrement
     * the argument counter.
-    *
-    * @param takeLock specifies if the state updates should be performed under a lock, defaults to true
     */
-  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit, takeLock: Boolean = true): Unit
+  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit): Unit
 
   /**
     * Filter the input morsel using the [[ArgumentState]] related to `argument`.

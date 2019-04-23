@@ -26,8 +26,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   private val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
 
   override def update(morsel: MorselExecutionContext,
-                      onState: (STATE, MorselExecutionContext) => Unit,
-                      takeLock: Boolean): Unit = {
+                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,

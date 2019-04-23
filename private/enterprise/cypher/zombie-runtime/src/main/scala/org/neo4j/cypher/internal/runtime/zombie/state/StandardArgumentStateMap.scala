@@ -22,8 +22,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   private val controllers = mutable.Map[Long, StandardStateController[STATE]]()
 
   override def update(morsel: MorselExecutionContext,
-                      onState: (STATE, MorselExecutionContext) => Unit,
-                      takeLock: Boolean): Unit = {
+                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,

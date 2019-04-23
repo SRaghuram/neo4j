@@ -13,7 +13,7 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
   /**
     * Perform {{{f}}} on each element in the buffer.
     *
-    * Not that there are no guarantees that an element observed
+    * Note that there are no guarantees that an element observed
     * by [[foreach]] will not be taken.
     */
   def foreach(f: T => Unit): Unit

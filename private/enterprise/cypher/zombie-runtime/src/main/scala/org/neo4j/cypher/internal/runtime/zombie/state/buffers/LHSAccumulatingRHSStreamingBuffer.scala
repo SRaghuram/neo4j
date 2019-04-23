@@ -169,7 +169,7 @@ class LHSAccumulatingRHSStreamingBuffer[LHS_ACC <: MorselAccumulator](tracker: Q
         // Increment for a morsel in the RHS buffer
         incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(acc.argumentRowId))
         tracker.increment()
-      }, takeLock = false)
+      })
     }
 
     override def initiate(argumentRowId: Long): Unit = {
