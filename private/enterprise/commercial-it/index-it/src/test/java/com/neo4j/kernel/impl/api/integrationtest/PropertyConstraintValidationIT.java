@@ -42,7 +42,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabel;
 import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabelNoIndex;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelType;
+import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelTypeNoIndex;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 @RunWith( Suite.class )
@@ -210,7 +210,7 @@ public class PropertyConstraintValidationIT
             commit();
 
             SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-            schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelType( relTypeId, propertyKeyId ) );
+            schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelTypeNoIndex( relTypeId, propertyKeyId ) );
             commit();
         }
 
