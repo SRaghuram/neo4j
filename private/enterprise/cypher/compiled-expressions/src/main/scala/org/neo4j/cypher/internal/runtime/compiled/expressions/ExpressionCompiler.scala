@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import java.util
+import java.util.concurrent.atomic.AtomicLong
 import java.util.regex
 
 import org.neo4j.codegen.api.CodeGeneration.compileClass
@@ -2673,6 +2674,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 object ExpressionCompiler {
   def defaultGenerator(slots: SlotConfiguration): ExpressionCompiler = new DefaultExpressionCompiler(slots)
 
+  private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
   private val DB_ACCESS = load("dbAccess")
   private val CURSORS = load("cursors")
@@ -2692,7 +2694,7 @@ object ExpressionCompiler {
 
   private val PACKAGE_NAME = "org.neo4j.codegen"
 
-  private def className(): String = "Expression" + System.nanoTime()
+  private def className(): String = "Expression" + COUNTER.getAndIncrement()
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
