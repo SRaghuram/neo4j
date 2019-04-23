@@ -26,7 +26,7 @@ public class CommercialDbmsRule extends EmbeddedDbmsRule
     @Override
     protected DatabaseManagementServiceBuilder newFactory()
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() );
     }
 
     @Override

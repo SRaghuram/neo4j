@@ -7,6 +7,7 @@ package com.neo4j.commercial.edition.factory;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
 
+import java.io.File;
 import java.util.function.Function;
 
 import org.neo4j.common.Edition;
@@ -17,6 +18,11 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 
 public class CommercialDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
 {
+    public CommercialDatabaseManagementServiceBuilder( File databaseRootDir )
+    {
+        super( databaseRootDir );
+    }
+
     @Override
     public String getEdition()
     {

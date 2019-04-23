@@ -41,10 +41,10 @@ class CommercialDatabaseManagementServiceBuilderIT
         File factoryDir = testDirectory.storeDir();
         File databasesDir = testDirectory.directory( "my_databases" );
 
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( factoryDir )
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( factoryDir )
                 .setConfig( databases_root_path, databasesDir.toString() )
-                .setConfig( online_backup_enabled, FALSE ).newDatabaseManagementService();
+                .setConfig( online_backup_enabled, FALSE )
+                .build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
@@ -65,7 +65,7 @@ class CommercialDatabaseManagementServiceBuilderIT
     {
         File factoryDir = testDirectory.storeDir();
 
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( factoryDir );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( factoryDir ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

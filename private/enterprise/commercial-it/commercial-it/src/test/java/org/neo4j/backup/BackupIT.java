@@ -1093,7 +1093,7 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
     {
-        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path );
+        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( path );
 
         settings.putIfAbsent( online_backup_enabled, TRUE );
         for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )
@@ -1101,7 +1101,7 @@ class BackupIT
             builder.setConfig( entry.getKey(), entry.getValue() );
         }
 
-        managementService = builder.newDatabaseManagementService();
+        managementService = builder.build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         databases.add( db );
         return db;

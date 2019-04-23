@@ -19,11 +19,13 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.setting;
 
 public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFactory
 {
@@ -39,30 +41,29 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( rootDirectory )
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies )
-                .newEmbeddedDatabaseBuilder( rootDirectory )
-                .setConfig( augmentConfig( originalConfig, rootDirectory ) ).newDatabaseManagementService();
+                .setConfig( augmentConfig( originalConfig, rootDirectory ) ).build();
         return new TemporaryDatabase( managementService );
     }
 
-    private static Map<String,String> augmentConfig( Config originalConfig, File rootDirectory )
+    private static Map<Setting<?>,String> augmentConfig( Config originalConfig, File rootDirectory )
     {
-        Map<String,String> augmentedParams = new HashMap<>();
+        Map<Setting<?>,String> augmentedParams = new HashMap<>();
 
         // use the same record format as specified by the original config
-        augmentedParams.put( GraphDatabaseSettings.record_format.name(), originalConfig.get( GraphDatabaseSettings.record_format ) );
+        augmentedParams.put( GraphDatabaseSettings.record_format, originalConfig.get( GraphDatabaseSettings.record_format ) );
 
         // make all database and transaction log directories live in the specified root directory
-        augmentedParams.put( GraphDatabaseSettings.databases_root_path.name(), rootDirectory.getAbsolutePath() );
-        augmentedParams.put( GraphDatabaseSettings.transaction_logs_root_path.name(), rootDirectory.getAbsolutePath() );
+        augmentedParams.put( GraphDatabaseSettings.databases_root_path, rootDirectory.getAbsolutePath() );
+        augmentedParams.put( GraphDatabaseSettings.transaction_logs_root_path, rootDirectory.getAbsolutePath() );
 
         /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
-        augmentedParams.putIfAbsent( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
-        augmentedParams.putIfAbsent( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
-        augmentedParams.putIfAbsent( "metrics.enabled", Settings.FALSE );
-        augmentedParams.putIfAbsent( "metrics.csv.enabled", Settings.FALSE );
+        augmentedParams.put( GraphDatabaseSettings.pagecache_warmup_enabled, FALSE );
+        augmentedParams.put( OnlineBackupSettings.online_backup_enabled, FALSE );
+        augmentedParams.put( setting( "metrics.enabled", Settings.BOOLEAN, "" ), Settings.FALSE );
+        augmentedParams.put( setting( "metrics.csv.enabled", Settings.BOOLEAN, "" ), Settings.FALSE );
 
         return augmentedParams;
     }

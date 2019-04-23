@@ -64,8 +64,7 @@ class CommercialSystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, new DatabaseId( DEFAULT_DATABASE_NAME ) );
@@ -189,7 +188,7 @@ class CommercialSystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
-            managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( disabledSystemDbDirectory );
+            managementService = new TestCommercialDatabaseManagementServiceBuilder( disabledSystemDbDirectory ).build();
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );

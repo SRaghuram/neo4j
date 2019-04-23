@@ -54,10 +54,10 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
-                .newDatabaseManagementService();
+                .build();
         database = managementService.database( CUSTOM_DATABASE_ID.name() );
         databaseManager = getDatabaseManager();
     }

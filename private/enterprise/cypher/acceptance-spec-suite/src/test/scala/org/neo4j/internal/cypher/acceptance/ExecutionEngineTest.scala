@@ -420,9 +420,9 @@ order by a.COL1""".format(a, b))
 
   test("createEngineWithSpecifiedParserVersion") {
     val managementService = new TestDatabaseManagementServiceBuilder()
-      .newImpermanentDatabaseBuilder()
+      .impermanent()
       .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
-      .newDatabaseManagementService()
+      .build()
     val db: GraphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
     createEngine(db)
 
@@ -947,11 +947,11 @@ order by a.COL1""".format(a, b))
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
     FileUtils.deleteRecursively(new File("target/readonly"))
-    val old = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( new File( "target/readonly" ) )
+    val old = new TestCommercialDatabaseManagementServiceBuilder(new File( "target/readonly" )).build()
     old.shutdown()
-    val managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( new File( "target/readonly" ))
+    val managementService = new TestCommercialDatabaseManagementServiceBuilder( new File( "target/readonly" ))
       .setConfig(GraphDatabaseSettings.read_only, "true")
-      .newDatabaseManagementService()
+      .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       val engine = createEngine(db)

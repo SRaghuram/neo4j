@@ -30,9 +30,10 @@ class PageCacheFlushTracingTest
     void tracePageCacheFlushProgress()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
-                                            .newEmbeddedDatabaseBuilder( testDirectory.directory() )
-                                            .setConfig( GraphDatabaseSettings.tracer, "verbose" ).newDatabaseManagementService();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( testDirectory.directory() )
+                .setInternalLogProvider( logProvider )
+                .setConfig( GraphDatabaseSettings.tracer, "verbose" )
+                .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {

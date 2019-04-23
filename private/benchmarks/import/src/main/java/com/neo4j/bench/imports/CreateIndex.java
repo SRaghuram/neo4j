@@ -30,9 +30,8 @@ public class CreateIndex
 {
     private void run( String storeDirString, List<String> indexPatterns )
     {
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( new File( storeDirString ) )
-                .newDatabaseManagementService();
+        DatabaseManagementService managementService =
+                new CommercialDatabaseManagementServiceBuilder( new File( storeDirString ) ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

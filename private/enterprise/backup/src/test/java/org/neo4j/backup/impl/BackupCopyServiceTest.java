@@ -178,7 +178,7 @@ class BackupCopyServiceTest
 
     private static void startAndStopDb( File databaseDir )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( databaseDir );
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {

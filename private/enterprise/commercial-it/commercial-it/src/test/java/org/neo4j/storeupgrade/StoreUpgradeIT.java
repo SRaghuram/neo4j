@@ -160,11 +160,10 @@ public class StoreUpgradeIT
         {
             store.prepareDirectory( testDir.databaseDir() );
 
-            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
-            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
@@ -232,11 +231,10 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
-            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
-            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
             managementService.shutdown();
@@ -259,12 +257,11 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
-            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
             managementService.shutdown();
@@ -329,11 +326,10 @@ public class StoreUpgradeIT
             // migrate the store using a single instance
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
-            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( pagecache_memory, "8m" );
-            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            DatabaseManagementService managementService = builder.build();
             GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
@@ -378,11 +374,10 @@ public class StoreUpgradeIT
                 }
             }
 
-            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
-            DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
-            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try

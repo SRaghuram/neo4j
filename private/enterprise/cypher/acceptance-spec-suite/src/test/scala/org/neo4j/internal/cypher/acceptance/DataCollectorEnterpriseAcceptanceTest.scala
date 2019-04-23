@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.io.File
+
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.cypher.{ExecutionEngineFunSuite, GraphIcing}
 import org.neo4j.internal.collector.DataCollectorMatchers._
@@ -12,7 +14,8 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with GraphIcing {
 
-  override protected def createDatabaseFactory(): TestDatabaseManagementServiceBuilder = new TestCommercialDatabaseManagementServiceBuilder()
+  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder =
+    new TestCommercialDatabaseManagementServiceBuilder(databaseRootDir)
 
   test("should retrieve node existence constraints") {
     // Given

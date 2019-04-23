@@ -38,7 +38,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

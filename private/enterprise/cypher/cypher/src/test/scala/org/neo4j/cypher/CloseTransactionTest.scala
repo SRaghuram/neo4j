@@ -40,7 +40,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   override protected def initTest(): Unit = {
     super.initTest()
-    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    managementService = new TestDatabaseManagementServiceBuilder().impermanent().build()
     db = managementService.database(DEFAULT_DATABASE_NAME)
   }
 

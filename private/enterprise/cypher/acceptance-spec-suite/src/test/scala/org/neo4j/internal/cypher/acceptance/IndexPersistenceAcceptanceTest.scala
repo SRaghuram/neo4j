@@ -35,11 +35,11 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
   }
 
   private def startGraphDatabaseWithConfig(storeDir: File, config: Map[Setting[_], String]): Unit = {
-    val builder = graphDatabaseFactory().newEmbeddedDatabaseBuilder(storeDir)
+    val builder = graphDatabaseFactory(storeDir)
     config.foreach {
       case (setting, settingValue) => builder.setConfig(setting, settingValue)
     }
-    managementService = builder.newDatabaseManagementService()
+    managementService = builder.build()
     graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }

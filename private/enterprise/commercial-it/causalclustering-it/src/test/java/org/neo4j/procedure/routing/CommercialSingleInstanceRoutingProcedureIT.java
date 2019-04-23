@@ -7,13 +7,15 @@ package org.neo4j.procedure.routing;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
+import java.io.File;
+
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 
 class CommercialSingleInstanceRoutingProcedureIT extends CommunitySingleInstanceRoutingProcedureIT
 {
     @Override
-    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory()
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File databaseRootDir )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( databaseRootDir );
     }
 }

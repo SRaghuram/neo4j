@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
+import java.io.File
+
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -54,7 +56,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
     )
   }
 
-  override protected def createDatabaseFactory(): TestDatabaseManagementServiceBuilder = new TestCommercialDatabaseManagementServiceBuilder()
+  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = new TestCommercialDatabaseManagementServiceBuilder(databaseRootDir)
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport {

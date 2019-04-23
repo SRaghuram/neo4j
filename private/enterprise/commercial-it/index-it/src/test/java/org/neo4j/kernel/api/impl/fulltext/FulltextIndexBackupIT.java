@@ -77,9 +77,9 @@ class FulltextIndexBackupIT
     @BeforeEach
     void setUp()
     {
-        dbManagementService = new TestCommercialDatabaseManagementServiceBuilder()
-                    .newEmbeddedDatabaseBuilder( dir.storeDir() )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
+        dbManagementService = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
+                .build();
         db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -194,9 +194,9 @@ class FulltextIndexBackupIT
 
     private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        backupManagementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( backupDatabaseDir )
-                .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() ).newDatabaseManagementService();
+        backupManagementService = new TestCommercialDatabaseManagementServiceBuilder( backupDatabaseDir )
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() )
+                .build();
         return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }
 

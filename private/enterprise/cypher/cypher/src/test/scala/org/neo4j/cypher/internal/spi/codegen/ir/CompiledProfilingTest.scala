@@ -67,7 +67,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
   }
 
   test("should profile hash join") {
-    val managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    val managementService = new TestDatabaseManagementServiceBuilder().impermanent().build()
     //given
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     try {

@@ -165,8 +165,10 @@ class RestoreDatabaseCommandIT
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
 
         // then
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( toStoreLayout.storeDirectory() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        DatabaseManagementService managementService =
+                new TestDatabaseManagementServiceBuilder( toStoreLayout.storeDirectory() )
+                        .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                        .build();
         GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction ignored = copiedDb.beginTx() )
@@ -283,11 +285,10 @@ class RestoreDatabaseCommandIT
     private static GraphDatabaseService createDatabase( File databasePath )
     {
         File storeDir = databasePath.getParentFile();
-        managementService = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+        managementService = new DatabaseManagementServiceBuilder( storeDir ).setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
                 .setConfig( default_database, databasePath.getName() )
-                .newDatabaseManagementService();
+                .build();
         return managementService.database( databasePath.getName() );
     }
 
@@ -295,12 +296,11 @@ class RestoreDatabaseCommandIT
     {
         File storeDir = databaseLayout.getStoreLayout().storeDirectory();
         String txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath();
-        managementService =
-                new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir ).setConfig(
+        managementService = new DatabaseManagementServiceBuilder( storeDir ).setConfig(
                         OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                         .setConfig( transaction_logs_root_path, txRootDirectory )
                         .setConfig( default_database, databaseLayout.getDatabaseName() )
-                        .newDatabaseManagementService();
+                        .build();
         return managementService.database( databaseLayout.getDatabaseName() );
     }
 

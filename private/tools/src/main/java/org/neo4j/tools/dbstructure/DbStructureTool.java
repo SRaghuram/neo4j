@@ -83,7 +83,7 @@ public class DbStructureTool
 
     private static DatabaseManagementService instantiateGraphDatabase( String dbDir )
     {
-        return new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( new File( dbDir ) );
+        return new CommercialDatabaseManagementServiceBuilder( new File( dbDir ) ).build();
     }
 
     private static void traceDb( String generator, String generatedClazzPackage, String generatedClazzName, GraphDatabaseService graph, Appendable output )

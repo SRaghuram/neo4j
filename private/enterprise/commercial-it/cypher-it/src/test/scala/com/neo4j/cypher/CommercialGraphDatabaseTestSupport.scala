@@ -5,6 +5,8 @@
  */
 package com.neo4j.cypher
 
+import java.io.File
+
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -14,7 +16,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder
 trait CommercialGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
   self: CypherFunSuite =>
 
-  override protected def graphDatabaseFactory(): TestDatabaseManagementServiceBuilder = {
-    new TestCommercialDatabaseManagementServiceBuilder()
+  override protected def graphDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
+    new TestCommercialDatabaseManagementServiceBuilder(databaseRootDir)
   }
 }

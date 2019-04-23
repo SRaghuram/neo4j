@@ -43,17 +43,14 @@ public class SecurityLogIT
         final AdversarialFileSystemAbstraction evilFileSystem = new AdversarialFileSystemAbstraction( adversary );
 
         final DatabaseManagementServiceBuilder builder =
-                new TestCommercialDatabaseManagementServiceBuilder()
-                        .setFileSystem( evilFileSystem )
-                        .setInternalLogProvider( logProvider )
-                        .newImpermanentDatabaseBuilder()
+                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( evilFileSystem ).setInternalLogProvider( logProvider ).impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, TRUE );
 
         // When
         RuntimeException runtimeException =
                 Assertions.assertThrows( RuntimeException.class, () ->
                 {
-                    DatabaseManagementService managementService = builder.newDatabaseManagementService();
+                    DatabaseManagementService managementService = builder.build();
                     managementService.database( DEFAULT_DATABASE_NAME );
                 } );
 

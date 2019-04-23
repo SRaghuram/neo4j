@@ -446,13 +446,13 @@ public class Neo4jDb extends Db
 
     public static DatabaseManagementService newDb( File dbDir, File configFile )
     {
-        return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
+        return newDbBuilder( dbDir, configFile ).build();
     }
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File dbDir, File configFile )
     {
         File storeDir = dbDir.getParentFile();
-        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder( storeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

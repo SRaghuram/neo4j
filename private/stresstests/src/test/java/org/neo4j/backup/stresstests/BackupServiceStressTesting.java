@@ -66,9 +66,8 @@ class BackupServiceStressTesting
         File storeDir = testDirectory.storeDir( DEFAULT_DATABASE_NAME );
         File backupsDir = testDirectory.directory( "backups" );
 
-        DatabaseManagementServiceBuilder databaseManagementServiceBuilder = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( online_backup_enabled, TRUE )
+        DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
+                new CommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, TRUE )
                 .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
                 .setConfig( keep_logical_logs, txPrune )
                 .setConfig( logical_log_rotation_threshold, "1M" );
@@ -80,7 +79,7 @@ class BackupServiceStressTesting
         DatabaseManagementService managementService = null;
         try
         {
-            managementService = databaseManagementServiceBuilder.newDatabaseManagementService();
+            managementService = databaseManagementServiceBuilder.build();
             dbRef.set( managementService.database( DEFAULT_DATABASE_NAME ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );

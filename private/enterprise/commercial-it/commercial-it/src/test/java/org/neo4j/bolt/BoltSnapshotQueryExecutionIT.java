@@ -74,12 +74,11 @@ public class BoltSnapshotQueryExecutionIT
 
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
-                .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
+        managementService =
+                new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) ).setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
-                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();
         connectDirver();

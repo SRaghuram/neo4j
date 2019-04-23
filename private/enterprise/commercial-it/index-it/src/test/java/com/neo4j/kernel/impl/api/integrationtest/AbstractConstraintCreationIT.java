@@ -9,6 +9,7 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -89,9 +90,9 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( databaseRootDir );
     }
 
     @Test

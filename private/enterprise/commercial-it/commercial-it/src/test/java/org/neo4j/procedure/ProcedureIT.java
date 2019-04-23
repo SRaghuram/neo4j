@@ -94,9 +94,9 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
-                record_id_batch_size, "1" ).newDatabaseManagementService();
+                record_id_batch_size, "1" ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }
@@ -588,10 +588,10 @@ public class ProcedureIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
-                .setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider(
+                logProvider ).impermanent()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newDatabaseManagementService();
+                .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When

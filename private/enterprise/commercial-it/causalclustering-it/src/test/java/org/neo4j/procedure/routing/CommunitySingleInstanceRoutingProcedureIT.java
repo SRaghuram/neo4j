@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.List;
 
@@ -98,9 +99,9 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
     }
 
-    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory()
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File databaseRootDir )
     {
-        return new TestDatabaseManagementServiceBuilder();
+        return new TestDatabaseManagementServiceBuilder( databaseRootDir );
     }
 
     private String boltAddress()
@@ -120,7 +121,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );
@@ -130,7 +131,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         {
             builder.setConfig( connector.advertised_address, advertisedBoltAddress.toString() );
         }
-        managementService = builder.newDatabaseManagementService();
+        managementService = builder.build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

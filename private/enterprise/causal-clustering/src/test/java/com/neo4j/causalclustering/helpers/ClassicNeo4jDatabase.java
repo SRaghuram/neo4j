@@ -131,12 +131,12 @@ public class ClassicNeo4jDatabase
         public ClassicNeo4jDatabase build() throws IOException
         {
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
-            managementService = new TestDatabaseManagementServiceBuilder()
-                        .setFileSystem( fileSystem )
-                        .newEmbeddedDatabaseBuilder( databasesRootDirectoryAbsolute )
-                        .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                        .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                        .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() ).newDatabaseManagementService();
+            managementService = new TestDatabaseManagementServiceBuilder( databasesRootDirectoryAbsolute )
+                    .setFileSystem( fileSystem )
+                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
+                    .build();
             GraphDatabaseService db = managementService.database( databaseId.name() );
 
             for ( int i = 0; i < (nrOfNodes / 2); i++ )

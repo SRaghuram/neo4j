@@ -62,9 +62,7 @@ class BoltMetricsIT
     {
         // Given
         File metricsFolder = testDirectory.directory( "metrics" );
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
@@ -73,7 +71,7 @@ class BoltMetricsIT
                 .setConfig( MetricsSettings.csvEnabled, "true" )
                 .setConfig( MetricsSettings.csvInterval, "100ms" )
                 .setConfig( MetricsSettings.csvPath, metricsFolder.getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         // When

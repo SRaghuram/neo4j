@@ -154,7 +154,7 @@ public class HalfAppliedConstraintRecoveryIT
 
         // WHEN
         DatabaseManagementService managementService =
-                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
+                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).impermanent().build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
@@ -256,7 +256,7 @@ public class HalfAppliedConstraintRecoveryIT
         // WHEN
         {
             DatabaseManagementService managementService =
-                    new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
+                    new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).impermanent().build();
             GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
@@ -325,8 +325,8 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs )
-                .setMonitors( monitors ).newImpermanentService();
+        managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs ).setMonitors( monitors ).impermanent().build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -354,8 +354,7 @@ public class HalfAppliedConstraintRecoveryIT
     private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator ) throws Exception
     {
         // A separate db altogether
-        DatabaseManagementService managementService =
-                new TestCommercialDatabaseManagementServiceBuilder().newImpermanentService();
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

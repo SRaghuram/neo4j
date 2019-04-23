@@ -75,7 +75,7 @@ public class LucenePartitionedIndexStressTesting
         System.out.println( String.format( "Starting database at: %s", storeDir ) );
 
         populators = Executors.newFixedThreadPool( NUMBER_OF_POPULATORS );
-        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        managementService = new TestDatabaseManagementServiceBuilder( storeDir ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

@@ -37,7 +37,7 @@ public class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        databaseManagementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        databaseManagementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
     }
 
     @AfterEach

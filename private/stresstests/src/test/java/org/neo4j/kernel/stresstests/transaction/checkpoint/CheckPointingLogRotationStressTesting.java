@@ -80,12 +80,12 @@ public class CheckPointingLogRotationStressTesting
         }
 
         System.out.println( "2/6\tStarting database..." );
-        DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( storeDir );
         DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )
                 .setConfig( GraphDatabaseSettings.check_point_interval_time, CHECK_POINT_INTERVAL_MINUTES + "m" )
-                .setConfig( GraphDatabaseSettings.tracer, "timer" ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.tracer, "timer" ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         System.out.println("3/6\tWarm up db...");

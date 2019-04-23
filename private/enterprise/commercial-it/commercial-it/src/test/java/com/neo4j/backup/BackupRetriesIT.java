@@ -144,9 +144,10 @@ class BackupRetriesIT
     private GraphDatabaseAPI startDb()
     {
         File databaseDirectory = testDirectory.storeDir();
-        managementService = new TestCommercialDatabaseManagementServiceBuilder( logProvider )
-                .newEmbeddedDatabaseBuilder( databaseDirectory )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( databaseDirectory )
+                .setUserLogProvider( logProvider )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
+                .build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         return db;

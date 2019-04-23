@@ -155,7 +155,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
                         getResource( "/neo4j/neo4j_sf001.conf" ),
                         "localhost",
                         0
-                ).newDatabaseManagementService();
+                ).build();
             GraphDatabaseService graphDatabase = managementService.database( DEFAULT_DATABASE_NAME );
             ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
             return new Neo4jConnectionState( managementService, graphDatabase,

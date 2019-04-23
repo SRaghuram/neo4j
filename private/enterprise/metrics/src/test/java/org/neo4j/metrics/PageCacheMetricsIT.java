@@ -51,13 +51,12 @@ class PageCacheMetricsIT
     void setUp()
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( MetricsSettings.metricsEnabled, Settings.FALSE  )
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( MetricsSettings.metricsEnabled, Settings.FALSE  )
                 .setConfig( MetricsSettings.neoPageCacheEnabled, Settings.TRUE  )
                 .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
                 .setConfig( MetricsSettings.csvInterval, "100ms" )
                 .setConfig( MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

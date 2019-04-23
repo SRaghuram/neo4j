@@ -119,7 +119,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
     {
         if ( null != dbDir )
         {
-            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).newDatabaseManagementService();
+            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             LdbcIndexer.waitForIndexesToBeOnline( db );
             registerShutdownHook( managementService );

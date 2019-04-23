@@ -100,11 +100,12 @@ class ExpressionEngineConfigurationTest
     private GraphDatabaseService withEngineAndLimit( String engine, int limit )
     {
 
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().
-                setInternalLogProvider( logProvider )
-                .newImpermanentDatabaseBuilder()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .impermanent()
+                .setInternalLogProvider( logProvider )
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )
-                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, Integer.toString( limit ) ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, Integer.toString( limit ) )
+                .build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 

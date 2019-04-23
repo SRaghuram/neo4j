@@ -307,8 +307,8 @@ public class PropertyConstraintValidationIT
         @Override
         protected DatabaseManagementService createDatabaseService()
         {
-            return new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( testDir.getFileSystem() )
-                        .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
+            return new TestCommercialDatabaseManagementServiceBuilder( testDir.storeDir() ).setFileSystem( testDir.getFileSystem() )
+                        .build();
         }
 
         @Test

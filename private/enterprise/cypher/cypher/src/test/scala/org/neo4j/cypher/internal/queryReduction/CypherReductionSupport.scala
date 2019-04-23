@@ -84,7 +84,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
   override protected def initTest() {
     super.initTest()
-    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    managementService = new TestDatabaseManagementServiceBuilder().impermanent().build()
     graph = new GraphDatabaseCypherService(managementService.database(DEFAULT_DATABASE_NAME))
     contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }

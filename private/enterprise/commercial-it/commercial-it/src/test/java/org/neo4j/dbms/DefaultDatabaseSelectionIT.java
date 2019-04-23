@@ -107,7 +107,9 @@ class DefaultDatabaseSelectionIT
     void startWithSystemAndLegacyConfiguredActiveDatabase()
     {
         String customDbName = "activeDb";
-        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        DatabaseManagementService managementService = getDatabaseBuilder()
+                .setConfig( "dbms.active_database", customDbName )
+                .build();
         GraphDatabaseService database = managementService.database( customDbName );
         try
         {
@@ -124,7 +126,9 @@ class DefaultDatabaseSelectionIT
     {
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
         String customDbName = "legacyCustomDb";
-        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        DatabaseManagementService managementService = getDatabaseBuilder()
+                .setConfig( "dbms.active_database", customDbName )
+                .build();
         GraphDatabaseService database = managementService.database( customDbName );
         try
         {
@@ -157,21 +161,20 @@ class DefaultDatabaseSelectionIT
 
     private GraphDatabaseService startDatabase()
     {
-        managementService = getDatabaseBuilder().newDatabaseManagementService();
+        managementService = getDatabaseBuilder().build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDatabase( String databaseName )
     {
         managementService = getDatabaseBuilder()
-               .setConfig( GraphDatabaseSettings.default_database, databaseName ).newDatabaseManagementService();
+               .setConfig( GraphDatabaseSettings.default_database, databaseName ).build();
         return managementService.database( databaseName );
     }
 
     private DatabaseManagementServiceBuilder getDatabaseBuilder()
     {
-        return new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 

@@ -57,11 +57,10 @@ class SystemGraphInternalsTest
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         File storeDir = testDirectory.storeDir();
-        final DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        final DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
-        managementService = builder.newDatabaseManagementService();
+        managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager<?> databaseManager = getDatabaseManager();

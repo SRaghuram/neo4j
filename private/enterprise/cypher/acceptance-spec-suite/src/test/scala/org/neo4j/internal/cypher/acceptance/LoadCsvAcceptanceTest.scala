@@ -524,7 +524,7 @@ class LoadCsvAcceptanceTest
   test("should fail for file urls if local file access disallowed") {
     val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.allow_file_urls, "false")
-      .newDatabaseManagementService()
+      .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       intercept[QueryExecutionException] {
@@ -545,7 +545,7 @@ class LoadCsvAcceptanceTest
 
     val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
-      .newDatabaseManagementService()
+      .build()
 
     val db = managementService.database(DEFAULT_DATABASE_NAME)
 
@@ -566,7 +566,7 @@ class LoadCsvAcceptanceTest
 
     val managementService = acceptanceTestDatabaseBuilder
       .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
-      .newDatabaseManagementService()
+      .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
 
     trackResources(db)
@@ -597,8 +597,10 @@ class LoadCsvAcceptanceTest
           }
     })
 
-    val managementService = new TestDatabaseManagementServiceBuilder().addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
-      .newImpermanentDatabaseBuilder(acceptanceDbFolder).newDatabaseManagementService()
+    val managementService = new TestDatabaseManagementServiceBuilder(acceptanceDbFolder)
+      .addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
+      .impermanent()
+      .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
 
     trackResources(db)
@@ -767,7 +769,7 @@ class LoadCsvAcceptanceTest
   }
 
   private def acceptanceTestDatabaseBuilder = {
-    new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder(acceptanceDbFolder)
+    new TestCommercialDatabaseManagementServiceBuilder(acceptanceDbFolder).impermanent()
   }
 
   private def acceptanceDbFolder = {

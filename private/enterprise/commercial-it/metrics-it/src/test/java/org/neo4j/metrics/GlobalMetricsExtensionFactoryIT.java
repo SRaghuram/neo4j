@@ -106,11 +106,11 @@ public class GlobalMetricsExtensionFactoryIT
     {
         // Start the database
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
-        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( disabledTracerDb );
+        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( disabledTracerDb );
         managementService = builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
                 .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         // key point!
         GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = nullTracerDatabase.beginTx() )

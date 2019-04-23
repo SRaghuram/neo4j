@@ -22,7 +22,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     @Override
     protected TestDatabaseManagementServiceBuilder getTestGraphDatabaseFactory()
     {
-        return new TestCommercialDatabaseManagementServiceBuilder( logProvider );
+        return new TestCommercialDatabaseManagementServiceBuilder().setUserLogProvider( logProvider );
     }
 
     @Override

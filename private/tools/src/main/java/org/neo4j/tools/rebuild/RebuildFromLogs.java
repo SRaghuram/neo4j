@@ -276,12 +276,11 @@ class RebuildFromLogs
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        managementService = new CommercialDatabaseManagementServiceBuilder()
+        managementService = new CommercialDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setExternalDependencies( dependencies )
-                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .newDatabaseManagementService();
+                .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }
 }

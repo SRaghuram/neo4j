@@ -83,9 +83,9 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE ).newDatabaseManagementService();
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
+                .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

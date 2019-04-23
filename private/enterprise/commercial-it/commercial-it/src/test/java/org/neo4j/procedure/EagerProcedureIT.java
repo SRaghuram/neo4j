@@ -153,9 +153,8 @@ public class EagerProcedureIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .newImpermanentDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.directory().getAbsolutePath() ).newDatabaseManagementService();
+        managementService = new TestDatabaseManagementServiceBuilder().impermanent()
+                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.directory().getAbsolutePath() ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

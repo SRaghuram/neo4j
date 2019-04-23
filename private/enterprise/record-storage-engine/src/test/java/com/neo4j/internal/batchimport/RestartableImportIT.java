@@ -97,9 +97,9 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( databaseDirectory )
-                        .setConfig( transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
-                    .newDatabaseManagementService();
+            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDirectory )
+                    .setConfig( transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
+                    .build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {

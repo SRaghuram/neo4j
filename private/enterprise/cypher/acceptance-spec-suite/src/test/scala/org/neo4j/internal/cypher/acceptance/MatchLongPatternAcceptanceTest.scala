@@ -269,7 +269,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
     val config: util.Map[Setting[_], String] = m.toMap.asJava
-    val managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService(config)
+    val managementService = new TestDatabaseManagementServiceBuilder().impermanent().setConfig(config).build()
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     val graph = new GraphDatabaseCypherService(database)
     try {

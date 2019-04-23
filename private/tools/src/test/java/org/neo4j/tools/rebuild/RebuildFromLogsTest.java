@@ -142,10 +142,9 @@ public class RebuildFromLogsTest
 
     private static GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .newDatabaseManagementService();
+                .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }
 

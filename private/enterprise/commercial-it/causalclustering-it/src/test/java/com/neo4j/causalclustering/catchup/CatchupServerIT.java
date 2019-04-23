@@ -93,7 +93,7 @@ class CatchupServerIT
     void startDb() throws Throwable
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs ).newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setFileSystem( fs ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );

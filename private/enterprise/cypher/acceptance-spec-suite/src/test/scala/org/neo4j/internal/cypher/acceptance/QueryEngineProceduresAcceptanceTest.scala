@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.io.File
+
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
 import org.neo4j.logging.AssertableLogProvider
@@ -55,16 +57,20 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("Test that cache clearing procedure writes to log") {
     val logProvider = new AssertableLogProvider()
-    val managementService = graphDatabaseFactory().setUserLogProvider(logProvider).newImpermanentService()
+    val managementService = graphDatabaseFactory(new File("test")).setUserLogProvider(logProvider).impermanent().build()
     val graphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
 
-    graphDatabaseService.execute("MATCH (n) RETURN n.prop")
+    try {
+      graphDatabaseService.execute("MATCH (n) RETURN n.prop")
 
-    val query = "CALL dbms.clearQueryCaches()"
-    graphDatabaseService.execute(query)
+      val query = "CALL dbms.clearQueryCaches()"
+      graphDatabaseService.execute(query)
 
-    logProvider.assertContainsLogCallContaining("Called dbms.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
-    managementService.shutdown()
+      logProvider.assertContainsLogCallContaining("Called dbms.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
+    }
+    finally {
+      managementService.shutdown()
+    }
 
   }
 }

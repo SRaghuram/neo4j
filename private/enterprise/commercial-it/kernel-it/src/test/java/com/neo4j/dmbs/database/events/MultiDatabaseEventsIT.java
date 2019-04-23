@@ -38,7 +38,7 @@ class MultiDatabaseEventsIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
     }
 
     @AfterEach

@@ -49,7 +49,7 @@ class MultiDatabaseCreationStressTesting
         deleteRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDirectory ).build();
         GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );

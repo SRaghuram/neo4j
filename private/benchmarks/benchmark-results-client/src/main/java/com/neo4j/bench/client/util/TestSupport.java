@@ -16,9 +16,8 @@ public class TestSupport
 {
     public static Store createEmptyStore( Path storeDir )
     {
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( storeDir.toFile() )
-                .newDatabaseManagementService();
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDir.toFile() )
+                .build();
         managementService.shutdown();
         return Store.createFrom( storeDir );
     }

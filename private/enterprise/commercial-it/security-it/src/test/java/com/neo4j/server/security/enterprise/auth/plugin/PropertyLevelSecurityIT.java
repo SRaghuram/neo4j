@@ -37,7 +37,6 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -67,12 +66,11 @@ class PropertyLevelSecurityIT
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestDatabaseManagementServiceBuilder s = new TestCommercialDatabaseManagementServiceBuilder();
-        managementService = s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
                 .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
                 .setConfig( SecuritySettings.procedure_roles, "test.*:procRole" )
-                .setConfig( GraphDatabaseSettings.auth_enabled, "true" ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.auth_enabled, "true" ).build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         CommercialAuthAndUserManager authManager = (CommercialAuthAndUserManager) db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );

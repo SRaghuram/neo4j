@@ -27,14 +27,12 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class EmbeddedDatabase implements Database
 {
@@ -132,22 +130,22 @@ public class EmbeddedDatabase implements Database
 
     private static DatabaseManagementService newDb( Store store, Edition edition, Path neo4jConfig )
     {
-        DatabaseManagementServiceInternalBuilder builder = newBuilder( store, edition );
+        DatabaseManagementServiceBuilder builder = newBuilder( store, edition );
         if ( null != neo4jConfig )
         {
             builder.loadPropertiesFromFile( neo4jConfig.toAbsolutePath().toString() );
         }
-        return builder.newDatabaseManagementService();
+        return builder.build();
     }
 
-    private static DatabaseManagementServiceInternalBuilder newBuilder( Store store, Edition edition )
+    private static DatabaseManagementServiceBuilder newBuilder( Store store, Edition edition )
     {
         switch ( edition )
         {
         case COMMUNITY:
-            return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
+            return new DatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
         case ENTERPRISE:
-            return new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
+            return new CommercialDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }

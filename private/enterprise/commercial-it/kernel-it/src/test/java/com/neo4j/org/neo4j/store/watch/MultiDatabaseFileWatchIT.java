@@ -52,8 +52,9 @@ class MultiDatabaseFileWatchIT
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).newDatabaseManagementService(
-                testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setInternalLogProvider( logProvider )
+                .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
         firstContext = databaseManager.createDatabase( new DatabaseId( "first" ) );

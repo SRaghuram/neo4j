@@ -193,10 +193,10 @@ class DatabaseRebuildToolTest
 
     private static void databaseWithSomeTransactions( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
+                .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );
         Node[] nodes = new Node[10];
         for ( int i = 0; i < nodes.length; i++ )

@@ -17,7 +17,7 @@ import org.neo4j.scheduler.JobScheduler
 //noinspection TypeAnnotation
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
-    new TestCommercialDatabaseManagementServiceBuilder(),
+    () => new TestCommercialDatabaseManagementServiceBuilder(),
     (runtimeConfig,resolver) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])

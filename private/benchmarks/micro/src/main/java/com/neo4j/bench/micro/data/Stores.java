@@ -220,9 +220,7 @@ public class Stores
         tryMkDir( topLevelStoreDir );
 
         // will create an empty database directory under top level
-        new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( topLevelStoreDir.toFile() )
-                .newDatabaseManagementService()
+        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() ).build()
                 .shutdown();
 
         // store Neo4j config every time, even if DataGeneratorConfig is identical -- they are retrieved later

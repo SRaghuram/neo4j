@@ -37,8 +37,9 @@ class MultiDatabaseDiagnosticsLoggingIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().setInternalLogProvider( provider ).newDatabaseManagementService(
-                testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setInternalLogProvider( provider )
+                .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

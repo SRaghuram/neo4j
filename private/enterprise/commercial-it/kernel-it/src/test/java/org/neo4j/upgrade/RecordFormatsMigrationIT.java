@@ -148,20 +148,19 @@ class RecordFormatsMigrationIT
     private GraphDatabaseService startDb( String recordFormatName )
     {
         managementService = getGraphDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.record_format, recordFormatName ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.record_format, recordFormatName ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDb()
     {
-        managementService = getGraphDatabaseBuilder().newDatabaseManagementService();
+        managementService = getGraphDatabaseBuilder().build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private DatabaseManagementServiceBuilder getGraphDatabaseBuilder()
     {
-        return new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
+        return new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 

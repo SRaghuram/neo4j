@@ -65,7 +65,7 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
                 getResource( "/neo4j/neo4j_sf001.conf" ),
                 boltAddressWithoutPort,
                 port
-        ).newDatabaseManagementService();
+        ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String url = "bolt://" + boltAddressWithoutPort + ":" + port;
         return new DatabaseAndUrl( managementService, url );

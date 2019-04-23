@@ -56,12 +56,11 @@ class RotatableCsvOutputIT
     void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        managementService = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( csvPath, outputPath.getAbsolutePath() )
+        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( csvPath, outputPath.getAbsolutePath() )
                 .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
                 .setConfig( csvInterval, "100ms" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

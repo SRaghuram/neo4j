@@ -19,7 +19,7 @@ public class EnterpriseWriteTestSupport extends WriteTestSupport
     @Override
     protected GraphDatabaseService newDb( File storeDir )
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( storeDir ).impermanent().build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

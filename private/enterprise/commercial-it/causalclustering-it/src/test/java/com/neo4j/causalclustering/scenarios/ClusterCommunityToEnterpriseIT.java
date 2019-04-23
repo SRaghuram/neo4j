@@ -67,10 +67,10 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDir.storeDir() )
-                .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
+        DatabaseManagementService managementService =
+                new DatabaseManagementServiceBuilder( testDir.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseLayout databaseLayout = ((GraphDatabaseAPI) database).databaseLayout();
         managementService.shutdown();

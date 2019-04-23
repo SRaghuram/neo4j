@@ -34,7 +34,7 @@ class BatchInserterEnterpriseConstraintIT
     {
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
         DatabaseManagementService
-                managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( databaseLayout.databaseDirectory() );
+                managementService = new TestCommercialDatabaseManagementServiceBuilder( databaseLayout.databaseDirectory() ).build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {

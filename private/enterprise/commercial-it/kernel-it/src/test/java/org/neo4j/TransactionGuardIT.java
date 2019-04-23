@@ -521,14 +521,12 @@ public class TransactionGuardIT
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystemRule.get() ) );
 
-        DatabaseManagementServiceBuilder databaseBuilder = new TestCommercialDatabaseManagementServiceBuilder()
-                .setClock( fakeClock )
-                .setExternalDependencies( dependencies )
-                .setFileSystem( fileSystemRule.get() )
-                .newImpermanentDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder databaseBuilder =
+                new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
+                        fileSystemRule.get() ).impermanent();
         configMap.forEach( databaseBuilder::setConfig );
 
-        customManagementService = databaseBuilder.newDatabaseManagementService();
+        customManagementService = databaseBuilder.build();
         return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 

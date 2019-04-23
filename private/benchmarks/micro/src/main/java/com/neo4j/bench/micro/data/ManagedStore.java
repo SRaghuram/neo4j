@@ -78,13 +78,12 @@ public class ManagedStore
 
     public static GraphDatabaseService newDb( Store store, Path config )
     {
-        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
+        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
         }
-        managementService = builder.newDatabaseManagementService();
+        managementService = builder.build();
 
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

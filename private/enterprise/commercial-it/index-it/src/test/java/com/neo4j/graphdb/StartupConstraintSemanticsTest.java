@@ -86,7 +86,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommunityDatabase()
     {
-        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( dir.storeDir() );
+        managementService = new TestDatabaseManagementServiceBuilder( dir.storeDir() ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -126,7 +126,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseService getCommercialDatabase()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

@@ -7,14 +7,16 @@ package com.neo4j;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
+import java.io.File;
+
 import org.neo4j.test.DatabaseManagementServiceBuilderOnEphemeralFileSystemTest;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 class CommercialDatabaseManagementServiceBuilderOnEphemeralFileSystemTest extends DatabaseManagementServiceBuilderOnEphemeralFileSystemTest
 {
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( databaseRootDir );
     }
 }

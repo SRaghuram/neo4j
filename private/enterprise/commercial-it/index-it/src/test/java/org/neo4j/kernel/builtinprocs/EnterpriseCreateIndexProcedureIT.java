@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.StringJoiner;
@@ -416,8 +417,8 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     }
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( databaseRootDir );
     }
 }

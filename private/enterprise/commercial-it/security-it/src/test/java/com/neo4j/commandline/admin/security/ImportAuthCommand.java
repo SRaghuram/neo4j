@@ -199,10 +199,9 @@ public class ImportAuthCommand implements AdminCommand
     private static GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
-        managementService = factory.newEmbeddedDatabaseBuilder( databaseDir )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( databaseDir )
                 .setConfig( default_database, IMPORT_SYSTEM_DATABASE_NAME )
-                .newDatabaseManagementService();
+                .build();
         return managementService.database( IMPORT_SYSTEM_DATABASE_NAME );
     }
 

@@ -28,19 +28,25 @@ import scala.collection.mutable.ArrayBuffer
 class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
   test("should be possible to close compiled result after it is consumed") {
+    val managementService = new TestDatabaseManagementServiceBuilder().impermanent().build()
     // given
-    val db = new TestDatabaseManagementServiceBuilder().newImpermanentService().database(DEFAULT_DATABASE_NAME)
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
+    try {
 
-    // when
-    val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
-    result.accept(new ResultVisitor[RuntimeException] {
-      def visit(row: ResultRow) = true
-    })
+      // when
+      val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
+      result.accept(new ResultVisitor[RuntimeException] {
+        def visit(row: ResultRow) = true
+      })
 
-    result.close()
+      result.close()
 
-    // then
-    // call to close actually worked
+      // then
+      // call to close actually worked
+    }
+    finally {
+      managementService.shutdown()
+    }
   }
 
   private implicit class RichDb(db: GraphDatabaseCypherService) {

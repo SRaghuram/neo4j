@@ -340,12 +340,9 @@ class FunctionIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .setInternalLogProvider( logProvider )
-                .setUserLogProvider( logProvider )
-                .newImpermanentDatabaseBuilder()
+        managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).impermanent()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
@@ -844,11 +841,10 @@ class FunctionIT
     {
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .newImpermanentDatabaseBuilder()
+        managementService = new TestDatabaseManagementServiceBuilder().impermanent()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
     }

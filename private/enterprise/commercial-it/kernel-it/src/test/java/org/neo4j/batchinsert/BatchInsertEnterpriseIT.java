@@ -89,8 +89,7 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( directory.storeDir() ).newDatabaseManagementService();
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
@@ -181,8 +180,9 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.record_format, recordFormat ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( storeDir )
+                .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                .build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 

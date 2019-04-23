@@ -144,7 +144,7 @@ public class DatabaseRebuildTool
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir );
         builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {
@@ -167,7 +167,7 @@ public class DatabaseRebuildTool
 
         Store( DatabaseManagementServiceBuilder dbBuilder, String databaseName )
         {
-            managementService = dbBuilder.newDatabaseManagementService();
+            managementService = dbBuilder.build();
             this.db = (GraphDatabaseAPI) managementService.database( databaseName );
             this.access = new StoreAccess( db.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();

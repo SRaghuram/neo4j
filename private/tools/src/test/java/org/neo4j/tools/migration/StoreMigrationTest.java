@@ -43,10 +43,10 @@ class StoreMigrationTest
         StoreMigration.main( new String[]{directory.storeDir().getAbsolutePath()} );
 
         // after migration we can open store and do something
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( directory.storeDir() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.storeDir() )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).getAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, directory.storeDir().getAbsolutePath() ).newDatabaseManagementService();
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, directory.storeDir().getAbsolutePath() )
+                .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {

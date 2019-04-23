@@ -112,8 +112,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        managementService = new TestDatabaseManagementServiceBuilder()
-                .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
@@ -122,7 +121,7 @@ public class BoltTlsIT
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
                 .setConfig( sslPolicy.client_auth, "none" )
-                .setConfig( sslPolicy.verify_hostname, "false" ).newDatabaseManagementService();
+                .setConfig( sslPolicy.verify_hostname, "false" ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

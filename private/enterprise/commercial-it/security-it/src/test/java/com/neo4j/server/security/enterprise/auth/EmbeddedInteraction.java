@@ -43,8 +43,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
     EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
-        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
-        DatabaseManagementServiceBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() );
         init( builder, config );
     }
 
@@ -59,9 +58,9 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
                 NeoInteractionLevel.tempPath( "cert", ".cert" ) );
         builder.setConfig( GraphDatabaseSettings.auth_enabled, "true" );
 
-        builder.setConfig( config );
+        builder.setConfigRaw( config );
 
-        managementService = builder.newDatabaseManagementService();
+        managementService = builder.build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );

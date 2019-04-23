@@ -45,9 +45,8 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( prometheusEnabled, Settings.TRUE )
-                .setConfig( prometheusEndpoint, "localhost:0" ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( prometheusEnabled, Settings.TRUE )
+                .setConfig( prometheusEndpoint, "localhost:0" ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

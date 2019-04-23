@@ -77,9 +77,9 @@ class OnlineBackupIT
         backupsDir = testDirectory.directory( "backups" ).toPath();
         defaultDbBackupDir = backupsDir.resolve( DB_ID.name() );
 
-        managementService = new TestCommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( online_backup_enabled, TRUE ).newDatabaseManagementService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( online_backup_enabled, TRUE )
+                .build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         backupAddress = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class ).getLocalAddress( BACKUP_SERVER_NAME );

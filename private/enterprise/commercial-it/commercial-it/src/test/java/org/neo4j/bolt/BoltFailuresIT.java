@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
 
+import java.io.File;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
@@ -72,7 +73,7 @@ public class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new DatabaseManagementServiceBuilder().setMonitors( monitors ) );
+        db = startDbWithBolt( new DatabaseManagementServiceBuilder( dir.storeDir() ).setMonitors( monitors ) );
         try
         {
             // attempt to create a driver when server is unavailable
@@ -183,23 +184,23 @@ public class BoltFailuresIT
 
     private GraphDatabaseService startTestDb( Monitors monitors )
     {
-        return startDbWithBolt( newDbFactory().setMonitors( monitors ) );
+        return startDbWithBolt( newDbFactory( dir.storeDir() ).setMonitors( monitors ) );
     }
 
     private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )
     {
-        managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
+        managementService = dbFactory
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
                 .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).newDatabaseManagementService();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static TestCommercialDatabaseManagementServiceBuilder newDbFactory()
+    private static TestCommercialDatabaseManagementServiceBuilder newDbFactory( File databaseRootDir )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder();
+        return new TestCommercialDatabaseManagementServiceBuilder( databaseRootDir );
     }
 
     private static Driver createDriver( int port )
