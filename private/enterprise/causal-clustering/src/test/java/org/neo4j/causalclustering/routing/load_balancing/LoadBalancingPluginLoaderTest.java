@@ -23,7 +23,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -110,9 +109,8 @@ public class LoadBalancingPluginLoaderTest
                 config );
 
         // then
-        assertFalse( plugin instanceof  ServerShufflingProcessor );
         assertTrue( plugin instanceof ServerPoliciesPlugin );
-        assertEquals( ServerPoliciesPlugin.PLUGIN_NAME, ((ServerPoliciesPlugin) plugin).pluginName() );
+        assertTrue( ((ServerPoliciesPlugin) plugin).isShufflingPlugin() );
     }
 
     @Test

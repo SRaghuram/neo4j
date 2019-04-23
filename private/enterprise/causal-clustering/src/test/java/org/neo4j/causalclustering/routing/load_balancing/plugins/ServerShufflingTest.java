@@ -8,7 +8,6 @@ package org.neo4j.causalclustering.routing.load_balancing.plugins;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +32,9 @@ import org.neo4j.causalclustering.routing.load_balancing.plugins.server_policies
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.ConfigBuilder;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -130,6 +127,7 @@ public class ServerShufflingTest
         when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
         ServerPoliciesPlugin serverPoliciesPlugin = new ServerPoliciesPlugin();
+        assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
 
         stringMap(
                 CausalClusteringSettings.load_balancing_shuffle.name(), "true",
