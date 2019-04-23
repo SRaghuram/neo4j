@@ -54,14 +54,13 @@ class RunWorkloadCommandIT
 {
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";
     private static final String WRITE_WORKLOAD = "pokec_write";
-    private static final String READ_WORKLOAD = "generated_queries";
+    private static final String READ_WORKLOAD = "zero";
 
     @Inject
     private TestDirectory temporaryFolder;
 
     // <><><><><><><><><><><><> Forked - Embedded <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadForkedWithEmbedded() throws Exception
     {
@@ -73,6 +72,7 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Disabled
     @Test
     void executeWriteWorkloadForkedWithEmbedded() throws Exception
     {
@@ -98,7 +98,6 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadForkedWithServer() throws Exception
     {
@@ -110,6 +109,7 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Disabled
     @Test
     void executeWriteWorkloadsForkedWithServer() throws Exception
     {
@@ -135,7 +135,6 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Embedded <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -148,6 +147,7 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Disabled
     @Test
     void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -175,7 +175,6 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
@@ -188,6 +187,7 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Disabled
     @Test
     void executeWriteWorkloadInProcessWithServer() throws Exception
     {
@@ -248,7 +248,7 @@ class RunWorkloadCommandIT
 
             int warmupCount = 2;
             int measurementCount = 2;
-            Duration minMeasurementDuration = Duration.ofSeconds( 0 );
+            Duration minMeasurementDuration = Duration.ofSeconds( 10 );
             Duration maxMeasurementDuration = Duration.ofSeconds( 10 );
 
             List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
