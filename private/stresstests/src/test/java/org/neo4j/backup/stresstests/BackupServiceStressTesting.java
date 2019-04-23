@@ -86,7 +86,7 @@ class BackupServiceStressTesting
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
             BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
-            StartStop startStopWorkload = new StartStop( control, () -> managementService.database( DEFAULT_DATABASE_NAME ), dbRef, managementRef );
+            StartStop startStopWorkload = new StartStop( control, dbRef, managementRef );
 
             executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 
