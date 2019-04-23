@@ -9,6 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -403,5 +404,41 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( subject, shortestBasic, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( subject, shortestWithProperty, r -> assertKeyIs( r, "length", 3 ) );
+    }
+
+    @Test
+    void shouldReadBackNodeCreatedInSameTransaction() throws Throwable
+    {
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( "write", "graph" ),
+                // without this it fails early since we aren't allowed to get Read operations
+                new ResourcePrivilege( "read", "label", "B" )
+        );
+
+        assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
+
+        String query = "CREATE (:A {foo: $param}) WITH 1 as bar MATCH (a:A) RETURN a.foo";
+        assertSuccess( adminSubject, query, Collections.singletonMap("param", 2L), r -> assertKeyIs( r, "a.foo", 1, 2 ) );
+        assertSuccess( subject, query, Collections.singletonMap("param", 3L), r -> assertKeyIs( r, "a.foo", 3 ) );
+    }
+
+    @Test
+    void shouldReadBackIndexedNodeCreatedInSameTransaction() throws Throwable
+    {
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( "write", "graph" ),
+                // without this it fails early since we aren't allowed to get Read operations
+                new ResourcePrivilege( "read", "label", "B" )
+        );
+
+        setupGraph();
+        assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
+
+        assertEmpty( adminSubject, "CREATE INDEX ON :A(foo)" );
+        assertEmpty( adminSubject, "CALL db.awaitIndexes" );
+
+        String query = "CREATE (:A {foo: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(foo) WHERE EXISTS(a.foo) RETURN a.foo";
+        assertSuccess( adminSubject, query, Collections.singletonMap("param", 2L), r -> assertKeyIs( r, "a.foo", 1, 2 ) );
+        assertSuccess( subject, query, Collections.singletonMap("param", 3L), r -> assertKeyIs( r, "a.foo", 3 ) );
     }
 }
