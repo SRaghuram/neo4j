@@ -21,9 +21,9 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
           case functions.Count =>
             (CountAggregator, c.arguments.head)
-//
-//          case functions.Sum =>
-//            SumOperatorExpression(self.toCommandExpression(id, c.arguments.head))
+
+          case functions.Sum =>
+            (SumAggregator, c.arguments.head)
 //
 //          case functions.Avg =>
 //            AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head))
