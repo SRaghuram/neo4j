@@ -94,12 +94,6 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     }
 
     @Override
-    public long getTransactionStartTimeout()
-    {
-        return editionModule.getTransactionStartTimeout();
-    }
-
-    @Override
     public Locks getLocks()
     {
         return databaseState.lockManager();
