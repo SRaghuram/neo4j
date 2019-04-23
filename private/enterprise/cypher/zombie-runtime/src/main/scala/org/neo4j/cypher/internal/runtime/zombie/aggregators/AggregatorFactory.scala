@@ -27,12 +27,12 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
           case functions.Avg =>
             (AvgAggregator, c.arguments.head)
-//
-//          case functions.Max =>
-//            MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head))
-//
-//          case functions.Min =>
-//            MinOperatorExpression(self.toCommandExpression(id, c.arguments.head))
+
+          case functions.Max =>
+            (MaxAggregator, c.arguments.head)
+
+          case functions.Min =>
+            (MinAggregator, c.arguments.head)
 //
 //          case functions.Collect =>
 //            CollectOperatorExpression(self.toCommandExpression(id, c.arguments.head))
