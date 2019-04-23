@@ -35,7 +35,7 @@ class StartStop extends Workload
     {
         TimeUnit.SECONDS.sleep( 10 ); // sleep between runs
         GraphDatabaseService db = dbRef.get();
-        managementService.stopDatabase( DEFAULT_DATABASE_NAME );
+        managementService.shutdownDatabase( DEFAULT_DATABASE_NAME );
         TimeUnit.SECONDS.sleep( 2 ); // sleep a bit while db is shutdown to let backup fail
         boolean replaced = dbRef.compareAndSet( db, restartDatabase() );
         assertTrue( replaced );
