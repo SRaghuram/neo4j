@@ -39,7 +39,6 @@ import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -47,7 +46,6 @@ import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.ParameterNames;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.RoutingResultFormat;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -60,13 +58,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-@ExtendWith( {TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
+@ExtendWith( TestDirectoryExtension.class )
 class ServerPoliciesLoadBalancingIT
 {
     @Inject
     private TestDirectory testDir;
-    @Inject
-    private FileSystemAbstraction fs;
 
     private Cluster cluster;
 
@@ -232,7 +228,7 @@ class ServerPoliciesLoadBalancingIT
         return cluster;
     }
 
-    private Map<String,String> policyContext( String policyName )
+    private static Map<String,String> policyContext( String policyName )
     {
         return stringMap( Policies.POLICY_KEY, policyName );
     }
@@ -257,7 +253,7 @@ class ServerPoliciesLoadBalancingIT
         }
     }
 
-    private RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
+    private static RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
     {
         RoutingResult lbResult = null;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )

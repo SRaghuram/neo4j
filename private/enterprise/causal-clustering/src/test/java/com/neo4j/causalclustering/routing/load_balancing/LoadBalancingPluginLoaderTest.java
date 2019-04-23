@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -22,9 +22,9 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class LoadBalancingPluginLoaderTest
@@ -33,7 +33,7 @@ public class LoadBalancingPluginLoaderTest
     private static final String DOES_NOT_EXIST = "does_not_exist";
 
     @Test
-    public void shouldReturnSelectedPlugin() throws Throwable
+    void shouldReturnSelectedPlugin() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -54,7 +54,7 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldEnableShufflingOfDelegate() throws Throwable
+    void shouldEnableShufflingOfDelegate() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -74,7 +74,7 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldFindServerPoliciesPlugin() throws Throwable
+    void shouldFindServerPoliciesPlugin() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -94,7 +94,7 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void serverPoliciesPluginShouldShuffleSelf() throws Throwable
+    void serverPoliciesPluginShouldShuffleSelf() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -114,41 +114,21 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldThrowOnInvalidPlugin()
+    void shouldThrowOnInvalidPlugin()
     {
-        // given
         Config config = Config.defaults( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST );
 
-        try
-        {
-            // when
-            LoadBalancingPluginLoader.validate( config, mock( Log.class ) );
-            fail();
-        }
-        catch ( InvalidSettingException ignored )
-        {
-            // then
-        }
+        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
     }
 
     @Test
-    public void shouldNotAcceptInvalidSetting()
+    void shouldNotAcceptInvalidSetting()
     {
-        // given
         Config config = Config.builder()
                 .withSetting( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), "true")
                 .withSetting( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME ).build();
 
-        try
-        {
-            // when
-            LoadBalancingPluginLoader.validate( config, mock( Log.class ) );
-            fail();
-        }
-        catch ( InvalidSettingException ignored )
-        {
-            // then
-        }
+        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
     }
 
     private static String settingFor( String pluginName, String settingName )
