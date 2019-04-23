@@ -180,9 +180,9 @@ class OperatorFactory(val stateDefinition: StateDefinition,
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+
         val aggregators = Array.newBuilder[Aggregator]
         val outputSlots = Array.newBuilder[Int]
-
         aggregationExpression.foreach {
           case (key, astExpression) =>
             val outputSlot = slots.get(key).get
@@ -194,6 +194,23 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                                                 WorkIdentity.fromPlan(plan),
                                                 aggregators.result(),
                                                 outputSlots.result())
+
+      case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
+        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+
+        val aggregators = Array.newBuilder[Aggregator]
+        val outputSlots = Array.newBuilder[Int]
+        aggregationExpression.foreach {
+          case (key, astExpression) =>
+            val outputSlot = slots.get(key).get
+            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression)
+            aggregators += aggregator
+            outputSlots += outputSlot.offset
+        }
+
+        AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
+          .reducer(argumentStateMapId, outputSlots.result())
 
       case plan: plans.ProduceResult => createProduceResults(plan)
 
@@ -264,9 +281,9 @@ class OperatorFactory(val stateDefinition: StateDefinition,
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
             val argumentDepth = physicalPlan.applyPlans(id)
             val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+
             val aggregators = Array.newBuilder[Aggregator]
             val expressions = Array.newBuilder[Expression]
-
             aggregationExpression.foreach {
               case (key, astExpression) =>
                 val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
@@ -279,6 +296,24 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                                                     outputBuffer.id,
                                                     aggregators.result(),
                                                     expressions.result())
+
+          case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
+            val argumentDepth = physicalPlan.applyPlans(id)
+            val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+            val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+
+            val aggregators = Array.newBuilder[Aggregator]
+            val expressions = Array.newBuilder[Expression]
+            aggregationExpression.foreach {
+              case (key, astExpression) =>
+                val outputSlot = slots.get(key).get
+                val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
+                aggregators += aggregator
+                expressions += expression
+            }
+
+            AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
+              .mapper(argumentSlotOffset, outputBuffer.id, expressions.result())
 
         }
     }

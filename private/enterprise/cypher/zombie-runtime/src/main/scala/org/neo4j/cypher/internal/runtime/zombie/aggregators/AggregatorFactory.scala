@@ -18,7 +18,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan, expressionConverters: E
     expression match {
       case _: CountStar => (CountStarAggregator, Null())
       case unsupported =>
-        throw new CantCompileQueryException(s"Aggregating function $unsupported is not yet supported in the parallel runtime")
+        throw new CantCompileQueryException(s"Unexpected expression in aggregating function position: $unsupported")
 //      case c: FunctionInvocation =>
 //        c.function match {
 //          case _: AggregatingFunction if c.distinct =>

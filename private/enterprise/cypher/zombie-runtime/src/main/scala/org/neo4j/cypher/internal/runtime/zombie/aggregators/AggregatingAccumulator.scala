@@ -45,7 +45,7 @@ object AggregatingAccumulator {
   * parts of the computations that can be done without synchronization.
   *
   * Also creates [[Reducer]], which performs the final parts of the
-  * aggregations. In the reducer synchonization is required.
+  * aggregations. In the reducer synchronization is required.
   */
 trait Aggregator {
   def newUpdater: Updater
