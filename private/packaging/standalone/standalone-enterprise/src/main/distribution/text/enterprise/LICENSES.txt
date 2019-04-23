@@ -27,6 +27,7 @@ Apache Software License, Version 2.0
   akka-actor
   akka-cluster
   akka-cluster-tools
+  akka-coordination
   akka-distributed-data
   akka-protobuf
   akka-remote

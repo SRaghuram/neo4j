@@ -29,7 +29,7 @@
 
   <properties>
     <license-text.header>commercial-license-header.txt</license-text.header>
-    <akka.version>2.5.18</akka.version>
+    <akka.version>2.5.22</akka.version>
   </properties>
 
   <build>

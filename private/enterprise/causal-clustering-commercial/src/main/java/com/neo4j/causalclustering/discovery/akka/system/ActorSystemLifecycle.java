@@ -18,7 +18,7 @@ import akka.cluster.client.ClusterClientReceptionist;
 import akka.cluster.client.ClusterClientSettings;
 import akka.event.EventStream;
 import akka.japi.function.Procedure;
-import akka.pattern.PatternsCS;
+import akka.pattern.Patterns;
 import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
@@ -153,7 +153,7 @@ public class ActorSystemLifecycle
 
     private CompletionStage<Done> gracefulShutdown( ActorRef actor )
     {
-        return PatternsCS.gracefulStop( actor, Duration.ofSeconds( ACTOR_SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
+        return Patterns.gracefulStop( actor, Duration.ofSeconds( ACTOR_SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
     }
 
     public EventStream eventStream()
