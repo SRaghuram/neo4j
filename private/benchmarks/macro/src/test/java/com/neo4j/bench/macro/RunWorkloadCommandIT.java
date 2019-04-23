@@ -101,7 +101,7 @@ class RunWorkloadCommandIT
     @Test
     void executeReadWorkloadForkedWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
@@ -113,7 +113,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadsForkedWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
@@ -125,7 +125,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
@@ -178,7 +178,7 @@ class RunWorkloadCommandIT
     @Test
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
@@ -191,7 +191,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadInProcessWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
@@ -204,7 +204,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Neo4jDeployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
