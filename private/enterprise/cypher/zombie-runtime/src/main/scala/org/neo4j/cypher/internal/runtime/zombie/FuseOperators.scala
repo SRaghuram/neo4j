@@ -36,7 +36,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       middleOperators,
       produceResultOperator,
       p.serial,
-     operatorFactory.stateDefinition.physicalPlan.slotConfigurations(p.headPlan.id),
+      physicalPlan.slotConfigurations(p.headPlan.id),
       p.inputBuffer,
       p.outputBuffer)
   }
@@ -69,7 +69,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val reversePlans = (headPlan +: middlePlans).reverse
 
     val fusedPipeline =
-      reversePlans.foldLeft(FusedPipeline(innerTemplate, produceResult.toList, List.empty, None)) {
+      reversePlans.foldLeft(FusionPlan(innerTemplate, produceResult.toList, List.empty, None)) {
         case (acc, nextPlan) => nextPlan match {
 
           case plans.AllNodesScan(nodeVariableName, _) =>
@@ -126,7 +126,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = innermostTemplate,
               fusedPlans = List.empty,
               unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]):::acc.unhandledPlans,
-              produceResult)
+              unhandledProduceResult = produceResult)
         }
       }
 
@@ -150,7 +150,7 @@ object FuseOperators {
   private val FUSE_LIMIT = 2
 }
 
-case class FusedPipeline(template: OperatorTaskTemplate,
-                         fusedPlans: List[LogicalPlan],
-                         unhandledPlans: List[LogicalPlan] = List.empty,
-                         unhandledProduceResult: Option[ProduceResult] = None)
+case class FusionPlan(template: OperatorTaskTemplate,
+                      fusedPlans: List[LogicalPlan],
+                      unhandledPlans: List[LogicalPlan] = List.empty,
+                      unhandledProduceResult: Option[ProduceResult] = None)
