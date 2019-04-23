@@ -73,7 +73,6 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
-    @Disabled
     @Test
     void executeWriteWorkloadForkedWithEmbedded() throws Exception
     {
@@ -85,6 +84,7 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Disabled
     @Test
     void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
@@ -110,7 +110,6 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
-    @Disabled
     @Test
     void executeWriteWorkloadsForkedWithServer() throws Exception
     {
@@ -122,6 +121,7 @@ class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Disabled
     @Test
     void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
@@ -148,7 +148,6 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
-    @Disabled
     @Test
     void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -161,6 +160,7 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Disabled
     @Test
     void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -188,7 +188,6 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
-    @Disabled
     @Test
     void executeWriteWorkloadInProcessWithServer() throws Exception
     {
@@ -201,6 +200,7 @@ class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Disabled
     @Test
     void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
