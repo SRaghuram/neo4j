@@ -48,14 +48,13 @@ public class RunWorkloadCommandIT
 {
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";
     private static final String WRITE_WORKLOAD = "pokec_write";
-    private static final String READ_WORKLOAD = "generated_queries";
+    private static final String READ_WORKLOAD = "zero";
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     // <><><><><><><><><><><><> Forked - Embedded <><><><><><><><><><><><>
 
-    @Ignore
     @Test
     public void executeReadWorkloadForkedWithEmbedded() throws Exception
     {
@@ -79,6 +78,7 @@ public class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Ignore
     @Test
     public void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
@@ -92,7 +92,6 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
-    @Ignore
     @Test
     public void executeReadWorkloadForkedWithServer() throws Exception
     {
@@ -116,6 +115,7 @@ public class RunWorkloadCommandIT
                                    profilers.size() );
     }
 
+    @Ignore
     @Test
     public void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
@@ -129,7 +129,6 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Embedded <><><><><><><><><><><><>
 
-    @Ignore
     @Test
     public void executeReadWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -155,6 +154,7 @@ public class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Ignore
     @Test
     public void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -169,7 +169,6 @@ public class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
-    @Ignore
     @Test
     public void executeReadWorkloadInProcessWithServer() throws Exception
     {
@@ -195,6 +194,7 @@ public class RunWorkloadCommandIT
                                    0 );
     }
 
+    @Ignore
     @Test
     public void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
@@ -242,7 +242,7 @@ public class RunWorkloadCommandIT
 
             int warmupCount = 2;
             int measurementCount = 2;
-            Duration minMeasurementDuration = Duration.ofSeconds( 0 );
+            Duration minMeasurementDuration = Duration.ofSeconds( 10 );
             Duration maxMeasurementDuration = Duration.ofSeconds( 10 );
 
             List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
