@@ -34,7 +34,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                       val queryIndexes: QueryIndexes) {
 
   private val physicalPlan = stateDefinition.physicalPlan
-  private val aggregatorFactory = AggregatorFactory(physicalPlan, converters)
+  private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id
@@ -288,7 +288,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
               case (key, astExpression) =>
                 val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
                 aggregators += aggregator
-                expressions += expression
+                expressions += converters.toCommandExpression(id, expression)
               }
 
             new AggregationMapperOperatorNoGrouping(WorkIdentity.fromPlan(plan),
@@ -306,10 +306,9 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             val expressions = Array.newBuilder[Expression]
             aggregationExpression.foreach {
               case (key, astExpression) =>
-                val outputSlot = slots.get(key).get
                 val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
                 aggregators += aggregator
-                expressions += expression
+                expressions += converters.toCommandExpression(id, expression)
             }
 
             AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
