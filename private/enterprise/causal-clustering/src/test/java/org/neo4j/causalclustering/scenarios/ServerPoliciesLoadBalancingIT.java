@@ -24,7 +24,6 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -462,7 +461,7 @@ public class ServerPoliciesLoadBalancingIT
         @Override
         public void describeTo( Description description )
         {
-            description.appendText( "expectedRouterOrder=" + describeListOfSets( subsets ) );
+            description.appendText( "expectedRouterOrder=" + subsets );
         }
 
         private int findPartialOrderForAddress( List<Set<AdvertisedSocketAddress>> addressSubsets, AdvertisedSocketAddress address )
@@ -476,7 +475,7 @@ public class ServerPoliciesLoadBalancingIT
             }
 
             throw new IllegalStateException( format( "An unexpected member has been returned! Expected:%s, Offender:%s",
-                    describeListOfSets( addressSubsets ), address ) );
+                    addressSubsets, address ) );
         }
 
         private AdvertisedSocketAddress getAddressOrThrow( Map<Integer,AdvertisedSocketAddress> addressMap, int idx )
@@ -485,14 +484,9 @@ public class ServerPoliciesLoadBalancingIT
             if ( address == null )
             {
                 throw new IllegalArgumentException( format( "You have expected member ids which do not exist! Expected:%s, Actual:%s",
-                        describeListOfSets( subsets ), addressMap.keySet() ) );
+                        subsets, addressMap.keySet() ) );
             }
             return address;
-        }
-
-        private <T> String describeListOfSets( List<Set<T>> coll )
-        {
-            return coll.stream().map( Set::toString ).collect( Collectors.joining( ", ", "{", "}" ) );
         }
     }
 }

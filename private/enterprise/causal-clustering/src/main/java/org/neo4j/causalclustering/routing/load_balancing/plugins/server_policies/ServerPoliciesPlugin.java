@@ -19,14 +19,12 @@ import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
-import org.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.routing.Endpoint;
 import org.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import org.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
-import org.neo4j.causalclustering.routing.load_balancing.ShufflingPlugin;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -52,7 +50,7 @@ import static org.neo4j.causalclustering.routing.load_balancing.plugins.server_p
  * N.B: Lists are shuffled in place.
  */
 @Service.Implementation( LoadBalancingPlugin.class )
-public class ServerPoliciesPlugin implements LoadBalancingPlugin, ShufflingPlugin
+public class ServerPoliciesPlugin implements LoadBalancingPlugin
 {
     public static final String PLUGIN_NAME = "server_policies";
 
@@ -92,6 +90,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin, ShufflingPlugi
     public String pluginName()
     {
         return PLUGIN_NAME;
+    }
+
+    @Override
+    public boolean isShufflingPlugin()
+    {
+        return true;
     }
 
     @Override
