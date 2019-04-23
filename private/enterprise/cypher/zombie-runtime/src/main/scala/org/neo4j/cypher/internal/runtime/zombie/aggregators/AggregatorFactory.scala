@@ -33,10 +33,10 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
           case functions.Min =>
             (MinAggregator, c.arguments.head)
-//
-//          case functions.Collect =>
-//            CollectOperatorExpression(self.toCommandExpression(id, c.arguments.head))
-//
+
+          case functions.Collect =>
+            (CollectAggregator, c.arguments.head)
+
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Aggregating function ${c.name} is not yet supported by the parallel runtime")
 
