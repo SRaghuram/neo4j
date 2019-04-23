@@ -5,8 +5,10 @@
  */
 package org.neo4j.causalclustering.routing.load_balancing;
 
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.discovery.TopologyService;
+import org.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
@@ -24,4 +26,16 @@ public interface LoadBalancingPlugin extends LoadBalancingProcessor
             LogProvider logProvider, Config config ) throws Throwable;
 
     String pluginName();
+
+    /**
+     * Check if this plugin handles its own shuffling of addresses in the returned routing tables.
+     * The results from shuffling plugins will be unmodified by {@link ServerShufflingProcessor}
+     * regardless of the value of {@link CausalClusteringSettings#load_balancing_shuffle}.
+     *
+     * @return {@code true} when the plugin randomly shuffles the returned addresses, {@code false} otherwise.
+     */
+    default boolean isShufflingPlugin()
+    {
+        return false;
+    }
 }
