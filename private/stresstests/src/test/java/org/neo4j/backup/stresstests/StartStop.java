@@ -20,14 +20,14 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class StartStop extends Workload
 {
     private final AtomicReference<GraphDatabaseService> dbRef;
-    private final AtomicReference<DatabaseManagementService> managedRef;
+    private final DatabaseManagementService managementService;
 
     StartStop( Control control, AtomicReference<GraphDatabaseService> dbRef,
-            AtomicReference<DatabaseManagementService> managedRef )
+            DatabaseManagementService managementService )
     {
         super( control );
         this.dbRef = dbRef;
-        this.managedRef = managedRef;
+        this.managementService = managementService;
     }
 
     @Override
@@ -35,7 +35,7 @@ class StartStop extends Workload
     {
         TimeUnit.SECONDS.sleep( 10 ); // sleep between runs
         GraphDatabaseService db = dbRef.get();
-        managedRef.get().stopDatabase(DEFAULT_DATABASE_NAME);
+        managementService.stopDatabase( DEFAULT_DATABASE_NAME );
         TimeUnit.SECONDS.sleep( 2 ); // sleep a bit while db is shutdown to let backup fail
         boolean replaced = dbRef.compareAndSet( db, restartDatabase() );
         assertTrue( replaced );
@@ -43,7 +43,6 @@ class StartStop extends Workload
 
     private GraphDatabaseService restartDatabase()
     {
-        DatabaseManagementService managementService = managedRef.get();
         managementService.startDatabase( DEFAULT_DATABASE_NAME );
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
