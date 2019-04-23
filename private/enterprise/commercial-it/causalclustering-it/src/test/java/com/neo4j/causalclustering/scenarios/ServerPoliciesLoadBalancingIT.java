@@ -21,14 +21,20 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.IntFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -47,9 +53,11 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.virtual.MapValueBuilder;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 @ExtendWith( {TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
@@ -165,6 +173,50 @@ class ServerPoliciesLoadBalancingIT
             assertThat( getServers( db, policyContext( "policy_one_two" ) ), new SpecificReplicasMatcher( 1, 2 ) );
             assertThat( getServers( db, policyContext( "policy_zero_two" ) ), new SpecificReplicasMatcher( 0, 2 ) );
             assertThat( getServers( db, policyContext( "policy_all_replicas" ) ), new SpecificReplicasMatcher( 0, 1, 2 ) );
+        }
+    }
+
+    @Test
+    void shouldPartiallyOrderRoutersByPolicy() throws Exception
+    {
+        Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
+        IntFunction<String> oddEven = i -> i % 2 == 0 ? "Even" : "Odd";
+        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core,core" + oddEven.apply( id ) );
+
+        String evensPolicy = "groups(coreEven)";
+        String evensHaltPolicy = "groups(coreEven);halt()";
+        String oddsPolicy = "groups(coreOdd)";
+        String oddsMinPolicy = "groups(coreOdd) -> min(3);groups(coreEven)";
+        String allPolicy = "all()";
+
+        Map<String,String> coreParams = stringMap(
+                CausalClusteringSettings.cluster_allow_reads_on_followers.name(), "true",
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evens", evensPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evensHalt", evensHaltPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.odds", oddsPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.oddsMin", oddsMinPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.all", allPolicy,
+                CausalClusteringSettings.multi_dc_license.name(), "true" );
+
+        cluster = startCluster( 5, 0, coreParams, instanceCoreParams, emptyMap() );
+
+        assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 5, 1, 4, 0 ), policyContext( "all" ) );
+        // all cores have observed the full topology, now specific policies should all return the same result
+
+        for ( CoreClusterMember core : cluster.coreMembers() )
+        {
+            CoreGraphDatabase db = core.database();
+
+            assertThat( getServers( db, policyContext( "evens" ) ),
+                    new RouterPartialOrderMatcher( false, asSet( 2 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "odds" ) ),
+                    new RouterPartialOrderMatcher( false, asSet( 1, 3 ), asSet( 0, 2 ) ) );
+            assertThat( getServers( db, policyContext( "evens" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "evensHalt" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "oddsMin" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
         }
     }
 
@@ -349,6 +401,85 @@ class ServerPoliciesLoadBalancingIT
         public void describeTo( Description description )
         {
             description.appendText( "replicaIds=" + replicaIds );
+        }
+    }
+
+    class RouterPartialOrderMatcher extends BaseMatcher<RoutingResult>
+    {
+        private final boolean exactMatch;
+        private final List<Set<Integer>> subsets;
+
+        @SafeVarargs
+        RouterPartialOrderMatcher( boolean exactMatch, Set<Integer>... subsets )
+        {
+            this.exactMatch = exactMatch;
+            this.subsets = Arrays.asList( subsets );
+        }
+
+        @Override
+        public boolean matches( Object item )
+        {
+            RoutingResult result = (RoutingResult) item;
+
+            List<AdvertisedSocketAddress> returnedRouters = new ArrayList<>( result.routeEndpoints() );
+
+            Map<Integer,AdvertisedSocketAddress> allBoltsById = cluster.coreMembers().stream()
+                    .collect( Collectors.toMap( CoreClusterMember::serverId, c -> c.clientConnectorAddresses().boltAddress() ) );
+
+            Function<Set<Integer>,Set<AdvertisedSocketAddress>> lookupBoltSubsets =
+                    s -> s.stream().map( i -> getAddressOrThrow( allBoltsById, i ) ).collect( Collectors.toSet() );
+
+            List<Set<AdvertisedSocketAddress>> expectedBoltSubsets = subsets.stream()
+                    .map( lookupBoltSubsets )
+                    .collect( Collectors.toList() );
+
+            Set<AdvertisedSocketAddress> allExpectedBolts = subsets.stream()
+                    .map( lookupBoltSubsets )
+                    .flatMap( Set::stream )
+                    .collect( Collectors.toSet() );
+
+            Predicate<AdvertisedSocketAddress> filterReturnedRouters = exactMatch ? Predicates.alwaysTrue() : allExpectedBolts::contains;
+
+            List<Integer> orders = returnedRouters.stream()
+                    .filter( filterReturnedRouters )
+                    .map( address -> findPartialOrderForAddress( expectedBoltSubsets, address ) )
+                    .collect( Collectors.toList() );
+
+            List<Integer> sortedOrders = new ArrayList<>( orders );
+            Collections.sort( sortedOrders );
+
+            return orders.equals( sortedOrders );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "expectedRouterOrder=" + subsets );
+        }
+
+        private int findPartialOrderForAddress( List<Set<AdvertisedSocketAddress>> addressSubsets, AdvertisedSocketAddress address )
+        {
+            for ( int i = 0; i < addressSubsets.size(); i++ )
+            {
+                if ( addressSubsets.get( i ).contains( address ) )
+                {
+                    return i;
+                }
+            }
+
+            throw new IllegalStateException( format( "An unexpected member has been returned! Expected:%s, Offender:%s",
+                    addressSubsets, address ) );
+        }
+
+        private AdvertisedSocketAddress getAddressOrThrow( Map<Integer,AdvertisedSocketAddress> addressMap, int idx )
+        {
+            AdvertisedSocketAddress address = addressMap.get( idx );
+            if ( address == null )
+            {
+                throw new IllegalArgumentException( format( "You have expected member ids which do not exist! Expected:%s, Actual:%s",
+                        subsets, addressMap.keySet() ) );
+            }
+            return address;
         }
     }
 }
