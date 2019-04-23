@@ -5,10 +5,9 @@
  */
 package com.neo4j.bench.imports;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
-import java.nio.file.Paths;
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -31,9 +30,8 @@ public class CreateIndex
 {
     private void run( String storeDirString, List<String> indexPatterns )
     {
-        Store store = Store.createFrom( Paths.get( storeDirString ) );
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
-                .newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() )
+                .newEmbeddedDatabaseBuilder( new File( storeDirString ) )
                 .newDatabaseManagementService();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
