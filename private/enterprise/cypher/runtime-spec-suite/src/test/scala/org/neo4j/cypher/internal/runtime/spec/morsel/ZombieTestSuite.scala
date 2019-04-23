@@ -85,7 +85,8 @@ class ZombieUnwindStressTest extends UnwindStressTestBase(ZombieRuntime)
 class ZombieSortTest extends SortTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
 // AGGREGATION
-class ZombieAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
+class ZombieSingleThreadedAggregationTest extends AggregationTestBase(ENTERPRISE.SINGLE_THREADED, ZombieRuntime, SIZE_HINT)
+class ZombieParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, SIZE_HINT)
 
 // NODE HASH JOIN
 class ZombieNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
