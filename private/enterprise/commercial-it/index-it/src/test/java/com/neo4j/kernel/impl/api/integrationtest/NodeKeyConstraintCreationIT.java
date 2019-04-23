@@ -15,12 +15,12 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.DefaultLabelSchemaDescriptor;
+import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.NodeKeyConstraintDescriptor;
 
-public class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor,DefaultLabelSchemaDescriptor>
+public class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>
 {
     @Override
     int initializeLabelOrRelType( TokenWrite tokenWrite, String name ) throws KernelException
@@ -29,7 +29,7 @@ public class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Co
     }
 
     @Override
-    ConstraintDescriptor createConstraint( SchemaWrite writeOps, DefaultLabelSchemaDescriptor descriptor )
+    ConstraintDescriptor createConstraint( SchemaWrite writeOps, LabelSchemaDescriptor descriptor )
             throws Exception
     {
         return writeOps.nodeKeyConstraintCreate( descriptor );
@@ -42,7 +42,7 @@ public class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Co
     }
 
     @Override
-    NodeKeyConstraintDescriptor newConstraintObject( DefaultLabelSchemaDescriptor descriptor )
+    NodeKeyConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
     {
         return ConstraintDescriptorFactory.nodeKeyForSchema( descriptor );
     }
@@ -73,7 +73,7 @@ public class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Co
     }
 
     @Override
-    DefaultLabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
+    LabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
         return SchemaDescriptorFactory.forLabel( typeId, propertyKeyId );
     }
