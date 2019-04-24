@@ -23,6 +23,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.String.format;
 import static java.lang.String.join;
 
 @Command( name = "run-worker" )
@@ -68,7 +69,7 @@ public class RunWorker extends InfraCommand
                     workspaceDir.toAbsolutePath(),
                     // required artifacts
                     Paths.get( "benchmark-infra-scheduler.jar" ),
-                    Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
+                    Paths.get( format( "neo4j-%s-%s-unix.tar.gz", benchmarkArgs.getDbEdition().toLowerCase(), benchmarkArgs.getNeo4jVersion() ) ),
                     Paths.get( "macro/target/macro.jar" ),
                     Paths.get( "macro/run-report-benchmarks.sh" ) );
 

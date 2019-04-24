@@ -112,6 +112,11 @@ class MacroBenchmarkRunArgs
         return neo4j_version;
     }
 
+    String getDbEdition()
+    {
+        return db_edition;
+    }
+
     List<String> toArguments( Path neo4jConfig, Path workDir )
     {
         String[] args = new String[31];
