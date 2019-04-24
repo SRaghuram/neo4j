@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
-import org.neo4j.cypher.internal.runtime.zombie.operators.{CompiledStreamingOperator, MiddleOperator, Operator, ProduceResultOperator}
+import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, SameId}
@@ -41,7 +41,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     //then
     compiled.start should not be fused
     compiled.middleOperators shouldBe empty
-    compiled.produceResult shouldBe empty
+    compiled.outputOperator shouldBe NoOutputOperator
   }
 
   test("should fuse full pipeline") {
@@ -54,7 +54,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     // then
     compiled.start shouldBe fused
     compiled.middleOperators shouldBe empty
-    compiled.produceResult shouldBe empty
+    compiled.outputOperator shouldBe NoOutputOperator
   }
 
   test("should fuse partial pipelines") {
@@ -67,7 +67,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     // then
     compiled.start shouldBe fused
     compiled.middleOperators should have size 2
-    compiled.produceResult should not be empty
+    compiled.outputOperator should not be NoOutputOperator
   }
 
   test("should fuse partial pipelines 2") {
@@ -80,7 +80,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     // then
     compiled.start shouldBe fused
     compiled.middleOperators should have size 2
-    compiled.produceResult should not be empty
+    compiled.outputOperator should not be NoOutputOperator
   }
 
   def notSupported = new PipelineBuilder(dummyLeaf)
@@ -105,7 +105,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
       current match {
-        case p:ProduceResult => pipeline.produceResults = Some(p)
+        case p: ProduceResult => pipeline.outputDefinition = ProduceResultOutput(p)
         case p => pipeline.middlePlans.append(p)
       }
       this
