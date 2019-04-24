@@ -22,7 +22,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
                                              relOffset: Int,
                                              toSlot: Slot,
                                              dir: SemanticDirection,
-                                             lazyTypes: LazyTypes,
+                                             lazyTypes: RelationshipTypes,
                                              slots: SlotConfiguration)
   extends PipeWithSource(source) with PrimitiveCachingExpandInto {
   self =>
@@ -82,7 +82,7 @@ object OptionalExpandIntoSlottedPipe {
             relOffset: Int,
             toSlot: Slot,
             dir: SemanticDirection,
-            lazyTypes: LazyTypes,
+            lazyTypes: RelationshipTypes,
             slots: SlotConfiguration,
             maybePredicate: Option[Expression])
            (id: Id = Id.INVALID_ID): OptionalExpandIntoSlottedPipe = maybePredicate match {
@@ -97,7 +97,7 @@ case class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                                      relOffset: Int,
                                                      toSlot: Slot,
                                                      dir: SemanticDirection,
-                                                     lazyTypes: LazyTypes,
+                                                     lazyTypes: RelationshipTypes,
                                                      slots: SlotConfiguration)(val id: Id)
   extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
 
@@ -114,13 +114,13 @@ case class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
 }
 
 case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
-                                             fromSlot: Slot,
-                                             relOffset: Int,
-                                             toSlot: Slot,
-                                             dir: SemanticDirection,
-                                             lazyTypes: LazyTypes,
-                                             slots: SlotConfiguration,
-                                             predicate: Expression)(val id: Id)
+                                                  fromSlot: Slot,
+                                                  relOffset: Int,
+                                                  toSlot: Slot,
+                                                  dir: SemanticDirection,
+                                                  lazyTypes: RelationshipTypes,
+                                                  slots: SlotConfiguration,
+                                                  predicate: Expression)(val id: Id)
   extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
 
   predicate.registerOwningPipe(this)

@@ -6,12 +6,12 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.api.iterator.LongIterator
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -29,7 +29,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
                                  relOffset: Int,
                                  toSlot: Slot,
                                  dir: SemanticDirection,
-                                 lazyTypes: LazyTypes,
+                                 lazyTypes: RelationshipTypes,
                                  slots: SlotConfiguration)
                                 (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) with PrimitiveCachingExpandInto {

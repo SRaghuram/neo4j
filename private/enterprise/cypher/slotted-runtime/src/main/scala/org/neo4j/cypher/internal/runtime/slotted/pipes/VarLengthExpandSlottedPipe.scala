@@ -8,9 +8,9 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedPipeMapper}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, RelationshipContainer, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.InternalException
@@ -33,7 +33,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                                       toSlot: Slot,
                                       dir: SemanticDirection,
                                       projectedDir: SemanticDirection,
-                                      types: LazyTypes,
+                                      types: RelationshipTypes,
                                       min: Int,
                                       maxDepth: Option[Int],
                                       shouldExpandAll: Boolean,

@@ -94,19 +94,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, LazyTypes(types.toArray), slots)(id)
+        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots)(id)
 
       case Expand(_, from, dir, types, to, relName, ExpandInto) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(to)
-        ExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), slots)(id)
+        ExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, RelationshipTypes(types.toArray), slots)(id)
 
       case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(toName)
-        OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, LazyTypes(types.toArray), slots,
+        OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots,
                                      predicate.map(convertExpressions))(id)
 
       case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
@@ -114,7 +114,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(toName)
 
-        OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), slots,
+        OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, RelationshipTypes(types.toArray), slots,
                                       predicate.map(convertExpressions))(id)
 
       case VarExpand(sourcePlan,
@@ -141,13 +141,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
         val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
         val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs, sourceSlots.numberOfReferences)
-        VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, LazyTypes(types.toArray), min,
-          max, shouldExpandAll, slots,
-          tempNodeOffset = tempNodeOffset,
-          tempRelationshipOffset = tempRelationshipOffset,
-          nodePredicate = nodePredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-          relationshipPredicate = relationshipPredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-          argumentSize = argumentSize)(id)
+        VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, RelationshipTypes(types.toArray), min,
+                                   max, shouldExpandAll, slots,
+                                   tempNodeOffset = tempNodeOffset,
+                                   tempRelationshipOffset = tempRelationshipOffset,
+                                   nodePredicate = nodePredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+                                   relationshipPredicate = relationshipPredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+                                   argumentSize = argumentSize)(id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols

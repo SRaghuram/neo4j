@@ -9,7 +9,7 @@ import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, ForeachApply, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -166,12 +166,12 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
       xNodeSlot, rRelSlot.offset, zNodeSlot.offset,
       SemanticDirection.INCOMING,
-      LazyTypes.empty,
+      RelationshipTypes.empty,
       SlotConfiguration(Map(
         "x" -> xNodeSlot,
         "r" -> rRelSlot,
         "z" -> zNodeSlot), numberOfLongs = 3, numberOfReferences = 0)
-    )())
+      )())
   }
 
   test("single node with expand into") {
@@ -187,9 +187,9 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val relSlot = LongSlot(1, nullable = false, CTRelationship)
     pipe should equal(ExpandIntoSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
-      nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, LazyTypes.empty,
+      nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, RelationshipTypes.empty,
       SlotConfiguration(Map("x" -> nodeSlot, "r" -> relSlot), numberOfLongs = 2, numberOfReferences = 0)
-    )())
+      )())
   }
 
   test("single optional node with expand") {
@@ -221,9 +221,9 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         )(),
         xNodeSlot, rRelSlot.offset, zNodeSlot.offset,
         SemanticDirection.INCOMING,
-        LazyTypes.empty,
+        RelationshipTypes.empty,
         expandSlots
-      )())
+        )())
   }
 
   test("single optional node with expand into") {
@@ -249,7 +249,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
           allNodeScanSlots,
           Size.zero
         )(),
-        nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, LazyTypes.empty,
+        nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, RelationshipTypes.empty,
         expandSlots)()
     )
   }
@@ -307,13 +307,13 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     pipe should equal(OptionalExpandAllSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
-      X_NODE_SLOTS("x"), 1, 2, SemanticDirection.INCOMING, LazyTypes.empty,
+      X_NODE_SLOTS("x"), 1, 2, SemanticDirection.INCOMING, RelationshipTypes.empty,
       SlotConfiguration(Map(
         "x" -> LongSlot(0, nullable = false, CTNode),
         "r" -> LongSlot(1, nullable = true, CTRelationship),
         "z" -> LongSlot(2, nullable = true, CTNode)), numberOfLongs = 3, numberOfReferences = 0),
       None
-    )())
+      )())
   }
 
   test("single node with optionalExpand ExpandInto") {
@@ -327,12 +327,12 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     pipe should equal(OptionalExpandIntoSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
-      X_NODE_SLOTS("x"), 1, X_NODE_SLOTS("x"), SemanticDirection.INCOMING, LazyTypes.empty,
+      X_NODE_SLOTS("x"), 1, X_NODE_SLOTS("x"), SemanticDirection.INCOMING, RelationshipTypes.empty,
       SlotConfiguration(Map(
         "x" -> LongSlot(0, nullable = false, CTNode),
         "r" -> LongSlot(1, nullable = true, CTRelationship)), numberOfLongs = 2, numberOfReferences = 0),
       None
-    )())
+      )())
   }
 
   test("single node with varlength expand") {
@@ -362,11 +362,11 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       AllNodesScanSlottedPipe("x", allNodeScanSlots, Size.zero)(),
       xNodeSlot, rRelSlot.offset, zNodeSlot,
       SemanticDirection.INCOMING, SemanticDirection.INCOMING,
-      LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = true,
+      RelationshipTypes.empty, varLength.min, varLength.max, shouldExpandAll = true,
       varExpandSlots,
       -1, -1,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
-    )())
+      )())
     pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
     pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
@@ -414,11 +414,11 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
           AllNodesScanSlottedPipe("x", allNodeScanSlots, Size.zero)(),
           xNodeSlot, rRelSlot.offset, zNodeSlot.offset,
           SemanticDirection.OUTGOING,
-          LazyTypes.empty,
+          RelationshipTypes.empty,
           expandSlots)(),
         xNodeSlot, r2RelSlot.offset, zNodeSlot,
         SemanticDirection.INCOMING, SemanticDirection.INCOMING,
-        LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = false,
+        RelationshipTypes.empty, varLength.min, varLength.max, shouldExpandAll = false,
         varExpandSlots,
         SlottedPipeMapper.NO_PREDICATE_OFFSET, // no node predicate
         SlottedPipeMapper.NO_PREDICATE_OFFSET, // no relationship predicate
@@ -578,8 +578,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       NodesByLabelScanSlottedPipe("x", LazyLabel(labelName("label1")), lhsSlots, Size.zero)(),
       ExpandAllSlottedPipe(
         ArgumentSlottedPipe(lhsSlots, Size(1, 0))(),
-        rhsSlots("x"), 1, 2, SemanticDirection.INCOMING, LazyTypes.empty, rhsSlots
-      )()
+        rhsSlots("x"), 1, 2, SemanticDirection.INCOMING, RelationshipTypes.empty, rhsSlots
+        )()
     )())
   }
 

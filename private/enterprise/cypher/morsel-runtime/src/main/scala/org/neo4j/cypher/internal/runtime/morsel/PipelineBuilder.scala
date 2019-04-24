@@ -146,7 +146,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           val fromOffset = slots.getLongOffsetFor(fromName)
           val relOffset = slots.getLongOffsetFor(relName)
           val toOffset = slots.getLongOffsetFor(to)
-          val lazyTypes = LazyTypes(types.toArray)(SemanticTable())
+          val lazyTypes = RelationshipTypes(types.toArray)(SemanticTable())
           new ExpandAllOperator(WorkIdentity.fromPlan(plan), fromOffset, relOffset, toOffset, dir, lazyTypes)
 
         case plans.Projection(_, expressions) =>

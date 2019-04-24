@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -28,7 +28,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,
-                        types: LazyTypes) extends StreamingOperator {
+                        types: RelationshipTypes) extends StreamingOperator {
 
   override def toString: String = "ExpandAll"
 
@@ -92,16 +92,16 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     private def getRelationshipsCursor(context: QueryContext,
                                        node: Long,
                                        dir: SemanticDirection,
-                                       types: Option[Array[Int]]): RelationshipSelectionCursor = {
+                                       types: Array[Int]): RelationshipSelectionCursor = {
 
       val read = context.transactionalContext.dataRead
       read.singleNode(node, nodeCursor)
       if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
       else {
         dir match {
-          case OUTGOING => outgoingCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
-          case INCOMING => incomingCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
-          case BOTH => allCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
+          case OUTGOING => outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
+          case INCOMING => incomingCursor(groupCursor, traversalCursor, nodeCursor, types)
+          case BOTH => allCursor(groupCursor, traversalCursor, nodeCursor, types)
         }
       }
     }

@@ -23,7 +23,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
                                             relOffset: Int,
                                             toOffset: Int,
                                             dir: SemanticDirection,
-                                            types: LazyTypes,
+                                            types: RelationshipTypes,
                                             slots: SlotConfiguration)
   extends PipeWithSource(source) with Pipe {
 
@@ -89,7 +89,7 @@ object OptionalExpandAllSlottedPipe {
             fromSlot: Slot,
             relOffset: Int,
             toOffset: Int,
-            dir: SemanticDirection, types: LazyTypes,
+            dir: SemanticDirection, types: RelationshipTypes,
             slots: SlotConfiguration,
             maybePredicate: Option[Expression])
            (id: Id = Id.INVALID_ID): OptionalExpandAllSlottedPipe = maybePredicate match {
@@ -100,25 +100,25 @@ object OptionalExpandAllSlottedPipe {
 }
 
 case class NonFilteringOptionalExpandAllSlottedPipe(source: Pipe,
-                                               fromSlot: Slot,
-                                               relOffset: Int,
-                                               toOffset: Int,
-                                               dir: SemanticDirection,
-                                               types: LazyTypes,
-                                               slots: SlotConfiguration)(val id: Id)
+                                                    fromSlot: Slot,
+                                                    relOffset: Int,
+                                                    toOffset: Int,
+                                                    dir: SemanticDirection,
+                                                    types: RelationshipTypes,
+                                                    slots: SlotConfiguration)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
   override def filter(iterator: Iterator[SlottedExecutionContext], state: QueryState): Iterator[SlottedExecutionContext] = iterator
 }
 
 case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
-                                            fromSlot: Slot,
-                                            relOffset: Int,
-                                            toOffset: Int,
-                                            dir: SemanticDirection,
-                                            types: LazyTypes,
-                                            slots: SlotConfiguration,
-                                            predicate: Expression)(val id: Id)
+                                                 fromSlot: Slot,
+                                                 relOffset: Int,
+                                                 toOffset: Int,
+                                                 dir: SemanticDirection,
+                                                 types: RelationshipTypes,
+                                                 slots: SlotConfiguration,
+                                                 predicate: Expression)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
   predicate.registerOwningPipe(this)

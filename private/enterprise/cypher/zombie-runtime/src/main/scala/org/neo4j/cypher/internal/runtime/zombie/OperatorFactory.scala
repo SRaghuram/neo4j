@@ -103,7 +103,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        val lazyTypes = LazyTypes(types.toArray)(SemanticTable())
+        val lazyTypes = RelationshipTypes(types.toArray)(SemanticTable())
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
                               fromOffset,
                               relOffset,
