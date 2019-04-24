@@ -389,8 +389,8 @@ public class RunCommand implements Runnable
             return Neo4jSchema.NEO4J_REGULAR;
         }
         Store store = Store.createFrom( storeDir.toPath() );
-        DatabaseManagementService managementService = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManagementService managementService = Neo4jDb.newDb( store.topLevelDirectory().toFile(), neo4jConfig );
+        GraphDatabaseService db = managementService.database( store.graphDbDirectory().getFileName().toString() );
         try
         {
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
