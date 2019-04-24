@@ -121,7 +121,7 @@ public class EmbeddedDatabase implements Database
         requireNonNull( managementService );
         this.store = store;
         this.managementService = managementService;
-        this.db = managementService.database( DEFAULT_DATABASE_NAME );
+        this.db = managementService.database( store.graphDbDirectory().getFileName().toString() );
         this.resultVisitor = new CountingResultVisitor();
     }
 
@@ -145,9 +145,9 @@ public class EmbeddedDatabase implements Database
         switch ( edition )
         {
         case COMMUNITY:
-            return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
+            return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
         case ENTERPRISE:
-            return new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
+            return new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }
