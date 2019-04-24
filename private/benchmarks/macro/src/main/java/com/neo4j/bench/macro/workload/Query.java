@@ -168,6 +168,7 @@ public class Query
     {
         String simpleName = sanitize( name );
         Map<String,String> params = new HashMap<>();
+        params.put( "deployment", "EMBEDDED" );
         params.put( "planner", queryString.planner().name() );
         params.put( "runtime", queryString.runtime().name() );
         params.put( "execution_mode", queryString.executionMode().name() );
