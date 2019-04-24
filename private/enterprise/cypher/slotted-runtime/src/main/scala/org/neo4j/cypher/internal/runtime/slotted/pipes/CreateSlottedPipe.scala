@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import java.util.function.ToLongFunction
+
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -41,8 +43,8 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
       if (state.lenientCreateRelationship) NO_SUCH_RELATIONSHIP
       else throw new InternalException(LenientCreateRelationship.errorMsg(command.relName, nodeName))
 
-    val startNodeId = command.startNodeIdGetter(context)
-    val endNodeId = command.endNodeIdGetter(context)
+    val startNodeId = command.startNodeIdGetter.applyAsLong(context)
+    val endNodeId = command.endNodeIdGetter.applyAsLong(context)
     val typeId = command.relType.typ(state.query)
 
     if (startNodeId == NO_SUCH_NODE) handleMissingNode(command.startName)
@@ -70,9 +72,9 @@ case class CreateNodeSlottedCommand(idOffset: Int,
                                     properties: Option[Expression])
 
 case class CreateRelationshipSlottedCommand(relIdOffset: Int,
-                                            startNodeIdGetter: ExecutionContext => Long,
+                                            startNodeIdGetter: ToLongFunction[ExecutionContext],
                                             relType: LazyType,
-                                            endNodeIdGetter: ExecutionContext => Long,
+                                            endNodeIdGetter: ToLongFunction[ExecutionContext],
                                             properties: Option[Expression],
                                             relName: String,
                                             startName: String,
