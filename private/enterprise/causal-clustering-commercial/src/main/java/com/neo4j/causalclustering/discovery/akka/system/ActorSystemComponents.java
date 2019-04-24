@@ -11,7 +11,6 @@ import akka.actor.CoordinatedShutdown;
 import akka.actor.ProviderSelection;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
-import akka.cluster.client.ClusterClientSettings;
 import akka.cluster.ddata.DistributedData;
 import akka.stream.ActorMaterializer;
 import akka.stream.ActorMaterializerSettings;
@@ -24,7 +23,6 @@ public class ActorSystemComponents
     private ActorRef replicator;
     private ActorMaterializer materializer;
     private ClusterClientReceptionist clusterClientReceptionist;
-    private ClusterClientSettings clusterClientSettings;
     private CoordinatedShutdown coordinatedShutdown;
 
     public ActorSystemComponents( ActorSystemFactory actorSystemFactory, ProviderSelection providerSelection )
