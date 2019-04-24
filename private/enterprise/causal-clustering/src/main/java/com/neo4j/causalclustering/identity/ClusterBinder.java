@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.identity;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -77,7 +77,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
      * @param coreTopology the present state of the local topology, as reported by the discovery service.
      * @return Whether or not coreTopology, in its current state, can form a viable cluster
      */
-    private boolean hostShouldBootstrapCluster( CoreTopology coreTopology )
+    private boolean hostShouldBootstrapCluster( DatabaseCoreTopology coreTopology )
     {
         int memberCount = coreTopology.members().size();
         if ( memberCount < minCoreHosts )
@@ -115,7 +115,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         }
 
         Map<DatabaseId,CoreSnapshot> snapshots = Collections.emptyMap();
-        CoreTopology topology;
+        DatabaseCoreTopology topology;
         long endTime = clock.millis() + timeout.toMillis();
 
         do

@@ -14,7 +14,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.{ReadReplicaInfo, ReadReplicaTopology, TestTopology}
+import com.neo4j.causalclustering.discovery.{DatabaseReadReplicaTopology, ReadReplicaInfo, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
@@ -38,8 +38,8 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         readReplicaTopologyActor ! message
 
         Then("topologies for all databases are built")
-        val receivedTopology1 = topologyReceiver.expectMsgType[ReadReplicaTopology]
-        val receivedTopology2 = topologyReceiver.expectMsgType[ReadReplicaTopology]
+        val receivedTopology1 = topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
+        val receivedTopology2 = topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
 
         Set(receivedTopology1.databaseId(), receivedTopology2.databaseId()) should equal(databaseIds)
       }
@@ -48,13 +48,13 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         Given("actor with a cached view containing a read replica topology")
         val databaseIds = Set(new DatabaseId("employees"))
         readReplicaTopologyActor ! newReadReplicaViewMessage(1, databaseIds)
-        topologyReceiver.expectMsgType[ReadReplicaTopology]
+        topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
 
         When("send empty view message")
         readReplicaTopologyActor ! newReadReplicaViewMessage(0, databaseIds)
 
         Then("empty topology is built")
-        val expectedEmptyTopology = new ReadReplicaTopology(new DatabaseId("employees"), Map.empty[MemberId, ReadReplicaInfo].asJava)
+        val expectedEmptyTopology = new DatabaseReadReplicaTopology(new DatabaseId("employees"), Map.empty[MemberId, ReadReplicaInfo].asJava)
         topologyReceiver.expectMsg(expectedEmptyTopology)
       }
     }
@@ -65,7 +65,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
     val topologyReceiver = TestProbe("ReadReplicaTopologyReceiver")
     val materializer = ActorMaterializer()
 
-    val readReplicaTopologySink = Source.queue[ReadReplicaTopology](1, OverflowStrategy.dropHead)
+    val readReplicaTopologySink = Source.queue[DatabaseReadReplicaTopology](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(topology => topologyReceiver.ref ! topology))
       .run(materializer)
 

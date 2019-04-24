@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -80,7 +80,7 @@ class ConnectToRandomCoreServerStrategyTest
         assertNotEquals( myself, found );
     }
 
-    static CoreTopology fakeCoreTopology( MemberId... memberIds )
+    static DatabaseCoreTopology fakeCoreTopology( MemberId... memberIds )
     {
         assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
 
@@ -95,6 +95,6 @@ class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new CoreTopology( DATABASE_ID, clusterId, false, coreMembers );
+        return new DatabaseCoreTopology( DATABASE_ID, clusterId, false, coreMembers );
     }
 }

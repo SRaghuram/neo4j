@@ -15,10 +15,10 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
@@ -78,7 +78,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         actorSystemLifecycle.createClusterActorSystem();
 
         SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
-        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
@@ -115,7 +115,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
-    private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink )
+    private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
         Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, logProvider, config, clock );
@@ -206,7 +206,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
@@ -218,7 +218,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }

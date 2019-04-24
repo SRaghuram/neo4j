@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.discovery.CoreTopology;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 
 public interface TopologyUpdateSink
 {
-    void onTopologyUpdate( CoreTopology topology );
+    void onTopologyUpdate( DatabaseCoreTopology topology );
 
-    void onTopologyUpdate( ReadReplicaTopology topology );
+    void onTopologyUpdate( DatabaseReadReplicaTopology topology );
 }

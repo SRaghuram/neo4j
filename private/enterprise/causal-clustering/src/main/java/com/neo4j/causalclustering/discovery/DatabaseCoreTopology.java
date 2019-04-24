@@ -15,16 +15,16 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
-public class CoreTopology implements Topology<CoreServerInfo>
+public class DatabaseCoreTopology implements Topology<CoreServerInfo>
 {
-    public static final CoreTopology EMPTY = new CoreTopology( null, null, false, emptyMap() );
+    public static final DatabaseCoreTopology EMPTY = new DatabaseCoreTopology( null, null, false, emptyMap() );
 
     private final DatabaseId databaseId;
     private final ClusterId clusterId;
     private final boolean canBeBootstrapped;
     private final Map<MemberId,CoreServerInfo> coreMembers;
 
-    public CoreTopology( DatabaseId databaseId, ClusterId clusterId, boolean canBeBootstrapped, Map<MemberId,CoreServerInfo> coreMembers )
+    public DatabaseCoreTopology( DatabaseId databaseId, ClusterId clusterId, boolean canBeBootstrapped, Map<MemberId,CoreServerInfo> coreMembers )
     {
         this.databaseId = databaseId;
         this.clusterId = clusterId;
@@ -65,7 +65,7 @@ public class CoreTopology implements Topology<CoreServerInfo>
         {
             return false;
         }
-        CoreTopology that = (CoreTopology) o;
+        var that = (DatabaseCoreTopology) o;
         return canBeBootstrapped == that.canBeBootstrapped &&
                Objects.equals( databaseId, that.databaseId ) &&
                Objects.equals( clusterId, that.clusterId ) &&
@@ -81,7 +81,7 @@ public class CoreTopology implements Topology<CoreServerInfo>
     @Override
     public String toString()
     {
-        return "CoreTopology{" +
+        return "DatabaseCoreTopology{" +
                "databaseId='" + databaseId + '\'' +
                ", clusterId=" + clusterId +
                ", canBeBootstrapped=" + canBeBootstrapped +

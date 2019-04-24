@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
-import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestDiscoveryMember, TestTopology}
+import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
@@ -49,7 +49,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     "running" should {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
-        val newCoreTopology = new CoreTopology(
+        val newCoreTopology = new DatabaseCoreTopology(
           new DatabaseId(DEFAULT_DATABASE_NAME),
           new ClusterId(UUID.randomUUID()),
           false,
@@ -71,7 +71,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
-        val newRRTopology = new ReadReplicaTopology(new DatabaseId(DEFAULT_DATABASE_NAME), Map(
+        val newRRTopology = new DatabaseReadReplicaTopology(new DatabaseId(DEFAULT_DATABASE_NAME), Map(
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
                 ).asJava)
@@ -119,14 +119,14 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   }
 
   trait Fixture {
-    var actualCoreTopology = CoreTopology.EMPTY
-    var actualReadReplicaTopology = ReadReplicaTopology.EMPTY
+    var actualCoreTopology = DatabaseCoreTopology.EMPTY
+    var actualReadReplicaTopology = DatabaseReadReplicaTopology.EMPTY
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
 
     val updateSink = new TopologyUpdateSink with DirectoryUpdateSink {
-      override def onTopologyUpdate(topology: CoreTopology) = actualCoreTopology = topology
+      override def onTopologyUpdate(topology: DatabaseCoreTopology) = actualCoreTopology = topology
 
-      override def onTopologyUpdate(topology: ReadReplicaTopology) = actualReadReplicaTopology = topology
+      override def onTopologyUpdate(topology: DatabaseReadReplicaTopology) = actualReadReplicaTopology = topology
 
       override def onDbLeaderUpdate(leaderPerDb: java.util.Map[DatabaseId, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
     }
@@ -135,10 +135,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     val discoverySink = Source.queue[java.util.Map[DatabaseId,LeaderInfo]](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onDbLeaderUpdate))
       .run(materializer)
-    val coreTopologySink = Source.queue[CoreTopology](1, OverflowStrategy.dropHead)
+    val coreTopologySink = Source.queue[DatabaseCoreTopology](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onTopologyUpdate))
       .run(materializer)
-    val readReplicaTopologySink = Source.queue[ReadReplicaTopology](1, OverflowStrategy.dropHead)
+    val readReplicaTopologySink = Source.queue[DatabaseReadReplicaTopology](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onTopologyUpdate))
       .run(materializer)
 

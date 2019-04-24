@@ -13,10 +13,10 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
@@ -65,8 +65,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         ClusterClientSettings clusterClientSettings = actorSystemLifecycle.clusterClientSettings();
         ActorRef clusterClient = actorSystemLifecycle.systemActorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
 
-        SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
-        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
 
         Props clientTopologyProps = ClientTopologyActor.props(
@@ -93,7 +93,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
@@ -105,7 +105,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }

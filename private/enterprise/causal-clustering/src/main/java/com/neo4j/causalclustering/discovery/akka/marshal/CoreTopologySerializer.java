@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 
-public class CoreTopologySerializer extends BaseAkkaSerializer<CoreTopology>
+public class CoreTopologySerializer extends BaseAkkaSerializer<DatabaseCoreTopology>
 {
     public static final int SIZE_HINT = 1536;
 

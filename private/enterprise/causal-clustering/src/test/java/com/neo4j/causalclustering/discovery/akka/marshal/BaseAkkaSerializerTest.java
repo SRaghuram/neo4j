@@ -11,7 +11,7 @@ import akka.actor.ExtendedActorSystem;
 import akka.cluster.UniqueAddress;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
@@ -85,7 +85,7 @@ public class BaseAkkaSerializerTest
                         new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                         new ReadReplicaInfoSerializer()},
-                new Object[]{new CoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new ClusterId( UUID.randomUUID() ), true,
+                new Object[]{new DatabaseCoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new ClusterId( UUID.randomUUID() ), true,
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
                 new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                         new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},

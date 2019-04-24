@@ -10,8 +10,8 @@ import akka.actor.ActorSystem;
 import akka.testkit.TestProbe;
 import akka.testkit.javadsl.TestKit;
 import co.unruly.matchers.StreamMatchers;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterEach;
@@ -68,14 +68,14 @@ class ReadReplicaViewMessageTest extends TestKit
     void shouldReturnEmptyTopologyIfEmptyView()
     {
         DatabaseId databaseId = new DatabaseId( "no_such_database" );
-        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( databaseId ), equalTo( new ReadReplicaTopology( databaseId, Map.of() ) ) );
+        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( databaseId ), equalTo( new DatabaseReadReplicaTopology( databaseId, Map.of() ) ) );
     }
 
     @Test
     void shouldReturnReadReplicaTopology()
     {
         DatabaseId databaseId = Iterables.single( readReplicaInfo.getDatabaseIds() );
-        ReadReplicaTopology expected = new ReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
+        DatabaseReadReplicaTopology expected = new DatabaseReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
 
         assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
     }

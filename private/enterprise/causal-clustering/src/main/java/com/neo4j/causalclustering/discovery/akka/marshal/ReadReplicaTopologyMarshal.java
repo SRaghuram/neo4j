@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
@@ -21,13 +21,13 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
 
-public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<ReadReplicaTopology>
+public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadReplicaTopology>
 {
     private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
     private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
 
     @Override
-    protected ReadReplicaTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
+    protected DatabaseReadReplicaTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         int size = channel.getInt();
@@ -38,11 +38,11 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<ReadReplicaTo
             ReadReplicaInfo readReplicaInfo = readReplicaInfoMarshal.unmarshal( channel );
             replicas.put( memberId, readReplicaInfo );
         }
-        return new ReadReplicaTopology( databaseId, replicas );
+        return new DatabaseReadReplicaTopology( databaseId, replicas );
     }
 
     @Override
-    public void marshal( ReadReplicaTopology readReplicaTopology, WritableChannel channel ) throws IOException
+    public void marshal( DatabaseReadReplicaTopology readReplicaTopology, WritableChannel channel ) throws IOException
     {
         DatabaseIdMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
         channel.putInt( readReplicaTopology.members().size() );

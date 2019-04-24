@@ -8,10 +8,10 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
@@ -468,8 +468,8 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         when( topologyService.allCoreServers() ).thenReturn( cores );
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
-        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new CoreTopology( databaseId, clusterId, false, cores ) );
-        when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new ReadReplicaTopology( databaseId, readReplicas ) );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, false, cores ) );
+        when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, readReplicas ) );
     }
 
     private static class ClusterView

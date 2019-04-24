@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
@@ -23,14 +23,14 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
 
-public class CoreTopologyMarshal extends SafeChannelMarshal<CoreTopology>
+public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology>
 {
     private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
     private final ChannelMarshal<CoreServerInfo> coreServerInfoChannelMarshal = new CoreServerInfoMarshal();
     private final ChannelMarshal<ClusterId> clusterIdMarshal = new ClusterId.Marshal();
 
     @Override
-    protected CoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
+    protected DatabaseCoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         ClusterId clusterId = clusterIdMarshal.unmarshal( channel );
@@ -45,11 +45,11 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<CoreTopology>
             members.put( memberId, coreServerInfo );
         }
 
-        return new CoreTopology( databaseId, clusterId, canBeBootstrapped, members );
+        return new DatabaseCoreTopology( databaseId, clusterId, canBeBootstrapped, members );
     }
 
     @Override
-    public void marshal( CoreTopology coreTopology, WritableChannel channel ) throws IOException
+    public void marshal( DatabaseCoreTopology coreTopology, WritableChannel channel ) throws IOException
     {
         DatabaseIdMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
         clusterIdMarshal.marshal( coreTopology.clusterId(), channel );

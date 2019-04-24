@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
@@ -73,8 +73,8 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
 
     private Set<ServerInfo> possibleServers( DatabaseId databaseId )
     {
-        CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
-        ReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( databaseId );
+        DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+        DatabaseReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( databaseId );
 
         var infoMap = Stream.of( coreTopology, readReplicaTopology )
                 .map( Topology::members )

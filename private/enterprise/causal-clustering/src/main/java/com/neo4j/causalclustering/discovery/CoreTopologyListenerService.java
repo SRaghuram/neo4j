@@ -27,7 +27,7 @@ public class CoreTopologyListenerService
         listeners.remove( listener );
     }
 
-    public void notifyListeners( CoreTopology coreTopology )
+    public void notifyListeners( DatabaseCoreTopology coreTopology )
     {
         for ( CoreTopologyService.Listener listener : listeners )
         {

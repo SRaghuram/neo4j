@@ -7,10 +7,10 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -35,14 +35,14 @@ import static java.util.Collections.unmodifiableMap;
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink
 {
     private final Log log;
-    private final Consumer<CoreTopology> callback;
+    private final Consumer<DatabaseCoreTopology> callback;
     private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
     private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
-    private final Map<DatabaseId,CoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
-    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,DatabaseCoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
 
-    public GlobalTopologyState( LogProvider logProvider, Consumer<CoreTopology> listener )
+    public GlobalTopologyState( LogProvider logProvider, Consumer<DatabaseCoreTopology> listener )
     {
         this.log = logProvider.getLog( getClass() );
         this.coresByMemberId = emptyMap();
@@ -52,10 +52,10 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     }
 
     @Override
-    public void onTopologyUpdate( CoreTopology newCoreTopology )
+    public void onTopologyUpdate( DatabaseCoreTopology newCoreTopology )
     {
         DatabaseId databaseId = newCoreTopology.databaseId();
-        CoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
+        DatabaseCoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
 
         if ( haveDifferentMembers( currentCoreTopology, newCoreTopology ) )
         {
@@ -66,10 +66,10 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     }
 
     @Override
-    public void onTopologyUpdate( ReadReplicaTopology newReadReplicaTopology )
+    public void onTopologyUpdate( DatabaseReadReplicaTopology newReadReplicaTopology )
     {
         DatabaseId databaseId = newReadReplicaTopology.databaseId();
-        ReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabase.put( databaseId, newReadReplicaTopology );
+        DatabaseReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabase.put( databaseId, newReadReplicaTopology );
 
         if ( !Objects.equals( currentReadReplicaTopology, newReadReplicaTopology ) )
         {
@@ -109,14 +109,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return readReplicasByMemberId;
     }
 
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return coreTopologiesByDatabase.getOrDefault( databaseId, CoreTopology.EMPTY );
+        return coreTopologiesByDatabase.getOrDefault( databaseId, DatabaseCoreTopology.EMPTY );
     }
 
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return readReplicaTopologiesByDatabase.getOrDefault( databaseId, ReadReplicaTopology.EMPTY );
+        return readReplicaTopologiesByDatabase.getOrDefault( databaseId, DatabaseReadReplicaTopology.EMPTY );
     }
 
     public AdvertisedSocketAddress retrieveCatchupServerAddress( MemberId memberId )
@@ -152,7 +152,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return unmodifiableMap( result );
     }
 
-    private static boolean haveDifferentMembers( CoreTopology oldTopology, CoreTopology newTopology )
+    private static boolean haveDifferentMembers( DatabaseCoreTopology oldTopology, DatabaseCoreTopology newTopology )
     {
         return oldTopology == null || !oldTopology.members().equals( newTopology.members() );
     }

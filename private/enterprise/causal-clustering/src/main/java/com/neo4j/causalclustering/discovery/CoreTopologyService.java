@@ -51,7 +51,7 @@ public interface CoreTopologyService extends TopologyService
 
     interface Listener
     {
-        void onCoreTopologyChange( CoreTopology coreTopology );
+        void onCoreTopologyChange( DatabaseCoreTopology coreTopology );
 
         DatabaseId databaseId();
     }

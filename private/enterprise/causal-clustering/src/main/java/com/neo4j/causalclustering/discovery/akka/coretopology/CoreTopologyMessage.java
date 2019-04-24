@@ -6,23 +6,23 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.Address;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 
 import java.util.Collection;
 import java.util.Objects;
 
 public class CoreTopologyMessage
 {
-    private final CoreTopology coreTopology;
+    private final DatabaseCoreTopology coreTopology;
     private final Collection<Address> akkaMembers;
 
-    public CoreTopologyMessage( CoreTopology coreTopology, Collection<Address> akkaMembers )
+    public CoreTopologyMessage( DatabaseCoreTopology coreTopology, Collection<Address> akkaMembers )
     {
         this.coreTopology = coreTopology;
         this.akkaMembers = akkaMembers;
     }
 
-    public CoreTopology coreTopology()
+    public DatabaseCoreTopology coreTopology()
     {
         return coreTopology;
     }

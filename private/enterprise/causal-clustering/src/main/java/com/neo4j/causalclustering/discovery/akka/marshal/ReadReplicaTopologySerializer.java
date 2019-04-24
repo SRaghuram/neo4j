@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 
-public class ReadReplicaTopologySerializer extends BaseAkkaSerializer<ReadReplicaTopology>
+public class ReadReplicaTopologySerializer extends BaseAkkaSerializer<DatabaseReadReplicaTopology>
 {
     protected ReadReplicaTopologySerializer()
     {

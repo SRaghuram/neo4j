@@ -14,14 +14,14 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
-public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
+public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
-    public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( null, emptyMap() );
+    public static final DatabaseReadReplicaTopology EMPTY = new DatabaseReadReplicaTopology( null, emptyMap() );
 
     private final DatabaseId databaseId;
     private final Map<MemberId,ReadReplicaInfo> readReplicaMembers;
 
-    public ReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
+    public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
         this.databaseId = databaseId;
         this.readReplicaMembers = readReplicaMembers;
@@ -50,7 +50,7 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
         {
             return false;
         }
-        ReadReplicaTopology that = (ReadReplicaTopology) o;
+        var that = (DatabaseReadReplicaTopology) o;
         return Objects.equals( databaseId, that.databaseId ) &&
                Objects.equals( readReplicaMembers, that.readReplicaMembers );
     }
@@ -64,7 +64,7 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
     @Override
     public String toString()
     {
-        return "ReadReplicaTopology{" +
+        return "DatabaseReadReplicaTopology{" +
                "databaseId='" + databaseId + '\'' +
                ", readReplicaMembers=" + readReplicaMembers +
                '}';

@@ -44,29 +44,29 @@ public final class SharedDiscoveryService
         enoughMembersLatch( databaseId ).await();
     }
 
-    CoreTopology getCoreTopology( DatabaseId databaseId, SharedDiscoveryCoreClient client )
+    DatabaseCoreTopology getCoreTopology( DatabaseId databaseId, SharedDiscoveryCoreClient client )
     {
         return getCoreTopology( databaseId, canBeBootstrapped( databaseId, client ) );
     }
 
-    CoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped )
+    DatabaseCoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped )
     {
         Map<MemberId,CoreServerInfo> databaseCoreMembers = coreMembers.entrySet()
                 .stream()
                 .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
                 .collect( entriesToMap() );
 
-        return new CoreTopology( databaseId, clusterIdDbNames.get( databaseId ), canBeBootstrapped, databaseCoreMembers );
+        return new DatabaseCoreTopology( databaseId, clusterIdDbNames.get( databaseId ), canBeBootstrapped, databaseCoreMembers );
     }
 
-    ReadReplicaTopology getReadReplicaTopology( DatabaseId databaseId )
+    DatabaseReadReplicaTopology getReadReplicaTopology( DatabaseId databaseId )
     {
         Map<MemberId,ReadReplicaInfo> databaseReadReplicas = readReplicas.entrySet()
                 .stream()
                 .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
                 .collect( entriesToMap() );
 
-        return new ReadReplicaTopology( databaseId, databaseReadReplicas );
+        return new DatabaseReadReplicaTopology( databaseId, databaseReadReplicas );
     }
 
     synchronized void registerCoreMember( SharedDiscoveryCoreClient client )

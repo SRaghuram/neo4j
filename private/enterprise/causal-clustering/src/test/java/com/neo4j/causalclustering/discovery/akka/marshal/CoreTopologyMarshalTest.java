@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -24,20 +24,20 @@ import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
 @RunWith( Parameterized.class )
-public class CoreTopologyMarshalTest extends BaseMarshalTest<CoreTopology>
+public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
 {
-    public CoreTopologyMarshalTest( CoreTopology original )
+    public CoreTopologyMarshalTest( DatabaseCoreTopology original )
     {
         super( original, new CoreTopologyMarshal() );
     }
 
     @Parameterized.Parameters
-    public static Collection<CoreTopology> data()
+    public static Collection<DatabaseCoreTopology> data()
     {
         return Arrays.asList(
-                new CoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 0 ) ),
-                new CoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
-                new CoreTopology( new DatabaseId( "cars" ), null, false, CoreTopologyMarshalTest.coreServerInfos( 4 ) )
+                new DatabaseCoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), true, coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), true, coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "cars" ), null, false, coreServerInfos( 4 ) )
         );
     }
 

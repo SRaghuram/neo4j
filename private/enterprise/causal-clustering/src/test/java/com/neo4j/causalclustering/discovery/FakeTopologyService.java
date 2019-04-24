@@ -18,11 +18,11 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class FakeTopologyService implements TopologyService
 {
-    private final CoreTopology coreTopology;
-    private final ReadReplicaTopology readReplicaTopology;
+    private final DatabaseCoreTopology coreTopology;
+    private final DatabaseReadReplicaTopology readReplicaTopology;
     private final Map<MemberId,AdvertisedSocketAddress> catchupAddresses;
 
-    public FakeTopologyService( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
+    public FakeTopologyService( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology readReplicaTopology )
     {
         this.coreTopology = coreTopology;
         this.readReplicaTopology = readReplicaTopology;
@@ -36,7 +36,7 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return coreTopology;
     }
@@ -48,7 +48,7 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return readReplicaTopology;
     }
@@ -96,7 +96,8 @@ public class FakeTopologyService implements TopologyService
     {
     }
 
-    private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
+    private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( DatabaseCoreTopology coreTopology,
+            DatabaseReadReplicaTopology readReplicaTopology )
     {
         var catchupAddressMap = new HashMap<MemberId,AdvertisedSocketAddress>();
 

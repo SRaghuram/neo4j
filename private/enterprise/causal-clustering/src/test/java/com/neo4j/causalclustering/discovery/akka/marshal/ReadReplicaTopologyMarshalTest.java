@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -18,19 +18,19 @@ import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
-public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<ReadReplicaTopology>
+public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseReadReplicaTopology>
 {
     public ReadReplicaTopologyMarshalTest()
     {
         super( generate(), new ReadReplicaTopologyMarshal() );
     }
 
-    static ReadReplicaTopology generate()
+    static DatabaseReadReplicaTopology generate()
     {
         Map<MemberId,ReadReplicaInfo> replicas = IntStream.range( 0, 5 )
                 .mapToObj( id -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForReadReplica( id ) ) )
                 .collect( CollectorsUtil.pairsToMap() );
-        return new ReadReplicaTopology( new DatabaseId( "hello" ), replicas );
+        return new DatabaseReadReplicaTopology( new DatabaseId( "hello" ), replicas );
     }
 
 }

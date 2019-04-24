@@ -21,11 +21,11 @@ public interface TopologyService extends Lifecycle
 {
     Map<MemberId,CoreServerInfo> allCoreServers();
 
-    CoreTopology coreTopologyForDatabase( DatabaseId databaseId );
+    DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId );
 
     Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
-    ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
+    DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 

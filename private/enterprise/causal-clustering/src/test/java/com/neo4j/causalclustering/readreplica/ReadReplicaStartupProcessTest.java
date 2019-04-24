@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
@@ -80,7 +80,7 @@ class ReadReplicaStartupProcessTest
         when( topologyService.allCoreServers() ).thenReturn( members );
         for ( DatabaseId databaseId : databaseIds )
         {
-            when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new CoreTopology( databaseId, clusterId, false, members ) );
+            when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, false, members ) );
         }
         when( topologyService.findCatchupAddress( memberId ) ).thenReturn( fromAddress );
         //I know ... I'm sorry
@@ -341,7 +341,7 @@ class ReadReplicaStartupProcessTest
         @Override
         public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
-            CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+            DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
             return Optional.ofNullable( coreTopology.members().keySet().iterator().next() );
         }
     }

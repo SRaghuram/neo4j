@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
@@ -53,7 +53,7 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
-        CoreTopology coreTopology = new CoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, Map.of() );
         Listener listener = mock( Listener.class );
         when( listener.databaseId() ).thenReturn( databaseId );
         service.addLocalCoreTopologyListener( listener );

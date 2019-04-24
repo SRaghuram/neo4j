@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
@@ -159,12 +159,12 @@ class UserDefinedConfigurationStrategyTest
         return Config.defaults( CausalClusteringSettings.user_defined_upstream_selection_strategy, filter );
     }
 
-    static ReadReplicaTopology fakeReadReplicaTopology( MemberId... readReplicaIds )
+    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId... readReplicaIds )
     {
         return fakeReadReplicaTopology( readReplicaIds, ignored -> Collections.emptySet() );
     }
 
-    static ReadReplicaTopology fakeReadReplicaTopology( MemberId[] readReplicaIds, Function<MemberId,Set<String>> groupGenerator )
+    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId[] readReplicaIds, Function<MemberId,Set<String>> groupGenerator )
     {
         assert readReplicaIds.length > 0;
 
@@ -174,7 +174,7 @@ class UserDefinedConfigurationStrategyTest
 
         Map<MemberId,ReadReplicaInfo> readReplicas = Stream.of( readReplicaIds ).collect( Collectors.toMap( Function.identity(), toReadReplicaInfo ) );
 
-        return new ReadReplicaTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), readReplicas );
+        return new DatabaseReadReplicaTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), readReplicas );
     }
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )

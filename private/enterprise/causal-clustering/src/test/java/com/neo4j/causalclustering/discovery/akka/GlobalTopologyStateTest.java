@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.verify;
 class GlobalTopologyStateTest
 {
     @SuppressWarnings( "unchecked" )
-    private final Consumer<CoreTopology> listener = mock( Consumer.class );
+    private final Consumer<DatabaseCoreTopology> listener = mock( Consumer.class );
     private final GlobalTopologyState state = new GlobalTopologyState( NullLogProvider.getInstance(), listener );
 
     private final DatabaseId databaseId1 = new DatabaseId( "db1" );
@@ -64,8 +64,8 @@ class GlobalTopologyStateTest
         assertEquals( Map.of(), state.allCoreRoles() );
         assertEquals( Map.of(), state.allCoreServers() );
         assertEquals( Map.of(), state.allReadReplicas() );
-        assertEquals( CoreTopology.EMPTY, state.coreTopologyForDatabase( databaseId1 ) );
-        assertEquals( ReadReplicaTopology.EMPTY, state.readReplicaTopologyForDatabase( databaseId1 ) );
+        assertEquals( DatabaseCoreTopology.EMPTY, state.coreTopologyForDatabase( databaseId1 ) );
+        assertEquals( DatabaseReadReplicaTopology.EMPTY, state.readReplicaTopologyForDatabase( databaseId1 ) );
         assertNull( state.retrieveCatchupServerAddress( coreId1 ) );
     }
 
@@ -73,10 +73,10 @@ class GlobalTopologyStateTest
     void shouldKeepTrackOfCoreTopologies()
     {
         var coreMembers1 = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, coreMembers1 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers1 );
 
         var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology2 = new CoreTopology( databaseId2, clusterId, true, coreMembers2 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, clusterId, true, coreMembers2 );
 
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );
@@ -89,8 +89,8 @@ class GlobalTopologyStateTest
     @Test
     void shouldNotifyCallbackOnCoreTopologyChange()
     {
-        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
-        var coreTopology2 = new CoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ) );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ) );
 
         state.onTopologyUpdate( coreTopology1 );
         verify( listener ).accept( coreTopology1 );
@@ -102,7 +102,7 @@ class GlobalTopologyStateTest
     @Test
     void shouldNotNotifyCallbackIfCoreTopologyDoesNotChange()
     {
-        var coreTopology = new CoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
 
         state.onTopologyUpdate( coreTopology );
         state.onTopologyUpdate( coreTopology );
@@ -115,10 +115,10 @@ class GlobalTopologyStateTest
     void shouldKeepTrackOfReadReplicaTopologies()
     {
         var readReplicas1 = Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology1 = new ReadReplicaTopology( databaseId1, readReplicas1 );
+        var readReplicaTopology1 = new DatabaseReadReplicaTopology( databaseId1, readReplicas1 );
 
         var readReplicas2 = Map.of( readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology2 = new ReadReplicaTopology( databaseId2, readReplicas2 );
+        var readReplicaTopology2 = new DatabaseReadReplicaTopology( databaseId2, readReplicas2 );
 
         state.onTopologyUpdate( readReplicaTopology1 );
         state.onTopologyUpdate( readReplicaTopology2 );
@@ -133,9 +133,9 @@ class GlobalTopologyStateTest
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 );
 
-        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology1 );
-        var coreTopology2 = new CoreTopology( databaseId2, clusterId, false, coreMembers );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology2 );
 
         var leaderInfos = Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 4242 ) );
@@ -151,11 +151,11 @@ class GlobalTopologyStateTest
     void shouldReturnAllCores()
     {
         var coreMembers1 = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, coreMembers1 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers1 );
         state.onTopologyUpdate( coreTopology1 );
 
         var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology2 = new CoreTopology( databaseId2, clusterId, false, coreMembers2 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, clusterId, false, coreMembers2 );
         state.onTopologyUpdate( coreTopology2 );
 
         assertEquals( Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ), state.allCoreServers() );
@@ -165,11 +165,11 @@ class GlobalTopologyStateTest
     void shouldReturnAllReadReplicas()
     {
         var readReplicas1 = Map.of( readReplicaId1, readReplicaInfo1 );
-        var readReplicaTopology1 = new ReadReplicaTopology( databaseId1, readReplicas1 );
+        var readReplicaTopology1 = new DatabaseReadReplicaTopology( databaseId1, readReplicas1 );
         state.onTopologyUpdate( readReplicaTopology1 );
 
         var readReplicas2 = Map.of( readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology2 = new ReadReplicaTopology( databaseId2, readReplicas2 );
+        var readReplicaTopology2 = new DatabaseReadReplicaTopology( databaseId2, readReplicas2 );
         state.onTopologyUpdate( readReplicaTopology2 );
 
         assertEquals( Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 ), state.allReadReplicas() );
@@ -179,7 +179,7 @@ class GlobalTopologyStateTest
     void shouldReturnCoreTopologyForKnownDatabase()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( coreTopology, state.coreTopologyForDatabase( databaseId1 ) );
@@ -189,17 +189,17 @@ class GlobalTopologyStateTest
     void shouldReturnCoreTopologyForUnknownDatabase()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( CoreTopology.EMPTY, state.coreTopologyForDatabase( databaseId2 ) );
+        assertEquals( DatabaseCoreTopology.EMPTY, state.coreTopologyForDatabase( databaseId2 ) );
     }
 
     @Test
     void shouldReturnReadReplicaTopologyForKnownDatabase()
     {
         var readReplicas = Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology = new ReadReplicaTopology( databaseId1, readReplicas );
+        var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
         assertEquals( readReplicaTopology, state.readReplicaTopologyForDatabase( databaseId1 ) );
@@ -209,17 +209,17 @@ class GlobalTopologyStateTest
     void shouldReturnReadReplicaTopologyForUnknownDatabase()
     {
         var readReplicas = Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology = new ReadReplicaTopology( databaseId1, readReplicas );
+        var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
-        assertEquals( ReadReplicaTopology.EMPTY, state.readReplicaTopologyForDatabase( databaseId2 ) );
+        assertEquals( DatabaseReadReplicaTopology.EMPTY, state.readReplicaTopologyForDatabase( databaseId2 ) );
     }
 
     @Test
     void shouldRetrieveCatchupAddressForCore()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( coreInfo1.getCatchupServer(), state.retrieveCatchupServerAddress( coreId1 ) );
@@ -230,7 +230,7 @@ class GlobalTopologyStateTest
     void shouldRetrieveCatchupAddressForReadReplica()
     {
         var readReplicas = Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 );
-        var readReplicaTopology = new ReadReplicaTopology( databaseId1, readReplicas );
+        var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
         assertEquals( readReplicaInfo1.getCatchupServer(), state.retrieveCatchupServerAddress( readReplicaId1 ) );
@@ -241,11 +241,11 @@ class GlobalTopologyStateTest
     void shouldRetrieveNullCatchupAddressForUnknownMember()
     {
         var coreMembers = Map.of( coreId1, coreInfo1 );
-        var coreTopology = new CoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         var readReplicas = Map.of( readReplicaId1, readReplicaInfo1 );
-        var readReplicaTopology = new ReadReplicaTopology( databaseId1, readReplicas );
+        var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
         assertNull( state.retrieveCatchupServerAddress( coreId2 ) );
@@ -257,8 +257,8 @@ class GlobalTopologyStateTest
     void shouldIgnoreCoreTopologyThatDiffersOnlyInCanBeBootstrapped()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology1 = new CoreTopology( databaseId1, clusterId, false, coreMembers );
-        var coreTopology2 = new CoreTopology( databaseId1, clusterId, true, coreMembers );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId1, clusterId, true, coreMembers );
 
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );

@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -36,7 +36,7 @@ public class TopologyBuilder
         this.log = logProvider.getLog( getClass() );
     }
 
-    CoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
+    DatabaseCoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
         log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
         Map<MemberId, CoreServerInfo> coreMembers =
@@ -44,7 +44,7 @@ public class TopologyBuilder
                 .collect( Collectors.toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
         boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData, databaseId );
-        CoreTopology newCoreTopology = new CoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
+        DatabaseCoreTopology newCoreTopology = new DatabaseCoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
         log.debug( "Returned topology: %s", newCoreTopology );
         return newCoreTopology;
     }

@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
@@ -111,7 +111,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
                 fakeReadReplicaTopology( myServerGroups, myGroupMemberIds, unwanted, 10 ) );
     }
 
-    static ReadReplicaTopology fakeReadReplicaTopology( List<String> wanted, MemberId[] memberIds, List<String> unwanted, int unwantedNumber )
+    static DatabaseReadReplicaTopology fakeReadReplicaTopology( List<String> wanted, MemberId[] memberIds, List<String> unwanted, int unwantedNumber )
     {
         Map<MemberId,ReadReplicaInfo> readReplicas = new HashMap<>();
 
@@ -137,6 +137,6 @@ class ConnectRandomlyToServerGroupStrategyImplTest
             offset++;
         }
 
-        return new ReadReplicaTopology( DATABASE_ID, readReplicas );
+        return new DatabaseReadReplicaTopology( DATABASE_ID, readReplicas );
     }
 }

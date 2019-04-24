@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
@@ -30,7 +30,7 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        final CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+        final DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
 
         if ( coreTopology.members().isEmpty() )
         {

@@ -12,7 +12,7 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 
 import java.util.Collection;
@@ -118,7 +118,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopology( DatabaseId databaseId )
     {
-        CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, clusterIdPerDb.get( databaseId ), clusterView, memberData );
+        DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, clusterIdPerDb.get( databaseId ), clusterView, memberData );
 
         Collection<Address> akkaMemberAddresses = clusterView.members()
                 .stream()

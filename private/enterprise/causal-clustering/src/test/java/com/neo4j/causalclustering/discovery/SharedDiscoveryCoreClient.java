@@ -71,7 +71,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         return sharedDiscoveryService.getCoreTopology( databaseId, this );
     }
@@ -83,7 +83,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         return sharedDiscoveryService.getReadReplicaTopology( databaseId );
     }
@@ -121,7 +121,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
         return refusesToBeLeader;
     }
 
-    void onCoreTopologyChange( CoreTopology coreTopology )
+    void onCoreTopologyChange( DatabaseCoreTopology coreTopology )
     {
         log.info( "Notified of core topology change " + coreTopology );
         listenerService.notifyListeners( coreTopology );

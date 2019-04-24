@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
@@ -99,14 +99,14 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         var dbId = new DatabaseId( databaseName );
         Policy policy = policies.selectFor( context );
 
-        CoreTopology coreTopology = coreTopologyFor( dbId );
-        ReadReplicaTopology rrTopology = readReplicaTopology( dbId );
+        DatabaseCoreTopology coreTopology = coreTopologyFor( dbId );
+        DatabaseReadReplicaTopology rrTopology = readReplicaTopology( dbId );
 
         return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( dbId ),
                 readEndpoints( coreTopology, rrTopology, policy, dbId ), timeToLive );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology, Policy policy )
+    private List<AdvertisedSocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
     {
         Set<ServerInfo> routers = coreTopology.members().entrySet().stream()
                 .map( e ->
@@ -135,7 +135,8 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         return leaderService.getLeaderBoltAddress( databaseId ).map( List::of ).orElse( emptyList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, DatabaseId databaseId )
+    private List<AdvertisedSocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
+            DatabaseId databaseId )
     {
 
         Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
@@ -175,12 +176,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
     }
 
-    private CoreTopology coreTopologyFor( DatabaseId databaseId )
+    private DatabaseCoreTopology coreTopologyFor( DatabaseId databaseId )
     {
         return topologyService.coreTopologyForDatabase( databaseId );
     }
 
-    private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
+    private DatabaseReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
         return topologyService.readReplicaTopologyForDatabase( databaseId );
     }

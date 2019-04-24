@@ -12,8 +12,8 @@ import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.CoreTopology;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
 import java.time.Clock;
@@ -33,18 +33,18 @@ import static java.util.stream.Collectors.toSet;
 
 public class ReadReplicaTopologyActor extends AbstractActor
 {
-    private final SourceQueueWithComplete<ReadReplicaTopology> topologySink;
+    private final SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink;
     private final Log log;
 
-    private final Map<DatabaseId,CoreTopology> coreTopologies = new HashMap<>();
-    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
+    private final Map<DatabaseId,DatabaseCoreTopology> coreTopologies = new HashMap<>();
+    private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologies = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
     private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
 
-    public static Props props( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, LogProvider logProvider,
-            Config config, Clock clock )
+    public static Props props( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
+            LogProvider logProvider, Config config, Clock clock )
     {
         return Props.create( ReadReplicaTopologyActor.class,
                 () -> new ReadReplicaTopologyActor( topologySink, receptionist, logProvider, config, clock ) );
@@ -52,8 +52,8 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     public static final String NAME = "cc-rr-topology-actor";
 
-    ReadReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, LogProvider logProvider,
-            Config config, Clock clock )
+    ReadReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
+            LogProvider logProvider, Config config, Clock clock )
     {
         this.topologySink = topologySink;
         this.log = logProvider.getLog( getClass() );
@@ -73,7 +73,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
                 .match( ReadReplicaViewActor.Tick.class,    this::sendTopologiesToClients )
-                .match( CoreTopology.class,                 this::addCoreTopology )
+                .match( DatabaseCoreTopology.class,         this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
     }
@@ -109,7 +109,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void sendReadReplicaTopologiesTo( ActorRef client )
     {
-        for ( ReadReplicaTopology readReplicaTopology : readReplicaTopologies.values() )
+        for ( DatabaseReadReplicaTopology readReplicaTopology : readReplicaTopologies.values() )
         {
             client.tell( readReplicaTopology, getSelf() );
         }
@@ -117,13 +117,13 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void sendCoreTopologiesTo( ActorRef client )
     {
-        for ( CoreTopology coreTopology : coreTopologies.values() )
+        for ( DatabaseCoreTopology coreTopology : coreTopologies.values() )
         {
             client.tell( coreTopology, getSelf() );
         }
     }
 
-    private void addCoreTopology( CoreTopology coreTopology )
+    private void addCoreTopology( DatabaseCoreTopology coreTopology )
     {
         coreTopologies.put( coreTopology.databaseId(), coreTopology );
     }
@@ -152,7 +152,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private void buildTopology( DatabaseId databaseId )
     {
         log.debug( "Building read replica topology for database %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
-        ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
+        DatabaseReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
         log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );

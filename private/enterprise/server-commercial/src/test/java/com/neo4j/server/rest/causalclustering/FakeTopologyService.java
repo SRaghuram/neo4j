@@ -8,9 +8,9 @@ package com.neo4j.server.rest.causalclustering;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -101,9 +101,9 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new CoreTopology( databaseId, clusterId, true, coreMembers );
+        return new DatabaseCoreTopology( databaseId, clusterId, true, coreMembers );
     }
 
     @Override
@@ -113,9 +113,9 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return new ReadReplicaTopology( databaseId, replicaMembers );
+        return new DatabaseReadReplicaTopology( databaseId, replicaMembers );
     }
 
     @Override

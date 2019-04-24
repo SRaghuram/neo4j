@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import org.junit.Test;
 
@@ -64,7 +64,7 @@ public class ClusterBinderTest
     public void shouldTimeoutWhenNotBootstrappableAndNobodyElsePublishesClusterId() throws Throwable
     {
         // given
-        CoreTopology unboundTopology = new CoreTopology( databaseId, null, false, emptyMap() );
+        DatabaseCoreTopology unboundTopology = new DatabaseCoreTopology( databaseId, null, false, emptyMap() );
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology );
 
@@ -90,8 +90,8 @@ public class ClusterBinderTest
     {
         // given
         ClusterId publishedClusterId = new ClusterId( UUID.randomUUID() );
-        CoreTopology unboundTopology = new CoreTopology( databaseId, null, false, emptyMap() );
-        CoreTopology boundTopology = new CoreTopology( databaseId, publishedClusterId, false, emptyMap() );
+        DatabaseCoreTopology unboundTopology = new DatabaseCoreTopology( databaseId, null, false, emptyMap() );
+        DatabaseCoreTopology boundTopology = new DatabaseCoreTopology( databaseId, publishedClusterId, false, emptyMap() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology ).thenReturn( boundTopology );
@@ -166,7 +166,7 @@ public class ClusterBinderTest
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        CoreTopology bootstrappableTopology = new CoreTopology( databaseId, null, true, members );
+        DatabaseCoreTopology bootstrappableTopology = new DatabaseCoreTopology( databaseId, null, true, members );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );

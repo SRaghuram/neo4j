@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -50,9 +50,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new CoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), true, allCoreServers() );
+        return new DatabaseCoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), true, allCoreServers() );
     }
 
     @Override
@@ -63,9 +63,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return new ReadReplicaTopology( DATABASE_ID, allReadReplicas() );
+        return new DatabaseReadReplicaTopology( DATABASE_ID, allReadReplicas() );
     }
 
     @Override

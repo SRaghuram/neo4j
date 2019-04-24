@@ -16,7 +16,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka._
-import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, _}
+import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, _}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
@@ -87,7 +87,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
-          val nullClusterIdTopology = new CoreTopology(databaseId, null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
+          val nullClusterIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
           topologyActorRef ! clusterView
@@ -109,13 +109,13 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
   }
 
   trait Fixture {
-    var actualCoreTopology = CoreTopology.EMPTY
-    var actualReadReplicaTopology = ReadReplicaTopology.EMPTY
+    var actualCoreTopology = DatabaseCoreTopology.EMPTY
+    var actualReadReplicaTopology = DatabaseReadReplicaTopology.EMPTY
 
     val updateSink = new TopologyUpdateSink {
-      override def onTopologyUpdate(topology: CoreTopology) = actualCoreTopology = topology
+      override def onTopologyUpdate(topology: DatabaseCoreTopology) = actualCoreTopology = topology
 
-      override def onTopologyUpdate(topology: ReadReplicaTopology) = actualReadReplicaTopology = topology
+      override def onTopologyUpdate(topology: DatabaseReadReplicaTopology) = actualReadReplicaTopology = topology
     }
 
     val materializer = ActorMaterializer()
@@ -140,7 +140,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val clusterIdKey = LWWMapKey[String, ClusterId](ClusterIdActor.CLUSTER_ID_PER_DB_KEY)
 
     val topologyBuilder = mock[TopologyBuilder]
-    val expectedCoreTopology = new CoreTopology(
+    val expectedCoreTopology = new DatabaseCoreTopology(
       databaseId,
       clusterId,
       false,
@@ -168,7 +168,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       NullLogProvider.getInstance())
     val topologyActorRef = system.actorOf(props)
 
-    def awaitExpectedCoreTopology(newCoreTopology: CoreTopology = expectedCoreTopology) = {
+    def awaitExpectedCoreTopology(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology) = {
       awaitCond(
         actualCoreTopology == newCoreTopology,
         max = defaultWaitTime,
