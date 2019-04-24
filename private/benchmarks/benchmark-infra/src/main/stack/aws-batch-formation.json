@@ -1,0 +1,122 @@
+{
+	"Resources": {
+		"M5D2XLargeComputeEnvironment": {
+			"Type": "AWS::Batch::ComputeEnvironment",
+			"Properties": {
+				"ComputeEnvironmentName": "benchmarking_m5d_2xlarge",
+				"Type": "MANAGED",
+				"ComputeResources": {
+					"Type": "EC2",
+					"ImageId": "ami-054a4336b77edd10e",
+					"Ec2KeyPair" : "jpalka",
+					"MinvCpus": 0,
+					"DesiredvCpus": 0,
+					"MaxvCpus": 256,
+					"InstanceTypes": [
+						"m5d.2xlarge"
+					],
+					"Subnets": [
+						"subnet-ff6f40b5",
+						"subnet-3a8c6e53",
+						"subnet-553c312d"
+					],
+					"SecurityGroupIds": [
+						"sg-bcab66d5"
+					],
+					"InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
+					"Tags": {
+						"role": "benchmarking run worker"
+					}
+				},
+				"ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
+			}
+		},
+		"MacroBenchmarkRunQueue": {
+			"Type": "AWS::Batch::JobQueue",
+			"Properties": {
+				"JobQueueName": "macro-benchnmark-run-queue",
+				"ComputeEnvironmentOrder": [
+					{
+						"Order": 1,
+						"ComputeEnvironment": {
+							"Ref": "M5D2XLargeComputeEnvironment"
+						}
+					}
+				],
+				"Priority": 1
+			}
+		},
+		"MacroBenchmarkRunJobDefintion": {
+			"Type": "AWS::Batch::JobDefinition",
+			"Properties": {
+				"JobDefinitionName": "macro-benchmark-job-definition",
+				"Type": "container",
+				"ContainerProperties": {
+					"Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:latest",
+					"Command": [
+						"/work/bootstrap-worker.sh",
+						"--workspacePath",
+						"/work/run",
+						"--workerArtifactUri",
+						"Ref::workerArtifactUri",
+						"run-worker",
+						"Ref::workload",
+						"Ref::db",
+						"Ref::warmup_count",
+						"Ref::measurement_count",
+						"Ref::db_edition",
+						"Ref::jvm",
+						"Ref::profilers",
+						"Ref::forks",
+						"Ref::results_path",
+						"Ref::time_unit",
+						"Ref::results_store_uri",
+						"Ref::results_store_user",
+						"Ref::results_store_password",
+						"Ref::neo4j_commit",
+						"Ref::neo4j_version",
+						"Ref::neo4j_branch",
+						"Ref::neo4j_branch_owner",
+						"Ref::tool_commit",
+						"Ref::tool_branch_owner",
+						"Ref::tool_branch",
+						"Ref::teamcity_build",
+						"Ref::parent_teamcity_build",
+						"Ref::execution_mode",
+						"Ref::jvm_args",
+						"Ref::recreate_schema",
+						"Ref::planner",
+						"Ref::runtime",
+						"Ref::triggered_by",
+						"Ref::error_policy"
+					],
+					"Volumes": [
+						{
+							"Host": {
+								"SourcePath": "/work"
+							},
+							"Name": "work"
+						}
+					],
+					"MountPoints": [
+						{
+							"SourceVolume": "work",
+							"ContainerPath": "/work/run",
+							"ReadOnly": false
+						}
+					],
+					"Privileged": true,
+					"Vcpus": 8,
+					"Memory": 16384
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"ComputeEnvironmentArn": {
+			"Value": {
+				"Ref": "M5D2XLargeComputeEnvironment"
+			}
+		}
+	}
+}

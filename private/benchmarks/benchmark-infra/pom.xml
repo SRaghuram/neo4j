@@ -1,0 +1,40 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.neo4j.bench</groupId>
+    <artifactId>benchmarks</artifactId>
+    <version>3.4.14-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>benchmark-infra</artifactId>
+  <packaging>pom</packaging>
+
+  <properties>
+        <amazon-sdk.version>1.11.524</amazon-sdk.version>
+        <slf4j.version>1.7.16</slf4j.version>
+        <license-text.header>../build/license-header.txt</license-text.header>
+    </properties>
+
+  <modules>
+      <module>benchmark-infra-common</module>
+      <module>benchmark-infra-scheduler</module>
+      <module>benchmark-infra-worker</module>
+  </modules>
+
+  <dependencyManagement>
+      <dependencies>
+          <dependency>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-simple</artifactId>
+              <version>${slf4j.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+              <version>${slf4j.version}</version>
+          </dependency>
+      </dependencies>
+  </dependencyManagement>
+
+</project>
