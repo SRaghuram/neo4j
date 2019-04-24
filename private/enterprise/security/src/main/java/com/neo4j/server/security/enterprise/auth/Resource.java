@@ -16,7 +16,7 @@ public interface Resource
         switch ( type.toUpperCase() )
         {
         case "GRAPH":
-            return new DatabaseResource();
+            return new GraphResource();
         case "LABEL":
             return new LabelResource( arg1, arg2 );
         case "TOKEN":
@@ -48,14 +48,14 @@ public interface Resource
 
     String cypherType();
 
-    class DatabaseResource implements Resource
+    class GraphResource implements Resource
     {
         @Override
         public void assertValidCombination( Action action ) throws InvalidArgumentsException
         {
             if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
             {
-                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action `%s`", action.toString() ) );
             }
         }
 
@@ -80,7 +80,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return obj instanceof DatabaseResource;
+            return obj instanceof GraphResource;
         }
 
         @Override
