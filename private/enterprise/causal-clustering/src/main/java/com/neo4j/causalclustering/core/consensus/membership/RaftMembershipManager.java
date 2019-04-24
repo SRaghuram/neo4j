@@ -276,7 +276,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         if ( state.commit( commitIndex ) )
         {
             membershipChanger.onRaftGroupCommitted();
-            storage.persistStoreData( state );
+            storage.writeState( state );
             updateMemberSets();
         }
     }
@@ -300,7 +300,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
                 if ( state.append( baseIndex, new HashSet<>( raftMembers.getMembers() ) ) )
                 {
                     log.info( "Appending new member set %s", state );
-                    storage.persistStoreData( state );
+                    storage.writeState( state );
                     updateMemberSets();
                 }
                 else
@@ -318,7 +318,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     {
         if ( state.truncate( fromIndex ) )
         {
-            storage.persistStoreData( state );
+            storage.writeState( state );
             updateMemberSets();
         }
     }
@@ -338,7 +338,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     public void install( MembershipEntry committed ) throws IOException
     {
         state = new RaftMembershipState( committed.logIndex(), committed, null );
-        storage.persistStoreData( state );
+        storage.writeState( state );
         updateMemberSets();
     }
 }

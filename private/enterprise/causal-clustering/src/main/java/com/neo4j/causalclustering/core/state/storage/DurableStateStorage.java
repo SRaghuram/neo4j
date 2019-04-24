@@ -105,7 +105,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     }
 
     @Override
-    public synchronized void persistStoreData( STATE state ) throws IOException
+    public synchronized void writeState( STATE state ) throws IOException
     {
         if ( numberOfEntriesWrittenInActiveFile >= numberOfEntriesBeforeRotation )
         {

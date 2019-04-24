@@ -21,7 +21,7 @@ public class InMemoryStateStorage<STATE> implements StateStorage<STATE>
     }
 
     @Override
-    public void persistStoreData( STATE state )
+    public void writeState( STATE state )
     {
         this.state = state;
     }

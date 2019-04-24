@@ -37,7 +37,7 @@ public class SessionTracker
 
     public void flush() throws IOException
     {
-        sessionTrackerStorage.persistStoreData( sessionState );
+        sessionTrackerStorage.writeState( sessionState );
     }
 
     public GlobalSessionTrackerState snapshot()

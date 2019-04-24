@@ -11,17 +11,9 @@ public interface SimpleStorage<T> extends StateStorage<T>
 {
     T readState() throws IOException;
 
-    void writeState( T state ) throws IOException;
-
     @Override
     default T getInitialState()
     {
         return null;
-    }
-
-    @Override
-    default void persistStoreData( T t ) throws IOException
-    {
-        writeState( t );
     }
 }

@@ -11,7 +11,7 @@ public interface StateStorage<STATE>
 {
     STATE getInitialState();
 
-    void persistStoreData( STATE state ) throws IOException;
+    void writeState( STATE state ) throws IOException;
 
     boolean exists();
 }

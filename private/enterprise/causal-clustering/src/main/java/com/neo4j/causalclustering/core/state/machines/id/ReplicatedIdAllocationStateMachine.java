@@ -57,7 +57,7 @@ public class ReplicatedIdAllocationStateMachine implements StateMachine<Replicat
     @Override
     public void flush() throws IOException
     {
-        storage.persistStoreData( state() );
+        storage.writeState( state() );
     }
 
     @Override

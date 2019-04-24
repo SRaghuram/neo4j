@@ -32,9 +32,9 @@ public class MonitoredTermStateStorage implements StateStorage<TermState>
     }
 
     @Override
-    public void persistStoreData( TermState state ) throws IOException
+    public void writeState( TermState state ) throws IOException
     {
-        delegate.persistStoreData( state );
+        delegate.writeState( state );
         termMonitor.term( state.currentTerm() );
     }
 

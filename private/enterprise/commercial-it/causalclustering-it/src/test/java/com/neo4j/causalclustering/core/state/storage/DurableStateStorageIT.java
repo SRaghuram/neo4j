@@ -245,7 +245,7 @@ class DurableStateStorageIT
 
         void setTheState( long newState ) throws IOException
         {
-            stateStorage.persistStoreData( newState );
+            stateStorage.writeState( newState );
             this.theState = newState;
         }
 

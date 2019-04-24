@@ -28,7 +28,7 @@ public class MonitoredTermStateStorageTest
 
         // when
         state.update( 7 );
-        monitoredTermStateStorage.persistStoreData( state );
+        monitoredTermStateStorage.writeState( state );
 
         // then
         assertEquals( 7, raftTermMonitor.term() );

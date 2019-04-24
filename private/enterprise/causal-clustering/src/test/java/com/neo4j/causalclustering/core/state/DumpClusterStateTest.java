@@ -99,7 +99,7 @@ class DumpClusterStateTest
         storageFactory.createRaftVoteStorage( DATABASE_ID, life );
 
         memberIdStorage.writeState( nonDefaultMember );
-        termStateStateStorage.persistStoreData( nonDefaultTermState );
+        termStateStateStorage.writeState( nonDefaultTermState );
         clusterIdStorage.writeState( nonDefaultClusterId );
     }
 }

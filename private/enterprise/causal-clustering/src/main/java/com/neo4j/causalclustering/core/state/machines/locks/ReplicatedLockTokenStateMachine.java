@@ -48,7 +48,7 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
     @Override
     public synchronized void flush() throws IOException
     {
-        storage.persistStoreData( state() );
+        storage.writeState( state() );
     }
 
     @Override

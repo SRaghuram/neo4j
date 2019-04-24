@@ -49,7 +49,7 @@ class DurableStateStorageTest
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), 100, NullLogProvider.getInstance() ) );
 
         // when
-        storage.persistStoreData( new AtomicInteger( 99 ) );
+        storage.writeState( new AtomicInteger( 99 ) );
 
         // then
         assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
@@ -66,11 +66,11 @@ class DurableStateStorageTest
         // when
         for ( int i = 0; i < numberOfEntriesBeforeRotation; i++ )
         {
-            storage.persistStoreData( new AtomicInteger( i ) );
+            storage.writeState( new AtomicInteger( i ) );
         }
 
         // Force the rotation
-        storage.persistStoreData( new AtomicInteger( 9999 ) );
+        storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
         assertEquals( 4, fileSystem.getFileSize( stateFileB() ) );
@@ -88,11 +88,11 @@ class DurableStateStorageTest
         // when
         for ( int i = 0; i < numberOfEntriesBeforeRotation * 2; i++ )
         {
-            storage.persistStoreData( new AtomicInteger( i ) );
+            storage.writeState( new AtomicInteger( i ) );
         }
 
         // Force the rotation back to the first store
-        storage.persistStoreData( new AtomicInteger( 9999 ) );
+        storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
         assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
@@ -112,7 +112,7 @@ class DurableStateStorageTest
         {
             for ( ; largestValueWritten < rotationCount * 2; largestValueWritten++ )
             {
-                storage.persistStoreData( new AtomicInteger( largestValueWritten ) );
+                storage.writeState( new AtomicInteger( largestValueWritten ) );
             }
         }
 
@@ -120,9 +120,9 @@ class DurableStateStorageTest
         storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance() ) );
 
-        storage.persistStoreData( new AtomicInteger( largestValueWritten++ ) );
-        storage.persistStoreData( new AtomicInteger( largestValueWritten++ ) );
-        storage.persistStoreData( new AtomicInteger( largestValueWritten ) );
+        storage.writeState( new AtomicInteger( largestValueWritten++ ) );
+        storage.writeState( new AtomicInteger( largestValueWritten++ ) );
+        storage.writeState( new AtomicInteger( largestValueWritten ) );
 
         /*
          * We have written stuff in fileA but not gotten to the end (resulting in rotation). The largestValueWritten

@@ -204,11 +204,11 @@ public class RaftState implements ReadableRaftState
     {
         if ( termState().update( outcome.getTerm() ) )
         {
-            termStorage.persistStoreData( termState() );
+            termStorage.writeState( termState() );
         }
         if ( voteState().update( outcome.getVotedFor(), outcome.getTerm() ) )
         {
-            voteStorage.persistStoreData( voteState() );
+            voteStorage.writeState( voteState() );
         }
 
         logIfLeaderChanged( outcome.getLeader() );

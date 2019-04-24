@@ -301,7 +301,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
             db.stateMachines().flush();
         }
         sessionTracker.flush();
-        lastFlushedStorage.persistStoreData( lastApplied );
+        lastFlushedStorage.writeState( lastApplied );
     }
 
     @Override
