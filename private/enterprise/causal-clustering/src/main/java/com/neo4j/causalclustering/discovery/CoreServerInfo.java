@@ -23,16 +23,6 @@ public class CoreServerInfo implements DiscoveryServerInfo
     private final Set<DatabaseId> databaseIds;
     private final boolean refuseToBeLeader;
 
-    public CoreServerInfo( Config config, Set<DatabaseId> databaseIds )
-    {
-        this( config.get( CausalClusteringSettings.raft_advertised_address ),
-                config.get( CausalClusteringSettings.transaction_advertised_address ),
-                ClientConnectorAddresses.extractFromConfig( config ),
-                Set.copyOf( config.get( CausalClusteringSettings.server_groups ) ),
-                databaseIds,
-                config.get( CausalClusteringSettings.refuse_to_be_leader ) );
-    }
-
     public CoreServerInfo( AdvertisedSocketAddress raftServer, AdvertisedSocketAddress catchupServer,
             ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, Set<DatabaseId> databaseIds, boolean refuseToBeLeader )
     {
@@ -42,6 +32,16 @@ public class CoreServerInfo implements DiscoveryServerInfo
         this.groups = groups;
         this.databaseIds = databaseIds;
         this.refuseToBeLeader = refuseToBeLeader;
+    }
+
+    public static CoreServerInfo from( Config config, Set<DatabaseId> databaseIds )
+    {
+        var raftAddress = config.get( CausalClusteringSettings.raft_advertised_address );
+        var catchupAddress = config.get( CausalClusteringSettings.transaction_advertised_address );
+        var connectorUris = ClientConnectorAddresses.extractFromConfig( config );
+        var groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
+        var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
+        return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
     }
 
     @Override
@@ -89,7 +89,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
         {
             return false;
         }
-        CoreServerInfo that = (CoreServerInfo) o;
+        var that = (CoreServerInfo) o;
         return refuseToBeLeader == that.refuseToBeLeader &&
                Objects.equals( raftServer, that.raftServer ) &&
                Objects.equals( catchupServer, that.catchupServer ) &&

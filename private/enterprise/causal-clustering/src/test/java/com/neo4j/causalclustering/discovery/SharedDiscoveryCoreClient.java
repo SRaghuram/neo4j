@@ -113,7 +113,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
 
     CoreServerInfo getCoreServerInfo()
     {
-        return new CoreServerInfo( config, getDatabaseIds() );
+        return CoreServerInfo.from( config, getDatabaseIds() );
     }
 
     boolean refusesToBeLeader()

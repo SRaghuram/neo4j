@@ -88,7 +88,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     {
         MemberId memberId = myself.id();
         Set<DatabaseId> databaseIds = myself.hostedDatabases();
-        ReadReplicaInfo readReplicaInfo = new ReadReplicaInfo( config, databaseIds );
+        ReadReplicaInfo readReplicaInfo = ReadReplicaInfo.from( config, databaseIds );
 
         ReadReplicaRefreshMessage msg = new ReadReplicaRefreshMessage( readReplicaInfo, memberId, clusterClient, getSelf() );
         sendToCore( msg );

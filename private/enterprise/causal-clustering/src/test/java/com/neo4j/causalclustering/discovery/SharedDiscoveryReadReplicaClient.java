@@ -96,7 +96,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
 
     ReadReplicaInfo getReadReplicaInfo()
     {
-        return new ReadReplicaInfo( config, getDatabaseIds() );
+        return ReadReplicaInfo.from( config, getDatabaseIds() );
     }
 
     @Override

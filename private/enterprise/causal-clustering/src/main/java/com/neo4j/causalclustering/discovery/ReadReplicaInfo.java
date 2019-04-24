@@ -21,14 +21,6 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     private final Set<String> groups;
     private final Set<DatabaseId> databaseIds;
 
-    public ReadReplicaInfo( Config config, Set<DatabaseId> databaseIds )
-    {
-        this( ClientConnectorAddresses.extractFromConfig( config ),
-                config.get( CausalClusteringSettings.transaction_advertised_address ),
-                Set.copyOf( config.get( CausalClusteringSettings.server_groups ) ),
-                databaseIds );
-    }
-
     public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
             AdvertisedSocketAddress catchupServerAddress, Set<String> groups, Set<DatabaseId> databaseIds )
     {
@@ -36,6 +28,14 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
         this.catchupServerAddress = catchupServerAddress;
         this.groups = groups;
         this.databaseIds = databaseIds;
+    }
+
+    public static ReadReplicaInfo from( Config config, Set<DatabaseId> databaseIds )
+    {
+        var connectorUris = ClientConnectorAddresses.extractFromConfig( config );
+        var catchupAddress = config.get( CausalClusteringSettings.transaction_advertised_address );
+        var groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
+        return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
     }
 
     @Override
@@ -73,7 +73,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
         {
             return false;
         }
-        ReadReplicaInfo that = (ReadReplicaInfo) o;
+        var that = (ReadReplicaInfo) o;
         return Objects.equals( catchupServerAddress, that.catchupServerAddress ) &&
                Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
                Objects.equals( groups, that.groups ) &&
