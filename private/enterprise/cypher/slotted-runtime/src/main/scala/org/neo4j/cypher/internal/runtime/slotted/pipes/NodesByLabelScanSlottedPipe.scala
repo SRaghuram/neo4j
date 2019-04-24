@@ -20,16 +20,16 @@ case class NodesByLabelScanSlottedPipe(ident: String,
   private val offset = slots.getLongOffsetFor(ident)
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    label.getOptId(state.query) match {
-      case Some(labelId) =>
-        PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId.id), { nodeId =>
-          val context = SlottedExecutionContext(slots)
-          state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
-          context.setLongAt(offset, nodeId)
-          context
-        })
-      case None =>
-        Iterator.empty
+
+    val labelId = label.getId(state.query)
+    if (labelId == LazyLabel.UNINITIALIZED) Iterator.empty
+    else {
+      PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId), { nodeId =>
+        val context = SlottedExecutionContext(slots)
+        state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+        context.setLongAt(offset, nodeId)
+        context
+      })
     }
   }
 }

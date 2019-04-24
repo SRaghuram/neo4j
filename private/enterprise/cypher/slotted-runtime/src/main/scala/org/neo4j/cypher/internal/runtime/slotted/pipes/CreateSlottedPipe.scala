@@ -26,7 +26,7 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
   protected def createNode(context: ExecutionContext,
                            state: QueryState,
                            command: CreateNodeSlottedCommand): Long = {
-    val labelIds = command.labels.map(_.getOrCreateId(state.query).id).toArray
+    val labelIds = command.labels.map(_.getOrCreateId(state.query)).toArray
     val nodeId = state.query.createNodeId(labelIds)
     command.properties.foreach(setProperties(context, state, nodeId, _, state.query.nodeOps))
     nodeId
