@@ -75,8 +75,8 @@ class ReadReplicaStatus extends BaseStatus
     {
         Collection<MemberId> votingMembers = topologyService.allCoreRoles().keySet();
         boolean isHealthy = dbHealth.isHealthy();
-        MemberId memberId = topologyService.myself();
-        MemberId leader = topologyService.allCoreRoles()
+        MemberId myId = topologyService.memberId();
+        MemberId leaderId = topologyService.allCoreRoles()
                 .keySet()
                 .stream()
                 .filter( member -> RoleInfo.LEADER.equals( topologyService.allCoreRoles().get( member ) ) )
@@ -86,7 +86,7 @@ class ReadReplicaStatus extends BaseStatus
         // leader message duration is meaningless for replicas since communication is not guaranteed with leader and transactions are streamed periodically
         Duration millisSinceLastLeaderMessage = null;
         Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
-        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, memberId, leader, millisSinceLastLeaderMessage,
+        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, myId, leaderId, millisSinceLastLeaderMessage,
                 raftCommandsPerSecond, false );
     }
 }

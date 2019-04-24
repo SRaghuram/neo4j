@@ -136,7 +136,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public MemberId myself()
+    public MemberId memberId()
     {
         return myself;
     }

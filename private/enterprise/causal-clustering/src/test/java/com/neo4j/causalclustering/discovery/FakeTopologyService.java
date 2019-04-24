@@ -71,7 +71,7 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public MemberId myself()
+    public MemberId memberId()
     {
         return new MemberId( new UUID( 0, 0 ) );
     }

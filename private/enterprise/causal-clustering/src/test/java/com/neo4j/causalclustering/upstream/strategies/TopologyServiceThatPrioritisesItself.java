@@ -30,22 +30,22 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
 {
     private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
-    private final MemberId myself;
+    private final MemberId memberId;
     private final String matchingGroupName;
 
     MemberId coreNotSelf = new MemberId( new UUID( 321, 654 ) );
     MemberId readReplicaNotSelf = new MemberId( new UUID( 432, 543 ) );
 
-    TopologyServiceThatPrioritisesItself( MemberId myself, String matchingGroupName )
+    TopologyServiceThatPrioritisesItself( MemberId memberId, String matchingGroupName )
     {
-        this.myself = myself;
+        this.memberId = memberId;
         this.matchingGroupName = matchingGroupName;
     }
 
     @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return Map.of( myself, coreServerInfo(),
+        return Map.of( memberId, coreServerInfo(),
                 coreNotSelf, coreServerInfo() );
     }
 
@@ -58,7 +58,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     @Override
     public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return Map.of( myself, readReplicaInfo( matchingGroupName ),
+        return Map.of( memberId, readReplicaInfo( matchingGroupName ),
                 readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
     }
 
@@ -81,9 +81,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public MemberId myself()
+    public MemberId memberId()
     {
-        return myself;
+        return memberId;
     }
 
     private static CoreServerInfo coreServerInfo( String... groupNames )

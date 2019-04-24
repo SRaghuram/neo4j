@@ -36,7 +36,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     public void start0() throws InterruptedException
     {
         sharedDiscoveryService.registerCoreMember( this );
-        log.info( "Registered core server %s", myself );
+        log.info( "Registered core server %s", memberId() );
 
         for ( DatabaseId databaseId : getDatabaseIds() )
         {
@@ -49,7 +49,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     public void stop0()
     {
         sharedDiscoveryService.unRegisterCoreMember( this );
-        log.info( "Unregistered core server %s", myself );
+        log.info( "Unregistered core server %s", memberId() );
     }
 
     @Override

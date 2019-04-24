@@ -31,5 +31,5 @@ public interface TopologyService extends Lifecycle
 
     Map<MemberId,RoleInfo> allCoreRoles();
 
-    MemberId myself();
+    MemberId memberId();
 }

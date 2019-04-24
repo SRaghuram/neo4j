@@ -128,7 +128,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public MemberId myself()
+    public MemberId memberId()
     {
         return myself.id();
     }

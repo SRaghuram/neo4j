@@ -38,7 +38,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     public void start0()
     {
         sharedDiscoveryService.registerReadReplica( this );
-        log.info( "Registered read replica member id: %s", myself() );
+        log.info( "Registered read replica member id: %s", memberId() );
     }
 
     @Override
@@ -84,7 +84,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public MemberId myself()
+    public MemberId memberId()
     {
         return myself.id();
     }

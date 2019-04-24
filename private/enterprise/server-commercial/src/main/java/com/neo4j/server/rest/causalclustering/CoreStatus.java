@@ -88,14 +88,14 @@ class CoreStatus extends BaseStatus
     @Override
     public Response description()
     {
-        MemberId myself = topologyService.myself();
-        MemberId leader = getLeader();
+        MemberId myId = topologyService.memberId();
+        MemberId leaderId = getLeader();
         List<MemberId> votingMembers = new ArrayList<>( raftMembershipManager.votingMembers() );
-        boolean participatingInRaftGroup = votingMembers.contains( myself ) && Objects.nonNull( leader );
+        boolean participatingInRaftGroup = votingMembers.contains( myId ) && Objects.nonNull( leaderId );
 
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
         final Duration millisSinceLastLeaderMessage;
-        if ( myself.equals( leader ) )
+        if ( Objects.equals( myId, leaderId ) )
         {
             millisSinceLastLeaderMessage = Duration.ofMillis( 0 );
         }
@@ -106,7 +106,7 @@ class CoreStatus extends BaseStatus
 
         Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
 
-        return statusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myself, leader,
+        return statusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myId, leaderId,
                 millisSinceLastLeaderMessage, raftCommandsPerSecond, true );
     }
 
