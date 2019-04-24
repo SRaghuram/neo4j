@@ -192,8 +192,9 @@ public class EndToEndIT
                 "triggered_by",
                 // error_policy
                 ErrorPolicy.FAIL.name(),
+                "EMBEDDED",
                 // AWS endpoint URL
-                endpointUrl ) )
+                endpointUrl) )
                 .directory( baseDir.toFile() )
                 .redirectOutput( Redirect.PIPE )
                 .redirectErrorStream( true );
