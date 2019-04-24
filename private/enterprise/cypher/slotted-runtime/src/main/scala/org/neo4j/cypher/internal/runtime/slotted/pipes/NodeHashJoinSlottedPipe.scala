@@ -81,7 +81,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
           return Some(newRow)
         }
 
-        while (rhsInput.nonEmpty) {
+        while (rhsInput.hasNext) {
           currentRhsRow = rhsInput.next()
           fillKeyArray(currentRhsRow, key, rhsOffsets)
           if (key(0) != -1 /*If we have nulls in the key, no match will be found*/ ) {

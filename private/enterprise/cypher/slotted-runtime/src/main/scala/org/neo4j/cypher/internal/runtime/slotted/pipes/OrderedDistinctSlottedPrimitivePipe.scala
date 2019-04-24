@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.values.storable.{LongArray, Values}
+import org.neo4j.values.storable.LongArray
 
 case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
                                                slots: SlotConfiguration,
@@ -34,7 +34,7 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
       private var currentOrderedGroupingValue: LongArray = _
 
       override def produceNext(): Option[ExecutionContext] = {
-        while (input.nonEmpty) {
+        while (input.hasNext) {
           val next: ExecutionContext = input.next()
 
           val groupingValue = buildGroupingValue(next, primitiveSlots)
@@ -79,7 +79,7 @@ case class AllOrderedDistinctSlottedPrimitivePipe(source: Pipe,
       private var currentOrderedGroupingValue: LongArray = _
 
       override def produceNext(): Option[ExecutionContext] = {
-        while (input.nonEmpty) {
+        while (input.hasNext) {
           val next: ExecutionContext = input.next()
 
           val groupingValue = buildGroupingValue(next, primitiveSlots)

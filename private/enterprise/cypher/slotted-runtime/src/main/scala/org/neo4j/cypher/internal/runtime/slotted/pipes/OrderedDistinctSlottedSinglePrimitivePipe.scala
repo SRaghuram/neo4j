@@ -39,7 +39,7 @@ case class OrderedDistinctSlottedSinglePrimitivePipe(source: Pipe,
       private var currentOrderedGroupingValue: Long = -1
 
       override def produceNext(): Option[ExecutionContext] = {
-        while (input.nonEmpty) { // Let's pull data until we find something not already seen
+        while (input.hasNext) { // Let's pull data until we find something not already seen
           val next = input.next()
           val groupingValue = next.getLongAt(offset)
           if (currentOrderedGroupingValue == -1 || currentOrderedGroupingValue != groupingValue) {

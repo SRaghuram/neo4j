@@ -6,15 +6,14 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.impl.factory.primitive.LongSets
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
-import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.values.AnyValue
 
 case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
                                               slots: SlotConfiguration,
@@ -41,7 +40,7 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
       private val seen = LongSets.mutable.empty()
 
       override def produceNext(): Option[ExecutionContext] = {
-        while (input.nonEmpty) { // Let's pull data until we find something not already seen
+        while (input.hasNext) { // Let's pull data until we find something not already seen
           val next = input.next()
           val id = next.getLongAt(offset)
           if (seen.add(id)) {

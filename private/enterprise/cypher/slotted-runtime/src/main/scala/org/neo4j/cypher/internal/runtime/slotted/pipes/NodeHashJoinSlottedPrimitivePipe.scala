@@ -11,8 +11,7 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -77,7 +76,7 @@ case class NodeHashJoinSlottedPrimitivePipe(lhsOffset: Int,
           return Some(newRow)
         }
 
-        while (rhsInput.nonEmpty) {
+        while (rhsInput.hasNext) {
           currentRhsRow = rhsInput.next()
           val nodeId = currentRhsRow.getLongAt(rhsOffset)
           if(nodeId != -1) {
