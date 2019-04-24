@@ -58,6 +58,23 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true)))
   }
 
+  test("should list populated roles") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    // TODO update to use actual DDL when available for creating users and assigning to roles
+    systemGraphInnerQueryExecutor.executeQueryLong(
+      """CREATE (r:Role {name:'foo'})
+        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
+        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
+      """.stripMargin)
+
+    // WHEN
+    val result = execute("SHOW POPULATED ROLES")
+
+    // THEN
+    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true), foo))
+  }
+
   test("should list default roles with users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -79,6 +96,23 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")))
+  }
+
+  test("should list populated roles with several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    // TODO update to use actual DDL when available for creating users and assigning to roles
+    systemGraphInnerQueryExecutor.executeQueryLong(
+      """CREATE (r:Role {name:'foo'})
+        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
+        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
+      """.stripMargin)
+
+    // WHEN
+    val result = execute("SHOW POPULATED ROLES WITH USERS")
+
+    // THEN
+    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"), foo ++ Map("member" -> "Bar"), foo ++ Map("member" -> "Baz")))
   }
 
   test("should create role") {
@@ -224,13 +258,17 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     result2.toSet should be(defaultRoles ++ Set.empty)
   }
 
+  // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
+  // But it can't be initialized until after super.initTest()
+  private var systemGraphInnerQueryExecutor: ContextSwitchingSystemGraphQueryExecutor = _
+
   protected override def initTest(): Unit = {
     super.initTest()
-    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "impermanent-db")
+    systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "impermanent-db")
     val secureHasher: SecureHasher = new SecureHasher
-    val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
+    val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
+    val systemGraphInitializer = new SystemGraphInitializer(systemGraphInnerQueryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
     systemGraphInitializer.initializeSystemGraph()
   }
 
