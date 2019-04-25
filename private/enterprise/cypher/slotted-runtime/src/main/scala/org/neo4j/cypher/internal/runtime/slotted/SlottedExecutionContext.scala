@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
@@ -83,14 +83,6 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
       case _ => fail()
     }
-
-  override def copyCachedFrom(input: ExecutionContext): Unit = input match {
-    case other@SlottedExecutionContext(otherPipeline) =>
-      slots.foreachCachedSlot({
-        case (key, slot) => setCachedPropertyAt(slot.offset, other.getCachedPropertyAt(otherPipeline.getCachedNodePropertyOffsetFor(key)))
-      })
-    case _ => fail()
-  }
 
   override def setLongAt(offset: Int, value: Long): Unit =
     longs(offset) = value

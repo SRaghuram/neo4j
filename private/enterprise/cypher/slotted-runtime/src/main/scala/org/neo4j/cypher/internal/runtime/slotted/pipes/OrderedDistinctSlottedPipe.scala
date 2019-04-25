@@ -9,7 +9,6 @@ import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.AnyValue
@@ -42,11 +41,8 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
 
           if (seen.add(groupingValue)) {
             // Found unseen key! Set it as the next element to yield, and exit
-            val outgoing = SlottedExecutionContext(slots)
-            outgoing.copyCachedFrom(next)
-            outgoing.setLinenumber(next.getLinenumber)
-            groupingExpression.project(outgoing, groupingValue)
-            return Some(outgoing)
+            groupingExpression.project(next, groupingValue)
+            return Some(next)
           }
         }
         None
@@ -80,11 +76,8 @@ case class AllOrderedDistinctSlottedPipe(source: Pipe,
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != groupingValue) {
             currentOrderedGroupingValue = groupingValue
             // Found unseen key! Set it as the next element to yield, and exit
-            val outgoing = SlottedExecutionContext(slots)
-            outgoing.copyCachedFrom(next)
-            outgoing.setLinenumber(next.getLinenumber)
-            groupingExpression.project(outgoing, groupingValue)
-            return Some(outgoing)
+            groupingExpression.project(next, groupingValue)
+            return Some(next)
           }
         }
         None

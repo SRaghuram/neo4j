@@ -8,10 +8,9 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.eclipse.collections.impl.factory.primitive.LongSets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.AnyValue
 
@@ -45,12 +44,9 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
           val id = next.getLongAt(offset)
           if (seen.add(id)) {
             // Found something! Set it as the next element to yield, and exit
-            val outgoing = SlottedExecutionContext(slots)
-            outgoing.copyCachedFrom(next)
-            outgoing.setLinenumber(next.getLinenumber)
             val outputValue = expression(next, state)
-            setInSlot(outgoing, outputValue)
-            return Some(outgoing)
+            setInSlot(next, outputValue)
+            return Some(next)
           }
         }
 

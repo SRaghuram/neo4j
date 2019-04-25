@@ -5,15 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.graphdb.NotFoundException
-import org.neo4j.internal.kernel.api.QueryContext
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -176,8 +174,6 @@ class MorselExecutionContext(private val morsel: Morsel,
     System.arraycopy(morsel.longs, longsAtCurrentRow, other.longs, 0, nLongs)
     System.arraycopy(morsel.refs, refsAtCurrentRow, other.refs, 0, nRefs)
   }
-
-  override def copyCachedFrom(input: ExecutionContext): Unit = fail()
 
   override def toString(): String = {
     s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}]($morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow)"

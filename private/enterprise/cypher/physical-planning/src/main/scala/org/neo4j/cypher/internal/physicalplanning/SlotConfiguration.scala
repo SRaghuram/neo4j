@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
@@ -77,8 +77,6 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slotAliases.addBinding(slot, newKey)
     this
   }
-
-  def getAliasOf(slot: Slot): String = slotAliases(slot).head
 
   def isAlias(key: String): Boolean = {
     aliases.contains(key)
@@ -203,7 +201,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def newCachedPropertyIfUnseen(key: CachedNodeProperty): SlotConfiguration = {
     cachedProperties.get(key) match {
-      case Some(existingSlot) => // do nothing
+      case Some(_) => // do nothing
       case None =>
         cachedProperties.put(key, RefSlot(numberOfReferences, nullable = false, CTAny))
         numberOfReferences = numberOfReferences + 1

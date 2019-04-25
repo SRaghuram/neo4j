@@ -18,7 +18,7 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
         => true
 
         // 1 child operators
-      case _: AggregatingPlan |
+      case _: Aggregation |
            _: Expand |
            _: OptionalExpand |
            _: VarExpand |

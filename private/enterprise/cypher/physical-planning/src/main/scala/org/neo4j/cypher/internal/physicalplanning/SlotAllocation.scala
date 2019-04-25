@@ -333,12 +333,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                                semanticTable: SemanticTable): Unit =
     lp match {
 
-      case Distinct(_, groupingExpressions) =>
-        addGroupingSlots(groupingExpressions, source, slots)
-
-      case OrderedDistinct(_, groupingExpressions, _) =>
-        addGroupingSlots(groupingExpressions, source, slots)
-
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
         addGroupingSlots(groupingExpressions, source, slots)
 
@@ -367,8 +361,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: PartialTop
       =>
 
-      case Projection(_, expressions) =>
-        expressions foreach {
+      case p:ProjectingPlan =>
+        p.projectExpressions foreach {
           case (key, parserAst.Variable(ident)) if key == ident =>
           // it's already there. no need to add a new slot for it
 
