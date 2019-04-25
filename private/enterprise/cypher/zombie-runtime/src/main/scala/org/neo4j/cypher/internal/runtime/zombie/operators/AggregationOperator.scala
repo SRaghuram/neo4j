@@ -24,9 +24,13 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import scala.collection.mutable
 
 /**
-  * Pre-operator for aggregations with no grouping. This performs local aggregation of the
-  * data in a single morsel at a time, before putting these local aggregations into the
-  * [[ExecutionState]] buffer which perform the final global aggregation.
+  * General purpose aggregation operator, supporting clauses like
+  *
+  * {{{
+  *   WITH key1, key2, key3, sum(..) AS aggr1, count(..) AS aggr2, avg(..) AS aggr3
+  * }}}
+  *
+  * The implementation composes an [[AggregationMapperOperator]], an [[AggregatingAccumulator]] and an [[AggregationReduceOperator]].
   */
 case class AggregationOperator(workIdentity: WorkIdentity,
                                aggregations: Array[Aggregator],
@@ -46,7 +50,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     new AggregationReduceOperator(argumentStateMapId, reducerOutputSlots)
 
   /**
-    * Pre-operator for aggregations with no grouping. This performs local aggregation of the
+    * Pre-operator for aggregations with grouping. This performs local aggregation of the
     * data in a single morsel at a time, before putting these local aggregations into the
     * [[ExecutionState]] buffer which perform the final global aggregation.
     */
@@ -172,7 +176,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 
   /**
-    * Operator which streams aggregated data, built by [[AggregationMapperOperatorNoGrouping]] and [[AggregatingAccumulator]].
+    * Operator which streams aggregated data, built by [[AggregationMapperOperator]] and [[AggregatingAccumulator]].
     */
   class AggregationReduceOperator(val argumentStateMapId: ArgumentStateMapId,
                                   reducerOutputSlots: Array[Int])

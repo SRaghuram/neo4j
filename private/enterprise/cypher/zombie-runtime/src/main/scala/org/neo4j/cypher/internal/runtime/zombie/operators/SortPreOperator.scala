@@ -91,7 +91,6 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  // This seems too generic?
   class PreSortedOutput(preSorted: IndexedSeq[PerArgument[MorselExecutionContext]],
                         sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends PreparedOutput {
     override def produce(): Unit = sink.put(preSorted)
@@ -99,14 +98,5 @@ class SortPreOperator(val workIdentity: WorkIdentity,
 }
 
 object PreSortingBuffer {
-
   val NO_LIMIT: Long = Long.MaxValue
-
-//  class Factory(orderBy: Seq[ColumnOrder], limit: Long) extends ArgumentStateFactory[PreSortingBuffer] {
-//    override def newStandardArgumentState(argumentRowId: Long): PreSortingBuffer =
-//      new PreSortingBuffer(argumentRowId, orderBy, limit, new StandardBuffer[MorselExecutionContext])
-//
-//    override def newConcurrentArgumentState(argumentRowId: Long): PreSortingBuffer =
-//      new PreSortingBuffer(argumentRowId, orderBy, limit, new ConcurrentBuffer[MorselExecutionContext])
-//  }
 }

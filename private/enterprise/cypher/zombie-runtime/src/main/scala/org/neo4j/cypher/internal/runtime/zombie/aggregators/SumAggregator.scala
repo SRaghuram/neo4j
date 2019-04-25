@@ -62,7 +62,7 @@ case object SumAggregator extends Aggregator {
       if (!seenDuration)
         sumNumber = overflowSafeAdd(sumNumber, number)
       else
-        failMix(number)
+        failMix()
     }
 
     protected def onDuration(dur: DurationValue): Unit = {
@@ -70,14 +70,14 @@ case object SumAggregator extends Aggregator {
       if (!seenNumber)
         sumDuration = sumDuration.add(dur)
       else
-        failMix(dur)
+        failMix()
     }
 
-    protected def failMix(value: AnyValue) =
-      throw new CypherTypeException("sum(%s) cannot mix number and durations".format(value))
+    protected def failMix() =
+      throw new CypherTypeException("sum() cannot mix numbers and durations")
 
     protected def failType(value: AnyValue) =
-      throw new CypherTypeException("sum() can only handle numerical values, duration, and null. Got %s".format(value))
+      throw new CypherTypeException(s"sum() can only handle numerical values, duration, and null. Got $value")
   }
 
   class SumConcurrentReducer() extends Reducer {

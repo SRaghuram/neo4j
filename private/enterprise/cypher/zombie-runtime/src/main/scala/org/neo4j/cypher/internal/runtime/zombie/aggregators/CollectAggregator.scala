@@ -21,9 +21,6 @@ case object CollectAggregator extends Aggregator {
   override def newUpdater: Updater = new CollectUpdater
   override def newStandardReducer: Reducer = new CollectStandardReducer
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer
-
-  def shouldUpdate(collect: AnyValue, value: AnyValue): Boolean =
-    collect == Values.NO_VALUE || AnyValues.COMPARATOR.compare(collect, value) > 0
 }
 
 class CollectUpdater() extends Updater {

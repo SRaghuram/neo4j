@@ -79,7 +79,7 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
     executionState.putMorsel(pipelineId, bufferId, outputMorsel)
 }
 
-// MORSEL BUFFER OUTPUT
+// MORSEL ARGUMENT STATE BUFFER OUTPUT
 
 case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
