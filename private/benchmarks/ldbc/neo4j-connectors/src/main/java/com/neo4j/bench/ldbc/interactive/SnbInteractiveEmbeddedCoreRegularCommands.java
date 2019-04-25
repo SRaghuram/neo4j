@@ -111,7 +111,7 @@ public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommand
     public void init() throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

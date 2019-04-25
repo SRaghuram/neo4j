@@ -136,7 +136,7 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
     public void init() throws DbException
     {
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

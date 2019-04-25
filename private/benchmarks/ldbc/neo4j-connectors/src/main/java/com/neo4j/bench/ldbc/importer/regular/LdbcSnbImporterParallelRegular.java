@@ -772,7 +772,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
 
         File dbDir = new File( storeDir, DEFAULT_DATABASE_NAME );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = managementService.database( dbDir.getName() );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 
