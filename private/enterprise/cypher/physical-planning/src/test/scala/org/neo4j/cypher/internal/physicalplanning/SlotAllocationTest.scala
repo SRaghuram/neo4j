@@ -8,11 +8,11 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.compiler.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
+import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions._
@@ -336,19 +336,18 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val distinct = Distinct(optional, Map("x" -> varFor("x"), "x.propertyKey" -> prop("x", "propertyKey")))
 
     // when
-    val allocations = SlotAllocation.allocateSlots(distinct, semanticTable, breakFor(distinct), NO_EXPR_VARS).slotConfigurations
+    val allocations = SlotAllocation.allocateSlots(distinct, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
 
     // then
-    val leafExpected = SlotConfiguration.empty.newLong("x", true, CTNode)
-    val distinctExpected =
+    val expected =
       SlotConfiguration.empty
         .newLong("x", true, CTNode)
         .newReference("x.propertyKey", true, CTAny)
 
     allocations should have size 3
-    allocations(leaf.id) should equal(leafExpected)
-    allocations(optional.id) should equal(leafExpected)
-    allocations(distinct.id) should equal(distinctExpected)
+    allocations(leaf.id) should equal(expected)
+    allocations(optional.id) should equal(expected)
+    allocations(distinct.id) should equal(expected)
   }
 
   test("optional travels through aggregation") {

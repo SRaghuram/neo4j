@@ -5,15 +5,15 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.ir.CreateNode
-import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.INCOMING
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.symbols._
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
 class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
@@ -240,14 +240,16 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(lhs, distinct)
 
     // when
-    val slots = SlotAllocation.allocateSlots(plan, semanticTable, PipelineBreakingPolicy.breakFor(leaf1, leaf2, distinct), NO_EXPR_VARS).slotConfigurations
+    val slots = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
 
     // then
     slots(distinct.id) should be(SlotConfiguration.empty
                                    .newLong("lhsLong0", false, CTNode)
                                    .newLong("rhsLong0", false, CTNode)
+                                   .newLong("rhsLong1", false, CTNode) // kept because we don't break pipeline on distinct
                                    .newReference("lhsRef0", true, CTAny)
                                    .newReference("lhsRef1", true, CTAny)
+                                   .newReference("rhsRef0", true, CTAny) // kept because we don't break pipeline on distinct
                                    .newReference("rhsRef1", true, CTAny)
     )
   }
