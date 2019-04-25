@@ -14,13 +14,13 @@ import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeUnionMapping
 import org.neo4j.cypher.internal.runtime.{NodeOperations, QueryContext, RelationshipOperations}
+import org.neo4j.cypher.internal.v4_0.util.symbols._
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.{Node, Relationship}
 import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeProxy, fromRelationshipProxy}
 import org.neo4j.values.storable.Values.{longValue, stringArray, stringValue}
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
-import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.immutable
 
@@ -28,11 +28,12 @@ class UnionSlottedPipeTest extends CypherFunSuite {
 
   private def union(lhsSlots: SlotConfiguration,
                     rhsSlots: SlotConfiguration,
-                    out: SlotConfiguration, lhsData: Iterable[Map[String, Any]],
+                    out: SlotConfiguration,
+                    lhsData: Iterable[Map[String, Any]],
                     rhsData: Iterable[Map[String, Any]]) = {
     val lhs = FakeSlottedPipe(lhsData, lhsSlots)
     val rhs = FakeSlottedPipe(rhsData, rhsSlots)
-    val union = UnionSlottedPipe(lhs, rhs, computeUnionMapping(lhsSlots, out), computeUnionMapping(rhsSlots, out) )()
+    val union = UnionSlottedPipe(lhs, rhs, out, computeUnionMapping(lhsSlots, out), computeUnionMapping(rhsSlots, out) )()
     val context = mock[QueryContext]
     val nodeOps = mock[NodeOperations]
     when(nodeOps.getById(any())).thenAnswer(new Answer[NodeValue] {

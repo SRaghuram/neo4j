@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
@@ -456,7 +457,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Union(_, _) =>
         val lhsSlots = slotConfigs(lhs.id)
         val rhsSlots = slotConfigs(rhs.id)
-        UnionSlottedPipe(lhs, rhs,
+        UnionSlottedPipe(lhs,
+          rhs,
+          slots,
           SlottedPipeMapper.computeUnionMapping(lhsSlots, slots),
           SlottedPipeMapper.computeUnionMapping(rhsSlots, slots))(id = id)
 
@@ -654,59 +657,34 @@ object SlottedPipeMapper {
       throw new InternalException(s"Do not know how to project $slot")
   }
 
-  type RowMapping = (ExecutionContext, QueryState) => ExecutionContext
-
   //compute mapping from incoming to outgoing pipe line, the slot order may differ
   //between the output and the input (lhs and rhs) and it may be the case that
   //we have a reference slot in the output but a long slot on one of the inputs,
   //e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val overlaps: Boolean = out.mapSlot {
-      //For long slots we need to make sure both offset and types match
-      //e.g we cannot allow mixing a node long slot with a relationship
-      //longslot
-      case (k, s: LongSlot) =>
-        s == in.get(k).get
-      //If both incoming and outgoing slots are refslot is is ok that types etc differs,
-      // just make sure they have the same offset
-      case (k, s: RefSlot) =>
-        val inSlot = in.get(k).get
-        inSlot.isInstanceOf[RefSlot] && s.offset == inSlot.offset
-
-    }.forall(_ == true)
-
-    //If we overlap we can just pass the result right through
-    if (overlaps) {
-      (incoming: ExecutionContext, _: QueryState) =>
-        incoming
+    val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot {
+      case (k, inSlot: LongSlot) =>
+        out.get(k).get match {
+          case l: LongSlot =>
+            (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
+          case r: RefSlot =>
+            //here we must map the long slot to a reference slot
+            val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
+            (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
+        }
+      case (k, inSlot: RefSlot) =>
+        // This means out must be a ref slot as well, otherwise slot allocation was wrong
+        out.get(k).get match {
+          case l: LongSlot =>
+            throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
+          case r: RefSlot =>
+            (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
+        }
     }
-    else {
-      //find columns where output is a reference slot but where the input is a long slot
-
-      val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = out.mapSlot {
-        case (k, v: LongSlot) =>
-          val sourceOffset = in.getLongOffsetFor(k)
-          (in, out, _) =>
-            out.setLongAt(v.offset, in.getLongAt(sourceOffset))
-        case (k, v: RefSlot) =>
-          in.get(k).get match {
-            case l: LongSlot => //here we must map the long slot to a reference slot
-              val projectionExpression = projectSlotExpression(l) // Pre-compute projection expression
-              (in, out, state) =>
-                out.setRefAt(v.offset, projectionExpression(in, state))
-            case _ =>
-              val sourceOffset = in.getReferenceOffsetFor(k)
-              (in, out, _) =>
-                out.setRefAt(v.offset, in.getRefAt(sourceOffset))
-          }
-      }
-      //Create a new context and apply all transformations
-      (incoming: ExecutionContext, state: QueryState) =>
-        val outgoing = SlottedExecutionContext(out)
-        mapSlots.foreach(f => f(incoming, outgoing, state))
-        outgoing
+    //Apply all transformations
+    (incoming: ExecutionContext, outgoing: ExecutionContext, state: QueryState) => {
+      mapSlots.foreach(f => f(incoming, outgoing, state))
     }
-
   }
 
   def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {

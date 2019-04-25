@@ -5,13 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.RowMapping
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case class UnionSlottedPipe(lhs: Pipe,
                             rhs: Pipe,
+                            slots: SlotConfiguration,
                             lhsMapping: RowMapping,
                             rhsMapping: RowMapping)
                            (val id: Id = Id.INVALID_ID) extends Pipe {
@@ -22,11 +25,24 @@ case class UnionSlottedPipe(lhs: Pipe,
 
     new Iterator[ExecutionContext] {
       override def hasNext: Boolean = left.hasNext || right.hasNext
-      override def next(): ExecutionContext =
-        if (left.hasNext)
-          lhsMapping(left.next(), state)
-        else
-          rhsMapping(right.next(), state)
+
+      override def next(): ExecutionContext = {
+        val outgoing = SlottedExecutionContext(slots)
+        if (left.hasNext) {
+          val incoming =  left.next()
+          lhsMapping.mapRows(incoming, outgoing, state)
+        } else {
+          val incoming = right.next()
+          rhsMapping.mapRows(incoming, outgoing, state)
+        }
+        outgoing
+      }
     }
+  }
+}
+
+object UnionSlottedPipe {
+  trait RowMapping {
+    def mapRows(incoming: ExecutionContext, outgoing: ExecutionContext, state: QueryState): Unit
   }
 }
