@@ -46,7 +46,13 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 prePopulateResults,
                                 inputDataStream)
 
-    val executionState = new TheExecutionState(stateDefinition, executablePipelines, StandardStateFactory, this, queryContext, queryState, resources)
+    val executionState = new TheExecutionState(stateDefinition,
+                                               executablePipelines,
+                                               StandardStateFactory,
+                                               this,
+                                               queryContext,
+                                               queryState,
+                                               resources)
 
     executionState.initializeState()
 

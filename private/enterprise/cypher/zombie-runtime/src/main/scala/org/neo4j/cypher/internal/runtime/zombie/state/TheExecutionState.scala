@@ -42,8 +42,8 @@ class TheExecutionState(stateDefinition: StateDefinition,
   // Execution state building works as a single sweep pass over the execution DAG, starting
   // from the produce results pipeline and moving towards the first pipeline and initial buffer.
   //
-  // Each pipeline and buffer state is build as we traverse the DAG, meaning that pipelines
-  // can acquire direct references to their sinks, and buffers can acquires references to
+  // Each pipeline and buffer state is built as we traverse the DAG, meaning that pipelines
+  // can acquire direct references to their sinks, and buffers can acquire references to
   // downstream buffers that they have to reference count for, and to the argument state maps
   // of any reducing operators.
 

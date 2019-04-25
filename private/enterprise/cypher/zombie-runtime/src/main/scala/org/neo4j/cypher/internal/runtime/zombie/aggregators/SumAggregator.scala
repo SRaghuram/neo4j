@@ -86,8 +86,8 @@ case object SumAggregator extends Aggregator {
     @volatile private var seenNumber = false
     @volatile private var seenDuration = false
 
-    private var sumNumber = new AtomicReference[NumberValue](Values.ZERO_INT)
-    private var sumDuration = new AtomicReference[DurationValue](DurationValue.ZERO)
+    private val sumNumber = new AtomicReference[NumberValue](Values.ZERO_INT)
+    private val sumDuration = new AtomicReference[DurationValue](DurationValue.ZERO)
 
     override def update(updater: Updater): Unit =
       updater match {
