@@ -153,7 +153,7 @@ case object AvgAggregator extends Aggregator {
       throw new CypherTypeException(s"avg() can only handle numerical values, duration, and null. Got $value")
   }
 
-  class AvgConcurrentReducer() extends Reducer {
+  class AvgConcurrentReducer() extends AvgStandardBase with Reducer {
 
     // Note: these volatile flags are set by multiple threads, but only to true, so racing is benign.
     @volatile private var seenNumber = false
@@ -175,6 +175,9 @@ case object AvgAggregator extends Aggregator {
         case u: AvgUpdater =>
           if (u.seenNumber) {
             seenNumber = true
+            if (seenDuration) {
+              failMix()
+            }
             number.updateAndGet(old => {
               val newCount = old.count + u.count
               val diff = u.avgNumber.minus(old.avgNumber)
@@ -184,6 +187,9 @@ case object AvgAggregator extends Aggregator {
 
           } else if (u.seenDuration) {
             seenDuration = true
+            if (seenNumber) {
+              failMix()
+            }
             duration.updateAndGet(old => {
               val newCount = old.count + u.count
               AvgDuration(newCount,
