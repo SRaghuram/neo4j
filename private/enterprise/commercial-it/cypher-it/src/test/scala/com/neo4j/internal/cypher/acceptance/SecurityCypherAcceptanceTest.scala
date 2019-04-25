@@ -8,14 +8,16 @@ package com.neo4j.internal.cypher.acceptance
 import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
-import com.neo4j.server.security.enterprise.auth.SecureHasher
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.Log
+import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
 
 class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val defaultRoles = Set(
@@ -264,7 +266,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   protected override def initTest(): Unit = {
     super.initTest()
-    systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "impermanent-db")
+    systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "neo4j")
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
@@ -276,7 +278,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   private def selectDatabase(name: String): Unit = {
     val manager = databaseManager()
-    val maybeCtx: Optional[DatabaseContext] = manager.getDatabaseContext(name)
+    val maybeCtx: Optional[DatabaseContext] = manager.getDatabaseContext(new DatabaseId(name))
     val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)
