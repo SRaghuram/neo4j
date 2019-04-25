@@ -63,12 +63,18 @@ class Worker(val workerId: Int,
       val task = schedulingPolicy.nextTask(executingQuery, resources)
       if (task != null) {
         val state = task.pipelineState
-        val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-        val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
-        val preparedOutput = task.executeWorkUnit(resources, output)
-        workUnitEvent.stop()
 
-        preparedOutput.produce()
+        try {
+          executingQuery.bindTransactionToThread()
+
+          val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+          val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
+          val preparedOutput = task.executeWorkUnit(resources, output)
+          workUnitEvent.stop()
+          preparedOutput.produce()
+        } finally {
+          executingQuery.unbindTransaction()
+        }
 
         if (task.canContinue) {
           // Put the continuation before unlocking (closeWorkUnit)

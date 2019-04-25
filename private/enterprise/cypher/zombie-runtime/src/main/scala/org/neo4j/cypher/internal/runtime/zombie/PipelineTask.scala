@@ -24,16 +24,6 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   extends Task[QueryResources] {
 
   override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): PreparedOutput = {
-    try {
-      state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
-      doExecuteWorkUnit(resources, output)
-    } finally {
-      state.transactionBinder.unbindFromThread()
-    }
-  }
-
-  private def doExecuteWorkUnit(resources: QueryResources,
-                                output: MorselExecutionContext): PreparedOutput = {
     startTask.operate(output, queryContext, state, resources)
     for (op <- middleTasks) {
       output.resetToFirstRow()

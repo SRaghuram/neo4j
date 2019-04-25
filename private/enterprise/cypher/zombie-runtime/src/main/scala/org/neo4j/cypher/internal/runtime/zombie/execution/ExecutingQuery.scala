@@ -22,4 +22,10 @@ class ExecutingQuery(val executionState: ExecutionState,
       queryExecutionTracer.stopQuery()
     }
   }
+
+  def bindTransactionToThread(): Unit =
+    queryState.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
+
+  def unbindTransaction(): Unit =
+    queryState.transactionBinder.unbindFromThread()
 }
