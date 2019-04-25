@@ -49,8 +49,6 @@ public abstract class BaseClusterOverviewIT
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedReadReplicaParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-            .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.disable_middleware_logging, "false" )
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 

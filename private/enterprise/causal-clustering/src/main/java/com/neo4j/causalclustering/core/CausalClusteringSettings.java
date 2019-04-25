@@ -238,10 +238,6 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<DiscoveryType> discovery_type =
             setting( "causal_clustering.discovery_type", optionsIgnoreCase( DiscoveryType.class ), DiscoveryType.LIST.name() );
 
-    @Description( "Prevents the network middleware from dumping its own logs. Defaults to true." )
-    public static final Setting<Boolean> disable_middleware_logging =
-            setting( "causal_clustering.disable_middleware_logging", BOOLEAN, TRUE );
-
     @Description( "The level of middleware logging" )
     public static final Setting<Level> middleware_logging_level =
             setting( "causal_clustering.middleware_logging.level", optionsObeyCase( Level.class ), Level.NONE.toString() );

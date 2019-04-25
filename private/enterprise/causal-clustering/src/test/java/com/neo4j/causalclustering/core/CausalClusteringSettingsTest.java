@@ -10,18 +10,23 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.BaseSetting;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_balancing_config;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.Settings.prefixSetting;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class CausalClusteringSettingsTest
@@ -30,7 +35,7 @@ class CausalClusteringSettingsTest
     void shouldValidatePrefixBasedKeys()
     {
         // given
-        BaseSetting<String> setting = Settings.prefixSetting( "foo", Settings.STRING, "" );
+        BaseSetting<String> setting = prefixSetting( "foo", STRING, "" );
 
         Map<String, String> rawConfig = new HashMap<>();
         rawConfig.put( "foo.us_east_1c", "abcdef" );
@@ -49,7 +54,7 @@ class CausalClusteringSettingsTest
     void shouldValidateMultiplePrefixBasedKeys()
     {
         // given
-        BaseSetting<String> setting = Settings.prefixSetting( "foo", Settings.STRING, "" );
+        BaseSetting<String> setting = prefixSetting( "foo", STRING, "" );
 
         Map<String, String> rawConfig = new HashMap<>();
         rawConfig.put( "foo.us_east_1c", "abcdef" );
@@ -86,7 +91,7 @@ class CausalClusteringSettingsTest
     void shouldBeInvalidIfPrefixDoesNotMatch()
     {
         // given
-        BaseSetting<String> setting = Settings.prefixSetting( "bar", Settings.STRING, "" );
+        BaseSetting<String> setting = prefixSetting( "bar", STRING, "" );
         Map<String, String> rawConfig = new HashMap<>();
         rawConfig.put( "foo.us_east_1c", "abcdef" );
 
@@ -125,7 +130,7 @@ class CausalClusteringSettingsTest
     @Test
     void shouldNotMigrateMiddlewareLoggingLevelWhenUpToDate()
     {
-        var setting = CausalClusteringSettings.middleware_logging_level;
+        var setting = middleware_logging_level;
 
         var config = Config.builder()
                 .withSetting( setting, Level.INFO.toString() )
@@ -137,6 +142,22 @@ class CausalClusteringSettingsTest
         config.setLogger( logProvider.getLog( Config.class ) );
 
         logProvider.assertNoLoggingOccurred();
+    }
+
+    @Test
+    void shouldMigrateDisableMiddlewareLoggingSettingWhenTrue()
+    {
+        testDisableMiddlewareLoggingMigration( TRUE, Level.NONE, Level.NONE );
+        testDisableMiddlewareLoggingMigration( TRUE, Level.INFO, Level.NONE );
+        testDisableMiddlewareLoggingMigration( TRUE, Level.DEBUG, Level.NONE );
+
+        testDisableMiddlewareLoggingMigration( FALSE, Level.DEBUG, Level.DEBUG );
+        testDisableMiddlewareLoggingMigration( FALSE, Level.ERROR, Level.ERROR );
+        testDisableMiddlewareLoggingMigration( FALSE, Level.INFO, Level.INFO );
+
+        testDisableMiddlewareLoggingMigration( null, Level.INFO, Level.INFO );
+        testDisableMiddlewareLoggingMigration( null, Level.WARN, Level.WARN );
+        testDisableMiddlewareLoggingMigration( null, Level.NONE, Level.NONE );
     }
 
     private static void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )
@@ -159,7 +180,7 @@ class CausalClusteringSettingsTest
 
     private static void testMiddlewareLoggingLevelMigration( java.util.logging.Level julLevel, Level neo4jLevel )
     {
-        var setting = CausalClusteringSettings.middleware_logging_level;
+        var setting = middleware_logging_level;
 
         var config = Config.builder()
                 .withSetting( setting, String.valueOf( julLevel.intValue() ) )
@@ -174,5 +195,29 @@ class CausalClusteringSettingsTest
                 inLog( Config.class ).warn( containsString( "Deprecated configuration options used" ) ) );
         logProvider.assertAtLeastOnce(
                 inLog( Config.class ).warn( containsString( setting.name() + " with integer value has been changed to use logging levels" ) ) );
+    }
+
+    private static void testDisableMiddlewareLoggingMigration( String rawValue, Level configuredLevel, Level expectedLevel )
+    {
+        var settingName = "causal_clustering.disable_middleware_logging";
+
+        var config = Config.builder()
+                .withSetting( settingName, rawValue )
+                .withSetting( middleware_logging_level, configuredLevel.toString() )
+                .build();
+
+        var logProvider = new AssertableLogProvider();
+        config.setLogger( logProvider.getLog( Config.class ) );
+
+        assertFalse( config.getRaw( settingName ).isPresent(), "Disable middleware logging setting should be absent" );
+        assertEquals( expectedLevel, config.get( middleware_logging_level ) );
+
+        if ( Objects.equals( TRUE, rawValue ) )
+        {
+            logProvider.assertAtLeastOnce(
+                    inLog( Config.class ).warn( containsString( "Deprecated configuration options used" ) ) );
+            logProvider.assertAtLeastOnce(
+                    inLog( Config.class ).warn( containsString( settingName + " has been removed" ) ) );
+        }
     }
 }

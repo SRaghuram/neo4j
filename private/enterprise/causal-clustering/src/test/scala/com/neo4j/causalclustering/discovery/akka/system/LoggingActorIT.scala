@@ -59,7 +59,6 @@ class LoggingActorIT extends NeoSuite {
   abstract class Fixture(logLevel: Level) {
 
     val config = Config.defaults
-    config.augment(CausalClusteringSettings.disable_middleware_logging, String.valueOf(false))
     config.augment(CausalClusteringSettings.middleware_logging_level, logLevel.toString)
 
     val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, config).generate())

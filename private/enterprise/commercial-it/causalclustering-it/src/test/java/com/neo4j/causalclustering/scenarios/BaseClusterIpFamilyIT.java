@@ -38,8 +38,6 @@ public abstract class BaseClusterIpFamilyIT
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 3 )
-            .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.disable_middleware_logging, "false" )
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 

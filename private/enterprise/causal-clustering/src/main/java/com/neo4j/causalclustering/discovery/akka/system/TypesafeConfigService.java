@@ -214,11 +214,6 @@ public final class TypesafeConfigService
 
     private static AkkaLoggingLevel logLevel( Config config )
     {
-        var disableLogging = config.get( CausalClusteringSettings.disable_middleware_logging );
-        if ( disableLogging )
-        {
-            return AkkaLoggingLevel.OFF;
-        }
         var configuredLevel = config.get( CausalClusteringSettings.middleware_logging_level );
         return AkkaLoggingLevel.fromNeo4jLevel( configuredLevel );
     }

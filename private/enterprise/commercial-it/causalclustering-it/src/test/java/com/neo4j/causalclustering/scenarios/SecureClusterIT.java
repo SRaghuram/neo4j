@@ -68,7 +68,6 @@ class SecureClusterIT
         BaseSslPolicyConfig policyConfig = new PemSslPolicyConfig( sslPolicyName );
 
         Map<String,String> coreParams = MapUtil.stringMap(
-                CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
@@ -77,7 +76,6 @@ class SecureClusterIT
                 policyConfig.format.name(), PEM.name()
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
-                CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
                 policyConfig.base_directory.name(), "certificates/cluster",

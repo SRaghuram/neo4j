@@ -11,11 +11,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Level;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.disable_middleware_logging;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport.TCP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.Settings.FALSE;
 
 class TypesafeConfigServiceTest
 {
@@ -34,7 +32,6 @@ class TypesafeConfigServiceTest
     private static Config neo4jConfigWithMiddlewareLoggingLevel( Level level )
     {
         return Config.builder()
-                .withSetting( disable_middleware_logging, FALSE )
                 .withSetting( middleware_logging_level, level.toString() )
                 .build();
     }
