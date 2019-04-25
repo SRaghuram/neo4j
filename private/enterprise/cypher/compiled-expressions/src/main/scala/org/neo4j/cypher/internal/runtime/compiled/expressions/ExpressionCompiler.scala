@@ -1910,10 +1910,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   private def intermediateCompileProjection(projections: Map[Int, IntermediateExpression]): IntermediateExpression = {
     val all = projections.toSeq.map {
-      case (slot, value) => setRefAt(slot,
-                                     if (value.nullCheck.isEmpty) value.ir
-                                     else ternary(value.nullCheck.reduceLeft((acc,current) => or(acc, current)),
-                                                  noValue, value.ir))
+      case (slot, value) => setRefAt(slot, value.ir)
     }
     IntermediateExpression(block(all:_*), projections.values.flatMap(_.fields).toSeq,
                            projections.values.flatMap(_.variables).toSeq, Set.empty)
