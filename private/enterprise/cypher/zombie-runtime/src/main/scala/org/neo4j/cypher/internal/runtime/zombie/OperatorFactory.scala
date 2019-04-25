@@ -187,10 +187,10 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             aggregators += aggregator
             outputSlots += outputSlot.offset
         }
-        new AggregationReduceOperatorNoGrouping(argumentStateMapId,
-                                                WorkIdentity.fromPlan(plan),
-                                                aggregators.result(),
-                                                outputSlots.result())
+        AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
+                                      aggregators.result())
+            .reducer(argumentStateMapId,
+                     outputSlots.result())
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
         val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
@@ -288,11 +288,11 @@ class OperatorFactory(val stateDefinition: StateDefinition,
                 expressions += converters.toCommandExpression(id, expression)
               }
 
-            new AggregationMapperOperatorNoGrouping(WorkIdentity.fromPlan(plan),
-                                                    argumentSlotOffset,
-                                                    outputBuffer.id,
-                                                    aggregators.result(),
-                                                    expressions.result())
+            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
+                                          aggregators.result())
+              .mapper(argumentSlotOffset,
+                      outputBuffer.id,
+                      expressions.result())
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val argumentDepth = physicalPlan.applyPlans(id)
