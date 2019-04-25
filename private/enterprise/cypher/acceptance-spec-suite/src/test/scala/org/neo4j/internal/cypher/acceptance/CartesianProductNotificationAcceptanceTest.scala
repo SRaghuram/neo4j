@@ -10,12 +10,11 @@ import java.time.Clock
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito.{verify, _}
 import org.neo4j.cypher.GraphDatabaseTestSupport
-import org.neo4j.cypher.internal.compatibility.simpleExpressionEvaluator
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
 import org.neo4j.cypher.internal.compiler._
 import org.neo4j.cypher.internal.compiler.phases.{PlannerContext, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp._
-import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
+import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory, simpleExpressionEvaluator}
 import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext}
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
