@@ -21,12 +21,6 @@ public class StandardToEnterpriseStoreUpgraderTest extends StoreUpgraderTest
     }
 
     @Override
-    protected RecordFormats getRecordFormats()
-    {
-        return HighLimit.RECORD_FORMATS;
-    }
-
-    @Override
     protected String getRecordFormatsName()
     {
         return HighLimit.NAME;
