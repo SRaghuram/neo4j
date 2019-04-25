@@ -37,7 +37,6 @@ import org.neo4j.kernel.impl.api.StatementOperationParts;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
-import org.neo4j.kernel.impl.api.TransactionHooks;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
@@ -50,6 +49,7 @@ import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
+import org.neo4j.kernel.internal.event.DatabaseTransactionEventListeners;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.resources.CpuClock;
@@ -250,7 +250,7 @@ class TransactionStatusResultTest
             Dependencies dependencies = new Dependencies();
             dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
-                        mock( StatementOperationParts.class ), new TransactionHooks(),
+                        mock( StatementOperationParts.class ), mock( DatabaseTransactionEventListeners.class ),
                         mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ), TransactionHeaderInformationFactory.DEFAULT,
                         mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
