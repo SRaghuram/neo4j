@@ -1,28 +1,26 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
- */
-package org.neo4j.cypher.internal
+package org.neo4j.cypher.internal.runtime.zombie
 
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuilder, StateDefinition}
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics, _}
+import org.neo4j.cypher.internal.runtime.zombie.operators.CompiledQueryResultRecord
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
+import org.neo4j.graphdb
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -33,10 +31,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                            query.logicalPlan,
-                                            query.semanticTable,
-                                            ZombiePipelineBreakingPolicy,
-                                            allocateArgumentSlots = true)
+      query.logicalPlan,
+      query.semanticTable,
+      ZombiePipelineBreakingPolicy,
+      allocateArgumentSlots = true)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -71,14 +69,14 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
 
     ZombieExecutionPlan(executablePipelines,
-                        stateDefinition,
-                        queryIndexes,
-                        physicalPlan.nExpressionSlots,
-                        physicalPlan.logicalPlan,
-                        physicalPlan.parameterMapping,
-                        query.resultColumns,
-                        executor,
-                        context.runtimeEnvironment.tracer)
+      stateDefinition,
+      queryIndexes,
+      physicalPlan.nExpressionSlots,
+      physicalPlan.logicalPlan,
+      physicalPlan.parameterMapping,
+      query.resultColumns,
+      executor,
+      context.runtimeEnvironment.tracer)
   }
 
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
@@ -101,18 +99,18 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
       new ZombieRuntimeResult(executablePipelines,
-                              stateDefinition,
-                              queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
-                              nExpressionSlots,
-                              prePopulateResults,
-                              inputDataStream,
-                              logicalPlan,
-                              queryContext,
-                              createParameterArray(params, parameterMapping),
-                              fieldNames,
-                              queryExecutor,
-                              schedulerTracer,
-                              subscriber: QuerySubscriber)
+        stateDefinition,
+        queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+        nExpressionSlots,
+        prePopulateResults,
+        inputDataStream,
+        logicalPlan,
+        queryContext,
+        createParameterArray(params, parameterMapping),
+        fieldNames,
+        queryExecutor,
+        schedulerTracer,
+        subscriber: QuerySubscriber)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -120,7 +118,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def metadata: Seq[Argument] = Nil
 
     override def notifications: Set[InternalNotification] = Set(ExperimentalFeatureNotification("use the morsel runtime at your own peril, " +
-                                                                                                "not recommended to be run on production systems"))
+      "not recommended to be run on production systems"))
   }
 
   class ZombieRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
@@ -135,11 +133,20 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             override val fieldNames: Array[String],
                             queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,
-                            subscriber: QuerySubscriber) extends NaiveQuerySubscription(subscriber) {
-
+                            subscriber: QuerySubscriber) extends RuntimeResult {
     private var resultRequested = false
 
+    //TODO no, just don't
+    if (subscriber!= QuerySubscriber.NOT_A_SUBSCRIBER) {
+      subscriber.onResult(fieldNames.length)
+    }
+
+    private var querySubscription: QuerySubscription = _
+
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
+      val nonReactiveSubscriber = new ZombieSubscriber(new VisitSubscriber(visitor), visitor)
+      nonReactiveSubscriber.request(Long.MaxValue)
+      nonReactiveSubscriber.onResult(fieldNames.length)
       val executionHandle = queryExecutor.execute(executablePipelines,
                                                   stateDefinition,
                                                   inputDataStream,
@@ -149,10 +156,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   queryIndexes,
                                                   nExpressionSlots,
                                                   prePopulateResults,
-                                                  visitor)
+                                                  nonReactiveSubscriber)
 
-      executionHandle.await()
       resultRequested = true
+      executionHandle.await()
     }
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
@@ -169,5 +176,58 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def close(): Unit = {}
 
     override def queryProfile(): QueryProfile = QueryProfile.NONE
+
+    override def request(numberOfRecords: Long): Unit = {
+      if (querySubscription == null) {
+        resultRequested = true
+        querySubscription = queryExecutor.execute(
+          executablePipelines,
+          stateDefinition,
+          inputDataStream,
+          queryContext,
+          params,
+          schedulerTracer,
+          queryIndexes,
+          nExpressionSlots,
+          prePopulateResults,
+          new ZombieSubscriber(subscriber, null))
+      }
+      querySubscription.request(numberOfRecords)
+    }
+
+    override def cancel(): Unit =
+      querySubscription.cancel()
+
+    override def await(): Boolean = {
+      querySubscription.await()
+    }
+  }
+
+}
+
+class VisitSubscriber(visitor: QueryResultVisitor[_]) extends QuerySubscriber {
+
+  private var array: Array[AnyValue] = _
+  private var results: QueryResult.Record = _
+
+  override def onResult(numberOfFields: Int): Unit = {
+    array = new Array[AnyValue](numberOfFields)
+    results = new CompiledQueryResultRecord(array)
+  }
+
+  override def onRecord(): Unit = {}
+
+  override def onField(offset: Int, value: AnyValue): Unit = {
+    array(offset) = value
+  }
+
+  override def onRecordCompleted(): Unit = {
+    visitor.visit(results)
+  }
+
+  override def onError(throwable: Throwable): Unit = throw throwable
+
+  override def onResultCompleted(statistics: graphdb.QueryStatistics): Unit = {
+
   }
 }

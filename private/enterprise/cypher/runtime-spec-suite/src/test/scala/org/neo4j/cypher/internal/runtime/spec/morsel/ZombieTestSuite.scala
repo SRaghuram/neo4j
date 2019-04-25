@@ -11,7 +11,8 @@ import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.runtime.zombie.ZombieRuntime
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue

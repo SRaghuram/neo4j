@@ -104,6 +104,7 @@ class Pipeline(val id: PipelineId,
   var outputDefinition: OutputDefinition = NoOutput
   val middlePlans = new ArrayBuffer[LogicalPlan]
   var serial: Boolean = false
+  var checkHasDemand: Boolean = false
 }
 
 class StateDefinition(val physicalPlan: PhysicalPlan) {
@@ -247,10 +248,12 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           pipeline.inputBuffer = outputToBuffer(source)
           pipeline.serial = true
+          pipeline.checkHasDemand = true
           pipeline
         } else {
           source.outputDefinition = ProduceResultOutput(produceResult)
           source.serial = true
+          source.checkHasDemand = true
           source
         }
 

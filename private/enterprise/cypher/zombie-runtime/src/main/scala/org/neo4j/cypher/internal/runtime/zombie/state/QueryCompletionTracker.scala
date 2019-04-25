@@ -8,6 +8,8 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
+import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
 
 /**
@@ -49,7 +51,7 @@ trait QueryCompletionTracker {
 /**
   * Not thread-safe implementation of [[QueryCompletionTracker]].
   */
-class StandardQueryCompletionTracker extends QueryCompletionTracker {
+class StandardQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext: QueryContext) extends QueryCompletionTracker {
   private var count = 0L
   private var throwable: Throwable = _
 
@@ -63,23 +65,28 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
     if (count < 0) {
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
+    if (count == 0) {
+      val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
+      subscriber.onResultCompleted(statistics)
+    }
     count
   }
 
   override def error(throwable: Throwable): Unit = {
     this.throwable = throwable
+    subscriber.onError(throwable)
   }
 
   override def await(): Unit = {
     if (throwable != null) {
       throw throwable
     }
-    if (count != 0) {
+    if (count != 0 && !subscriber.isCompleteOrCancelled) {
       throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
     }
   }
 
-  override def isCompleted: Boolean = throwable != null || count == 0
+  override def isCompleted: Boolean = throwable != null || count == 0 || subscriber.isCompleteOrCancelled
 
   override def toString: String = s"StandardQueryCompletionTracker($count)"
 }
@@ -87,7 +94,7 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
 /**
   * Concurrent implementation of [[QueryCompletionTracker]].
   */
-class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
+class ConcurrentQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext: QueryContext) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
   private val latch = new CountDownLatch(1)
@@ -101,8 +108,11 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
     Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
-    if (newCount == 0)
+    if (newCount == 0) {
       latch.countDown()
+      val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
+      subscriber.onResultCompleted(statistics)
+    }
     else if (newCount < 0)
       throw new IllegalStateException("Cannot count below 0")
     newCount
@@ -110,6 +120,7 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
 
   override def error(throwable: Throwable): Unit = {
     errors.add(throwable)
+    subscriber.onError(throwable)
     latch.countDown()
   }
 
@@ -122,7 +133,7 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
     }
   }
 
-  override def isCompleted: Boolean = latch.getCount == 0
+  override def isCompleted: Boolean = latch.getCount == 0 || subscriber.isCompleteOrCancelled
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 }

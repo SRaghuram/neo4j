@@ -10,16 +10,19 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, Slot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContext, ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
+import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, QueryStatistics, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
+
+import scala.collection.mutable
 
 /**
   * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
@@ -29,8 +32,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
                             columns: Seq[(String, Expression)])
   extends StreamingOperator
-     with OutputOperator
-     with OutputOperatorState {
+     with OutputOperator {
+
+  private val expressions: Array[Expression] = columns.map(_._2).toArray
 
   override def toString: String = "ProduceResult"
   override def outputBuffer: Option[BufferId] = None
@@ -45,35 +49,65 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
+    @volatile private var _canContinue: Boolean = false
     override def toString: String = "ProduceResultInputTask"
-    override def canContinue: Boolean = false // will be true sometimes for reactive results
+    override def canContinue: Boolean =_canContinue
 
     override def operate(outputIgnore: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
+
       produceOutput(inputMorsel, context, state, resources)
+      _canContinue = inputMorsel.isValidRow
     }
   }
 
   //==========================================================================
   // This is called whe ProduceResult is the final operator of a pipeline
-  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = this
 
-  override def prepareOutput(outputMorsel: MorselExecutionContext,
-                             context: QueryContext,
-                             state: QueryState,
-                             resources: QueryResources): PreparedOutput =
-    new OutputOTask(outputMorsel, context, state, resources)
+  class OutputOOperatorState extends OutputOperatorState with PreparedOutput {
 
-  class OutputOTask(outputMorsel: MorselExecutionContext,
-                    context: QueryContext,
-                    state: QueryState,
-                    resources: QueryResources) extends PreparedOutput {
+    // TODO this will turn to false again when we have been able to produce all the results. then PipelineTask will be finished too.
+    // TODO but is awkward that there is 1 OutputOperatorState instance per pipeline that lives for duration of query execution
+    @volatile private var _canContinue: Boolean = false
 
     override def toString: String = "ProduceResultOutputTask"
-    override def produce(): Unit = produceOutput(outputMorsel, context, state, resources)
+
+    override def canContinue: Boolean = _canContinue
+
+    override def prepareOutput(outputMorsel: MorselExecutionContext,
+                               context: QueryContext,
+                               state: QueryState,
+                               resources: QueryResources): PreparedOutput = {
+      produceOutput(outputMorsel, context, state, resources)
+      _canContinue = outputMorsel.isValidRow
+      this
+    }
+
+    override def produce(): Unit = {}
   }
+
+  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = new OutputOOperatorState
+
+
+//
+//  override def prepareOutput(outputMorsel: MorselExecutionContext,
+//                             context: QueryContext,
+//                             state: QueryState,
+//                             resources: QueryResources): PreparedOutput =
+//    new OutputOTask(outputMorsel, context, state, resources)
+//
+//  class OutputOTask(outputMorsel: MorselExecutionContext,
+//                    context: QueryContext,
+//                    state: QueryState,
+//                    resources: QueryResources) extends PreparedOutput {
+//
+//    override def toString: String = "ProduceResultOutputTask"
+//    override def produce(): Unit = {
+//      produceOutput(outputMorsel, context, state, resources)
+//    }
+//  }
 
   //==========================================================================
 
@@ -81,7 +115,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources): Unit = {
-    val resultFactory = ArrayResultExecutionContextFactory(columns)
+    //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
     val queryState = new OldQueryState(context,
                                        resources = null,
                                        params = state.params,
@@ -90,12 +124,29 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                        resources.expressionVariables(state.nExpressionSlots),
                                        prePopulateResults = state.prepopulateResults)
 
+    val subscriber = state.subscriber
+    var served = 0
+    val demand = subscriber.getDemand
     // Loop over the rows of the morsel and call the visitor for each one
-    while (output.isValidRow) {
-      val arrayRow = resultFactory.newResult(output, queryState, queryState.prePopulateResults)
-      state.visitor.visit(arrayRow)
+    while (output.isValidRow && served < demand) {
+      subscriber.onRecord()
+      var i = 0
+      while (i < expressions.length) {
+        val value = expressions(i)(output, queryState)
+        if (state.prepopulateResults) {
+          ValuePopulation.populate(value)
+        }
+        subscriber.onField(i, value)
+        i += 1
+      }
+      subscriber.onRecordCompleted()
+      served += 1
+
       output.moveToNextRow()
     }
+    subscriber.addServed(served)
+
+    //TODO should we call subscriber.setCompleted here?
   }
 }
 

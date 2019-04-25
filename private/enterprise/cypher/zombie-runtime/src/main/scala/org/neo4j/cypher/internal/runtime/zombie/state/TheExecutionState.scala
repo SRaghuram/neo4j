@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState, ZombieSubscriber}
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.{AlarmSink, WorkerWaker}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
@@ -25,9 +25,10 @@ class TheExecutionState(stateDefinition: StateDefinition,
                         workerWaker: WorkerWaker,
                         queryContext: QueryContext,
                         queryState: QueryState,
-                        resources: QueryResources) extends ExecutionState {
+                        resources: QueryResources,
+                        subscriber: ZombieSubscriber) extends ExecutionState {
 
-  private val tracker = stateFactory.newTracker()
+  private val tracker: QueryCompletionTracker = stateFactory.newTracker(subscriber, queryContext)
 
   // Verify that IDs and offsets match
 
@@ -178,7 +179,12 @@ class TheExecutionState(stateDefinition: StateDefinition,
   override def unlock(pipeline: ExecutablePipeline): Unit = pipelineLocks(pipeline.id.x).unlock()
 
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
-    continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
+    val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
+    if (pipeline.checkHasDemand) {
+      hasWork && subscriber.hasDemand
+    } else {
+      hasWork
+    }
   }
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
@@ -189,9 +195,13 @@ class TheExecutionState(stateDefinition: StateDefinition,
     asm
   }
 
-  override def failQuery(throwable: Throwable): Unit = tracker.error(throwable)
+  override def failQuery(throwable: Throwable): Unit = {
+    tracker.error(throwable)
+  }
 
-  override def awaitCompletion(): Unit = tracker.await()
+  override def awaitCompletion(): Unit = {
+    tracker.await()
+  }
 
   override def isCompleted: Boolean = tracker.isCompleted
 

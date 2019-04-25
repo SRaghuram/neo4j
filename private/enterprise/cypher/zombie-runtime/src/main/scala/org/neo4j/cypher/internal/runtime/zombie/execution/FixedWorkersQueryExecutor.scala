@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
 
 /**
@@ -58,10 +59,10 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
+                                       subscriber: ZombieSubscriber): QuerySubscription = {
 
     val queryState = QueryState(params,
-                                visitor,
+                                subscriber,
                                 morselSize,
                                 queryIndexes,
                                 transactionBinder,
@@ -80,7 +81,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                this,
                                                queryContext,
                                                queryState,
-                                               initResources)
+                                               initResources,
+                                               subscriber)
 
     executionState.initializeState()
 
@@ -90,6 +92,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                             schedulerTracer.traceQuery())
 
     queryManager.addQuery(executingQuery)
-    executingQuery
+    subscriber
   }
 }

@@ -19,6 +19,7 @@ case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
                               middleOperators: Array[MiddleOperator],
                               serial: Boolean,
+                              checkHasDemand: Boolean,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
                               outputOperator: OutputOperator) extends WorkIdentity {

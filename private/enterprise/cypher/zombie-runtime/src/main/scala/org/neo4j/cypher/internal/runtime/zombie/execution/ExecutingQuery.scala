@@ -13,15 +13,7 @@ import org.neo4j.cypher.internal.runtime.zombie.ExecutionState
 class ExecutingQuery(val executionState: ExecutionState,
                      val queryContext: QueryContext,
                      val queryState: QueryState,
-                     val queryExecutionTracer: QueryExecutionTracer) extends QueryExecutionHandle {
-
-  override def await(): Unit = {
-    try{
-      executionState.awaitCompletion()
-    } finally {
-      queryExecutionTracer.stopQuery()
-    }
-  }
+                     val queryExecutionTracer: QueryExecutionTracer) {
 
   def bindTransactionToThread(): Unit =
     queryState.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)

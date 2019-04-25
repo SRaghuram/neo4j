@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer}
 
@@ -15,7 +17,8 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Concurren
 object ConcurrentStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new ConcurrentBuffer[T]
 
-  override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker
+  override def newTracker(subscriber: ZombieSubscriber, queryContext: QueryContext): QueryCompletionTracker =
+    new ConcurrentQueryCompletionTracker(subscriber, queryContext)
 
   override def newIdAllocator(): IdAllocator = new ConcurrentIdAllocator
 

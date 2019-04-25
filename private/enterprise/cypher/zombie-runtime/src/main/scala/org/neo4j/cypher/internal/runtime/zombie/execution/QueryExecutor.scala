@@ -6,11 +6,12 @@
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
+import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.zombie.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
-import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
 
 /**
@@ -26,5 +27,5 @@ trait QueryExecutor {
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
-                              visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
+                              subscriber: ZombieSubscriber): QuerySubscription
 }

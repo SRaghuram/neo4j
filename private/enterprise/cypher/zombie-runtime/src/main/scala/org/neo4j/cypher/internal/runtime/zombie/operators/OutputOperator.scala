@@ -34,6 +34,8 @@ trait OutputOperatorState {
                     context: QueryContext,
                     state: QueryState,
                     resources: QueryResources): PreparedOutput
+
+  def canContinue: Boolean = false
 }
 
 trait PreparedOutput {

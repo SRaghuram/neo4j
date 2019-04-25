@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
-import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.runtime.morsel.QueryResources
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, QueryManager, SchedulingPolicy}
 
@@ -68,9 +68,10 @@ class Worker(val workerId: Int,
           executingQuery.bindTransactionToThread()
 
           val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-          val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
+          val output = task.getOrAllocateMorsel(workUnitEvent)
           val preparedOutput = task.executeWorkUnit(resources, output)
           workUnitEvent.stop()
+          // TODO should we call produce, if the OutputOperatorState can continue?
           preparedOutput.produce()
         } finally {
           executingQuery.unbindTransaction()
@@ -101,19 +102,6 @@ class Worker(val workerId: Int,
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
     val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
     if (upstreamWorkUnitEvent != null) Seq(upstreamWorkUnitEvent) else Seq.empty
-  }
-
-  private def allocateMorsel(pipeline: ExecutablePipeline, morselSize: Int, producingWorkUnitEvent: WorkUnitEvent): MorselExecutionContext = {
-    val slots = pipeline.slots
-    val slotSize = slots.size()
-    val morsel = Morsel.create(slots, morselSize)
-    new MorselExecutionContext(morsel,
-                               slotSize.nLongs,
-                               slotSize.nReferences,
-                               morselSize,
-                               currentRow = 0,
-                               slots,
-                               producingWorkUnitEvent)
   }
 }
 

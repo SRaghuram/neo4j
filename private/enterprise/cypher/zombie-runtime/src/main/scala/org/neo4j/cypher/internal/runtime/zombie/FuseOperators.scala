@@ -34,6 +34,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                        headOperator,
                        middleOperators,
                        p.serial,
+                       p.checkHasDemand,
                        physicalPlan.slotConfigurations(p.headPlan.id),
                        p.inputBuffer,
                        operatorFactory.createOutput(unhandledOutput))
