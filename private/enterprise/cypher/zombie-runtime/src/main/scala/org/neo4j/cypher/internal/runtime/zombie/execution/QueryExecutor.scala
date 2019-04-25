@@ -28,11 +28,3 @@ trait QueryExecutor {
                               prePopulateResults: Boolean,
                               visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
 }
-
-trait WorkerWaker {
-
-  /**
-    * Wake up any idle workers.
-    */
-  def wakeAll(): Unit
-}

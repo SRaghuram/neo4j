@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
+import org.neo4j.cypher.internal.runtime.zombie.execution.{AlarmSink, WorkerWaker}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatorAndMorsel, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers, Sink}
@@ -87,14 +87,13 @@ class TheExecutionState(stateDefinition: StateDefinition,
 
   override def getSink[T <: AnyRef](fromPipeline: PipelineId,
                                     bufferId: BufferId): Sink[T] = {
-    buffers.sink[T](fromPipeline, bufferId)
+    new AlarmSink(buffers.sink[T](fromPipeline, bufferId), workerWaker)
   }
 
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
     buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
-    // TODO: what about this?
     workerWaker.wakeAll()
   }
 
