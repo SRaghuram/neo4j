@@ -8,14 +8,17 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
-import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{NodeReference, NodeValue, RelationshipReference, RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.{NodeReference, RelationshipReference}
+
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 // INPUT
 class ZombieInputTest extends ParallelInputTestBase(ZombieRuntime)
@@ -330,6 +333,24 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
           result should beColumns("x").withRows(singleColumn(nodes))
         )
       }
+    }
+  }
+
+  test("should complete query with error") {
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .filter("x = 0/0") // will explode!
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    import scala.concurrent.ExecutionContext.global
+    val futureResult = Future(consume(execute(logicalQuery, runtime, inputValues(Array(1)))))(global)
+
+    // then
+    intercept[org.neo4j.cypher.internal.v4_0.util.ArithmeticException] {
+      Await.result(futureResult, 10.seconds)
     }
   }
 

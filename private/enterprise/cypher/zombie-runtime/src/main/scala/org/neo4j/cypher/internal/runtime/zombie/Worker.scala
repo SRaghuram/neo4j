@@ -44,7 +44,7 @@ class Worker(val workerId: Int,
           sleeper.reportIdle()
         }
       } catch {
-        // TODO REV: what should we do in this case?
+        // Failure in QueryManager. Crash horribly.
         case error: Throwable =>
           error.printStackTrace()
           throw error
@@ -90,9 +90,11 @@ class Worker(val workerId: Int,
         false
       }
     } catch {
-      case error: Throwable =>
-        error.printStackTrace()
-        throw error
+
+      // Failure in scheduling or execution of the query
+      case throwable: Throwable =>
+        executingQuery.executionState.failQuery(throwable)
+        false
     }
   }
 

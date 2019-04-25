@@ -177,12 +177,21 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def initializeState(): Unit
 
   /**
+    * Fail the query.
+    */
+  def failQuery(throwable: Throwable): Unit
+
+  /**
     * Await the completion of this query execution.
+    *
+    * @return normally when the query has produced all results successfully
+    * @throws Throwable if an exception has occurred during query execution
     */
   def awaitCompletion(): Unit
 
   /**
-    * Check whether this query has completed.
+    * Check whether this query has completed. A query is completed if it has
+    * produced all results, or an exception has occurred.
     */
   def isCompleted: Boolean
 

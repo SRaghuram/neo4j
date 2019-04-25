@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
@@ -26,9 +26,17 @@ trait QueryCompletionTracker {
   def decrement(): Long
 
   /**
-    * Await query completion. Blocks until the query has completed.
+    * Error!
     */
-  def await()
+  def error(throwable: Throwable): Unit
+
+  /**
+    * Await query completion.
+    *
+    * @retun when the query has completed successfully
+    * @throws Throwable if an exception has occurred
+    */
+  def await(): Unit
 
   /**
     * Query completion state. Non-blocking.
@@ -43,6 +51,7 @@ trait QueryCompletionTracker {
   */
 class StandardQueryCompletionTracker extends QueryCompletionTracker {
   private var count = 0L
+  private var throwable: Throwable = _
 
   override def increment(): Long = {
     count += 1
@@ -57,13 +66,20 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
     count
   }
 
+  override def error(throwable: Throwable): Unit = {
+    this.throwable = throwable
+  }
+
   override def await(): Unit = {
+    if (throwable != null) {
+      throw throwable
+    }
     if (count != 0) {
       throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
     }
   }
 
-  override def isCompleted: Boolean = count == 0
+  override def isCompleted: Boolean = throwable != null || count == 0
 
   override def toString: String = s"StandardQueryCompletionTracker($count)"
 }
@@ -73,6 +89,7 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
   */
 class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
+  private val errors = new ConcurrentLinkedQueue[Throwable]()
   private val latch = new CountDownLatch(1)
 
   override def increment(): Long = {
@@ -91,10 +108,21 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
     newCount
   }
 
-  override def await(): Unit =
-    latch.await()
+  override def error(throwable: Throwable): Unit = {
+    errors.add(throwable)
+    latch.countDown()
+  }
 
-  override def isCompleted: Boolean = count.get() == 0
+  override def await(): Unit = {
+    latch.await()
+    if (!errors.isEmpty) {
+      val firstException = errors.poll()
+      errors.forEach(t => firstException.addSuppressed(t))
+      throw firstException
+    }
+  }
+
+  override def isCompleted: Boolean = latch.getCount == 0
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 }

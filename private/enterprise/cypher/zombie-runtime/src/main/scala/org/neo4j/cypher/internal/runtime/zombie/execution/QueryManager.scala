@@ -19,6 +19,10 @@ class QueryManager {
     runningQueries.add(query)
   }
 
+  /**
+    * Select the next query to work on. As a side effect, we also remove queries
+    * which have complete (successfully or not) from the set of running queries.
+    */
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
     var query = runningQueries.peek()
     while (query != null && query.executionState.isCompleted) {

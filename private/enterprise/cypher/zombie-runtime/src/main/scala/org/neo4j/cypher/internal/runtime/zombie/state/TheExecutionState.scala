@@ -190,6 +190,8 @@ class TheExecutionState(stateDefinition: StateDefinition,
     asm
   }
 
+  override def failQuery(throwable: Throwable): Unit = tracker.error(throwable)
+
   override def awaitCompletion(): Unit = tracker.await()
 
   override def isCompleted: Boolean = tracker.isCompleted
