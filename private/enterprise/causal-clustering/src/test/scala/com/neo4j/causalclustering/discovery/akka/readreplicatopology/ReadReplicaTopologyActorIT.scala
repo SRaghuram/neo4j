@@ -55,7 +55,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
         Then("empty topology is built")
         val expectedEmptyTopology = new DatabaseReadReplicaTopology(new DatabaseId("employees"), Map.empty[MemberId, ReadReplicaInfo].asJava)
-        topologyReceiver.expectMsg(expectedEmptyTopology)
+        awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime * 2)
       }
     }
   }
