@@ -6,19 +6,18 @@
 package com.neo4j.bench.macro.workload;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.results.ForkDirectory;
 
-import java.io.IOException;
-import java.nio.file.Files;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertFileExists;
-
 import static java.util.stream.Collectors.toSet;
 
 public abstract class Parameters
@@ -32,7 +31,7 @@ public abstract class Parameters
 
     public abstract boolean isLoopable();
 
-    public abstract ParametersReader create( ForkDirectory forkDirectory ) throws Exception;
+    public abstract ParametersReader create() throws Exception;
 
     static Parameters empty()
     {
@@ -93,7 +92,7 @@ public abstract class Parameters
         }
 
         @Override
-        public ParametersReader create( ForkDirectory forkDirectory ) throws Exception
+        public ParametersReader create() throws Exception
         {
             if ( isLoopable )
             {
@@ -131,38 +130,38 @@ public abstract class Parameters
         }
 
         @Override
-        public ParametersReader create( ForkDirectory forkDirectory ) throws IOException
+        public ParametersReader create()
         {
-            Path forkCsv = forkDirectory.findOrCreate( resourceCsv.getFileName().toString() );
-            Files.copy( resourceCsv, forkCsv, StandardCopyOption.REPLACE_EXISTING );
-            Map<String,Object> parameters = new HashMap<>();
-            parameters.put( CSV_PARAMETER_KEY, "file:///" + forkCsv.toAbsolutePath() );
-
-            // TODO remove, just for debug
-            System.out.println( "Path to LOAD CSV resource" );
-            System.out.println( "Resource :              " + resourceCsv.toAbsolutePath() );
-            System.out.println( "Actual Parameter Value: " + parameters.get( CSV_PARAMETER_KEY ) );
-
-            return new ParametersReader()
+            try
             {
-                @Override
-                public boolean hasNext()
+                URL url = new URL( "file://" + resourceCsv.toAbsolutePath() );
+                URI uri = new URI( url.getProtocol(), url.getUserInfo(), url.getHost(), url.getPort(), url.getPath(), url.getQuery(), url.getRef() );
+                Map<String,Object> parameters = new HashMap<>();
+                parameters.put( CSV_PARAMETER_KEY, uri.toASCIIString() );
+                return new ParametersReader()
                 {
-                    return true;
-                }
+                    @Override
+                    public boolean hasNext()
+                    {
+                        return true;
+                    }
 
-                @Override
-                public Map<String,Object> next()
-                {
-                    return parameters;
-                }
+                    @Override
+                    public Map<String,Object> next()
+                    {
+                        return parameters;
+                    }
 
-                @Override
-                public void close()
-                {
-
-                }
-            };
+                    @Override
+                    public void close()
+                    {
+                    }
+                };
+            }
+            catch ( MalformedURLException | URISyntaxException e )
+            {
+                throw new RuntimeException( "Error creating CSV parameters", e );
+            }
         }
 
         @Override
@@ -181,7 +180,7 @@ public abstract class Parameters
         }
 
         @Override
-        public ParametersReader create( ForkDirectory forkDirectory )
+        public ParametersReader create()
         {
             return new ParametersReader()
             {

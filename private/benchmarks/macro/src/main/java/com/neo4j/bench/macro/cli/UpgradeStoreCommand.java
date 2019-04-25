@@ -10,7 +10,7 @@ import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.macro.execution.database.Database;
+import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -20,6 +20,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -77,10 +78,11 @@ public class UpgradeStoreCommand implements Runnable
                                     upgradedDbDir.getAbsolutePath() ) );
 
         Store.assertDirectoryIsNeoStore( originalDbDir.toPath() );
+        Path workDir = Paths.get( System.getProperty( "user.dir" ) );
         try ( Store originalStore = Store.createFrom( originalDbDir.toPath() );
-              Resources resources = new Resources() )
+              Resources resources = new Resources( workDir ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources );
+            Workload workload = Workload.fromName( workloadName, resources, DeploymentMode.EMBEDDED );
 
             Path neo4jConfigPath = (null == neo4jConfigFile) ? null : neo4jConfigFile.toPath();
             if ( neo4jConfigPath != null )
@@ -92,18 +94,19 @@ public class UpgradeStoreCommand implements Runnable
                 neo4jConfigPath = Paths.get( "neo4j.conf" );
                 Neo4jConfig.empty()
                            .withSetting( allow_upgrade, "true" )
-                           .withSetting( record_format, "high_limit" ).writeAsProperties( neo4jConfigPath );
+                           .withSetting( record_format, "high_limit" )
+                           .writeToFile( neo4jConfigPath );
             }
 
             System.out.println( "Checking schema..." );
-            Database.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
+            EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
 
             System.out.println( "Copying store\n" +
                                 "From: " + originalDbDir.getAbsolutePath() + "\n" +
                                 "To:   " + upgradedDbDir.getAbsolutePath() );
             try ( Store upgradedStore = originalStore.makeCopyAt( upgradedDbDir.toPath() ) )
             {
-                Database.recreateSchema( upgradedStore, edition, neo4jConfigPath, workload.expectedSchema() );
+                EmbeddedDatabase.recreateSchema( upgradedStore, edition, neo4jConfigPath, workload.expectedSchema() );
             }
             System.out.println( "Upgrade complete" );
         }

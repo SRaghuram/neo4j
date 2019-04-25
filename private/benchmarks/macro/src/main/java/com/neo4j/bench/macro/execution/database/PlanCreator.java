@@ -40,7 +40,7 @@ public class PlanCreator
                                    Path neo4jConfig,
                                    Query query )
     {
-        Plan plan = run( store, edition, neo4jConfig, query, forkDirectory );
+        Plan plan = run( store, edition, neo4jConfig, query );
         Path planFile = forkDirectory.pathForPlan();
         JsonUtil.serializeJson( planFile, plan );
         return planFile;
@@ -49,12 +49,11 @@ public class PlanCreator
     private static Plan run( Store store,
                              Edition edition,
                              Path neo4jConfig,
-                             Query query,
-                             ForkDirectory forkDirectory )
+                             Query query )
     {
-        try ( Database database = Database.startWith( store, edition, neo4jConfig ) )
+        try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
-            ParametersReader parametersReader = query.parameters().create( forkDirectory );
+            ParametersReader parametersReader = query.parameters().create();
 
             /*
              * Run query with profile to get plan & output query plan

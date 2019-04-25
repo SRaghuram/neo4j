@@ -55,6 +55,12 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
     }
 
     @Override
+    public void shutdown()
+    {
+        guards.forEach( DatabaseAvailabilityGuard::shutdown );
+    }
+
+    @Override
     public boolean isAvailable()
     {
         return guards.stream().allMatch( DatabaseAvailabilityGuard::isAvailable );

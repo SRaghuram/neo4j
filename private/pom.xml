@@ -5,13 +5,13 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>3.5.4-SNAPSHOT</version>
+    <version>3.5.5-SNAPSHOT</version>
     <relativePath>../public/pom.xml</relativePath>
   </parent>
 
   <groupId>com.neo4j</groupId>
   <artifactId>commercial-parent</artifactId>
-  <version>3.5.4-SNAPSHOT</version>
+  <version>3.5.5-SNAPSHOT</version>
 
   <packaging>pom</packaging>
   <name>Neo4j</name>
@@ -29,7 +29,7 @@
 
   <properties>
     <license-text.header>commercial-license-header.txt</license-text.header>
-    <akka.version>2.5.18</akka.version>
+    <akka.version>2.5.22</akka.version>
   </properties>
 
   <build>
@@ -55,6 +55,7 @@
         <plugin>
           <groupId>org.neo4j.build.plugins</groupId>
           <artifactId>licensing-maven-plugin</artifactId>
+          <version>1.7.7</version>
           <configuration>
             <excludedGroups>
               ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1}|(com.neo4j.bolt){1}|(com.neo4j.build){1}|(com.neo4j.test){1}|(com.neo4j.bench){1})$
@@ -106,6 +107,11 @@
               <port.authority.directory>${user.dir}/target/port-authority-${maven.build.timestamp}</port.authority.directory>
             </systemPropertyVariables>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.neo4j.build.plugins</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>3</version>
         </plugin>
       </plugins>
     </pluginManagement>

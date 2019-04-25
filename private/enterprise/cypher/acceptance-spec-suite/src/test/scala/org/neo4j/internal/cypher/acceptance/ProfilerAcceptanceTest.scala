@@ -653,6 +653,19 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   }
 
+  test("profiling with compiled runtime") {
+    //given
+    createLabeledNode("L")
+    createLabeledNode("L")
+    createLabeledNode("L")
+
+    //when
+    val result = executeSingle("PROFILE CYPHER runtime=compiled MATCH (n:L) RETURN count(n.prop)", Map.empty)
+
+    //then
+    result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation").withRows(1)
+  }
+
   type Planner = (String, Map[String, Any]) => RewindableExecutionResult
 
   def profileWithPlanner(planner: Planner, q: String, params: Map[String, Any]): RewindableExecutionResult = {

@@ -23,6 +23,8 @@ case class ForeachSlottedPipe(lhs: Pipe, rhs: Pipe, innerVariableSlot: Slot, exp
   //===========================================================================
   private val setVariableFun = makeSetValueInSlotFunctionFor(innerVariableSlot)
 
+  expression.registerOwningPipe(this)
+
   //===========================================================================
   // Runtime code
   //===========================================================================

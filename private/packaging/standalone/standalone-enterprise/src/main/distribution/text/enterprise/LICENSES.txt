@@ -27,6 +27,7 @@ Apache Software License, Version 2.0
   akka-actor
   akka-cluster
   akka-cluster-tools
+  akka-coordination
   akka-distributed-data
   akka-protobuf
   akka-remote
@@ -379,6 +380,7 @@ BSD License
   scala-parser-combinators
   sntp
   tough-cookie
+  Zstandard
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
@@ -412,6 +414,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BSD License 2-clause
   tar-pack
   uri-js
+  zstd-jni
 ------------------------------------------------------------------------------
 
 Copyright <year> <copyright holder>

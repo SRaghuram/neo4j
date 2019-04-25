@@ -94,6 +94,26 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
+    public void serverPoliciesPluginShouldShuffleSelf() throws Throwable
+    {
+        // given
+        Config config = Config.builder()
+                .withSetting( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
+                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "true" ).build();
+
+        // when
+        LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
+                mock( TopologyService.class ),
+                mock( LeaderLocator.class ),
+                NullLogProvider.getInstance(),
+                config );
+
+        // then
+        assertTrue( plugin instanceof ServerPoliciesPlugin );
+        assertTrue( ((ServerPoliciesPlugin) plugin).isShufflingPlugin() );
+    }
+
+    @Test
     public void shouldThrowOnInvalidPlugin()
     {
         // given

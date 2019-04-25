@@ -23,8 +23,8 @@ public class CommercialCoreGraphDatabase extends CoreGraphDatabase
                                         GraphDatabaseFacadeFactory.Dependencies dependencies,
                                         SslDiscoveryServiceFactory discoveryServiceFactory )
     {
-        Function<PlatformModule,AbstractEditionModule> factory =
-                platformModule -> new CommercialCoreEditionModule( platformModule, discoveryServiceFactory );
+        Function<PlatformModule,AbstractEditionModule> factory = platformModule ->
+                new CommercialCoreEditionModule( platformModule, discoveryServiceFactory );
         new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, factory ).initFacade( storeDir, config, dependencies, this );
     }
 }

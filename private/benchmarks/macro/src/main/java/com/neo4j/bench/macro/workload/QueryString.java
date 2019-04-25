@@ -15,6 +15,8 @@ public abstract class QueryString
 {
     private static final String CYPHER_PREFIX = "CYPHER ";
 
+    protected abstract String stableValue();
+
     protected abstract String rawValue();
 
     public abstract QueryString copyWith( Runtime newRuntime );

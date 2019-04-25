@@ -5,40 +5,110 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Parameters;
+import com.neo4j.bench.client.options.Planner;
+import com.neo4j.bench.client.options.Runtime;
+import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.profiling.InternalProfiler;
+import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
+import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.macro.workload.Workload;
 
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
-public interface QueryRunner
+import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
+import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.compositeOf;
+import static java.util.stream.Collectors.toList;
+
+public abstract class QueryRunner
 {
-    static QueryRunner runnerFor( ExecutionMode executionMode )
+    public static QueryRunner queryRunnerFor( ExecutionMode executionMode,
+                                              Function<ForkDirectory,Database> databaseCreator )
     {
         switch ( executionMode )
         {
         case EXECUTE:
-            return new EmbeddedCypherRunner();
+            return new CypherExecutingRunner( databaseCreator );
         case PLAN:
-            return new EmbeddedCypherPlanner();
+            return new CypherPlanningRunner( databaseCreator );
         default:
             throw new RuntimeException( "Unsupported execution mode: " + executionMode );
         }
     }
 
-    void run( Jvm jvm,
-              Store store,
-              Edition edition,
-              Neo4jConfig neo4jConfig,
-              List<InternalProfiler> profilers,
-              Query query,
-              ForkDirectory forkDirectory,
-              MeasurementControl warmupControl,
-              MeasurementControl measurementControl );
+    /**
+     * NOTE: this command does not export summary of results as JSON. This is because it has two purposes and neither of them requires it:
+     * (1) Interactive execution, locally by developers. Result logs and console output should suffice.
+     * (2) Invoked from 'run-workload'. Multiple forks for same query, so result log merging needs to happen before constructing summary.
+     */
+    public static void runSingleCommand( QueryRunner queryRunner,
+                                         Jvm jvm,
+                                         ForkDirectory forkDir,
+                                         String workloadName,
+                                         String queryName,
+                                         Planner planner,
+                                         Runtime runtime,
+                                         ExecutionMode executionMode,
+                                         Map<Pid,Parameters> pidParameters,
+                                         Map<Pid,List<ProfilerType>> pidProfilers,
+                                         int warmupCount,
+                                         int minMeasurementSeconds,
+                                         int maxMeasurementSeconds,
+                                         int measurementCount,
+                                         DeploymentMode deployment,
+                                         Path workDir )
+    {
+        try ( Resources resources = new Resources( workDir ) )
+        {
+            Workload workload = Workload.fromName( workloadName, resources, deployment );
+            Query query = workload.queryForName( queryName )
+                                  .copyWith( planner )
+                                  .copyWith( runtime )
+                                  .copyWith( executionMode );
+
+            List<ProfilerType> allProfilerTypes = pidProfilers.keySet().stream()
+                                                              .map( pidProfilers::get )
+                                                              .flatMap( List::stream )
+                                                              .distinct()
+                                                              .collect( toList() );
+            ProfilerType.assertInternal( allProfilerTypes );
+
+            Map<Pid,List<InternalProfiler>> pidInternalProfilers = new HashMap<>();
+            pidProfilers.keySet().forEach( pid -> pidInternalProfilers.put( pid, ProfilerType.createInternalProfilers( pidProfilers.get( pid ) ) ) );
+
+            queryRunner.run( jvm,
+                             pidParameters,
+                             pidInternalProfilers,
+                             query,
+                             forkDir,
+                             compositeOf( warmupCount, minMeasurementSeconds, maxMeasurementSeconds ),
+                             compositeOf( measurementCount, minMeasurementSeconds, maxMeasurementSeconds ) );
+        }
+        catch ( Exception e )
+        {
+            Path errorFile = forkDir.logError( e );
+            throw new RuntimeException( "Error running query\n" +
+                                        "Workload          : " + workloadName + "\n" +
+                                        "Query             : " + queryName + "\n" +
+                                        "See error file at : " + errorFile.toAbsolutePath().toString(), e );
+        }
+    }
+
+    protected abstract void run( Jvm jvm,
+                                 Map<Pid,Parameters> pidParameters,
+                                 Map<Pid,List<InternalProfiler>> pidProfilers,
+                                 Query query,
+                                 ForkDirectory forkDirectory,
+                                 MeasurementControl warmupControl,
+                                 MeasurementControl measurementControl );
 }

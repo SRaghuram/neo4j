@@ -72,13 +72,30 @@ public class Stores
 
     private static final String FORK_NAME_PREFIX = "fork-";
 
-    public ForkDirectory newForkDirectoryFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark, List<ProfilerType> profilers )
+    public ForkDirectory findOrCreateForkDirectoryFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark, List<ProfilerType> profilers )
     {
         BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( storesDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        int forkNumber = lastForkNumberFor( benchmarkDir ) + 1;
-        String forkName = numberedForkName( forkNumber );
-        return benchmarkDir.create( forkName, profilers );
+        List<ForkDirectory> existingForkDirectories = benchmarkDir.forks().stream()
+                                                                  .filter( f -> f.profilers().containsAll( profilers ) )
+                                                                  .collect( toList() );
+        if ( existingForkDirectories.isEmpty() )
+        {
+            int forkNumber = lastForkNumberFor( benchmarkDir ) + 1;
+            String forkName = numberedForkName( forkNumber );
+            return benchmarkDir.create( forkName, profilers );
+        }
+        else if ( existingForkDirectories.size() != 1 )
+        {
+            throw new RuntimeException( "Found more than one fork directory for:\n" +
+                                        "Benchmark Group : " + benchmarkGroup.name() + "\n" +
+                                        "Benchmark       : " + benchmark.name() + "\n" +
+                                        "Profilers       : " + profilers );
+        }
+        else
+        {
+            return existingForkDirectories.get( 0 );
+        }
     }
 
     private int lastForkNumberFor( BenchmarkDirectory benchmarkDir )
@@ -187,7 +204,7 @@ public class Stores
         Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
         System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         forceRecreateFile( neo4jConfigFile );
-        neo4jConfig.writeAsProperties( neo4jConfigFile );
+        neo4jConfig.writeToFile( neo4jConfigFile );
         return neo4jConfigFile;
     }
 

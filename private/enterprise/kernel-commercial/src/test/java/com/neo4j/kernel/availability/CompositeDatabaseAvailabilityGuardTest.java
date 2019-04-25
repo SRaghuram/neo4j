@@ -74,6 +74,18 @@ class CompositeDatabaseAvailabilityGuardTest
     }
 
     @Test
+    void shutdownOnMultipleGuards()
+    {
+        assertFalse( defaultGuard.isShutdown() );
+        assertFalse( systemGuard.isShutdown() );
+
+        compositeGuard.shutdown();
+
+        assertTrue( defaultGuard.isShutdown() );
+        assertTrue( systemGuard.isShutdown() );
+    }
+
+    @Test
     void availableWhenAllGuardsAreAvailable()
     {
         assertTrue( compositeGuard.isAvailable() );

@@ -16,7 +16,7 @@ public interface HasPid
      *
      * @return PID.
      */
-    static long getPid()
+    static Pid getPid()
     {
         final String DELIM = "@";
 
@@ -31,7 +31,7 @@ public interface HasPid
                 String str = name.substring( 0, name.indexOf( DELIM ) );
                 try
                 {
-                    return Long.valueOf( str );
+                    return new Pid( Long.valueOf( str ) );
                 }
                 catch ( NumberFormatException nfe )
                 {
@@ -42,5 +42,5 @@ public interface HasPid
         throw new IllegalStateException( "Unsupported PID format: " + name );
     }
 
-    long pid();
+    Pid pid();
 }

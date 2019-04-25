@@ -39,6 +39,17 @@ triggered_by="${21}"
 micro_benchmarks_dir=$(pwd)
 json_path=${micro_benchmarks_dir}/results.json
 
+# here we are checking for optional AWS endpoint URL,
+# this is required for end to end testing, where we mock s3
+AWS_EXTRAS=
+if [[ $# -eq 22 ]]; then
+	AWS_EXTRAS="--endpoint-url=${22}"
+fi
+
+if [[ -z "$JAVA_HOME" ]]; then
+ echo "JAVA_HOME not set, bye, bye"
+fi
+
 uuid=$(uuidgen)
 profiler_recording_output_dir="${micro_benchmarks_dir}"/"${uuid}"
 mkdir "${profiler_recording_output_dir}"
@@ -69,34 +80,30 @@ echo "JFR Enabled : ${with_jfr}"
 echo "ASYNC Enabled : ${with_async}"
 echo "Build triggered by : ${triggered_by}"
 
-function runExport {
-    #shellcheck disable=SC2068
-    java -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
-            --jvm "${jvm_path}" \
-            --jvm_args "${jvm_args}" \
-            --jmh "${jmh_args}" \
-            --neo4j_config "${neo4j_config_path}" \
-            --json_path "${json_path}" \
-            --neo4j_commit "${neo4j_commit}" \
-            --neo4j_version "${neo4j_version}" \
-            --neo4j_branch "${neo4j_branch}" \
-            --branch_owner "${neo4j_branch_owner}" \
-            --teamcity_build "${teamcity_build_id}" \
-            --parent_teamcity_build "${parent_teamcity_build_id}" \
-            --tool_commit "${tool_commit}" \
-            --tool_branch "${tool_branch}" \
-            --tool_branch_owner "${tool_branch_owner}" \
-            --neo4j_package_for_jvm_args "${tarball}" \
-            --config "${benchmark_config}" \
-            --triggered-by "${triggered_by}" \
-            $@
-}
-profilers_input="--profiles-dir ${profiler_recording_output_dir}"
+declare -a profilers
+[ "${with_jfr}" = "true" ] && profilers+=('--profile-jfr') && echo "Profiling with JFR Enabled!"
+[ "${with_async}" = "true" ] && profilers+=('--profile-async') && echo "Profiling with Async Enabled!"
 
-[ "${with_jfr}" = "true" ] && profilers_input="$profilers_input --profile-jfr" && echo "Profiling with JFR Enabled!"
-[ "${with_async}" = "true" ] && profilers_input="$profilers_input --profile-async" && echo "Profiling with Async Enabled!"
-#shellcheck disable=SC2086
-runExport ${profilers_input}
+${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
+        --jvm "${jvm_path}" \
+        --jvm_args "${jvm_args}" \
+        --jmh "${jmh_args}" \
+        --neo4j_config "${neo4j_config_path}" \
+        --json_path "${json_path}" \
+        --neo4j_commit "${neo4j_commit}" \
+        --neo4j_version "${neo4j_version}" \
+        --neo4j_branch "${neo4j_branch}" \
+        --branch_owner "${neo4j_branch_owner}" \
+        --teamcity_build "${teamcity_build_id}" \
+        --parent_teamcity_build "${parent_teamcity_build_id}" \
+        --tool_commit "${tool_commit}" \
+        --tool_branch "${tool_branch}" \
+        --tool_branch_owner "${tool_branch_owner}" \
+        --neo4j_package_for_jvm_args "${tarball}" \
+        --config "${benchmark_config}" \
+        --triggered-by "${triggered_by}" \
+        --profiles-dir "${profiler_recording_output_dir}" \
+        "${profilers[@]}"
 
 # --- create archive of profiler recording artifacts---
 profiler_recording_dir_name=$(basename "${profiler_recording_output_dir}")
@@ -104,19 +111,21 @@ archive="${profiler_recording_dir_name}".tar.gz
 tar czvf "${archive}" "${profiler_recording_dir_name}"
 
 # --- upload archive of profiler recording artifacts to S3 ---
-aws --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
+# shellcheck disable=SC2086
+aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
 # --- upload profiler recording artifacts to S3 ---
-aws --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
+# shellcheck disable=SC2086
+aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
-java -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main add-profiles \
+${jvm_path} -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main add-profiles \
     --dir "${profiler_recording_output_dir}"  \
     --s3-bucket benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}" \
     --archive benchmarking.neo4j.com/recordings/"${archive}"  \
     --test_run_report "${json_path}" \
     --ignore_unrecognized_files
 
-java -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main report \
+${jvm_path} -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main report \
             --results_store_uri "${results_store_uri}"  \
             --results_store_user "${results_store_user}"  \
             --results_store_pass "${results_store_password}" \

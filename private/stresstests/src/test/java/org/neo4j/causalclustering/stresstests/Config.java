@@ -233,9 +233,8 @@ public class Config
     {
         populateCommonParams( params );
 
-        params.put( CausalClusteringSettings.raft_log_rotation_size.name(), "1K" );
-        params.put( CausalClusteringSettings.raft_log_pruning_frequency.name(), "250ms" );
-        params.put( CausalClusteringSettings.raft_log_pruning_strategy.name(), "keep_none" );
+        params.put( CausalClusteringSettings.raft_log_rotation_size.name(), "10M" );
+        params.put( CausalClusteringSettings.raft_log_pruning_frequency.name(), "1m" );
         // the following will override the test-default in CoreClusterMember
         params.put( CausalClusteringSettings.raft_messages_log_enable.name(), Boolean.toString( raftMessagesLog ) );
     }

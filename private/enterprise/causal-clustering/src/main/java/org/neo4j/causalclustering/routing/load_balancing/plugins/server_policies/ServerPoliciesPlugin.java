@@ -5,11 +5,14 @@
  */
 package org.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -39,6 +42,12 @@ import static org.neo4j.causalclustering.routing.load_balancing.plugins.server_p
  * can be bound to by a client by supplying a appropriately formed context.
  *
  * An example would be to define different policies for different regions.
+ *
+ * If so configured, this plugin also shuffles servers within each role
+ * around so that every client invocation gets a a little bit of
+ * that extra entropy spice.
+ *
+ * N.B: Lists are shuffled in place.
  */
 @Service.Implementation( LoadBalancingPlugin.class )
 public class ServerPoliciesPlugin implements LoadBalancingPlugin
@@ -50,6 +59,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private Long timeToLive;
     private boolean allowReadsOnFollowers;
     private Policies policies;
+    private boolean shouldShuffle;
 
     @Override
     public void validate( Config config, Log log ) throws InvalidSettingException
@@ -69,6 +79,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
             LogProvider logProvider, Config config ) throws InvalidFilterSpecification
     {
         this.topologyService = topologyService;
+        this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
         this.leaderLocator = leaderLocator;
         this.timeToLive = config.get( CausalClusteringSettings.cluster_routing_ttl ).toMillis();
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
@@ -82,6 +93,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
+    public boolean isShufflingPlugin()
+    {
+        return true;
+    }
+
+    @Override
     public Result run( Map<String,String> context ) throws ProcedureException
     {
         Policy policy = policies.selectFor( context );
@@ -89,14 +106,32 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         CoreTopology coreTopology = topologyService.localCoreServers();
         ReadReplicaTopology rrTopology = topologyService.localReadReplicas();
 
-        return new LoadBalancingResult( routeEndpoints( coreTopology ), writeEndpoints( coreTopology ),
+        return new LoadBalancingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( coreTopology ),
                 readEndpoints( coreTopology, rrTopology, policy ), timeToLive );
     }
 
-    private List<Endpoint> routeEndpoints( CoreTopology cores )
+    private List<Endpoint> routeEndpoints( CoreTopology cores, Policy policy )
     {
-        return cores.members().values().stream().map( extractBoltAddress() )
-                .map( Endpoint::route ).collect( Collectors.toList() );
+        Set<ServerInfo> routers = cores.members().entrySet().stream()
+                .map( e ->
+                {
+                    MemberId m = e.getKey();
+                    CoreServerInfo c = e.getValue();
+                    return new ServerInfo( c.connectors().boltAddress(), m, c.groups() );
+                } ).collect( Collectors.toSet());
+
+        Set<ServerInfo> preferredRouters = policy.apply( routers );
+        List<ServerInfo> otherRouters = routers.stream().filter( r -> !preferredRouters.contains( r ) ).collect( Collectors.toList() );
+        List<ServerInfo> preferredRoutersList = new ArrayList<>( preferredRouters );
+
+        if ( shouldShuffle )
+        {
+            Collections.shuffle( preferredRoutersList );
+            Collections.shuffle( otherRouters );
+        }
+
+        return Stream.concat( preferredRouters.stream(), otherRouters.stream() )
+                .map( r -> Endpoint.route( r.boltAddress() ) ).collect( Collectors.toList() );
     }
 
     private List<Endpoint> writeEndpoints( CoreTopology cores )
@@ -149,7 +184,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
             }
         }
 
-        Set<ServerInfo> readers = policy.apply( possibleReaders );
+        List<ServerInfo> readers = new ArrayList<>( policy.apply( possibleReaders ) );
+
+        if ( shouldShuffle )
+        {
+            Collections.shuffle( readers );
+        }
         return readers.stream().map( r -> Endpoint.read( r.boltAddress() ) ).collect( Collectors.toList() );
     }
 }

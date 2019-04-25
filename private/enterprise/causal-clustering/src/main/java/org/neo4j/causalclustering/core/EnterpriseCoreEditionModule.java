@@ -361,7 +361,7 @@ public class EnterpriseCoreEditionModule extends DefaultEditionModule
             ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, DatabaseLayout databaseLayout )
     {
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(),
-                platformModule, clusterStateDirectory.get(), databaseLayout );
+                platformModule, clusterStateDirectory.get(), databaseLayout, globalAvailabilityGuard );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()

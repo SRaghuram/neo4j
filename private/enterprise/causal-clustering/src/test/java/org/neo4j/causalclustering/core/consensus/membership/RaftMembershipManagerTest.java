@@ -15,25 +15,36 @@ import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import org.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import org.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
+import org.neo4j.causalclustering.core.replication.SendToMyself;
 import org.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
+import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.time.Clocks;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.neo4j.causalclustering.core.consensus.membership.RaftMembershipState.Marshal;
+import static org.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
+import static org.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.neo4j.causalclustering.identity.RaftTestMemberSetBuilder.INSTANCE;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class RaftMembershipManagerTest
 {
     private final Log log = NullLog.getInstance();
+    private final MemberId myself = member( 0 );
 
     @Rule
     public LifeRule lifeRule = new LifeRule( true );
+    private SendToMyself sendToMyself = mock( SendToMyself.class );
 
     @Test
     public void membershipManagerShouldUseLatestAppendedMembershipSetEntries()
@@ -106,10 +117,64 @@ public class RaftMembershipManagerTest
         assertEquals( new RaftTestGroup( 1, 2, 3, 5 ).getMembers(), membershipManager.votingMembers() );
     }
 
+    @Test
+    public void shouldNotRemoveSelfFromConsensusGroup() throws Exception
+    {
+        // given
+        InMemoryRaftLog raftLog = new InMemoryRaftLog();
+        RaftMembershipManager membershipManager = lifeRule.add( raftMembershipManager( raftLog ) );
+
+        RaftTestGroup membersA = new RaftTestGroup( 0, 1, 2, 3, 4 );
+        RaftTestGroup membersB = new RaftTestGroup( 1, 2, 3, 4 ); // without myself
+
+        List<RaftLogCommand> logCommands = singletonList(
+                new AppendLogEntry( 0, new RaftLogEntry( 0, membersA ) ) );
+
+        for ( RaftLogCommand logCommand : logCommands )
+        {
+            logCommand.applyTo( raftLog, log );
+        }
+        membershipManager.processLog( 0, logCommands );
+        membershipManager.onRole( LEADER );
+
+        // when
+        membershipManager.setTargetMembershipSet( membersB.getMembers() );
+
+        // then
+        verify( sendToMyself, never() ).replicate( any() );
+    }
+
+    @Test
+    public void shouldRemoveOtherFromConsensusGroup() throws Exception
+    {
+        // given
+        InMemoryRaftLog raftLog = new InMemoryRaftLog();
+        RaftMembershipManager membershipManager = lifeRule.add( raftMembershipManager( raftLog ) );
+
+        RaftTestGroup membersA = new RaftTestGroup( 0, 1, 2, 3, 4 );
+        RaftTestGroup membersB = new RaftTestGroup( 0, 2, 3, 4 ); // without number 1
+
+        List<RaftLogCommand> logCommands = singletonList(
+                new AppendLogEntry( 0, new RaftLogEntry( 0, membersA ) ) );
+
+        for ( RaftLogCommand logCommand : logCommands )
+        {
+            logCommand.applyTo( raftLog, log );
+        }
+        membershipManager.processLog( 0, logCommands );
+        membershipManager.onRole( LEADER );
+
+        // when
+        membershipManager.setTargetMembershipSet( membersB.getMembers() );
+
+        // then
+        verify( sendToMyself ).replicate( membersB );
+    }
+
     private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log )
     {
         RaftMembershipManager raftMembershipManager = new RaftMembershipManager(
-                null, INSTANCE, log,
+                sendToMyself, myself, INSTANCE, log,
                 getInstance(), 3, 1000, Clocks.fakeClock(),
                 1000, new InMemoryStateStorage<>( new Marshal().startState() ) );
 

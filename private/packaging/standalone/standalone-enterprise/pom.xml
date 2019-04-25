@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.neo4j.assembly</groupId>
     <artifactId>neo4j-standalone-commercial</artifactId>
-    <version>3.5.4-SNAPSHOT</version>
+    <version>3.5.5-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -13,7 +13,7 @@
 
   <name>Neo4j - Enterprise Server Assembler</name>
 
-  <version>3.5.4-SNAPSHOT</version>
+  <version>3.5.5-SNAPSHOT</version>
 
   <description>
     This project assembles the Neo4j Enterprise stand-alone distribution,
@@ -159,6 +159,11 @@
     <dependency>
       <groupId>com.neo4j</groupId>
       <artifactId>neo4j-kernel-commercial</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-cypher-expression-evaluator</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
