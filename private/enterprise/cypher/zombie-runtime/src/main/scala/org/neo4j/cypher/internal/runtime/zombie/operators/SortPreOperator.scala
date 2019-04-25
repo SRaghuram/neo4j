@@ -24,8 +24,7 @@ import scala.collection.JavaConverters._
 class SortPreOperator(val workIdentity: WorkIdentity,
                       argumentSlotOffset: Int,
                       outputBufferId: BufferId,
-                      orderBy: Seq[ColumnOrder],
-                      limit: Long = Long.MaxValue) extends OutputOperator {
+                      orderBy: Seq[ColumnOrder]) extends OutputOperator {
 
   override def toString: String = "SortPre"
   override def outputBuffer: Option[BufferId] = Some(outputBufferId)
@@ -57,32 +56,8 @@ class SortPreOperator(val workIdentity: WorkIdentity,
       // This array contains only the pointers to the morsel rows
       var outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
 
-      if (limit <= 0) {
-        morsel.finishedWriting()
-
-      } else if (limit < morsel.getValidRows) {
-        val intLimit = limit.asInstanceOf[Int]
-
-        // a table to hold the top n entries
-        val topTable = new DefaultComparatorTopTable(comparator, intLimit)
-
-        while (morsel.isValidRow) {
-          topTable.add(outputToInputIndexes(morsel.getCurrentRow))
-          morsel.moveToNextRow()
-        }
-
-        topTable.sort()
-
-        outputToInputIndexes = topTable.iterator.asScala.toArray
-
-        // only the first count elements stay valid
-        morsel.moveToRow(intLimit)
-        morsel.finishedWriting()
-
-      } else {
-        // We have to sort everything
-        java.util.Arrays.sort(outputToInputIndexes, comparator)
-      }
+      // We have to sort everything
+      java.util.Arrays.sort(outputToInputIndexes, comparator)
 
       // Now that we have a sorted array, we need to shuffle the morsel rows around until they follow the same order
       // as the sorted array
@@ -95,8 +70,4 @@ class SortPreOperator(val workIdentity: WorkIdentity,
                         sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends PreparedOutput {
     override def produce(): Unit = sink.put(preSorted)
   }
-}
-
-object PreSortingBuffer {
-  val NO_LIMIT: Long = Long.MaxValue
 }

@@ -25,8 +25,7 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.ArgumentStateBuffe
 class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
                         orderBy: Seq[ColumnOrder],
-                        argumentSlotOffset: Int,
-                        limit: Long = PreSortingBuffer.NO_LIMIT)
+                        argumentSlotOffset: Int)
   extends Operator
      with ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] {
 
