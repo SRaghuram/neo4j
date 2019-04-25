@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNINITIALIZED
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
@@ -42,7 +42,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       val id = label.getId(context)
-      if (id == UNINITIALIZED) false
+      if (id == UNKNOWN) false
       else {
         cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
         val read = context.transactionalContext.dataRead

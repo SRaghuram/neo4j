@@ -22,7 +22,7 @@ case class NodesByLabelScanSlottedPipe(ident: String,
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
 
     val labelId = label.getId(state.query)
-    if (labelId == LazyLabel.UNINITIALIZED) Iterator.empty
+    if (labelId == LazyLabel.UNKNOWN) Iterator.empty
     else {
       PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId), { nodeId =>
         val context = SlottedExecutionContext(slots)

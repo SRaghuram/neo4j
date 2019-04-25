@@ -123,11 +123,14 @@ trait PrimitiveCachingExpandInto {
 
   private def getDegree(node: Long, relTypes: Array[Int], direction: SemanticDirection, state: QueryState) = {
     if (relTypes == null) state.query.nodeGetDegree(node, direction, state.cursors.nodeCursor)
-    else if (relTypes.length == 1) state.query.nodeGetDegree(node, direction, relTypes.head, state.cursors.nodeCursor)
     else {
-      relTypes.foldLeft(0)(
-        (acc, rel) => acc + state.query.nodeGetDegree(node, direction, rel, state.cursors.nodeCursor)
-        )
+      var i = 0
+      var total = 0
+      while (i < relTypes.length) {
+        total += state.query.nodeGetDegree(node, direction, relTypes(i), state.cursors.nodeCursor)
+        i += 1
+      }
+      total
     }
   }
 }
