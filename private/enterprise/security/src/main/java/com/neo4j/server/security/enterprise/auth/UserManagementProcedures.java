@@ -29,7 +29,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
     }
 
@@ -39,7 +38,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         setUserPassword( securityContext.subject().username(), password, requirePasswordChange );
     }
 
@@ -49,7 +47,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         securityContext.assertCredentialsNotExpired();
         setUserPassword( username, newPassword, requirePasswordChange );
     }
@@ -169,5 +166,33 @@ public class UserManagementProcedures extends AuthProceduresBase
         {
             securityContext.subject().setPasswordChangeNoLongerRequired();
         }
+    }
+
+    @Admin
+    @Description( "Grant privilege to role." )
+    @Procedure( name = "dbms.security.grantPrivilegeToRole", mode = DBMS )
+    public void grantPrivilegeToRole(
+            @Name( "roleName" ) String roleName,
+            @Name( "action" ) String action,
+            @Name( "resource" ) String resource,
+            @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
+    {
+        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        privilege.addPrivilege( new ResourcePrivilege( action, resource ) );
+        userManager.grantPrivilegeToRole( roleName, privilege );
+    }
+
+    @Admin
+    @Description( "Revoke privilege from role." )
+    @Procedure( name = "dbms.security.revokePrivilegeFromRole", mode = DBMS )
+    public void revokePrivilegeFromRole(
+            @Name( "roleName" ) String roleName,
+            @Name( "action" ) String action,
+            @Name( "resource" ) String resource,
+            @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
+    {
+        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        privilege.addPrivilege( new ResourcePrivilege( action, resource ) );
+        userManager.revokePrivilegeFromRole( roleName, privilege );
     }
 }

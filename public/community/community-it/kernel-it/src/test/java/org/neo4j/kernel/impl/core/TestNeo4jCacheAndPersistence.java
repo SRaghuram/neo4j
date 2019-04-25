@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -41,13 +42,14 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 
@@ -66,6 +68,7 @@ public class TestNeo4jCacheAndPersistence extends AbstractNeo4jTestCase
     private final String string1 = "1";
     private final String string2 = "2";
     private final int[] array = new int[] { 1, 2, 3, 4, 5, 6, 7 };
+    private DatabaseManagementService managementService;
 
     @Before
     public void createTestingGraph()
@@ -392,7 +395,7 @@ public class TestNeo4jCacheAndPersistence extends AbstractNeo4jTestCase
 
             tx.success();
         }
-        graphDb.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -527,14 +530,14 @@ public class TestNeo4jCacheAndPersistence extends AbstractNeo4jTestCase
 
         tx.success();
         tx.close();
-        graphDb.shutdown();
+        managementService.shutdown();
     }
 
     private GraphDatabaseService getImpermanentDatabase( Map<String,String> config )
     {
-        return new TestGraphDatabaseFactory()
-                .newImpermanentDatabaseBuilder( testDirectory.directory( "impermanent" ) )
-                .setConfig( config )
-                .newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+                .setConfig( config ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

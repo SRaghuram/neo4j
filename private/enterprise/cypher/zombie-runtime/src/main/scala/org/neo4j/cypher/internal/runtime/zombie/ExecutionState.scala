@@ -5,70 +5,166 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer}
+import org.neo4j.cypher.internal.runtime.zombie.state.{ArgumentStateMap, MorselParallelizer}
 
 /**
   * Creator of [[ArgumentStateMap]].
   */
-trait ArgumentStateCreator {
+trait ArgumentStateMapCreator {
 
   /**
-    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `reducePlanId`.
+    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `argumentStateMapId`.
     */
-  def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                     constructor: () => T
-                                                    ): ArgumentStateMap[T]
+  def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
+
+  /**
+    * Create a new [[Buffer]]
+    */
+  def newBuffer[T <: AnyRef](): Buffer[T]
 }
 
 /**
   * The execution state of a single executing query.
   */
-trait ExecutionState extends ArgumentStateCreator {
+trait ExecutionState extends ArgumentStateMapCreator {
 
   /**
-    * Get the [[PipelineState]] of this query execution for the given `pipelineId`.
+    * Put a morsel into the buffer with id `bufferId`.
     */
-  def pipelineState(pipelineId: PipelineId): PipelineState
+  def putMorsel(fromPipeline: PipelineId, bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
-    * Produce a morsel into the row buffer with id `bufferId`. This call
-    * also resets the morsel current row to the first row.
-    */
-  def produceMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit
-
-  /**
-    * Consume a morsel from the row buffer with id `bufferId`.
+    * Take a morsel from the row buffer with id `bufferId`.
     *
-    * @return the morsel to consume, or `null` if no morsel was available
+    * @return the morsel to take, or `null` if no morsel was available
     */
-  def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
+  def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
 
   /**
-    * Close this task, meaning that we are done executing it.
+    * Take one accumulator that is ready from the argument state map buffer with id `bufferId`.
     *
-    * @param task the task to close
+    * @return the ready morsel accumulator, or `null` if no accumulators are ready
     */
-  def closeTask(task: PipelineTask): Unit
+  def takeAccumulator[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): ACC
+
+  /**
+    * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingBuffer]] with id `bufferId`.
+    *
+    * @return the ready morsel accumulator, or `null` if no accumulator is ready
+    */
+  def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC]
+
+  /**
+    * Close a pipeline task which was executing over an input morsel.
+    *
+    * @param pipeline the executing pipeline
+    * @param inputMorsel the input morsel
+    */
+  def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit
+
+  /**
+    * Close the work unit of a pipeline. This will release a lock
+    * if the pipeline is serial. Otherwise this does nothing.
+    *
+    * This is called from all close... methods in [[ExecutionState]], so if your're calling these
+    * methods there is no need to call this method as well
+    *
+    * It as also called from [[filterCancelledArguments()]] if a task is filtered out completely.
+    */
+  def closeWorkUnit(pipeline: ExecutablePipeline): Unit
+
+  /**
+    * Close a pipeline task which was executing over some input morsel accumulator.
+    *
+    * @param pipeline the executing pipeline
+    * @param accumulator the input morsel accumulator
+    */
+  def closeAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulator: ACC): Unit
+
+  /**
+    * Close a pipeline task which was executing over some input morsel accumulator (LHS) and a morsel (RHS) from a [[LHSAccumulatingRHSStreamingBuffer]].
+    *
+    * @param pipeline the executing pipeline
+    * @param inputMorsel the input morsel
+    * @param accumulator the input morsel accumulator
+    */
+  def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                              inputMorsel: MorselExecutionContext,
+                                                              accumulator: ACC): Unit
+
+  /**
+    * Remove all rows related to cancelled argumentRowIds from `morsel`.
+    *
+    * @param pipeline    the executing pipeline
+    * @param inputMorsel the input morsel
+    * @return `true` iff the morsel is cancelled
+    */
+  def filterCancelledArguments(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Boolean
+
+  /**
+    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
+    *
+    * @param pipeline     the executing pipeline
+    * @param accumulator the accumulator
+    * @return `true` iff the accumulator is cancelled
+    */
+  def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                         accumulator: ACC): Boolean
+
+  /**
+    * Remove all rows related to cancelled argumentRowIds from `morsel`.
+    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
+    *
+    * @param pipeline the executing pipeline
+    * @param inputMorsel the input morsel
+    * @param accumulator the accumulator
+    * @return `true` iff both the morsel and the accumulator are cancelled
+    */
+  def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                         inputMorsel: MorselExecutionContext,
+                                                         accumulator: ACC): Boolean
 
   /**
     * Continue executing pipeline `p`.
     *
     * @return the task to continue executing, or `null` if no task was available
     */
-  def continue(p: ExecutablePipeline): PipelineTask
+  def takeContinuation(p: ExecutablePipeline): PipelineTask
 
   /**
-    * Add `task` to the continuation queue for its pipeline, so we can continue executing it later.
+    * Put `task` to the continuation queue for its pipeline, so we can continue executing it later.
     */
-  def addContinuation(task: PipelineTask): Unit
+  def putContinuation(task: PipelineTask): Unit
+
+  /**
+    * Try to lock execution of the given pipeline.
+    *
+    * @return `true` iff the pipeline was locked
+    */
+  def tryLock(pipeline: ExecutablePipeline): Boolean
+
+  /**
+    * Unlock execution of the given pipeline.
+    */
+  def unlock(pipeline: ExecutablePipeline): Unit
+
+  /**
+    * Check if the pipeline can execute either a continuation or a new task.
+    *
+    * @return `true` if the pipeline can be executed
+    */
+  def canContinueOrTake(pipeline: ExecutablePipeline): Boolean
 
   /**
     * Adds an empty row to the initBuffer.
     */
-  def initialize(): Unit
+  def initializeState(): Unit
 
   /**
     * Await the completion of this query execution.
@@ -79,4 +175,9 @@ trait ExecutionState extends ArgumentStateCreator {
     * Check whether this query has completed.
     */
   def isCompleted: Boolean
+
+  /**
+    * Return a string representation of the state related to the given pipeline. Meant for debugging.
+    */
+  def prettyString(pipeline: ExecutablePipeline): String
 }

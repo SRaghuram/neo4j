@@ -16,12 +16,11 @@
  */
 package org.neo4j.cypher.internal.v4_0.frontend.phases
 
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.ast.Where
+import org.neo4j.cypher.internal.v4_0.expressions.{And, Equals, Or, _}
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.helpers.fixedPoint
 import org.neo4j.cypher.internal.v4_0.util.{Rewriter, bottomUp}
-import org.neo4j.cypher.internal.v4_0.ast.Where
-import org.neo4j.cypher.internal.v4_0.expressions.{And, Equals, Or}
 
 /**
   * TODO: This should instead implement Rewriter
@@ -49,16 +48,18 @@ case object transitiveClosure extends StatementRewriter {
 
     //Collects property equalities, e.g `a.prop = 42`
     private def collect(e: Expression): Closures = e.treeFold(Closures.empty) {
-      case _: Or => (acc) => (acc, None)
-      case _: And => (acc) => (acc, Some(identity))
-      case Equals(p1: Property, p2: Property) => (acc) => (acc.withEquivalence(p1 -> p2), None)
-      case Equals(p: Property, other) => (acc) => (acc.withMapping(p -> other), None)
-      case Not(Equals(_,_)) => (acc) => (acc, None)
+      case _: Or => acc => (acc, None)
+      case _: And => acc => (acc, Some(identity))
+      case Equals(p1: Property, p2: Property) => acc => (acc.withEquivalence(p1 -> p2), None)
+      case Equals(p: Property, other) => acc => (acc.withMapping(p -> other), None)
+      case Not(Equals(_,_)) => acc => (acc, None)
     }
 
     //NOTE that this might introduce duplicate predicates, however at a later rewrite
     //when AND is turned into ANDS we remove all duplicates
     private val whereRewriter: Rewriter = bottomUp(Rewriter.lift {
+      case and@(And(_, _: ExistsSubClause) | And(_: ExistsSubClause, _)) =>
+        and
       case and@And(lhs, rhs) =>
         val closures = collect(lhs) ++ collect(rhs)
         val inner = andRewriter(closures)
@@ -67,13 +68,14 @@ case object transitiveClosure extends StatementRewriter {
         //ALSO take care of case WHERE b.prop = a.prop AND b.prop = 42
         //turns into WHERE b.prop = a.prop AND b.prop = 42 AND a.prop = 42
         closures.emergentEqualities.foldLeft(newAnd) {
-          case (acc, (prop, expr)) => And(acc, Equals(prop, expr)(acc.position))(acc.position)
+          case (acc, (prop, expr)) =>
+            And(acc, Equals(prop, expr)(acc.position))(acc.position)
         }
     })
 
     private def andRewriter(closures: Closures): Rewriter = {
       val stopOnNotEquals: AnyRef => Boolean = {
-        case not@Not(Equals(_, _)) => true
+        case Not(Equals(_, _)) => true
         case _ => false
       }
 

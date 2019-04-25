@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
@@ -32,11 +29,6 @@ public class PrepareStoreCopyFiles implements AutoCloseable
     {
         this.database = database;
         this.fileSystemAbstraction = fileSystemAbstraction;
-    }
-
-    LongSet getNonAtomicIndexIds()
-    {
-        return LongSets.immutable.empty();
     }
 
     StoreResource[] getAtomicFilesSnapshot() throws IOException

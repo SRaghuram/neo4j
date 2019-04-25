@@ -8,9 +8,9 @@ package com.neo4j.bench.micro.data;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,6 +36,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.BATCH;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
@@ -45,14 +46,12 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.number.IsCloseTo.closeTo;
 
-import static java.lang.String.format;
-
 public class DataGeneratorTestUtil
 {
     private static final Path NEO4J_CONFIG = Paths.get( "neo4j.config" );
 
     static void assertGraphStatsAreConsistentWithBuilderConfiguration(
-            File storeDir,
+            Store store,
             DataGeneratorConfigBuilder builder,
             double percentageTolerance ) throws IOException
     {
@@ -61,16 +60,16 @@ public class DataGeneratorTestUtil
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
-        config.neo4jConfig().writeAsProperties( NEO4J_CONFIG );
+        config.neo4jConfig().writeToFile( NEO4J_CONFIG );
 
-        generator.generate( storeDir.toPath(), NEO4J_CONFIG );
+        generator.generate( store, NEO4J_CONFIG );
 
         System.out.println( "Tolerance: " + percentageTolerance );
 
         GraphDatabaseService db = null;
         try
         {
-            db = ManagedStore.newDb( storeDir.toPath(), NEO4J_CONFIG );
+            db = ManagedStore.newDb( store, NEO4J_CONFIG );
 
             // check global counts
             assertThat( nodeCount( db ), equalTo( config.nodeCount() ) );
@@ -163,7 +162,7 @@ public class DataGeneratorTestUtil
             FileUtils.deleteRecursively( NEO4J_CONFIG.toFile() );
             if ( null != db )
             {
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
         }
     }

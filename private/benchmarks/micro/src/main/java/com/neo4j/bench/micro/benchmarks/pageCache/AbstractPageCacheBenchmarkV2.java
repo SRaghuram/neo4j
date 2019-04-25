@@ -116,7 +116,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
     {
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         fs.mkdirs( STORE_FILE.getParentFile() );
-        try ( StoreChannel storeChannel = fs.create( STORE_FILE ) )
+        try ( StoreChannel storeChannel = fs.write( STORE_FILE ) )
         {
             long fileSize = 0;
             while ( fileSize < getFileSize() )

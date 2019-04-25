@@ -7,10 +7,11 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import akka.actor.Address;
 import akka.remote.ThisActorSystemQuarantinedEvent;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 import org.mockito.Answers;
 import org.mockito.InOrder;
@@ -18,7 +19,6 @@ import org.mockito.InOrder;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 public class AkkaCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
-    private MemberId myself = new MemberId( UUID.randomUUID() );
+    private DiscoveryMember myself = new TestDiscoveryMember();
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy retryStrategy = new NoRetriesStrategy();

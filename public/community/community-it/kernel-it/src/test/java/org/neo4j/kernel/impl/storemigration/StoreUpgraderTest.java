@@ -67,7 +67,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.AbstractStoreMigrationParticipant;
@@ -426,7 +425,7 @@ public class StoreUpgraderTest
         assertThat( preparedLogFiles, not( empty() ) );
         for ( String preparedLogFile : preparedLogFiles )
         {
-            fileSystem.create( new File( databaseTransactionLogsHome, preparedLogFile ) ).close();
+            fileSystem.write( new File( databaseTransactionLogsHome, preparedLogFile ) ).close();
         }
     }
 
@@ -500,7 +499,7 @@ public class StoreUpgraderTest
     {
         NullLogService instance = NullLogService.getInstance();
         RecordStorageMigrator defaultMigrator = new RecordStorageMigrator( fileSystem, pageCache, getTuningConfig(), instance, jobScheduler );
-        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         SchemaIndexMigrator indexMigrator = new SchemaIndexMigrator( fileSystem, IndexProvider.EMPTY, storageEngineFactory );
 
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )

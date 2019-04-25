@@ -21,11 +21,11 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.ir.SimplePatternLength
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.attribution.{IdGen, SequentialIdGen}
 
 import scala.collection.mutable.ArrayBuffer
@@ -98,6 +98,11 @@ class LogicalQueryBuilder(tokenResolver: TokenResolver) extends AstConstructionT
     this
   }
 
+  def limit(count: Int): LogicalQueryBuilder = {
+    appendAtCurrentIndent(UnaryOperator(lp => Limit(lp, literal(count), DoNotIncludeTies)))
+    this
+  }
+
   def expand(pattern: String): LogicalQueryBuilder = {
     val p = PatternParser.parse(pattern)
     p.length match {
@@ -108,12 +113,24 @@ class LogicalQueryBuilder(tokenResolver: TokenResolver) extends AstConstructionT
     this
   }
 
-  def optionalExpand(pattern: String, predicate: Option[String]): LogicalQueryBuilder = {
+  def optionalExpandAll(pattern: String, predicate: Option[String]): LogicalQueryBuilder = {
     val p = PatternParser.parse(pattern)
     p.length match {
       case SimplePatternLength =>
         val pred = predicate.map(ExpressionParser.parseExpression)
         appendAtCurrentIndent(UnaryOperator(lp => OptionalExpand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, ExpandAll, pred)))
+      case _ =>
+        throw new IllegalArgumentException("Cannot have optional expand with variable length pattern")
+    }
+    this
+  }
+
+  def optionalExpandInto(pattern: String, predicate: Option[String]): LogicalQueryBuilder = {
+    val p = PatternParser.parse(pattern)
+    p.length match {
+      case SimplePatternLength =>
+        val pred = predicate.map(ExpressionParser.parseExpression)
+        appendAtCurrentIndent(UnaryOperator(lp => OptionalExpand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, ExpandInto, pred)))
       case _ =>
         throw new IllegalArgumentException("Cannot have optional expand with variable length pattern")
     }
@@ -197,6 +214,12 @@ class LogicalQueryBuilder(tokenResolver: TokenResolver) extends AstConstructionT
     this
   }
 
+  def orderedDistinct(orderToLeverage: Seq[Expression], projectionStrings: String*): LogicalQueryBuilder = {
+    val projections = ExpressionParser.parseProjections(projectionStrings: _*)
+    appendAtCurrentIndent(UnaryOperator(lp => OrderedDistinct(lp, projections, orderToLeverage)))
+    this
+  }
+
   def allNodeScan(node: String, args: String*): LogicalQueryBuilder = {
     semanticTable = semanticTable.addNode(varFor(node))
     appendAtCurrentIndent(LeafOperator(AllNodesScan(node, args.toSet)))
@@ -243,19 +266,24 @@ class LogicalQueryBuilder(tokenResolver: TokenResolver) extends AstConstructionT
     appendAtCurrentIndent(UnaryOperator(source => Expand(source, p.from, p.dir, p.relTypes, p.to, p.relName, ExpandAll)))
   }
 
+  def nodeHashJoin(nodes: String*): LogicalQueryBuilder = {
+    appendAtCurrentIndent(BinaryOperator((left, right) => NodeHashJoin(nodes.toSet, left, right)))
+  }
+
   def argument(): LogicalQueryBuilder =
     appendAtCurrentIndent(LeafOperator(Argument()))
 
-  def input(nodes: Seq[String] = Seq.empty, variables: Seq[String] = Seq.empty): LogicalQueryBuilder = {
+  def input(nodes: Seq[String] = Seq.empty, variables: Seq[String] = Seq.empty, nullable: Boolean = true): LogicalQueryBuilder = {
     if (indent != 0)
       throw new IllegalStateException("The input operator has to be the left-most leaf of the plan")
     if (nodes.toSet.size < nodes.size || variables.toSet.size < variables.size)
       throw new IllegalArgumentException("Input must create unique variables")
     nodes.foreach(node => semanticTable = semanticTable.addNode(varFor(node)))
-    appendAtCurrentIndent(LeafOperator(Input(nodes.toArray, variables.toArray)))
+    appendAtCurrentIndent(LeafOperator(Input(nodes.toArray, variables.toArray, nullable)))
   }
 
-  def filter(predicates: Seq[Expression]): LogicalQueryBuilder = {
+  def filter(predicateStrings: String*): LogicalQueryBuilder = {
+    val predicates = predicateStrings.map(ExpressionParser.parseExpression)
     appendAtCurrentIndent(UnaryOperator(lp => Selection(predicates, lp)))
   }
 

@@ -11,11 +11,15 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface CoreStateRepository
 {
-    void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot );
+    void augmentSnapshot( DatabaseId databaseId, CoreSnapshot coreSnapshot );
 
-    void installSnapshot( String databaseName, CoreSnapshot coreSnapshot );
+    void installSnapshotForDatabase( DatabaseId databaseId, CoreSnapshot coreSnapshot );
+
+    void installSnapshotForRaftGroup( CoreSnapshot coreSnapshot );
 
     void flush( long lastApplied ) throws IOException;
 
@@ -25,7 +29,7 @@ public interface CoreStateRepository
 
     long getLastFlushed();
 
-    Map<String,PerDatabaseCoreStateComponents> getAllDatabaseStates();
+    Map<DatabaseId,DatabaseCoreStateComponents> getAllDatabaseStates();
 
-    Optional<PerDatabaseCoreStateComponents> getDatabaseState( String databaseName );
+    Optional<DatabaseCoreStateComponents> getDatabaseState( DatabaseId databaseId );
 }

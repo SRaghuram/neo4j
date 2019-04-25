@@ -25,13 +25,23 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.Service;
-import org.neo4j.common.DependencyResolver;
-import org.neo4j.common.DependencySatisfier;
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.id.IdController;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.lock.LockService;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.service.Services;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
+import org.neo4j.token.TokenHolders;
 
 /**
  * A factory suitable for something like service-loading to load {@link StorageEngine} instances.
@@ -43,29 +53,27 @@ public interface StorageEngineFactory
     /**
      * Returns a {@link StoreVersionCheck} which can provide both configured and existing store versions
      * and means of checking upgradability between them.
-     * @param dependencyResolver {@link DependencyResolver} for all dependency needs.
      * @return StoreVersionCheck to check store version as well as upgradability to other versions.
      */
-    StoreVersionCheck versionCheck( DependencyResolver dependencyResolver );
+    StoreVersionCheck versionCheck( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, LogService logService );
 
     StoreVersion versionInformation( String storeVersion );
 
     /**
      * Returns a {@link StoreMigrationParticipant} which will be able to participate in a store migration.
-     * @param dependencyResolver {@link DependencyResolver} for all dependency needs.
      * @return StoreMigrationParticipant for migration.
      */
-    StoreMigrationParticipant migrationParticipant( DependencyResolver dependencyResolver );
+    List<StoreMigrationParticipant> migrationParticipants( FileSystemAbstraction fs, Config config, PageCache pageCache,
+            JobScheduler jobScheduler, LogService logService );
 
     /**
      * Instantiates a {@link StorageEngine} where all dependencies can be retrieved from the supplied {@code dependencyResolver}.
      *
-     * @param dependencyResolver {@link DependencyResolver} used to get all required dependencies to instantiate the {@link StorageEngine}.
-     * @param dependencySatisfier {@link DependencySatisfier} providing ways to let the storage engine provide dependencies
-     * back to the instantiator. This is a hack with the goal to be removed completely when graph storage abstraction in kernel is properly in place.
      * @return the instantiated {@link StorageEngine}.
      */
-    StorageEngine instantiate( DependencyResolver dependencyResolver, DependencySatisfier dependencySatisfier );
+    StorageEngine instantiate( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, TokenHolders tokenHolders,
+            SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, LockService lockService, IdGeneratorFactory idGeneratorFactory,
+            IdController idController, DatabaseHealth databaseHealth, VersionContextSupplier versionContextSupplier, LogProvider logProvider );
 
     /**
      * Lists files of a specific storage location.
@@ -76,50 +84,47 @@ public interface StorageEngineFactory
      */
     List<File> listStorageFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException;
 
-    boolean storageExists( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout );
+    boolean storageExists( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache );
 
     /**
      * Instantiates a read-only {@link TransactionIdStore} to be used outside of a {@link StorageEngine}.
-     * @param dependencyResolver resolver for all dependencies required to instantiate the {@link TransactionIdStore}.
      * @return the read-only {@link TransactionIdStore}.
      * @throws IOException on I/O error or if the store doesn't exist.
      */
-    TransactionIdStore readOnlyTransactionIdStore( DependencyResolver dependencyResolver ) throws IOException;
+    TransactionIdStore readOnlyTransactionIdStore( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException;
 
     /**
      * Instantiates a read-only {@link LogVersionRepository} to be used outside of a {@link StorageEngine}.
-     * @param dependencyResolver resolver for all dependencies required to instantiate the {@link LogVersionRepository}.
      * @return the read-only {@link LogVersionRepository}.
      * @throws IOException on I/O error or if the store doesn't exist.
      */
-    LogVersionRepository readOnlyLogVersionRepository( DependencyResolver dependencyResolver ) throws IOException;
+    LogVersionRepository readOnlyLogVersionRepository( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException;
 
     /**
      * Instantiates a {@link ReadableStorageEngine} over a storage location without instantiating the full {@link StorageEngine}, just the readable parts.
-     * @param dependencyResolver {@link DependencyResolver} for all dependency needs.
      * @return StorageReader for reading the storage at this location. Must be closed after usage.
      */
-    ReadableStorageEngine instantiateReadable( DependencyResolver dependencyResolver );
+    ReadableStorageEngine instantiateReadable( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config,
+            PageCache pageCache, LogProvider logProvider );
 
     /**
      * Instantiates a fully functional {@link TransactionMetaDataStore}, which is a union of {@link TransactionIdStore}
      * and {@link LogVersionRepository}.
-     * @param dependencyResolver resolver for all dependencies required to instantiate the {@link TransactionMetaDataStore}.
      * @return a fully functional {@link TransactionMetaDataStore}.
      * @throws IOException on I/O error or if the store doesn't exist.
      */
-    TransactionMetaDataStore transactionMetaDataStore( DependencyResolver dependencyResolver ) throws IOException;
+    TransactionMetaDataStore transactionMetaDataStore( FileSystemAbstraction fs, DatabaseLayout databaseLayout,
+            Config config, PageCache pageCache ) throws IOException;
 
-    StoreId storeId( DependencyResolver dependencyResolver ) throws IOException;
+    StoreId storeId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException;
 
     /**
      * Selects a {@link StorageEngineFactory} among the candidates. How it's done or which it selects isn't important a.t.m.
-     * @param candidates list of {@link StorageEngineFactory} to compare.
      * @return the selected {@link StorageEngineFactory}.
      * @throws IllegalStateException if there were no candidates.
      */
-    static StorageEngineFactory selectStorageEngine( Iterable<StorageEngineFactory> candidates )
+    static StorageEngineFactory selectStorageEngine()
     {
-        return Iterables.single( candidates );
+        return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
     }
 }

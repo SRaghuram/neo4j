@@ -40,6 +40,8 @@ case class PruningVarLengthExpandPipe(source: Pipe,
 
   assert(min <= max)
 
+  filteringStep.predicateExpressions.foreach(_.registerOwningPipe(this))
+
   /**
     * Performs DFS traversal, but omits traversing relationships that have been completely traversed (to the
     * remaining depth) before.
@@ -321,7 +323,7 @@ case class PruningVarLengthExpandPipe(source: Pipe,
   ) extends Iterator[ExecutionContext] {
 
     var outputRow:ExecutionContext = _
-    var fullPruneState:FullPruneState = new FullPruneState( queryState )
+    val fullPruneState:FullPruneState = new FullPruneState( queryState )
     var hasPrefetched = false
 
     override def hasNext: Boolean = {

@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenS
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.identity.ClusterId;
-import com.neo4j.causalclustering.identity.DatabaseName;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
@@ -59,7 +58,6 @@ public class CoreStateFiles<STATE>
             new CoreStateFiles<>( "id-allocation", DATABASE, new IdAllocationState.Marshal(), id_alloc_state_size, CoreStateType.ID_ALLOCATION );
     public static final CoreStateFiles<RaftCoreState> RAFT_CORE_STATE =
             new CoreStateFiles<>( "core", DATABASE, new RaftCoreState.Marshal(), CoreStateType.RAFT_CORE_STATE );
-    public static final CoreStateFiles<DatabaseName> DB_NAME = new CoreStateFiles<>( "db-name", GLOBAL, new DatabaseName.Marshal(), CoreStateType.DB_NAME );
     public static final CoreStateFiles<ClusterId> CLUSTER_ID = new CoreStateFiles<>( "cluster-id", GLOBAL, new ClusterId.Marshal(), CoreStateType.CLUSTER_ID );
     public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =
             new CoreStateFiles<>( "core-member-id", GLOBAL, new MemberId.Marshal(), CoreStateType.CORE_MEMBER_ID );
@@ -83,7 +81,7 @@ public class CoreStateFiles<STATE>
 
     static
     {
-        values = asList( ID_ALLOCATION, LOCK_TOKEN, DB_NAME, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
+        values = asList( ID_ALLOCATION, LOCK_TOKEN, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
                 LAST_FLUSHED, SESSION_TRACKER );
         values.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         values = Collections.unmodifiableList( values );

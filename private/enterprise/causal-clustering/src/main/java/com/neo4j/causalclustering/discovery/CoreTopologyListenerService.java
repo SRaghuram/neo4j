@@ -31,9 +31,10 @@ public class CoreTopologyListenerService
     {
         for ( CoreTopologyService.Listener listener : listeners )
         {
-            String dbName = listener.dbName();
-
-            listener.onCoreTopologyChange( coreTopology.filterTopologyByDb( dbName ) );
+            if ( listener.databaseId().equals( coreTopology.databaseId() ) )
+            {
+                listener.onCoreTopologyChange( coreTopology );
+            }
         }
     }
 }

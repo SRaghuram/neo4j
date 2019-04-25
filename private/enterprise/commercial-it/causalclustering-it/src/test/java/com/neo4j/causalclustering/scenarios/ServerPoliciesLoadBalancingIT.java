@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.eclipse.collections.impl.factory.Sets;
@@ -21,19 +21,24 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.IntFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -41,24 +46,23 @@ import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.ParameterNames;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.RoutingResultFormat;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.virtual.MapValueBuilder;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-@ExtendWith( {TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
+@ExtendWith( TestDirectoryExtension.class )
 class ServerPoliciesLoadBalancingIT
 {
     @Inject
     private TestDirectory testDir;
-    @Inject
-    private FileSystemAbstraction fs;
 
     private Cluster cluster;
 
@@ -168,11 +172,55 @@ class ServerPoliciesLoadBalancingIT
         }
     }
 
+    @Test
+    void shouldPartiallyOrderRoutersByPolicy() throws Exception
+    {
+        Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
+        IntFunction<String> oddEven = i -> i % 2 == 0 ? "Even" : "Odd";
+        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core,core" + oddEven.apply( id ) );
+
+        String evensPolicy = "groups(coreEven)";
+        String evensHaltPolicy = "groups(coreEven);halt()";
+        String oddsPolicy = "groups(coreOdd)";
+        String oddsMinPolicy = "groups(coreOdd) -> min(3);groups(coreEven)";
+        String allPolicy = "all()";
+
+        Map<String,String> coreParams = stringMap(
+                CausalClusteringSettings.cluster_allow_reads_on_followers.name(), "true",
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evens", evensPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.evensHalt", evensHaltPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.odds", oddsPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.oddsMin", oddsMinPolicy,
+                CausalClusteringSettings.load_balancing_config.name() + ".server_policies.all", allPolicy,
+                CausalClusteringSettings.multi_dc_license.name(), "true" );
+
+        cluster = startCluster( 5, 0, coreParams, instanceCoreParams, emptyMap() );
+
+        assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 5, 1, 4, 0 ), policyContext( "all" ) );
+        // all cores have observed the full topology, now specific policies should all return the same result
+
+        for ( CoreClusterMember core : cluster.coreMembers() )
+        {
+            CoreGraphDatabase db = core.database();
+
+            assertThat( getServers( db, policyContext( "evens" ) ),
+                    new RouterPartialOrderMatcher( false, asSet( 2 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "odds" ) ),
+                    new RouterPartialOrderMatcher( false, asSet( 1, 3 ), asSet( 0, 2 ) ) );
+            assertThat( getServers( db, policyContext( "evens" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "evensHalt" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+            assertThat( getServers( db, policyContext( "oddsMin" ) ),
+                    new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
+        }
+    }
+
     private Cluster startCluster( int cores, int readReplicas, Map<String,String> sharedCoreParams, Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,IntFunction<String>> instanceReplicaParams ) throws Exception
     {
         Cluster cluster = new Cluster( testDir.directory( "cluster" ), cores, readReplicas,
-                new HazelcastDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
+                new AkkaDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
                 emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         cluster.start();
@@ -180,7 +228,7 @@ class ServerPoliciesLoadBalancingIT
         return cluster;
     }
 
-    private Map<String,String> policyContext( String policyName )
+    private static Map<String,String> policyContext( String policyName )
     {
         return stringMap( Policies.POLICY_KEY, policyName );
     }
@@ -205,7 +253,7 @@ class ServerPoliciesLoadBalancingIT
         }
     }
 
-    private RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
+    private static RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
     {
         RoutingResult lbResult = null;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
@@ -349,6 +397,85 @@ class ServerPoliciesLoadBalancingIT
         public void describeTo( Description description )
         {
             description.appendText( "replicaIds=" + replicaIds );
+        }
+    }
+
+    class RouterPartialOrderMatcher extends BaseMatcher<RoutingResult>
+    {
+        private final boolean exactMatch;
+        private final List<Set<Integer>> subsets;
+
+        @SafeVarargs
+        RouterPartialOrderMatcher( boolean exactMatch, Set<Integer>... subsets )
+        {
+            this.exactMatch = exactMatch;
+            this.subsets = Arrays.asList( subsets );
+        }
+
+        @Override
+        public boolean matches( Object item )
+        {
+            RoutingResult result = (RoutingResult) item;
+
+            List<AdvertisedSocketAddress> returnedRouters = new ArrayList<>( result.routeEndpoints() );
+
+            Map<Integer,AdvertisedSocketAddress> allBoltsById = cluster.coreMembers().stream()
+                    .collect( Collectors.toMap( CoreClusterMember::serverId, c -> c.clientConnectorAddresses().boltAddress() ) );
+
+            Function<Set<Integer>,Set<AdvertisedSocketAddress>> lookupBoltSubsets =
+                    s -> s.stream().map( i -> getAddressOrThrow( allBoltsById, i ) ).collect( Collectors.toSet() );
+
+            List<Set<AdvertisedSocketAddress>> expectedBoltSubsets = subsets.stream()
+                    .map( lookupBoltSubsets )
+                    .collect( Collectors.toList() );
+
+            Set<AdvertisedSocketAddress> allExpectedBolts = subsets.stream()
+                    .map( lookupBoltSubsets )
+                    .flatMap( Set::stream )
+                    .collect( Collectors.toSet() );
+
+            Predicate<AdvertisedSocketAddress> filterReturnedRouters = exactMatch ? Predicates.alwaysTrue() : allExpectedBolts::contains;
+
+            List<Integer> orders = returnedRouters.stream()
+                    .filter( filterReturnedRouters )
+                    .map( address -> findPartialOrderForAddress( expectedBoltSubsets, address ) )
+                    .collect( Collectors.toList() );
+
+            List<Integer> sortedOrders = new ArrayList<>( orders );
+            Collections.sort( sortedOrders );
+
+            return orders.equals( sortedOrders );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "expectedRouterOrder=" + subsets );
+        }
+
+        private int findPartialOrderForAddress( List<Set<AdvertisedSocketAddress>> addressSubsets, AdvertisedSocketAddress address )
+        {
+            for ( int i = 0; i < addressSubsets.size(); i++ )
+            {
+                if ( addressSubsets.get( i ).contains( address ) )
+                {
+                    return i;
+                }
+            }
+
+            throw new IllegalStateException( format( "An unexpected member has been returned! Expected:%s, Offender:%s",
+                    addressSubsets, address ) );
+        }
+
+        private AdvertisedSocketAddress getAddressOrThrow( Map<Integer,AdvertisedSocketAddress> addressMap, int idx )
+        {
+            AdvertisedSocketAddress address = addressMap.get( idx );
+            if ( address == null )
+            {
+                throw new IllegalArgumentException( format( "You have expected member ids which do not exist! Expected:%s, Actual:%s",
+                        subsets, addressMap.keySet() ) );
+            }
+            return address;
         }
     }
 }

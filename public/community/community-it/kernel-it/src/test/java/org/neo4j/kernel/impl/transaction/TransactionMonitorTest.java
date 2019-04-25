@@ -26,12 +26,15 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class TransactionMonitorTest
@@ -59,7 +62,8 @@ public class TransactionMonitorTest
     @Test
     public void shouldCountCommittedTransactions() throws Exception
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             TransactionCounters counts = db.getDependencyResolver().resolveDependency( TransactionCounters.class );
@@ -73,14 +77,15 @@ public class TransactionMonitorTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
     @Test
     public void shouldCountRolledBackTransactions() throws Exception
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             TransactionCounters counts = db.getDependencyResolver().resolveDependency( TransactionCounters.class );
@@ -94,14 +99,15 @@ public class TransactionMonitorTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
     @Test
     public void shouldCountTerminatedTransactions() throws Exception
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             TransactionCounters counts = db.getDependencyResolver().resolveDependency( TransactionCounters.class );
@@ -115,7 +121,7 @@ public class TransactionMonitorTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

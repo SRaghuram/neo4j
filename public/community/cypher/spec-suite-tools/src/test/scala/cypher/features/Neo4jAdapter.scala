@@ -20,13 +20,14 @@
 package cypher.features
 
 import cypher.features.Neo4jExceptionToExecutionFailed._
-import org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_hints_error}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{Result => Neo4jResult}
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.opencypher.tools.tck.api._
 import org.opencypher.tools.tck.values.CypherValue
 
@@ -35,18 +36,23 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 object Neo4jAdapter {
-  def apply(executionPrefix: String, graphDatabaseFactory: TestGraphDatabaseFactory,
+  def apply(executionPrefix: String, graphDatabaseFactory: TestDatabaseManagementServiceBuilder,
             dbConfig: collection.Map[Setting[_], String] = Map[Setting[_], String](cypher_hints_error -> "true")): Neo4jAdapter = {
-    val service = createGraphDatabase(dbConfig, graphDatabaseFactory)
-    new Neo4jAdapter(service, executionPrefix)
+    val managementService = createManagementService(dbConfig, graphDatabaseFactory)
+    val service = createGraphDatabase(managementService)
+    new Neo4jAdapter(managementService, service, executionPrefix)
   }
 
-  private def createGraphDatabase(config: collection.Map[Setting[_], String], graphDatabaseFactory: TestGraphDatabaseFactory): GraphDatabaseCypherService = {
-    new GraphDatabaseCypherService(graphDatabaseFactory.newImpermanentDatabase(config.asJava))
+  private def createGraphDatabase(managementService: DatabaseManagementService): GraphDatabaseCypherService = {
+    new GraphDatabaseCypherService(managementService.database(DEFAULT_DATABASE_NAME))
+  }
+
+  private def createManagementService(config: collection.Map[Setting[_], String], graphDatabaseFactory: TestDatabaseManagementServiceBuilder) = {
+    graphDatabaseFactory.newImpermanentService(config.asJava)
   }
 }
 
-class Neo4jAdapter(service: GraphDatabaseCypherService, executionPrefix: String) extends Graph with Neo4jProcedureAdapter {
+class Neo4jAdapter(managementService: DatabaseManagementService, service: GraphDatabaseCypherService, executionPrefix: String) extends Graph with Neo4jProcedureAdapter {
   protected val instance: GraphDatabaseFacade = service.getGraphDatabaseService
 
   private val explainPrefix = "EXPLAIN\n"
@@ -91,7 +97,7 @@ class Neo4jAdapter(service: GraphDatabaseCypherService, executionPrefix: String)
   }
 
   override def close(): Unit = {
-    instance.shutdown()
+    managementService.shutdown()
   }
 
 }

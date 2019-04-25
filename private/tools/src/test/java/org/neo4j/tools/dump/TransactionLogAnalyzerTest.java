@@ -106,7 +106,7 @@ class TransactionLogAnalyzerTest
         writeTransactions( 5 );
 
         // when
-        TransactionLogAnalyzer.analyze( fs, directory.databaseDir(), STRICT, monitor );
+        analyzeAllTransactionLogs();
 
         // then
         assertEquals( 1, monitor.logFiles );
@@ -131,7 +131,7 @@ class TransactionLogAnalyzerTest
         writeTransactions( 4 ); // txs 7, 8, 9, 10
 
         // when
-        TransactionLogAnalyzer.analyze( fs, directory.databaseDir(), STRICT, monitor );
+        analyzeAllTransactionLogs();
 
         // then
         assertEquals( 1, monitor.logFiles );
@@ -150,7 +150,7 @@ class TransactionLogAnalyzerTest
         writeTransactions( 1 );
 
         // when
-        TransactionLogAnalyzer.analyze( fs, directory.databaseDir(), STRICT, monitor );
+        analyzeAllTransactionLogs();
 
         // then
         assertEquals( 3, monitor.logFiles );
@@ -188,7 +188,7 @@ class TransactionLogAnalyzerTest
         writer.prepareForFlush().flush();
 
         // when
-        TransactionLogAnalyzer.analyze( fs, directory.databaseDir(), STRICT, monitor );
+        analyzeAllTransactionLogs();
 
         // then
         assertEquals( expectedLogFiles, monitor.logFiles );
@@ -217,6 +217,11 @@ class TransactionLogAnalyzerTest
         assertEquals( 1, monitor.logFiles );
         assertEquals( 1, monitor.checkpoints );
         assertEquals( 7, monitor.transactions );
+    }
+
+    private void analyzeAllTransactionLogs() throws IOException
+    {
+        TransactionLogAnalyzer.analyze( fs, directory.databaseLayout().getTransactionLogsDirectory(), STRICT, monitor );
     }
 
     private long rotate() throws IOException

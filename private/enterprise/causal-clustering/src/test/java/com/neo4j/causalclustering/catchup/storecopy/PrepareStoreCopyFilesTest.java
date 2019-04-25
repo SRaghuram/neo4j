@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
-import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,13 +19,11 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
-import org.neo4j.kernel.impl.transaction.state.SchemaAndIndexingFileIndexListing;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -42,7 +37,6 @@ public class PrepareStoreCopyFilesTest
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemAbstraction );
     private PrepareStoreCopyFiles prepareStoreCopyFiles;
-    private SchemaAndIndexingFileIndexListing indexListingMock;
     private DatabaseLayout databaseLayout;
     private DatabaseFileListing.StoreFileListingBuilder fileListingBuilder;
 
@@ -53,10 +47,7 @@ public class PrepareStoreCopyFilesTest
         fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
         databaseLayout = testDirectory.databaseLayout();
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
-        indexListingMock = mock( SchemaAndIndexingFileIndexListing.class );
-        when( indexListingMock.getIndexIds() ).thenReturn( new LongHashSet() );
         DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
-        when( storeFileListing.getIndexFileListing() ).thenReturn( indexListingMock );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );
         when( dataSource.getDatabaseFileListing() ).thenReturn( storeFileListing );
         prepareStoreCopyFiles = new PrepareStoreCopyFiles( dataSource, fileSystemAbstraction );
@@ -102,25 +93,6 @@ public class PrepareStoreCopyFilesTest
             assertEquals( expected.path(), storeResource.path() );
             assertEquals( expected.recordSize(), storeResource.recordSize() );
         }
-    }
-
-    @Test
-    public void shouldHandleEmptyDescriptors()
-    {
-        LongSet indexIds = prepareStoreCopyFiles.getNonAtomicIndexIds();
-
-        assertEquals( 0, indexIds.size() );
-    }
-
-    @Test
-    public void shouldReturnEmptySetOfIdsAndIgnoreIndexListing()
-    {
-        LongSet expectedIndexIds = LongSets.immutable.of( 42 );
-        when( indexListingMock.getIndexIds() ).thenReturn( expectedIndexIds );
-
-        LongSet actualIndexIndexIds = prepareStoreCopyFiles.getNonAtomicIndexIds();
-
-        assertTrue( actualIndexIndexIds.isEmpty() );
     }
 
     private String getRelativePath( StoreFileMetadata f )

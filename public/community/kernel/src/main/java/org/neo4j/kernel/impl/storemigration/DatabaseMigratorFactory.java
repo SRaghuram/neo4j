@@ -29,6 +29,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
 import org.neo4j.kernel.impl.transaction.log.LogVersionUpgradeChecker;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
@@ -62,15 +63,15 @@ public class DatabaseMigratorFactory
         this.jobScheduler = jobScheduler;
     }
 
-    public DatabaseMigrator createDatabaseMigrator( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver )
+    public DatabaseMigrator createDatabaseMigrator( DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory,
+            DependencyResolver dependencyResolver )
     {
-        final DatabaseConfig dbConfig = DatabaseConfig.from( config, databaseLayout.getDatabaseName() );
+        final DatabaseConfig dbConfig = DatabaseConfig.from( config, new DatabaseId( databaseLayout.getDatabaseName() ) );
         final IndexProviderMap indexProviderMap = dependencyResolver.resolveDependency( IndexProviderMap.class );
         final Monitors monitors = dependencyResolver.resolveDependency( Monitors.class );
         final LogFileCreationMonitor logFileCreationMonitor = monitors.newMonitor( LogFileCreationMonitor.class );
         final LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>();
         final LegacyTransactionLogsLocator logsLocator = new LegacyTransactionLogsLocator( dbConfig, databaseLayout );
-        final StorageEngineFactory storageEngineFactory = dependencyResolver.resolveDependency( StorageEngineFactory.class );
         final LogFiles logFiles;
         try
         {

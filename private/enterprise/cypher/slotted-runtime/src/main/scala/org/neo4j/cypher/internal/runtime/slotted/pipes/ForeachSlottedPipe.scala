@@ -24,12 +24,14 @@ case class ForeachSlottedPipe(lhs: Pipe, rhs: Pipe, innerVariableSlot: Slot, exp
   //===========================================================================
   private val setVariableFun = makeSetValueInSlotFunctionFor(innerVariableSlot)
 
+  expression.registerOwningPipe(this)
+
   //===========================================================================
   // Runtime code
   //===========================================================================
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
-      (outerContext) =>
+      outerContext =>
         val values = makeTraversable(expression(outerContext, state))
         values.iterator().asScala.foreach { v =>
           setVariableFun(outerContext, v) // A slot for the variable has been allocated on the outer context

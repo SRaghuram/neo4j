@@ -52,7 +52,7 @@ import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 import static org.neo4j.bolt.v3.messaging.request.GoodbyeMessage.GOODBYE_MESSAGE;
 import static org.neo4j.bolt.v3.messaging.request.RollbackMessage.ROLLBACK_MESSAGE;
-import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_NAME;
+import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_ID;
 
 class FailedStateIT extends BoltStateMachineStateTestBase
 {
@@ -114,7 +114,7 @@ class FailedStateIT extends BoltStateMachineStateTestBase
         machine.process( newHelloMessage(), nullResponseHandler() );
 
         RunMessage runMessage = mock( RunMessage.class );
-        when( runMessage.databaseName() ).thenReturn( ABSENT_DB_NAME );
+        when( runMessage.databaseId() ).thenReturn( ABSENT_DB_ID );
         when( runMessage.statement() ).thenThrow( new RuntimeException( "error here" ) );
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         machine.process( runMessage, recorder );
@@ -126,7 +126,7 @@ class FailedStateIT extends BoltStateMachineStateTestBase
 
     private static Stream<RequestMessage> ignoredMessages() throws BoltIOException
     {
-        return Stream.of( newDiscardNMessage( 2L ), newPullNMessage( 2L ), new RunMessage( "A cypher query" ), COMMIT_MESSAGE, ROLLBACK_MESSAGE );
+        return Stream.of( newDiscardMessage( 2L ), newPullMessage( 2L ), new RunMessage( "A cypher query" ), COMMIT_MESSAGE, ROLLBACK_MESSAGE );
     }
 
     private static Stream<RequestMessage> illegalV4Messages() throws BoltIOException

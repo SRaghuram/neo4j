@@ -43,7 +43,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.neo4j.common.CopyOnWriteHashMap;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -80,15 +79,15 @@ public class Config implements Configuration
 
     private final List<ConfigOptions> configOptions;
 
-    private final Map<String,String> params = new CopyOnWriteHashMap<>(); // Read heavy workload
-    private final Map<String,Object> parsedParams = new CopyOnWriteHashMap<>(); // Read heavy workload
+    private final Map<String,String> params = new ConcurrentHashMap<>();
+    private final Map<String,Object> parsedParams = new ConcurrentHashMap<>();
     private final Map<String, Collection<DynamicUpdateListener>> updateListeners = new ConcurrentHashMap<>();
     private final ConfigurationMigrator migrator;
     private final List<ConfigurationValidator> validators = new ArrayList<>();
-    private final Map<String,String> overriddenDefaults = new CopyOnWriteHashMap<>();
+    private final Map<String,String> overriddenDefaults = new ConcurrentHashMap<>();
     private final Map<String,BaseSetting<?>> settingsMap; // Only contains fixed settings and not groups
 
-    // Messages to this log get replayed into a real logger once logging has been instantiated.
+    // Messages to this log get replayed target a real logger once logging has been instantiated.
     private Log log = new BufferingLog();
 
     /**
@@ -112,7 +111,7 @@ public class Config implements Configuration
      */
     public static class Builder
     {
-        private Map<String,String> initialSettings = stringMap();
+        private Map<String,String> overriddenSettings = stringMap();
         private Map<String,String> overriddenDefaults = stringMap();
         private List<ConfigurationValidator> validators = new ArrayList<>();
         private File configFile;
@@ -139,7 +138,7 @@ public class Config implements Configuration
          */
         public Builder withSetting( final String setting, final String value )
         {
-            initialSettings.put( setting, value );
+            overriddenSettings.put( setting, value );
             return this;
         }
 
@@ -150,7 +149,7 @@ public class Config implements Configuration
          */
         public Builder withSettings( final Map<String,String> initialSettings )
         {
-            this.initialSettings.putAll( initialSettings );
+            this.overriddenSettings.putAll( initialSettings );
             return this;
         }
 
@@ -254,7 +253,7 @@ public class Config implements Configuration
         @Nonnull
         public Builder withHome( final File homeDir )
         {
-            initialSettings.put( GraphDatabaseSettings.neo4j_home.name(), homeDir.getAbsolutePath() );
+            overriddenSettings.put( GraphDatabaseSettings.neo4j_home.name(), homeDir.getAbsolutePath() );
             return this;
         }
 
@@ -300,12 +299,12 @@ public class Config implements Configuration
                     Optional.ofNullable( settingsClasses ).orElseGet( LoadableConfig::allConfigClasses );
 
             // If reading from a file, make sure we always have a neo4j_home
-            if ( configFile != null && !initialSettings.containsKey( GraphDatabaseSettings.neo4j_home.name() ) )
+            if ( configFile != null && !overriddenSettings.containsKey( GraphDatabaseSettings.neo4j_home.name() ) )
             {
-                initialSettings.put( GraphDatabaseSettings.neo4j_home.name(), System.getProperty( "user.dir" ) );
+                nullSafePut( overriddenSettings, GraphDatabaseSettings.neo4j_home.name(), System.getProperty( "user.dir" ) );
             }
 
-            Config config = new Config( configFile, throwOnFileLoadFailure, initialSettings, overriddenDefaults, validators, loadableConfigs );
+            Config config = new Config( configFile, throwOnFileLoadFailure, overriddenSettings, overriddenDefaults, validators, loadableConfigs );
 
             if ( connectorsDisabled )
             {
@@ -361,7 +360,7 @@ public class Config implements Configuration
 
     /**
      * @param initialSettings a map with settings to be present in the config.
-     * @return a configuration with default values augmented with the provided <code>initialSettings</code>.
+     * @return a configuration with default values augmented with the provided <code>overriddenSettings</code>.
      */
     @Nonnull
     public static Config defaults( @Nonnull final Map<String,String> initialSettings )
@@ -387,7 +386,7 @@ public class Config implements Configuration
 
     private Config( File configFile,
             boolean throwOnFileLoadFailure,
-            Map<String,String> initialSettings,
+            Map<String,String> overriddenSettings,
             Map<String,String> overriddenDefaults,
             Collection<ConfigurationValidator> additionalValidators,
             List<LoadableConfig> settingsClasses )
@@ -406,23 +405,34 @@ public class Config implements Configuration
 
         validators.addAll( additionalValidators );
         migrator = new AnnotationBasedConfigurationMigrator( settingsClasses );
-        this.overriddenDefaults.putAll( overriddenDefaults );
+        nullSafePutAll( this.overriddenDefaults, overriddenDefaults );
 
         boolean fromFile = configFile != null;
-        if ( fromFile )
-        {
-            loadFromFile( configFile, log, throwOnFileLoadFailure, initialSettings );
-        }
+        Map<String,String> settings = buildConfiguredSettings( configFile, throwOnFileLoadFailure, overriddenSettings, overriddenDefaults, fromFile );
 
-        overriddenDefaults.forEach( initialSettings::putIfAbsent );
-
-        migrateAndValidateAndUpdateSettings( initialSettings, fromFile );
+        migrateAndValidateAndUpdateSettings( settings, fromFile );
 
         // Only warn for deprecations if red from a file
         if ( fromFile )
         {
             warnAboutDeprecations( params );
         }
+    }
+
+    private Map<String,String> buildConfiguredSettings( File configFile, boolean throwOnFileLoadFailure, Map<String,String> overriddenSettings,
+            Map<String,String> overriddenDefaults, boolean fromFile )
+    {
+        Map<String,String> settings = new HashMap<>();
+        if ( fromFile )
+        {
+            loadFromFile( configFile, log, throwOnFileLoadFailure, settings );
+        }
+        for ( Map.Entry<String,String> overriddenSetting : overriddenSettings.entrySet() )
+        {
+            addSettingToMap( settings, overriddenSetting.getKey(), overriddenSetting.getValue(), log );
+        }
+        overriddenDefaults.forEach( settings::putIfAbsent );
+        return settings;
     }
 
     /**
@@ -542,8 +552,11 @@ public class Config implements Configuration
      */
     public void augmentDefaults( Setting<?> setting, String value ) throws InvalidSettingException
     {
-        overriddenDefaults.put( setting.name(), value );
-        params.putIfAbsent( setting.name(), value );
+        nullSafePut( overriddenDefaults, setting.name(), value );
+        if ( value != null )
+        {
+            params.putIfAbsent( setting.name(), value );
+        }
         parsedParams.remove( setting.name() );
     }
 
@@ -773,7 +786,7 @@ public class Config implements Configuration
             throws InvalidSettingException
     {
         Map<String,String> migratedSettings = migrateSettings( settings );
-        params.putAll( migratedSettings );
+        nullSafePutAll( params, migratedSettings );
 
         List<SettingValidator> settingValidators = configOptions.stream()
                 .map( ConfigOptions::settingGroup )
@@ -784,7 +797,7 @@ public class Config implements Configuration
         {
             Map<String,String> additionalSettings =
                     new IndividualSettingsValidator( settingValidators, warnOnUnknownSettings ).validate( this, log );
-            params.putAll( additionalSettings );
+            nullSafePutAll( params, additionalSettings );
         }
 
         // Validate configuration
@@ -833,26 +846,7 @@ public class Config implements Configuration
         }
         try
         {
-            @SuppressWarnings( "MismatchedQueryAndUpdateOfCollection" )
-            Properties loader = new Properties()
-            {
-                @Override
-                public Object put( Object key, Object val )
-                {
-                    String setting = key.toString();
-                    String value = val.toString();
-                    // We use the 'super' Hashtable as a set of all the settings we have logged warnings about.
-                    // We only want to warn about each duplicate setting once.
-                    if ( into.putIfAbsent( setting, value ) != null &&
-                            super.put( key, val ) == null &&
-                            !key.equals( ExternalSettings.additionalJvm.name() ) )
-                    {
-                        log.warn( "The '%s' setting is specified more than once. Settings only be specified once, to avoid ambiguity. " +
-                                "The setting value that will be used is '%s'.", setting, into.get( setting ) );
-                    }
-                    return null;
-                }
-            };
+            PropertiesLoader loader = new PropertiesLoader( into, log );
             try ( FileInputStream stream = new FileInputStream( file ) )
             {
                 loader.load( stream );
@@ -992,6 +986,57 @@ public class Config implements Configuration
                 .sorted( Comparator.comparing( Map.Entry::getKey ) )
                 .map( entry -> entry.getKey() + "=" + obfuscateIfSecret( entry ) )
                 .collect( Collectors.joining( ", ") );
+    }
+
+    private static void addSettingToMap( Map<String,String> settingMap, String setting, String newValue, Log log )
+    {
+        String oldValue = settingMap.put( setting, newValue );
+        if ( oldValue != null && !setting.equals( ExternalSettings.additionalJvm.name() ) )
+        {
+            log.warn( "The '%s' setting is overridden. Setting value changed from '%s' to '%s'.", setting, oldValue, newValue );
+        }
+    }
+
+    private static <K, V> void nullSafePutAll( Map<K,V> toMap, Map<K,V> fromMap )
+    {
+        for ( Map.Entry<K,V> entry : fromMap.entrySet() )
+        {
+            nullSafePut( toMap, entry.getKey(), entry.getValue() );
+        }
+    }
+
+    private static <K, V> void nullSafePut( Map<K,V> toMap, K key, V value )
+    {
+        if ( value == null )
+        {
+            toMap.remove( key );
+        }
+        else
+        {
+            toMap.put( key, value );
+        }
+    }
+
+    private static class PropertiesLoader extends Properties
+    {
+        private final Map<String,String> target;
+        private final Log log;
+
+        PropertiesLoader( Map<String,String> target, Log log )
+        {
+            this.target = target;
+            this.log = log;
+        }
+
+        @Override
+        public Object put( Object key, Object val )
+        {
+            String setting = key.toString();
+            String value = val.toString();
+
+            addSettingToMap( target, setting, value, log );
+            return null;
+        }
     }
 
     private class DynamicUpdateListener<V> implements SettingChangeListener<String>

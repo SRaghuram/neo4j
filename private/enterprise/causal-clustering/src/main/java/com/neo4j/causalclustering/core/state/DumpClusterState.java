@@ -17,6 +17,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 
@@ -24,7 +25,7 @@ public class DumpClusterState
 {
     private final CoreStateStorageFactory storageFactory;
     private final PrintStream out;
-    private final String databaseToDump;
+    private final DatabaseId databaseToDump;
 
     /**
      * @param args [0] = data directory
@@ -64,7 +65,7 @@ public class DumpClusterState
         {
             String databaseName = databaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             String databaseToDump = databaseToDumpOpt.orElse( databaseName );
-            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump );
+            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, new DatabaseId( databaseToDump ) );
             dumpTool.dump();
         }
         catch ( Exception e )
@@ -74,7 +75,7 @@ public class DumpClusterState
         }
     }
 
-    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump )
+    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, DatabaseId databaseToDump )
     {
         this.storageFactory = newCoreStateStorageService( fs, dataDirectory );
         this.out = out;
@@ -88,7 +89,6 @@ public class DumpClusterState
         try
         {
             dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
-            dumpSimpleState( CoreStateFiles.DB_NAME, storageFactory.createMultiClusteringDbNameStorage() );
             dumpSimpleState( CoreStateFiles.CLUSTER_ID, storageFactory.createClusterIdStorage() );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life ) );

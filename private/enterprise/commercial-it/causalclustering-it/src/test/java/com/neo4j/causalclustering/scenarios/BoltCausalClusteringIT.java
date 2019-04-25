@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -37,6 +39,7 @@ import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
+import org.neo4j.driver.v1.Logging;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
@@ -86,12 +89,22 @@ class BoltCausalClusteringIT
     @BeforeEach
     void removePersons() throws TimeoutException
     {
-        try ( Driver driver = GraphDatabase.driver( cluster.awaitLeader().routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
-                Session session = driver.session( AccessMode.WRITE ) )
+        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ); Session session = driver.session( AccessMode.WRITE ) )
         {
             // when
             session.run( "MATCH (n:Person) DELETE n" ).consume();
         }
+    }
+
+    private static Driver makeDriver( String uri )
+    {
+        Config config = Config
+                .builder()
+                .withoutEncryption()
+                .withLogging( Logging.none() )
+                .build();
+
+        return GraphDatabase.driver( uri, AuthTokens.basic( "neo4j", "neo4j" ), config );
     }
 
     @Test
@@ -128,7 +141,7 @@ class BoltCausalClusteringIT
         } );
 
         // when
-        int count = executeWriteAndReadThroughBolt( cluster.getMemberWithRole( Role.FOLLOWER ) );
+        int count = executeWriteAndReadThroughBolt( cluster.awaitCoreMemberWithRole( Role.FOLLOWER ) );
 
         // then
         assertEquals( 1, count );
@@ -142,7 +155,7 @@ class BoltCausalClusteringIT
 
     private static int executeWriteAndReadThroughBolt( CoreClusterMember core ) throws TimeoutException
     {
-        try ( Driver driver = GraphDatabase.driver( core.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
+        try ( Driver driver = makeDriver( core.routingURI() ) )
         {
 
             return inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
@@ -164,7 +177,7 @@ class BoltCausalClusteringIT
             switchLeader( cluster.awaitLeader() );
             CoreClusterMember leader = cluster.awaitLeader();
 
-            try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+            try ( Driver driver = makeDriver( leader.routingURI() );
                     Session session = driver.session( AccessMode.READ ) )
             {
                 // when
@@ -185,7 +198,7 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ); Session session = driver.session() )
+        try ( Driver driver = makeDriver( leader.routingURI() ); Session session = driver.session() )
         {
             session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
@@ -206,7 +219,7 @@ class BoltCausalClusteringIT
 
         int clusterSize = cluster.readReplicas().size() + cluster.coreMembers().size();
 
-        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ); Session session = driver.session() )
+        try ( Driver driver = makeDriver( leader.routingURI() ); Session session = driver.session() )
         {
             StatementResult overview = session.run( "CALL dbms.cluster.overview" );
             MatcherAssert.assertThat( overview.list(), hasSize( clusterSize ) );
@@ -306,9 +319,8 @@ class BoltCausalClusteringIT
 
         LeaderSwitcher leaderSwitcher = new LeaderSwitcher( cluster, leaderSwitchLatch );
 
-        Config config = Config.build().withLogging( new JULogging( Level.OFF ) ).toConfig();
         Set<String> seenAddresses = new HashSet<>();
-        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ), config ) )
+        try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
             boolean success = false;
 
@@ -365,7 +377,7 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
+        try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
             inExpirableSession( driver, Driver::session, session ->
             {
@@ -412,7 +424,7 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = GraphDatabase.driver( leader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
+        try ( Driver driver = makeDriver( leader.directURI() ) )
         {
             String bookmark = inExpirableSession( driver, Driver::session, session ->
             {
@@ -442,7 +454,7 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = GraphDatabase.driver( leader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
+        try ( Driver driver = makeDriver( leader.directURI() ) )
         {
             inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
             {
@@ -492,7 +504,7 @@ class BoltCausalClusteringIT
 
         readReplica.txPollingClient().stop();
 
-        Driver driver = GraphDatabase.driver( leader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+        Driver driver = makeDriver( leader.directURI() );
 
         String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
         {
@@ -511,7 +523,7 @@ class BoltCausalClusteringIT
         assertNotNull( bookmark );
         readReplica.txPollingClient().start();
 
-        driver = GraphDatabase.driver( readReplica.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+        driver = makeDriver( readReplica.directURI() );
 
         try ( Session session = driver.session( AccessMode.READ, bookmark ) )
         {
@@ -529,7 +541,7 @@ class BoltCausalClusteringIT
     {
         // given
         CoreClusterMember leader = cluster.awaitLeader();
-        Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+        Driver driver = makeDriver( leader.routingURI() );
 
         String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
         {
@@ -592,7 +604,7 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
+        try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
             // when
             try ( Session session = driver.session() )
@@ -645,7 +657,7 @@ class BoltCausalClusteringIT
         Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
         cluster.start();
 
-        Driver driver = GraphDatabase.driver( cluster.awaitLeader().routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+        Driver driver = makeDriver( cluster.awaitLeader().routingURI() );
 
         try ( Session session = driver.session() )
         {
@@ -737,7 +749,7 @@ class BoltCausalClusteringIT
     {
         long deadline = System.currentTimeMillis() + (30 * 1000);
 
-        Role role = initialLeader.database().getRole();
+        Role role = getCurrentCoreRole( initialLeader.database() );
         while ( role != Role.FOLLOWER )
         {
             if ( System.currentTimeMillis() > deadline )
@@ -755,10 +767,15 @@ class BoltCausalClusteringIT
             }
             finally
             {
-                role = initialLeader.database().getRole();
+                role = getCurrentCoreRole( initialLeader.database() );
                 Thread.sleep( 100 );
             }
         }
+    }
+
+    private static Role getCurrentCoreRole( CoreGraphDatabase database )
+    {
+        return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     private void triggerElection( CoreClusterMember initialLeader ) throws IOException, TimeoutException

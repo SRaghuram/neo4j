@@ -9,10 +9,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 
-public class MemberIdSetBuilder implements RaftGroup.Builder<MemberId>
+public class MemberIdSetBuilder implements RaftMembers.Builder<MemberId>
 {
     @Override
-    public RaftGroup<MemberId> build( Set<MemberId> members )
+    public RaftMembers<MemberId> build( Set<MemberId> members )
     {
         return new MemberIdSet( members );
     }

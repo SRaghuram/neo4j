@@ -9,13 +9,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class PageCacheFlushTracingTest
@@ -27,16 +30,16 @@ class PageCacheFlushTracingTest
     void tracePageCacheFlushProgress()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
-        GraphDatabaseService database = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
                                             .newEmbeddedDatabaseBuilder( testDirectory.directory() )
-                                            .setConfig( GraphDatabaseSettings.tracer, "verbose" )
-                                            .newGraphDatabase();
+                                            .setConfig( GraphDatabaseSettings.tracer, "verbose" ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
             database.createNode();
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
         logProvider.assertContainsMessageContaining( "Flushing file" );
     }
 }

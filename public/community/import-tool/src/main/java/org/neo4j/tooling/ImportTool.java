@@ -36,9 +36,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.common.Validator;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.LayoutConfig;
 import org.neo4j.configuration.Settings;
 import org.neo4j.csv.reader.IllegalMultilineFieldException;
 import org.neo4j.helpers.Args;
@@ -47,6 +49,22 @@ import org.neo4j.helpers.ArrayUtil;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.Strings;
 import org.neo4j.helpers.collection.IterableWrapper;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.BatchImporterFactory;
+import org.neo4j.internal.batchimport.cache.idmapping.string.DuplicateInputIdException;
+import org.neo4j.internal.batchimport.input.BadCollector;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.InputException;
+import org.neo4j.internal.batchimport.input.MissingRelationshipDataException;
+import org.neo4j.internal.batchimport.input.csv.Configuration;
+import org.neo4j.internal.batchimport.input.csv.CsvInput;
+import org.neo4j.internal.batchimport.input.csv.DataFactory;
+import org.neo4j.internal.batchimport.input.csv.Decorator;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.staging.SpectrumExecutionMonitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -60,22 +78,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.StoreLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.DuplicateInputIdException;
-import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.InputException;
-import org.neo4j.unsafe.impl.batchimport.input.MissingRelationshipDataException;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
-import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
-import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
-import org.neo4j.unsafe.impl.batchimport.staging.SpectrumExecutionMonitor;
 
 import static java.lang.String.format;
 import static java.nio.charset.Charset.defaultCharset;
@@ -86,28 +88,28 @@ import static org.neo4j.configuration.Settings.parseLongWithUnit;
 import static org.neo4j.helpers.Exceptions.throwIfUnchecked;
 import static org.neo4j.helpers.Strings.TAB;
 import static org.neo4j.helpers.TextUtil.tokenizeStringWithQuotes;
+import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
+import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
+import static org.neo4j.internal.batchimport.Configuration.DEFAULT_MAX_MEMORY_PERCENT;
+import static org.neo4j.internal.batchimport.Configuration.calculateMaxMemoryFromPercent;
+import static org.neo4j.internal.batchimport.Configuration.canDetectFreeMemory;
+import static org.neo4j.internal.batchimport.input.BadCollector.BAD_FILE_NAME;
+import static org.neo4j.internal.batchimport.input.Collectors.badCollector;
+import static org.neo4j.internal.batchimport.input.Collectors.collect;
+import static org.neo4j.internal.batchimport.input.Collectors.silentBadCollector;
+import static org.neo4j.internal.batchimport.input.InputEntityDecorators.NO_DECORATOR;
+import static org.neo4j.internal.batchimport.input.InputEntityDecorators.additiveLabels;
+import static org.neo4j.internal.batchimport.input.InputEntityDecorators.defaultRelationshipType;
+import static org.neo4j.internal.batchimport.input.csv.Configuration.COMMAS;
+import static org.neo4j.internal.batchimport.input.csv.DataFactories.data;
+import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
+import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.io.ByteUnit.mebiBytes;
 import static org.neo4j.io.fs.FileUtils.readTextFile;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 import static org.neo4j.kernel.impl.util.Converters.withDefault;
-import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT_MAX_MEMORY_PERCENT;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.calculateMaxMemoryFromPercent;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.canDetectFreeMemory;
-import static org.neo4j.unsafe.impl.batchimport.input.BadCollector.BAD_FILE_NAME;
-import static org.neo4j.unsafe.impl.batchimport.input.Collectors.badCollector;
-import static org.neo4j.unsafe.impl.batchimport.input.Collectors.collect;
-import static org.neo4j.unsafe.impl.batchimport.input.Collectors.silentBadCollector;
-import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.NO_DECORATOR;
-import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.additiveLabels;
-import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.defaultRelationshipType;
-import static org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.COMMAS;
-import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.data;
-import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
-import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
 
 /**
  * User-facing command line tool around a {@link BatchImporter}.
@@ -416,7 +418,7 @@ public class ImportTool
         Config dbConfig;
         OutputStream badOutput = null;
         IdType idType;
-        org.neo4j.unsafe.impl.batchimport.Configuration configuration;
+        org.neo4j.internal.batchimport.Configuration configuration;
         File logsDir;
         File badFile = null;
         Long maxMemory;
@@ -430,10 +432,6 @@ public class ImportTool
 
             databaseDirectory = args.interpretOption( Options.STORE_DIR.key(), Converters.mandatory(),
                     Converters.toFile(), Validators.DIRECTORY_IS_WRITABLE );
-            DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDirectory );
-            Config config = Config.defaults( GraphDatabaseSettings.neo4j_home, databaseDirectory.getAbsolutePath() );
-            logsDir = config.get( GraphDatabaseSettings.logs_directory );
-            fs.mkdirs( logsDir );
 
             skipBadEntriesLogging = args.getBoolean( Options.SKIP_BAD_ENTRIES_LOGGING.key(),
                     (Boolean) Options.SKIP_BAD_ENTRIES_LOGGING.defaultValue(), false);
@@ -467,10 +465,11 @@ public class ImportTool
             badCollector = getBadCollector( badTolerance, skipBadRelationships, skipDuplicateNodes, ignoreExtraColumns,
                     skipBadEntriesLogging, badOutput );
 
-            dbConfig = loadDbConfig( args.interpretOption( Options.DATABASE_CONFIG.key(), Converters.optional(),
-                    Converters.toFile(), Validators.REGEX_FILE_EXISTS ) );
-            dbConfig.augment( loadDbConfig( args.interpretOption( Options.ADDITIONAL_CONFIG.key(), Converters.optional(),
-                    Converters.toFile(), Validators.REGEX_FILE_EXISTS ) ) );
+            dbConfig = buildDbConfig( args, databaseDirectory );
+
+            logsDir = dbConfig.get( GraphDatabaseSettings.logs_directory );
+            fs.mkdirs( logsDir );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDirectory, LayoutConfig.of( dbConfig ) );
             boolean allowCacheOnHeap = args.getBoolean( Options.CACHE_ON_HEAP.key(),
                     (Boolean) Options.CACHE_ON_HEAP.defaultValue() );
             configuration = importConfiguration(
@@ -500,6 +499,16 @@ public class ImportTool
                 badCollector.close();
             }
         }
+    }
+
+    private static Config buildDbConfig( Args args, File databaseDirectory )
+    {
+        Config dbConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, databaseDirectory.getAbsolutePath() );
+        dbConfig.augment( loadDbConfig( args.interpretOption( Options.DATABASE_CONFIG.key(), Converters.optional(),
+                Converters.toFile(), Validators.REGEX_FILE_EXISTS ) ) );
+        dbConfig.augment( loadDbConfig( args.interpretOption( Options.ADDITIONAL_CONFIG.key(), Converters.optional(),
+                Converters.toFile(), Validators.REGEX_FILE_EXISTS ) ) );
+        return dbConfig;
     }
 
     public static Args useArgumentsFromFileArgumentIfPresent( Args args ) throws IOException
@@ -553,7 +562,7 @@ public class ImportTool
                                  FileSystemAbstraction fs, Collection<Option<File[]>> nodesFiles,
                                  Collection<Option<File[]>> relationshipsFiles, boolean enableStacktrace, Input input,
                                  Config dbConfig, Collector badCollector,
-                                 org.neo4j.unsafe.impl.batchimport.Configuration configuration, boolean detailedProgress ) throws IOException
+                                 org.neo4j.internal.batchimport.Configuration configuration, boolean detailedProgress ) throws IOException
     {
         boolean success;
         LifeSupport life = new LifeSupport();
@@ -575,7 +584,7 @@ public class ImportTool
                 EMPTY,
                 dbConfig,
                 RecordFormatSelector.selectForConfig( dbConfig, logService.getInternalLogProvider() ),
-                new PrintingImportLogicMonitor( out, err ), jobScheduler, badCollector );
+                new PrintingImportLogicMonitor( out, err ), jobScheduler, badCollector, TransactionLogsInitializer.INSTANCE );
         printOverview( databaseLayout.databaseDirectory(), nodesFiles, relationshipsFiles, configuration, out );
         success = false;
         try
@@ -659,7 +668,7 @@ public class ImportTool
 
     static void printOverview( File storeDir, Collection<Option<File[]>> nodesFiles,
             Collection<Option<File[]>> relationshipsFiles,
-            org.neo4j.unsafe.impl.batchimport.Configuration configuration, PrintStream out )
+            org.neo4j.internal.batchimport.Configuration configuration, PrintStream out )
     {
         out.println( "Neo4j version: " + Version.getNeo4jVersion() );
         out.println( "Importing the contents of these files into " + storeDir + ":" );
@@ -720,7 +729,7 @@ public class ImportTool
         }
     }
 
-    public static org.neo4j.unsafe.impl.batchimport.Configuration importConfiguration(
+    public static org.neo4j.internal.batchimport.Configuration importConfiguration(
             Number processors, boolean defaultSettingsSuitableForTests, Config dbConfig, DatabaseLayout databaseLayout, Boolean defaultHighIO )
     {
         return importConfiguration(
@@ -728,11 +737,11 @@ public class ImportTool
                 DEFAULT.allowCacheAllocationOnHeap(), defaultHighIO );
     }
 
-    public static org.neo4j.unsafe.impl.batchimport.Configuration importConfiguration(
+    public static org.neo4j.internal.batchimport.Configuration importConfiguration(
             Number processors, boolean defaultSettingsSuitableForTests, Config dbConfig, Long maxMemory, DatabaseLayout databaseLayout,
             boolean allowCacheOnHeap, Boolean defaultHighIO )
     {
-        return new org.neo4j.unsafe.impl.batchimport.Configuration()
+        return new org.neo4j.internal.batchimport.Configuration()
         {
             @Override
             public long pageCacheMemory()

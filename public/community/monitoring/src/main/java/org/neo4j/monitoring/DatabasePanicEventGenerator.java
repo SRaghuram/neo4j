@@ -19,19 +19,19 @@
  */
 package org.neo4j.monitoring;
 
-import org.neo4j.graphdb.event.ErrorState;
-
 public class DatabasePanicEventGenerator
 {
-    private final DatabaseEventHandlers databaseEventHandlers;
+    private final DatabaseEventListeners databaseEventListeners;
+    private final String databaseName;
 
-    public DatabasePanicEventGenerator( DatabaseEventHandlers databaseEventHandlers )
+    public DatabasePanicEventGenerator( DatabaseEventListeners databaseEventListeners, String databaseName )
     {
-        this.databaseEventHandlers = databaseEventHandlers;
+        this.databaseEventListeners = databaseEventListeners;
+        this.databaseName = databaseName;
     }
 
-    public void generateEvent( final ErrorState error, final Throwable cause )
+    public void panic()
     {
-        databaseEventHandlers.kernelPanic( error, cause );
+        databaseEventListeners.databasePanic( databaseName );
     }
 }

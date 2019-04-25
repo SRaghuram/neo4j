@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import org.neo4j.cypher.internal.runtime.morsel.QueryResources
-import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, PipelineTask}
+import org.neo4j.cypher.internal.runtime.zombie.PipelineTask
 
 /**
   * Policy which selects the next task for execute for a given executing query.
@@ -16,38 +16,14 @@ trait SchedulingPolicy {
                queryResources: QueryResources): PipelineTask
 }
 
-object TaskMaker {
-  def taskOrNull(pipeline: ExecutablePipeline,
-                 executingQuery: ExecutingQuery,
-                 queryResources: QueryResources): PipelineTask = {
-
-    val state = executingQuery.executionState
-
-    val task = state.continue(pipeline)
-    if (task != null) {
-      return task
-    }
-
-    val input = state.consumeMorsel(pipeline.inputRowBuffer.id, pipeline)
-    if (input != null) {
-      val pipelineState = state.pipelineState(pipeline.id)
-      val tasks = pipelineState.init(input, executingQuery.queryContext, executingQuery.queryState, queryResources)
-      for (task <- tasks.tail)
-        state.addContinuation(task)
-      return tasks.head
-    }
-
-    null
-  }
-}
-
 object LazyScheduling extends SchedulingPolicy {
 
   def nextTask(executingQuery: ExecutingQuery,
                queryResources: QueryResources): PipelineTask = {
 
-    for (p <- executingQuery.executablePipelines.reverseIterator) {
-      val task = TaskMaker.taskOrNull(p, executingQuery, queryResources)
+    // TODO this schedules RHS of hash join first. Not so good.
+    for (pipelineState <- executingQuery.pipelineExecutions.reverseIterator) {
+      val task = pipelineState.nextTask(executingQuery.queryContext, executingQuery.queryState, queryResources)
       if (task != null) {
         return task
       }

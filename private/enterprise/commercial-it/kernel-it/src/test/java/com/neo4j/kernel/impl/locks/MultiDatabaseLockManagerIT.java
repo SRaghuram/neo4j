@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.locks;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +16,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -29,6 +32,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseLockManagerIT
@@ -38,17 +42,19 @@ class MultiDatabaseLockManagerIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -58,7 +64,7 @@ class MultiDatabaseLockManagerIT
     }
 
     @Test
-    void databasesHaveDifferentLockManagers()
+    void databasesHaveDifferentLockManagers() throws DatabaseExistsException
     {
         GraphDatabaseFacade secondFacade = startSecondDatabase();
         Locks firstDbLocks = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( Locks.class );
@@ -66,7 +72,7 @@ class MultiDatabaseLockManagerIT
         assertNotSame( firstDbLocks, secondDbLocks );
     }
 
-    private void acquireLockIn2DifferentDatabases() throws InterruptedException
+    private void acquireLockIn2DifferentDatabases() throws InterruptedException, DatabaseExistsException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         try
@@ -89,11 +95,11 @@ class MultiDatabaseLockManagerIT
         }
     }
 
-    private GraphDatabaseFacade startSecondDatabase()
+    private GraphDatabaseFacade startSecondDatabase() throws DatabaseExistsException
     {
         String secondDb = "second";
-        DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( secondDb ).getDatabaseFacade();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
+        return databaseManager.createDatabase( new DatabaseId( secondDb ) ).databaseFacade();
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )
@@ -108,7 +114,7 @@ class MultiDatabaseLockManagerIT
         } );
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

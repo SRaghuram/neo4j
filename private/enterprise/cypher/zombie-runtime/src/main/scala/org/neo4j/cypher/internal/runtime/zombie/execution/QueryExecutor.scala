@@ -25,5 +25,14 @@ trait QueryExecutor {
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
+                              prePopulateResults: Boolean,
                               visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
+}
+
+trait WorkerWaker {
+
+  /**
+    * Wake up any idle workers.
+    */
+  def wakeAll(): Unit
 }

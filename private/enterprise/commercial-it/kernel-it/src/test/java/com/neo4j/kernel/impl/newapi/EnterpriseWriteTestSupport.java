@@ -5,18 +5,21 @@
  */
 package com.neo4j.kernel.impl.newapi;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.newapi.WriteTestSupport;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 public class EnterpriseWriteTestSupport extends WriteTestSupport
 {
     @Override
     protected GraphDatabaseService newDb( File storeDir )
     {
-        return new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder( storeDir ).newGraphDatabase();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

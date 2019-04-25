@@ -15,6 +15,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.diagnostics.providers.DbmsDiagnosticsManager;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.management.Diagnostics;
@@ -53,9 +54,9 @@ public class DiagnosticsBean extends ManagementBeanProvider
         }
 
         @Override
-        public void dumpDatabaseDiagnosticsToLog( String databaseName )
+        public void dumpDatabaseDiagnosticsToLog( DatabaseId databaseId )
         {
-            diagnosticsManager.dump( databaseName );
+            diagnosticsManager.dump( databaseId );
         }
 
         @Override
@@ -69,12 +70,12 @@ public class DiagnosticsBean extends ManagementBeanProvider
         }
 
         @Override
-        public String dumpDatabaseDiagnostics( String databaseName )
+        public String dumpDatabaseDiagnostics( DatabaseId databaseId )
         {
             StringWriter stringWriter = new StringWriter();
             ZoneId zoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
             FormattedLog.Builder logBuilder = FormattedLog.withZoneId( zoneId );
-            diagnosticsManager.dump( databaseName, logBuilder.toWriter( stringWriter ) );
+            diagnosticsManager.dump( databaseId, logBuilder.toWriter( stringWriter ) );
             return stringWriter.toString();
         }
     }

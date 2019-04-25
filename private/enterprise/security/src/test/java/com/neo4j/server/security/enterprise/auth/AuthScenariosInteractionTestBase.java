@@ -88,7 +88,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.deleteUser('mats')" );
 
         // flush log
-        neo.getLocalGraph().shutdown();
+        neo.shutdown();
 
         // assert on log content
         SecurityLog log = new SecurityLog();

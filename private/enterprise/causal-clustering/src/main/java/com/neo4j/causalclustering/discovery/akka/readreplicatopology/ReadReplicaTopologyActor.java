@@ -18,22 +18,27 @@ import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMe
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.util.stream.Collectors.toSet;
 
 public class ReadReplicaTopologyActor extends AbstractActor
 {
     private final SourceQueueWithComplete<ReadReplicaTopology> topologySink;
     private final Log log;
 
-    private CoreTopology coreTopology = CoreTopology.EMPTY;
+    private final Map<DatabaseId,CoreTopology> coreTopologies = new HashMap<>();
+    private final Map<DatabaseId,ReadReplicaTopology> readReplicaTopologies = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
-    private ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
     private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
@@ -68,7 +73,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
                 .match( ReadReplicaViewActor.Tick.class,    this::sendTopologiesToClients )
-                .match( CoreTopology.class,                 this::setCoreTopology )
+                .match( CoreTopology.class,                 this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
     }
@@ -76,13 +81,13 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private void handleReadReplicaView( ReadReplicaViewMessage msg )
     {
         readReplicaViewMessage = msg;
-        buildTopology();
+        buildTopologies();
     }
 
     private void handleClusterClientView( ClusterClientViewMessage msg )
     {
         myClusterClients = msg.clusterClients();
-        buildTopology();
+        buildTopologies();
     }
 
     private Stream<ActorRef> myTopologyClients()
@@ -94,17 +99,33 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void sendTopologiesToClients( ReadReplicaViewActor.Tick ignored )
     {
-        log.debug( "Sending to clients: %s, %s, %s", readReplicaTopology, coreTopology, databaseLeaderInfo );
+        log.debug( "Sending to clients: %s, %s, %s", readReplicaTopologies, coreTopologies, databaseLeaderInfo );
         myTopologyClients().forEach( client -> {
-            client.tell( readReplicaTopology, getSelf() );
-            client.tell( coreTopology, getSelf() );
+            sendReadReplicaTopologiesTo( client );
+            sendCoreTopologiesTo( client );
             client.tell( databaseLeaderInfo, getSelf() );
         } );
     }
 
-    private void setCoreTopology( CoreTopology coreTopology )
+    private void sendReadReplicaTopologiesTo( ActorRef client )
     {
-        this.coreTopology = coreTopology;
+        for ( ReadReplicaTopology readReplicaTopology : readReplicaTopologies.values() )
+        {
+            client.tell( readReplicaTopology, getSelf() );
+        }
+    }
+
+    private void sendCoreTopologiesTo( ActorRef client )
+    {
+        for ( CoreTopology coreTopology : coreTopologies.values() )
+        {
+            client.tell( coreTopology, getSelf() );
+        }
+    }
+
+    private void addCoreTopology( CoreTopology coreTopology )
+    {
+        coreTopologies.put( coreTopology.databaseId(), coreTopology );
     }
 
     private void setDatabaseLeaderInfo( LeaderInfoDirectoryMessage leaderInfo )
@@ -112,16 +133,36 @@ public class ReadReplicaTopologyActor extends AbstractActor
         this.databaseLeaderInfo = leaderInfo;
     }
 
-    private void buildTopology()
+    private void buildTopologies()
     {
-        log.debug( "Building read replica topology with read replicas: %s", readReplicaViewMessage );
-        ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology();
-        log.debug( "Built read replica topology %s", readReplicaTopology );
+        var receivedDatabaseIds = readReplicaViewMessage.databaseIds();
 
-        if ( !this.readReplicaTopology.equals( readReplicaTopology ) )
+        // build topologies for the set of received database IDs
+        receivedDatabaseIds.forEach( this::buildTopology );
+
+        // build empty topologies for database IDs cached locally but absent from the set of received database IDs
+        var absentDatabaseIds = readReplicaTopologies.keySet()
+                .stream()
+                .filter( id -> !receivedDatabaseIds.contains( id ) )
+                .collect( toSet() );
+
+        absentDatabaseIds.forEach( this::buildTopology );
+    }
+
+    private void buildTopology( DatabaseId databaseId )
+    {
+        log.debug( "Building read replica topology for database %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
+        ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
+        log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
+
+        topologySink.offer( readReplicaTopology );
+        if ( readReplicaTopology.members().isEmpty() )
         {
-            topologySink.offer( readReplicaTopology );
-            this.readReplicaTopology = readReplicaTopology;
+            readReplicaTopologies.remove( databaseId );
+        }
+        else
+        {
+            readReplicaTopologies.put( databaseId, readReplicaTopology );
         }
     }
 }

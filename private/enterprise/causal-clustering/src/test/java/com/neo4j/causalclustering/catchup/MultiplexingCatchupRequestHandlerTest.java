@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,24 +13,21 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.function.Function;
 
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final String EXISTING_DB_NAME = "existing.neo4j";
-    private static final String NON_EXISTING_DB_NAME = "non.existing.neo4j";
+    private static final DatabaseId EXISTING_DB_NAME = new DatabaseId( "existing.neo4j" );
+    private static final DatabaseId NON_EXISTING_DB_NAME = new DatabaseId( "non.existing.neo4j" );
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();
@@ -76,14 +74,12 @@ class MultiplexingCatchupRequestHandlerTest
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
-    private static DatabaseManager newDbManager()
+    private static DatabaseManager<?> newDbManager()
     {
-        DatabaseManager dbManager = mock( DatabaseManager.class );
-        DatabaseContext dbContext = mock( DatabaseContext.class );
-        Database db = mock( Database.class );
-        when( db.getDatabaseName() ).thenReturn( EXISTING_DB_NAME );
-        when( dbContext.getDatabase() ).thenReturn( db );
-        when( dbManager.getDatabaseContext( EXISTING_DB_NAME ) ).thenReturn( Optional.of( dbContext ) );
+        StubClusteredDatabaseManager dbManager = new StubClusteredDatabaseManager();
+        dbManager.givenDatabaseWithConfig()
+                .withDatabaseId( EXISTING_DB_NAME )
+                .register();
         return dbManager;
     }
 
@@ -95,19 +91,19 @@ class MultiplexingCatchupRequestHandlerTest
     private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler(
             Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
     {
-        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), MultiplexingCatchupRequestHandlerTest::newDbManager, handlerFactory,
+        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), newDbManager(), handlerFactory,
                 CatchupProtocolMessage.class, NullLogProvider.getInstance() );
     }
 
     private static SimpleChannelInboundHandler<CatchupProtocolMessage> newHandlerFactory( Database db )
     {
-        assertEquals( EXISTING_DB_NAME, db.getDatabaseName() );
+        assertEquals( EXISTING_DB_NAME, db.getDatabaseId() );
         return new CatchupProtocolMessageHandler();
     }
 
-    private static CatchupProtocolMessage newCatchupRequest( String dbName )
+    private static CatchupProtocolMessage newCatchupRequest( DatabaseId databaseId )
     {
-        return new DummyMessage( dbName );
+        return new DummyMessage( databaseId );
     }
 
     private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage>
@@ -121,9 +117,9 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static class DummyMessage extends CatchupProtocolMessage
     {
-        DummyMessage( String databaseName )
+        DummyMessage( DatabaseId databaseId )
         {
-            super( RequestMessageType.STORE_FILE, databaseName );
+            super( RequestMessageType.STORE_FILE, databaseId );
         }
     }
 }

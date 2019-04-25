@@ -31,6 +31,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
@@ -40,6 +42,7 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "run",
@@ -386,11 +389,12 @@ public class RunCommand implements Runnable
             return Neo4jSchema.NEO4J_REGULAR;
         }
         Store store = Store.createFrom( storeDir.toPath() );
-        GraphDatabaseService db = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
+        DatabaseManagementService managementService = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
-            db.shutdown();
+            managementService.shutdown();
             return metadataProxy.neo4jSchema();
         }
         catch ( Exception e )
@@ -399,7 +403,7 @@ public class RunCommand implements Runnable
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

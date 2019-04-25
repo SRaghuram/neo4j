@@ -10,6 +10,11 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.io.IOException;
+import java.util.Map;
+
+import org.neo4j.kernel.database.DatabaseId;
+
+import static java.util.Comparator.comparingLong;
 
 public class CoreSnapshotService
 {
@@ -29,7 +34,7 @@ public class CoreSnapshotService
         this.raftMachine = raftMachine;
     }
 
-    public synchronized CoreSnapshot snapshot( String databaseName ) throws Exception
+    public synchronized CoreSnapshot snapshot( DatabaseId databaseId ) throws Exception
     {
         applicationProcess.pauseApplier( OPERATION_NAME );
         try
@@ -39,7 +44,7 @@ public class CoreSnapshotService
             long prevTerm = raftLog.readEntryTerm( lastApplied );
             CoreSnapshot coreSnapshot = new CoreSnapshot( lastApplied, prevTerm );
 
-            coreStateRepository.augmentSnapshot( databaseName, coreSnapshot );
+            coreStateRepository.augmentSnapshot( databaseId, coreSnapshot );
             coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftMachine.coreState() );
 
             return coreSnapshot;
@@ -50,16 +55,19 @@ public class CoreSnapshotService
         }
     }
 
-    public synchronized void installSnapshot( String databaseName, CoreSnapshot coreSnapshot ) throws IOException
+    public synchronized void installSnapshots( Map<DatabaseId,CoreSnapshot> coreSnapshots ) throws IOException
     {
-        long snapshotPrevIndex = coreSnapshot.prevIndex();
-        raftLog.skip( snapshotPrevIndex, coreSnapshot.prevTerm() );
+        CoreSnapshot earliestSnapshot = coreSnapshots.values().stream().min( comparingLong( CoreSnapshot::prevIndex ) ).orElseThrow();
 
-        coreStateRepository.installSnapshot( databaseName, coreSnapshot );
-        raftMachine.installCoreState( coreSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
+        long snapshotPrevIndex = earliestSnapshot.prevIndex();
+        raftLog.skip( snapshotPrevIndex, earliestSnapshot.prevTerm() );
+        raftMachine.installCoreState( earliestSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
+
+        coreSnapshots.forEach( coreStateRepository::installSnapshotForDatabase );
+        coreStateRepository.installSnapshotForRaftGroup( earliestSnapshot );
         coreStateRepository.flush( snapshotPrevIndex );
 
-        applicationProcess.installSnapshot( coreSnapshot );
+        applicationProcess.installSnapshot( earliestSnapshot );
         notifyAll();
     }
 

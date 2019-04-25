@@ -6,11 +6,10 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -23,9 +22,9 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class LoadBalancingPluginLoaderTest
@@ -34,7 +33,7 @@ public class LoadBalancingPluginLoaderTest
     private static final String DOES_NOT_EXIST = "does_not_exist";
 
     @Test
-    public void shouldReturnSelectedPlugin() throws Throwable
+    void shouldReturnSelectedPlugin() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -44,7 +43,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -55,7 +54,7 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldEnableShufflingOfDelegate() throws Throwable
+    void shouldEnableShufflingOfDelegate() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -65,7 +64,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -75,7 +74,7 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldFindServerPoliciesPlugin() throws Throwable
+    void shouldFindServerPoliciesPlugin() throws Throwable
     {
         // given
         Config config = Config.builder()
@@ -85,7 +84,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -95,41 +94,41 @@ public class LoadBalancingPluginLoaderTest
     }
 
     @Test
-    public void shouldThrowOnInvalidPlugin()
+    void serverPoliciesPluginShouldShuffleSelf() throws Throwable
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST );
+        Config config = Config.builder()
+                .withSetting( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
+                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "true" ).build();
 
-        try
-        {
-            // when
-            LoadBalancingPluginLoader.validate( config, mock( Log.class ) );
-            fail();
-        }
-        catch ( InvalidSettingException ignored )
-        {
-            // then
-        }
+        // when
+        LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
+                mock( TopologyService.class ),
+                mock( LeaderService.class ),
+                NullLogProvider.getInstance(),
+                config );
+
+        // then
+        assertTrue( plugin instanceof ServerPoliciesPlugin );
+        assertTrue( ((ServerPoliciesPlugin) plugin).isShufflingPlugin() );
     }
 
     @Test
-    public void shouldNotAcceptInvalidSetting()
+    void shouldThrowOnInvalidPlugin()
     {
-        // given
+        Config config = Config.defaults( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST );
+
+        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
+    }
+
+    @Test
+    void shouldNotAcceptInvalidSetting()
+    {
         Config config = Config.builder()
                 .withSetting( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), "true")
                 .withSetting( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME ).build();
 
-        try
-        {
-            // when
-            LoadBalancingPluginLoader.validate( config, mock( Log.class ) );
-            fail();
-        }
-        catch ( InvalidSettingException ignored )
-        {
-            // then
-        }
+        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
     }
 
     private static String settingFor( String pluginName, String settingName )
@@ -158,8 +157,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void init( TopologyService topologyService, LeaderLocator leaderLocator, LogProvider logProvider,
-                Config config )
+        public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
         {
             wasInitialized = true;
         }
@@ -171,7 +169,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public RoutingResult run( MapValue context )
+        public RoutingResult run( String databaseName, MapValue context )
         {
             return null;
         }

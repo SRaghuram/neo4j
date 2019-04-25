@@ -35,6 +35,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -46,16 +47,20 @@ import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class TestRelationshipCount
 {
+
+    private static DatabaseManagementService managementService;
+
     @Parameterized.Parameters( name = "denseNodeThreshold={0}" )
     public static Collection<Object[]> data()
     {
@@ -74,7 +79,7 @@ public class TestRelationshipCount
     @AfterClass
     public static void shutdownDb()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     public TestRelationshipCount( final int denseNodeThreshold )
@@ -85,11 +90,11 @@ public class TestRelationshipCount
         {
             if ( db != null )
             {
-                db.shutdown();
+                managementService.shutdown();
             }
-            db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
-                    .setConfig( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) )
-                    .newGraphDatabase();
+            managementService = new TestDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder()
+                        .setConfig( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) ).newDatabaseManagementService();
+            db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         }
     }
 

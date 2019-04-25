@@ -5,21 +5,23 @@
  */
 package org.neo4j.dbms;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -29,6 +31,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class DefaultDatabaseSelectionIT
@@ -36,6 +39,7 @@ class DefaultDatabaseSelectionIT
     private static final String LEGACY_DATABASE_NAME = "graph.db";
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @Test
     void startWithSystemAndNeo4jByDefault()
@@ -47,7 +51,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -62,7 +66,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -71,14 +75,14 @@ class DefaultDatabaseSelectionIT
     {
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
 
-        GraphDatabaseService database = startDatabase();
+        GraphDatabaseService database = startDatabase( LEGACY_DATABASE_NAME );
         try
         {
             checkDatabaseNames( database, LEGACY_DATABASE_NAME );
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -95,7 +99,7 @@ class DefaultDatabaseSelectionIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -103,14 +107,15 @@ class DefaultDatabaseSelectionIT
     void startWithSystemAndLegacyConfiguredActiveDatabase()
     {
         String customDbName = "activeDb";
-        GraphDatabaseService database = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( customDbName );
         try
         {
             checkDatabaseNames( database, customDbName );
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -119,29 +124,30 @@ class DefaultDatabaseSelectionIT
     {
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
         String customDbName = "legacyCustomDb";
-        GraphDatabaseService database = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newGraphDatabase();
+        DatabaseManagementService managementService = getDatabaseBuilder().setConfig( "dbms.active_database", customDbName ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( customDbName );
         try
         {
             checkDatabaseNames( database, customDbName );
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
-    private void checkDatabaseNames( GraphDatabaseService database, String defaultDatabaseName )
+    private static void checkDatabaseNames( GraphDatabaseService database, String defaultDatabaseName )
     {
-        DatabaseManager databaseManager = getDatabaseManager( database );
-        List<String> databases = databaseManager.listDatabases();
-        assertThat( databases, containsInAnyOrder( defaultDatabaseName, "system" ) );
+        DatabaseManager<?> databaseManager = getDatabaseManager( database );
+        Set<DatabaseId> databases = databaseManager.registeredDatabases().keySet();
+        assertThat( databases, containsInAnyOrder( new DatabaseId( defaultDatabaseName ), new DatabaseId( "system" ) ) );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException
     {
         GraphDatabaseService database = startDatabase( databaseName );
-        database.shutdown();
-        DatabaseLayout systemLayout = testDirectory.storeLayout().databaseLayout( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        managementService.shutdown();
+        DatabaseLayout systemLayout = testDirectory.databaseLayout( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         assertTrue( systemLayout.metadataStore().exists() );
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
         fileSystem.deleteRecursively( systemLayout.getTransactionLogsDirectory() );
@@ -151,24 +157,25 @@ class DefaultDatabaseSelectionIT
 
     private GraphDatabaseService startDatabase()
     {
-        return getDatabaseBuilder().newGraphDatabase();
+        managementService = getDatabaseBuilder().newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDatabase( String databaseName )
     {
-        return getDatabaseBuilder()
-               .setConfig( GraphDatabaseSettings.default_database, databaseName )
-               .newGraphDatabase();
+        managementService = getDatabaseBuilder()
+               .setConfig( GraphDatabaseSettings.default_database, databaseName ).newDatabaseManagementService();
+        return managementService.database( databaseName );
     }
 
-    private GraphDatabaseBuilder getDatabaseBuilder()
+    private DatabaseManagementServiceInternalBuilder getDatabaseBuilder()
     {
-        return new CommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        return new CommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseService database )
+    private static DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

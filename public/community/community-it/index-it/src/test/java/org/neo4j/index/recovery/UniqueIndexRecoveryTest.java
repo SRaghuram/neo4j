@@ -30,8 +30,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -44,12 +44,14 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerImpl;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertFalse;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.Label.label;
 
 @RunWith( Parameterized.class )
@@ -62,8 +64,9 @@ public class UniqueIndexRecoveryTest
     private static final String PROPERTY_VALUE = "value";
     private static final Label LABEL = label( "label" );
 
-    private final TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+    private final TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
     private GraphDatabaseAPI db;
+    private DatabaseManagementService managementService;
 
     @Parameterized.Parameters( name = "{0}" )
     public static SchemaIndex[] parameters()
@@ -83,7 +86,7 @@ public class UniqueIndexRecoveryTest
     @After
     public void after()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -133,14 +136,15 @@ public class UniqueIndexRecoveryTest
 
     private void restart( File newStore )
     {
-        db.shutdown();
+        managementService.shutdown();
         db = (GraphDatabaseAPI) newDb();
     }
 
     private GraphDatabaseService newDb()
     {
-        return factory.newEmbeddedDatabaseBuilder( storeDir.absolutePath() ).setConfig( GraphDatabaseSettings.default_schema_provider,
-                schemaIndex.providerName() ).newGraphDatabase();
+        managementService = factory.newEmbeddedDatabaseBuilder( storeDir.absolutePath() )
+                .setConfig( default_schema_provider, schemaIndex.providerName() ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static File snapshot( final File path ) throws IOException

@@ -39,6 +39,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.TransactionTracingLevel;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -68,6 +70,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.isA;
 import static org.hamcrest.core.Every.everyItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.helpers.collection.Iterables.single;
@@ -159,6 +162,39 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
         latch.finishAndWaitForAllToFinish();
         tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    public void listTransactionWithNullInMetadata() throws Throwable
+    {
+        GraphDatabaseFacade graph = neo.getLocalGraph();
+
+        // null as value
+        try ( Transaction tx = graph.beginTx() )
+        {
+            graph.execute( "CALL dbms.setTXMetaData( { realUser: null })" );
+            assertNull( getResultRowForMetadataQuery( graph ).get( "realUser" ) );
+        }
+        // null as key
+        try ( Transaction tx = graph.beginTx() )
+        {
+            graph.execute( "CALL dbms.setTXMetaData( { null: 'success' } )" );
+            assertEquals( "success", getResultRowForMetadataQuery( graph ).get( "null" ) );
+        }
+
+        // nesting map with null as value
+        try ( Transaction tx = graph.beginTx() )
+        {
+            graph.execute( "CALL dbms.setTXMetaData( { nesting: { inner: null } } )" );
+            assertNull( ((Map<String,Object>) getResultRowForMetadataQuery( graph ).get( "nesting" )).get( "inner" ) );
+        }
+
+        // nesting map with null as key
+        try ( Transaction tx = graph.beginTx() )
+        {
+            graph.execute( "CALL dbms.setTXMetaData( { nesting: { null: 'success' } } )" );
+            assertEquals( "success", ((Map<String,Object>) getResultRowForMetadataQuery( graph ).get( "nesting" )).get( "null" ) );
+        }
     }
 
     @Test
@@ -1455,6 +1491,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     /*
     ==================================================================================
      */
+
+    private Map<String,Object> getResultRowForMetadataQuery( GraphDatabaseFacade graph )
+    {
+        Result result = graph.execute( "call dbms.getTXMetaData() yield metadata return metadata" );
+        Map<String,Object> row = (Map<String,Object>) result.next().get( "metadata" );
+        assertFalse( result.hasNext() );
+        return row;
+    }
 
     //---------- jetty helpers for serving CSV files -----------
 

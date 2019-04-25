@@ -86,7 +86,7 @@
                             </group>
                             <group>
                                 <title>Import</title>
-                                <packages>org.neo4j.unsafe.batchinsert</packages>
+                                <packages>org.neo4j.batchinsert</packages>
                             </group>
                             <group>
                                 <title>Procedures</title>
@@ -108,7 +108,7 @@
 
                         <!-- Include the following packages... (yes, has to be one line) -->
                         <subpackages>
-                            org.neo4j.backup:org.neo4j.graphalgo:org.neo4j.cypher.export:org.neo4j.cypher.javacompat:org.neo4j.graphdb:org.neo4j.helpers:org.neo4j.helpers.collection:org.neo4j.index:org.neo4j.jmx:org.neo4j.management:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.unsafe.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit
+                            org.neo4j.backup:org.neo4j.graphalgo:org.neo4j.cypher.export:org.neo4j.cypher.javacompat:org.neo4j.graphdb:org.neo4j.helpers:org.neo4j.helpers.collection:org.neo4j.index:org.neo4j.jmx:org.neo4j.management:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
@@ -137,4 +137,20 @@
         </plugins>
     </build>
 
+    <repositories>
+        <repository>
+            <id>docs-maven-local</id>
+            <name>Docs Maven Local</name>
+            <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>ldbc</id>
+            <name>LDBC SNB</name>
+            <url>https://dl.bintray.com/ldbc/snb/</url>
+        </repository>
+    </repositories>
+    
 </project>

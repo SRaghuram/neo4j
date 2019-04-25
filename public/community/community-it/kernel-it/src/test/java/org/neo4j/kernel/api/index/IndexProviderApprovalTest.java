@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
@@ -40,12 +41,13 @@ import org.neo4j.helpers.ArrayUtil;
 import org.neo4j.helpers.Strings;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.createIndex;
@@ -135,7 +137,8 @@ public abstract class IndexProviderApprovalTest
     @BeforeClass
     public static void init()
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         for ( TestValue value : TestValue.values() )
         {
             createNode( db, PROPERTY_KEY, value.value );
@@ -144,12 +147,12 @@ public abstract class IndexProviderApprovalTest
         noIndexRun = runFindByLabelAndProperty( db );
         createIndex( db, label( LABEL ), PROPERTY_KEY );
         indexRun = runFindByLabelAndProperty( db );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     public static final String LABEL = "Person";
-    public static final String PROPERTY_KEY = "name";
-    public static final Function<Node, Object> PROPERTY_EXTRACTOR = node ->
+    private static final String PROPERTY_KEY = "name";
+    private static final Function<Node, Object> PROPERTY_EXTRACTOR = node ->
     {
         Object value = node.getProperty( PROPERTY_KEY );
         if ( value.getClass().isArray() )

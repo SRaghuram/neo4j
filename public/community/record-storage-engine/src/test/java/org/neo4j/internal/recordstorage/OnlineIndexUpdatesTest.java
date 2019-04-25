@@ -19,7 +19,6 @@
  */
 package org.neo4j.internal.recordstorage;
 
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +27,8 @@ import java.util.Iterator;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.recordstorage.Command.NodeCommand;
+import org.neo4j.internal.recordstorage.Command.PropertyCommand;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -58,7 +59,6 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
@@ -131,7 +131,7 @@ class OnlineIndexUpdatesTest
     }
 
     @Test
-    void shouldContainFedNodeUpdate() throws Exception
+    void shouldContainFedNodeUpdate()
     {
         OnlineIndexUpdates onlineIndexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache, propertyPhysicalToLogicalConverter,
                 new RecordStorageReader( neoStores ) );
@@ -143,16 +143,15 @@ class OnlineIndexUpdatesTest
         NodeRecord notInUse = getNode( nodeId, false );
         nodeStore.updateRecord( inUse );
 
-        Command.NodeCommand nodeCommand = new Command.NodeCommand( inUse, notInUse );
+        NodeCommand nodeCommand = new NodeCommand( inUse, notInUse );
         PropertyRecord propertyBlocks = new PropertyRecord( propertyId );
         propertyBlocks.setNodeId( nodeId );
-        Command.PropertyCommand propertyCommand = new Command.PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
+        PropertyCommand propertyCommand = new PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
 
         StorageIndexReference indexDescriptor = new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, NODE, 1, 4, 6 ), false, 0, null );
         createIndexes( indexDescriptor );
 
-        onlineIndexUpdates.feed( LongObjectMaps.immutable.of( nodeId, singletonList( propertyCommand ) ), LongObjectMaps.immutable.empty(),
-                LongObjectMaps.immutable.of( nodeId, nodeCommand ), LongObjectMaps.immutable.empty() );
+        onlineIndexUpdates.feed( nodeGroup( nodeCommand, propertyCommand ), relationshipGroup( null ) );
         assertTrue( onlineIndexUpdates.hasUpdates() );
         Iterator<IndexEntryUpdate<SchemaDescriptor>> iterator = onlineIndexUpdates.iterator();
         assertEquals( iterator.next(), IndexEntryUpdate.remove( nodeId, indexDescriptor, propertyValue, null, null ) );
@@ -160,7 +159,7 @@ class OnlineIndexUpdatesTest
     }
 
     @Test
-    void shouldContainFedRelationshipUpdate() throws Exception
+    void shouldContainFedRelationshipUpdate()
     {
         OnlineIndexUpdates onlineIndexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache, propertyPhysicalToLogicalConverter,
                 new RecordStorageReader( neoStores ) );
@@ -175,13 +174,12 @@ class OnlineIndexUpdatesTest
         Command.RelationshipCommand relationshipCommand = new Command.RelationshipCommand( inUse, notInUse );
         PropertyRecord propertyBlocks = new PropertyRecord( propertyId );
         propertyBlocks.setRelId( relId );
-        Command.PropertyCommand propertyCommand = new Command.PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
+        PropertyCommand propertyCommand = new PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
 
         StorageIndexReference indexDescriptor = new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, RELATIONSHIP, 1, 4, 6 ), false, 0, null );
         createIndexes( indexDescriptor );
 
-        onlineIndexUpdates.feed( LongObjectMaps.immutable.empty(), LongObjectMaps.immutable.of( relId, singletonList( propertyCommand ) ),
-                LongObjectMaps.immutable.empty(), LongObjectMaps.immutable.of( relId, relationshipCommand ) );
+        onlineIndexUpdates.feed( nodeGroup( null ), relationshipGroup( relationshipCommand, propertyCommand ) );
         assertTrue( onlineIndexUpdates.hasUpdates() );
         Iterator<IndexEntryUpdate<SchemaDescriptor>> iterator = onlineIndexUpdates.iterator();
         assertEquals( iterator.next(), IndexEntryUpdate.remove( relId, indexDescriptor, propertyValue, null, null ) );
@@ -189,7 +187,7 @@ class OnlineIndexUpdatesTest
     }
 
     @Test
-    void shouldDifferentiateNodesAndRelationships() throws Exception
+    void shouldDifferentiateNodesAndRelationships()
     {
         OnlineIndexUpdates onlineIndexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache, propertyPhysicalToLogicalConverter,
                 new RecordStorageReader( neoStores ) );
@@ -201,11 +199,11 @@ class OnlineIndexUpdatesTest
         NodeRecord notInUseNode = getNode( nodeId, false );
         nodeStore.updateRecord( inUseNode );
 
-        Command.NodeCommand nodeCommand = new Command.NodeCommand( inUseNode, notInUseNode );
+        NodeCommand nodeCommand = new NodeCommand( inUseNode, notInUseNode );
         PropertyRecord nodePropertyBlocks = new PropertyRecord( nodePropertyId );
         nodePropertyBlocks.setNodeId( nodeId );
-        Command.PropertyCommand nodePropertyCommand =
-                new Command.PropertyCommand( recordAccess.getIfLoaded( nodePropertyId ).forReadingData(), nodePropertyBlocks );
+        PropertyCommand nodePropertyCommand =
+                new PropertyCommand( recordAccess.getIfLoaded( nodePropertyId ).forReadingData(), nodePropertyBlocks );
 
         StorageIndexReference nodeIndexDescriptor = new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, NODE, 1, 4, 6 ), false, 0, null );
         createIndexes( nodeIndexDescriptor );
@@ -220,16 +218,14 @@ class OnlineIndexUpdatesTest
         Command.RelationshipCommand relationshipCommand = new Command.RelationshipCommand( inUse, notInUse );
         PropertyRecord relationshipPropertyBlocks = new PropertyRecord( propertyId );
         relationshipPropertyBlocks.setRelId( relId );
-        Command.PropertyCommand relationshipPropertyCommand =
-                new Command.PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), relationshipPropertyBlocks );
+        PropertyCommand relationshipPropertyCommand =
+                new PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), relationshipPropertyBlocks );
 
         StorageIndexReference relationshipIndexDescriptor =
                 new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, RELATIONSHIP, 1, 4, 6 ), false, 1, null );
         createIndexes( relationshipIndexDescriptor );
 
-        onlineIndexUpdates.feed( LongObjectMaps.immutable.of( nodeId, singletonList( nodePropertyCommand ) ),
-                LongObjectMaps.immutable.of( relId, singletonList( relationshipPropertyCommand ) ), LongObjectMaps.immutable.of( nodeId, nodeCommand ),
-                LongObjectMaps.immutable.of( relId, relationshipCommand ) );
+        onlineIndexUpdates.feed( nodeGroup( nodeCommand, nodePropertyCommand ), relationshipGroup( relationshipCommand, relationshipPropertyCommand ) );
         assertTrue( onlineIndexUpdates.hasUpdates() );
         assertThat( onlineIndexUpdates,
                 containsInAnyOrder( IndexEntryUpdate.remove( relId, relationshipIndexDescriptor, relationshipPropertyValue, null, null ),
@@ -237,7 +233,7 @@ class OnlineIndexUpdatesTest
     }
 
     @Test
-    void shouldUpdateCorrectIndexes() throws Exception
+    void shouldUpdateCorrectIndexes()
     {
         OnlineIndexUpdates onlineIndexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache, propertyPhysicalToLogicalConverter,
                 new RecordStorageReader( neoStores ) );
@@ -254,11 +250,11 @@ class OnlineIndexUpdatesTest
         Command.RelationshipCommand relationshipCommand = new Command.RelationshipCommand( inUse, notInUse );
         PropertyRecord propertyBlocks = new PropertyRecord( propertyId );
         propertyBlocks.setRelId( relId );
-        Command.PropertyCommand propertyCommand = new Command.PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
+        PropertyCommand propertyCommand = new PropertyCommand( recordAccess.getIfLoaded( propertyId ).forReadingData(), propertyBlocks );
 
         PropertyRecord propertyBlocks2 = new PropertyRecord( propertyId2 );
         propertyBlocks2.setRelId( relId );
-        Command.PropertyCommand propertyCommand2 = new Command.PropertyCommand( recordAccess.getIfLoaded( propertyId2 ).forReadingData(), propertyBlocks2 );
+        PropertyCommand propertyCommand2 = new PropertyCommand( recordAccess.getIfLoaded( propertyId2 ).forReadingData(), propertyBlocks2 );
 
         StorageIndexReference indexDescriptor0 = new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, RELATIONSHIP, 1, 4, 6 ), false, 0, null );
         StorageIndexReference indexDescriptor1 = new DefaultStorageIndexReference( multiToken( ENTITY_TOKENS, RELATIONSHIP, 2, 4, 6 ), false, 1, null );
@@ -268,8 +264,7 @@ class OnlineIndexUpdatesTest
                 false, 3, null );
         createIndexes( indexDescriptor0, indexDescriptor1, indexDescriptor2 );
 
-        onlineIndexUpdates.feed( LongObjectMaps.immutable.empty(), LongObjectMaps.immutable.of( relId, asList( propertyCommand, propertyCommand2 ) ),
-                LongObjectMaps.immutable.empty(), LongObjectMaps.immutable.of( relId, relationshipCommand ) );
+        onlineIndexUpdates.feed( nodeGroup( null ), relationshipGroup( relationshipCommand, propertyCommand, propertyCommand2 ) );
         assertTrue( onlineIndexUpdates.hasUpdates() );
         assertThat( onlineIndexUpdates, containsInAnyOrder( IndexEntryUpdate.remove( relId, indexDescriptor0, propertyValue, propertyValue2, null ),
                 IndexEntryUpdate.remove( relId, indexDescriptor1, null, propertyValue2, null ),
@@ -283,6 +278,32 @@ class OnlineIndexUpdatesTest
         {
             schemaCache.addSchemaRule( indexDescriptor );
         }
+    }
+
+    private EntityCommandGrouper<NodeCommand>.Cursor nodeGroup( NodeCommand nodeCommand, PropertyCommand... propertyCommands )
+    {
+        return group( nodeCommand, NodeCommand.class, propertyCommands );
+    }
+
+    private EntityCommandGrouper<Command.RelationshipCommand>.Cursor relationshipGroup( Command.RelationshipCommand relationshipCommand,
+            PropertyCommand... propertyCommands )
+    {
+        return group( relationshipCommand, Command.RelationshipCommand.class, propertyCommands );
+    }
+
+    private <ENTITY extends Command> EntityCommandGrouper<ENTITY>.Cursor group( ENTITY entityCommand, Class<ENTITY> cls,
+            PropertyCommand... propertyCommands )
+    {
+        EntityCommandGrouper<ENTITY> grouper = new EntityCommandGrouper<>( cls, 8 );
+        if ( entityCommand != null )
+        {
+            grouper.add( entityCommand );
+        }
+        for ( PropertyCommand propertyCommand : propertyCommands )
+        {
+            grouper.add( propertyCommand );
+        }
+        return grouper.sortAndAccessGroups();
     }
 
     private long createRelationshipProperty( RelationshipRecord relRecord, Value propertyValue, int propertyKey )
@@ -301,13 +322,20 @@ class OnlineIndexUpdatesTest
     {
         NodeRecord nodeRecord = new NodeRecord( nodeId );
         nodeRecord = nodeRecord.initialize( inUse, NO_NEXT_PROPERTY.longValue(), false, NO_NEXT_RELATIONSHIP.longValue(), NO_LABELS_FIELD.longValue() );
-        InlineNodeLabels labelFieldWriter = new InlineNodeLabels( nodeRecord );
-        labelFieldWriter.put( new long[]{ENTITY_TOKEN}, null, null );
+        if ( inUse )
+        {
+            InlineNodeLabels labelFieldWriter = new InlineNodeLabels( nodeRecord );
+            labelFieldWriter.put( new long[]{ENTITY_TOKEN}, null, null );
+        }
         return nodeRecord;
     }
 
     private RelationshipRecord getRelationship( long relId, boolean inUse, int type )
     {
+        if ( !inUse )
+        {
+            type = -1;
+        }
         return new RelationshipRecord( relId ).initialize( inUse, NO_NEXT_PROPERTY.longValue(), 0, 0, type, NO_NEXT_RELATIONSHIP.longValue(),
                 NO_NEXT_RELATIONSHIP.longValue(), NO_NEXT_RELATIONSHIP.longValue(), NO_NEXT_RELATIONSHIP.longValue(), true, false );
     }

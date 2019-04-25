@@ -23,27 +23,29 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 import org.neo4j.kernel.api.index.IndexProvider;
-import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.storable.ValueCategory;
 
 import static org.apache.commons.lang3.ArrayUtils.contains;
 
 /**
  * Given a set of values selects a slot to use.
  */
-interface SlotSelector
+public interface SlotSelector
 {
+    SlotSelector nullInstance = new NullInstance();
+
     void validateSatisfied( InstanceSelector<IndexProvider> instances );
 
     /**
-     * Selects a slot to use based on the given values. The values can be anything that can yield a {@link ValueGroup value group},
+     * Selects a slot to use based on the given values. The values can be anything that can yield a {@link ValueCategory value category},
      * which is what the {@code groupOf} function extracts from each value.
      *
-     * @param <V> type of value to extract {@link ValueGroup} from.
-     * @param values values, something which can yield a {@link ValueGroup}.
-     * @param groupOf {@link Function} to get {@link ValueGroup} for the given values.
+     * @param <V> type of value to extract {@link ValueCategory} from.
+     * @param values values, something which can yield a {@link ValueCategory}.
+     * @param categoryOf {@link Function} to get {@link ValueCategory} for the given values.
      * @return {@link IndexSlot} or {@code null} if no single slot could be selected. This means that all slots are needed.
      */
-    <V> IndexSlot selectSlot( V[] values, Function<V,ValueGroup> groupOf );
+    <V> IndexSlot selectSlot( V[] values, Function<V,ValueCategory> categoryOf );
 
     /**
      * Standard utility method for typical implementation of {@link SlotSelector#validateSatisfied(InstanceSelector)}.
@@ -63,6 +65,20 @@ interface SlotSelector
                         String.format( "Only indexes expected to be separated from IndexProvider.EMPTY are %s but was %s",
                                 Arrays.toString( aliveIndex ), instances ) );
             }
+        }
+    }
+
+    class NullInstance implements SlotSelector
+    {
+        @Override
+        public void validateSatisfied( InstanceSelector<IndexProvider> instances )
+        {   // no-op
+        }
+
+        @Override
+        public <V> IndexSlot selectSlot( V[] values, Function<V,ValueCategory> categoryOf )
+        {
+            throw new UnsupportedOperationException( "NullInstance cannot select a slot for you. Please use the real deal." );
         }
     }
 }

@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -60,10 +59,10 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
     void setUp()
     {
         indexFile = testDirectory.file( "index" );
-        layout = getLayout();
+        layout = getLayout( random, pageCache.pageSize() );
     }
 
-    abstract TestLayout<KEY,VALUE> getLayout();
+    abstract TestLayout<KEY,VALUE> getLayout( RandomRule random, int pageSize );
 
     @Test
     void shouldSeeSimpleInsertions() throws Exception
@@ -79,12 +78,12 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
                 }
             }
 
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor = index.seek( key( 0 ), key( Long.MAX_VALUE ) ) )
+            try ( Seeker<KEY,VALUE> cursor = index.seek( key( 0 ), key( Long.MAX_VALUE ) ) )
             {
                 for ( int i = 0; i < count; i++ )
                 {
                     assertTrue( cursor.next() );
-                    assertEqualsKey( key( i ), cursor.get().key() );
+                    assertEqualsKey( key( i ), cursor.key() );
                 }
                 assertFalse( cursor.next() );
             }
@@ -107,10 +106,10 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
 
             for ( int i = 0; i < count; i++ )
             {
-                try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor = index.seek( key( i ), key( i ) ) )
+                try ( Seeker<KEY,VALUE> cursor = index.seek( key( i ), key( i ) ) )
                 {
                     assertTrue( cursor.next() );
-                    assertEqualsKey( key( i ), cursor.get().key() );
+                    assertEqualsKey( key( i ), cursor.key() );
                     assertFalse( cursor.next() );
                 }
             }
@@ -145,12 +144,12 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
             }
 
             // THEN
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor = index.seek( key( 0 ), key( Long.MAX_VALUE ) ) )
+            try ( Seeker<KEY,VALUE> cursor = index.seek( key( 0 ), key( Long.MAX_VALUE ) ) )
             {
                 long prev = -1;
                 while ( cursor.next() )
                 {
-                    KEY hit = cursor.get().key();
+                    KEY hit = cursor.key();
                     long hitSeed = layout.keySeed( hit );
                     if ( hitSeed < prev )
                     {

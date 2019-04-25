@@ -5,24 +5,21 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdRequestHandler;
+import com.neo4j.causalclustering.catchup.storecopy.GetStoreFileRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvider;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyRequestHandler.GetIndexSnapshotRequestHandler;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyRequestHandler.GetStoreFileRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
-import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequestHandler;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
+import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import io.netty.channel.ChannelHandler;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -34,20 +31,20 @@ import org.neo4j.logging.LogProvider;
  */
 public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
+    private final DatabaseManager<?> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
 
-    public MultiDatabaseCatchupServerHandler( Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, FileSystemAbstraction fs )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
     {
-        this( databaseManagerSupplier, logProvider, fs, null );
+        this( databaseManager, logProvider, fs, null );
     }
 
-    public MultiDatabaseCatchupServerHandler( Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, FileSystemAbstraction fs,
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs,
             CoreSnapshotService snapshotService )
     {
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.databaseManager = databaseManager;
         this.logProvider = logProvider;
         this.fs = fs;
         this.snapshotService = snapshotService;
@@ -56,36 +53,29 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildTxPullRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildTxPullRequestHandler( db, protocol ),
                 TxPullRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreIdRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreIdRequestHandler( db, protocol ),
                 GetStoreIdRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreListingRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreListingRequestHandler( db, protocol ),
                 PrepareStoreCopyRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreFileRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreFileRequestHandler( db, protocol ),
                 GetStoreFileRequest.class, logProvider );
-    }
-
-    @Override
-    public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol protocol )
-    {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildIndexSnapshotRequestHandler( db, protocol ),
-                GetIndexFilesRequest.class, logProvider );
     }
 
     @Override
@@ -112,10 +102,5 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
-    }
-
-    private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( Database db, CatchupServerProtocol protocol )
-    {
-        return new GetIndexSnapshotRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
     }
 }

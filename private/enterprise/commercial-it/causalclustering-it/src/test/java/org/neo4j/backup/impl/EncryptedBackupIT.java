@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -49,6 +49,7 @@ import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
@@ -322,14 +323,15 @@ class EncryptedBackupIT
 
             // and the cluster is populated with more data
             DataCreator.createDataInOneTransaction( cluster, 100 );
-            dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
+            dataMatchesEventually( cluster.awaitLeader(), allMembers( cluster ) );
 
             // then an incremental backup is successful on that cluster
             exitCode = backupClient.getAsInt();
             assertEquals( 0, exitCode );
 
             // and data matches
-            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ), DbRepresentation.of( new File( backupHome, DEFAULT_DATABASE_NAME ) ) );
+            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ),
+                    DbRepresentation.of( DatabaseLayout.of( backupHome, DEFAULT_DATABASE_NAME ) ) );
         }
 
         private static void shouldNotBeSuccessful( IntSupplier backupClient )
@@ -346,8 +348,7 @@ class EncryptedBackupIT
             int noOfCoreMembers = 3;
             int noOfReadReplicas = 3;
 
-            // use secure discovery service factory to make cluster members communicate with SSL enabled
-            DiscoveryServiceFactory discoveryServiceFactory = new SslHazelcastDiscoveryServiceFactory();
+            DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
             return new Cluster( testDir.directory( UUID.randomUUID().toString() ), noOfCoreMembers, noOfReadReplicas,
                     discoveryServiceFactory, emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
         }
@@ -418,7 +419,7 @@ class EncryptedBackupIT
             {
                 try
                 {
-                    dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
+                    dataMatchesEventually( cluster.awaitLeader(), allMembers( cluster ) );
                     return runBackupSameJvm( backupHome, selectedNodeAddress );
                 }
                 catch ( Exception e )

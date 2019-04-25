@@ -24,9 +24,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -42,16 +43,20 @@ import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 
 class TestLogPruning
 {
+
+    private DatabaseManagementService managementService;
+
     private interface Extractor
     {
         int extract( long fromVersion ) throws IOException;
@@ -68,7 +73,7 @@ class TestLogPruning
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         fs.close();
     }
@@ -172,11 +177,12 @@ class TestLogPruning
     {
         this.rotateEveryNTransactions = rotateEveryNTransactions;
         fs = new EphemeralFileSystemAbstraction();
-        TestGraphDatabaseFactory gdf = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder gdf = new TestDatabaseManagementServiceBuilder();
         gdf.setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) );
-        GraphDatabaseBuilder builder = gdf.newImpermanentDatabaseBuilder();
+        DatabaseManagementServiceInternalBuilder builder = gdf.newImpermanentDatabaseBuilder();
         builder.setConfig( keep_logical_logs, logPruning );
-        this.db = (GraphDatabaseAPI) builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        this.db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         files = db.getDependencyResolver().resolveDependency( LogFiles.class );
         return db;
     }
@@ -208,7 +214,7 @@ class TestLogPruning
     {
         db = newDb( "true", 5 );
         doTransaction();
-        db.shutdown();
+        managementService.shutdown();
         return (int) fs.getFileSize( files.getLogFileForVersion( 0 ) );
     }
 

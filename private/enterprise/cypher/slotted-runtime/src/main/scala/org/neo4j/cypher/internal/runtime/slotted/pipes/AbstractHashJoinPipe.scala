@@ -20,7 +20,7 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
 
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
 
-    if (input.isEmpty)
+    if (!input.hasNext)
       return Iterator.empty
 
     val rhsIterator = right.createResults(state)

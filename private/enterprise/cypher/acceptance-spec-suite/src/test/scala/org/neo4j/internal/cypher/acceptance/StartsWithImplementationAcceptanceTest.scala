@@ -12,12 +12,12 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  var aNode: Node = null
-  var bNode: Node = null
-  var cNode: Node = null
-  var dNode: Node = null
-  var eNode: Node = null
-  var fNode: Node = null
+  var aNode: Node = _
+  var bNode: Node = _
+  var cNode: Node = _
+  var dNode: Node = _
+  var eNode: Node = _
+  var fNode: Node = _
 
   override def initTest() {
     super.initTest()

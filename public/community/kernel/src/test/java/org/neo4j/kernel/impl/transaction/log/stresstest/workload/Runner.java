@@ -44,11 +44,13 @@ import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
-import org.neo4j.monitoring.DatabaseEventHandlers;
+import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.monitoring.Health;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler.STRICT;
 
 public class Runner implements Callable<Long>
@@ -111,9 +113,9 @@ public class Runner implements Callable<Long>
             TransactionMetadataCache transactionMetadataCache, LogFiles logFiles )
     {
         Log log = NullLog.getInstance();
-        DatabaseEventHandlers databaseEventHandlers = new DatabaseEventHandlers( log );
-        DatabasePanicEventGenerator panicEventGenerator = new DatabasePanicEventGenerator( databaseEventHandlers );
-        DatabaseHealth databaseHealth = new DatabaseHealth( panicEventGenerator, log );
+        DatabaseEventListeners databaseEventListeners = new DatabaseEventListeners( log );
+        DatabasePanicEventGenerator panicEventGenerator = new DatabasePanicEventGenerator( databaseEventListeners, DEFAULT_DATABASE_NAME );
+        Health databaseHealth = new DatabaseHealth( panicEventGenerator, log );
         LogRotationImpl logRotation = new LogRotationImpl( logFiles, Clock.systemUTC(), databaseHealth, LogRotationMonitorAdapter.EMPTY );
         return new BatchingTransactionAppender( logFiles, logRotation,
                 transactionMetadataCache, transactionIdStore, databaseHealth );

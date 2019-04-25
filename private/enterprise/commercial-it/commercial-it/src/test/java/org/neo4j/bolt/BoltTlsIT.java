@@ -21,17 +21,19 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SecureClient;
 import org.neo4j.ssl.SslContextFactory;
 import org.neo4j.ssl.SslResource;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
 import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
@@ -51,6 +53,7 @@ public class BoltTlsIT
     private SslResource sslResource;
 
     private BoltConnector bolt = new BoltConnector( "bolt" );
+    private DatabaseManagementService managementService;
 
     @Before
     public void setup() throws IOException
@@ -109,8 +112,8 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .newImpermanentDatabaseBuilder( testDirectory.databaseDir() )
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
@@ -119,8 +122,8 @@ public class BoltTlsIT
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
                 .setConfig( sslPolicy.client_auth, "none" )
-                .setConfig( sslPolicy.verify_hostname, "false" )
-                .newGraphDatabase();
+                .setConfig( sslPolicy.verify_hostname, "false" ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
@@ -128,7 +131,7 @@ public class BoltTlsIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

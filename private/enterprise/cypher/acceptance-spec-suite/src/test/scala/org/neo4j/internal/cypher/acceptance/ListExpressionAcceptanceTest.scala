@@ -398,7 +398,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     def rec(count: Int): String =
       count match {
         case 0 => "[0]"
-        case n =>
+        case _ =>
           val i = "i" + count
           val inner = rec(count - 1)
           s"[$i IN [1] | $i + $inner[0]]"

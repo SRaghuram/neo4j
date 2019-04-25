@@ -280,32 +280,6 @@ public class Exceptions
         return false;
     }
 
-    /**
-     * @deprecated Use {@link Throwable#addSuppressed(Throwable)} and {@link Throwable#initCause(Throwable)} where
-     * appropriate instead.
-     */
-    @Deprecated
-    public static <E extends Throwable> E combine( E first, E second )
-    {
-        if ( first == null )
-        {
-            return second;
-        }
-        if ( second == null )
-        {
-            return first;
-        }
-
-        Throwable current = first;
-        while ( current.getCause() != null )
-        {
-            current = current.getCause();
-        }
-
-        current.initCause( second );
-        return first;
-    }
-
     private static final Field THROWABLE_MESSAGE_FIELD;
     static
     {
@@ -352,4 +326,33 @@ public class Exceptions
         return initial;
     }
 
+    public static <EXCEPTION extends Throwable> EXCEPTION disguiseException( Class<EXCEPTION> disguise, String message, Throwable disguised )
+    {
+        EXCEPTION exception;
+        try
+        {
+            try
+            {
+                exception = disguise.getConstructor( String.class, Throwable.class )
+                        .newInstance( message, disguised );
+            }
+            catch ( NoSuchMethodException e )
+            {
+                exception = disguise.getConstructor( String.class ).newInstance( message );
+                try
+                {
+                    exception.initCause( disguised );
+                }
+                catch ( IllegalStateException ignored )
+                {
+                }
+            }
+        }
+        catch ( Exception e )
+        {
+            throw new Error( message + ". An exception of type " + disguise.getName() +
+                    " was requested to be thrown but that proved impossible", e );
+        }
+        return exception;
+    }
 }

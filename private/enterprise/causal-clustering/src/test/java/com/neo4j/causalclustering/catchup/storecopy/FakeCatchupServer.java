@@ -8,16 +8,12 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
-import com.neo4j.causalclustering.identity.StoreId;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
 
 import java.io.File;
 import java.util.HashMap;
@@ -31,12 +27,12 @@ import java.util.stream.Collectors;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.rule.TestDirectory;
 
 class FakeCatchupServer implements CatchupServerHandler
 {
     private final Set<FakeFile> filesystem = new HashSet<>();
-    private final Set<FakeFile> indexFiles = new HashSet<>();
     private final Map<String,Integer> pathToRequestCountMapping = new HashMap<>();
     private final Log log;
     private TestDirectory testDirectory;
@@ -53,11 +49,6 @@ class FakeCatchupServer implements CatchupServerHandler
     void addFile( FakeFile fakeFile )
     {
         filesystem.add( fakeFile );
-    }
-
-    void addIndexFile( FakeFile fakeFile )
-    {
-        indexFiles.add( fakeFile );
     }
 
     public int getRequestCount( String file )
@@ -167,38 +158,8 @@ class FakeCatchupServer implements CatchupServerHandler
                 File[] files = new File[list.size()];
                 files = list.toArray( files );
                 startTxId = 123L;
-                LongSet indexIds = LongSets.immutable.of( 13 );
-                channelHandlerContext.writeAndFlush( PrepareStoreCopyResponse.success( files, indexIds, startTxId ) );
+                channelHandlerContext.writeAndFlush( PrepareStoreCopyResponse.success( files, startTxId ) );
                 catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
-            }
-        };
-    }
-
-    @Override
-    public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol catchupServerProtocol )
-    {
-        return new SimpleChannelInboundHandler<GetIndexFilesRequest>()
-        {
-            @Override
-            protected void channelRead0( ChannelHandlerContext channelHandlerContext, GetIndexFilesRequest snapshotRequest )
-            {
-                log.info( "Received request for index %s", snapshotRequest.indexId() );
-                try
-                {
-                    for ( FakeFile indexFile : indexFiles )
-                    {
-                        log.info( "FakeServer File %s does exist", indexFile.getFile() );
-                        channelHandlerContext.writeAndFlush( ResponseMessageType.FILE );
-                        channelHandlerContext.writeAndFlush( new FileHeader( indexFile.getFile().getName() ) );
-                        StoreResource storeResource = storeResourceFromEntry( indexFile.getFile() );
-                        channelHandlerContext.writeAndFlush( new FileSender( storeResource ) );
-                    }
-                    new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
-                }
-                finally
-                {
-                    catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
-                }
             }
         };
     }
@@ -211,6 +172,6 @@ class FakeCatchupServer implements CatchupServerHandler
 
     public StoreId getStoreId()
     {
-        return new StoreId( 1, 2, 3, 4 );
+        return new StoreId( 1, 2, 3, 4, 5 );
     }
 }

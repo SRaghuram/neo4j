@@ -101,15 +101,15 @@ object indexScanLeafPlanner extends LeafPlanner with LeafPlanFromExpression {
 
   private def findNonScannableVariables(predicates: Seq[Expression], context: LogicalPlanningContext) =
     predicates.flatMap {
-      case predicate@AsDynamicPropertyNonScannable(nonScannableId) if context.semanticTable.isNode(nonScannableId) =>
+      case AsDynamicPropertyNonScannable(nonScannableId) if context.semanticTable.isNode(nonScannableId) =>
         Some(nonScannableId)
-      case predicate@AsStringRangeNonSeekable(nonScannableId) if context.semanticTable.isNode(nonScannableId) =>
+      case AsStringRangeNonSeekable(nonScannableId) if context.semanticTable.isNode(nonScannableId) =>
         Some(nonScannableId)
       case _ =>
         None
     }.toSet
 
-  type PlanProducer = (String, LabelToken, IndexedProperty, Seq[Expression], Option[UsingIndexHint], Set[String], ProvidedOrder) => LogicalPlan
+  type PlanProducer = (String, LabelToken, Seq[IndexedProperty], Seq[Expression], Option[UsingIndexHint], Set[String], ProvidedOrder) => LogicalPlan
 
   private def produce(variableName: String,
                       qg: QueryGraph,
@@ -180,6 +180,6 @@ object indexScanLeafPlanner extends LeafPlanner with LeafPlanFromExpression {
 
     val labelToken = LabelToken(labelName, labelId)
     val predicates = Seq(predicate, labelPredicate)
-    planProducer(variableName, labelToken, indexProperty, predicates, hint, qg.argumentIds, providedOrder)
+    planProducer(variableName, labelToken, Seq(indexProperty), predicates, hint, qg.argumentIds, providedOrder)
   }
 }

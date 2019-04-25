@@ -7,6 +7,11 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
+
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.After;
@@ -26,12 +31,14 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
+import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 public class MultiRealmAuthManagerRule implements TestRule
 {
@@ -50,11 +57,22 @@ public class MultiRealmAuthManagerRule implements TestRule
         securityLogWriter = new StringWriter();
         Log log = builder.toWriter( securityLogWriter );
 
-        SecurityLog securityLog = new SecurityLog( log );
+        SystemGraphImportOptions importOptions =
+                new SystemGraphImportOptions( false, true, true, false,
+                        InMemoryUserRepository::new,
+                        InMemoryRoleRepository::new,
+                        InMemoryUserRepository::new,
+                        InMemoryRoleRepository::new,
+                        InMemoryUserRepository::new,
+                        InMemoryUserRepository::new
+                );
+
         SecureHasher secureHasher = new SecureHasher();
-        SystemGraphRealm realm = new SystemGraphRealm(
-                new InMemorySystemGraphOperations( secureHasher ),
-                null, false, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
+        InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( secureHasher );
+        SystemGraphInitializer initializer = new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ) );
+
+        SecurityLog securityLog = new SecurityLog( log );
+        SystemGraphRealm realm = new SystemGraphRealm( ops, initializer, true, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
                 new MemoryConstrainedCacheManager(), securityLog, true, false, Collections.emptyMap() );

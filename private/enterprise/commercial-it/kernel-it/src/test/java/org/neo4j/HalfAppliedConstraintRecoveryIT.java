@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -51,6 +52,7 @@ import org.neo4j.token.api.NonUniqueTokenException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
@@ -83,6 +85,7 @@ public class HalfAppliedConstraintRecoveryIT
             db -> db.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ", n." + KEY2 + ") IS NODE KEY" );
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
             ( db, txs ) -> apply( db, txs.subList( txs.size() - 1, txs.size() ) );
+    private DatabaseManagementService managementService;
 
     private static BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> recreate( Consumer<GraphDatabaseAPI> constraintCreator )
     {
@@ -146,11 +149,13 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         // WHEN
-        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentDatabase();
+        DatabaseManagementService managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             applier.accept( db, transactions );
@@ -183,7 +188,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -244,13 +249,15 @@ public class HalfAppliedConstraintRecoveryIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
 
         // WHEN
         {
-            GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentDatabase();
+            DatabaseManagementService managementService =
+                    new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).newImpermanentService();
+            GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
                 recreate( constraintCreator ).accept( db, transactions );
@@ -262,7 +269,7 @@ public class HalfAppliedConstraintRecoveryIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
     }
@@ -318,7 +325,9 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors ).newImpermanentDatabase();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( fs )
+                .setMonitors( monitors ).newImpermanentService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static void flushStores( GraphDatabaseAPI db ) throws IOException
@@ -345,7 +354,9 @@ public class HalfAppliedConstraintRecoveryIT
     private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator ) throws Exception
     {
         // A separate db altogether
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             LogicalTransactionStore txStore = db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
@@ -365,7 +376,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

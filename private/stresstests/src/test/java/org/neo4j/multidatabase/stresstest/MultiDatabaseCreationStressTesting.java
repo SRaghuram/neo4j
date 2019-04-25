@@ -5,7 +5,7 @@
  */
 package org.neo4j.multidatabase.stresstest;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -26,6 +27,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
@@ -47,8 +49,9 @@ class MultiDatabaseCreationStressTesting
         deleteRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
-        GraphDatabaseService databaseService = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( storeDirectory );
-        DatabaseManager databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );
 
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
@@ -58,13 +61,13 @@ class MultiDatabaseCreationStressTesting
         }
         finally
         {
-            databaseService.shutdown();
+            managementService.shutdown();
             executorPool.shutdown();
         }
     }
 
-    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager databaseManager, ExecutorService executorPool )
-            throws InterruptedException
+    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager<?> databaseManager,
+            ExecutorService executorPool ) throws InterruptedException
     {
         long finishTimeMillis = System.currentTimeMillis() + MINUTES.toMillis( durationInMinutes );
         CountDownLatch executorLatch = new CountDownLatch( threads );
@@ -82,7 +85,7 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseAPI databaseService )
+    private DatabaseManager<?> getDatabaseManager( GraphDatabaseAPI databaseService )
     {
         return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

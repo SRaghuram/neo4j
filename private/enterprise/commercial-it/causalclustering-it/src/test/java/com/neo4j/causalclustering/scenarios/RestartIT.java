@@ -32,7 +32,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 
@@ -42,6 +41,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -115,7 +115,7 @@ class RestartIT
 
         // then
         assertEventually( () -> cluster.healthyCoreMembers(), hasSize( 3 ), 1, MINUTES );
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology(), equalTo( 3 ), 1, MINUTES );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalTo( 3 ), 1, MINUTES );
 
         done.set( true );
 
@@ -160,7 +160,7 @@ class RestartIT
             for ( CoreClusterMember core : cluster.coreMembers() )
             {
                 ConsistencyCheckService.Result result =
-                        new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( core.databaseDirectory() ), Config.defaults(),
+                        new ConsistencyCheckService().runFullConsistencyCheck( core.databaseLayout(), Config.defaults(),
                                 ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
                                 new ConsistencyFlags( true, true, true, false ) );
                 assertTrue( result.isSuccessful(), "Inconsistent: " + core );
@@ -169,7 +169,7 @@ class RestartIT
             for ( ReadReplica readReplica : cluster.readReplicas() )
             {
                 ConsistencyCheckService.Result result =
-                        new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( readReplica.databaseDirectory() ), Config.defaults(),
+                        new ConsistencyCheckService().runFullConsistencyCheck( readReplica.databaseLayout(), Config.defaults(),
                                 ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
                                 new ConsistencyFlags( true, true, true, false ) );
                 assertTrue( result.isSuccessful(), "Inconsistent: " + readReplica );

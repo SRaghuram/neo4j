@@ -11,11 +11,10 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.backup.BackupTestUtil.createBackupFromCore;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -31,8 +30,10 @@ public abstract class AbstractStoreGenerator implements BackupStore
     public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
-        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
+        DatabaseId defaultDatabaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, defaultDatabaseId.name() ), defaultDatabaseId );
+        DatabaseId systemDatabaseId = new DatabaseId( SYSTEM_DATABASE_NAME );
+        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, systemDatabaseId.name() ), systemDatabaseId );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );
@@ -42,19 +43,6 @@ public abstract class AbstractStoreGenerator implements BackupStore
     public String toString()
     {
         return getClass().getSimpleName();
-    }
-
-    static void deleteTransactionLogs( File dir ) throws IOException
-    {
-        File[] txLogs = dir.listFiles( TransactionLogFiles.DEFAULT_FILENAME_FILTER );
-        if ( txLogs == null )
-        {
-            throw new IllegalStateException( "No transaction logs found in " + dir + " containing: " + Arrays.toString( dir.list() ) );
-        }
-        for ( File transaction : txLogs )
-        {
-            Files.delete( transaction.toPath() );
-        }
     }
 
     private static File backupDir( File baseDir, String database ) throws IOException

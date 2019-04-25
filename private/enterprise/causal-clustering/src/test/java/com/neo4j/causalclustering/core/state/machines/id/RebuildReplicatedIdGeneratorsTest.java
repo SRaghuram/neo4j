@@ -20,6 +20,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -47,7 +48,7 @@ public class RebuildReplicatedIdGeneratorsTest
     public void rebuildReplicatedIdGeneratorsOnRecovery() throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = fileSystemRule.get();
-        File stickyGenerator = new File( testDirectory.databaseDir(), "stickyGenerator" );
+        File stickyGenerator = new File( testDirectory.storeDir(), "stickyGenerator" );
         File nodeStoreIdGenerator = testDirectory.databaseLayout().idNodeStore();
 
         StoreFactory storeFactory = new StoreFactory( testDirectory.databaseLayout(), Config.defaults(),
@@ -83,6 +84,6 @@ public class RebuildReplicatedIdGeneratorsTest
         when( idRangeAcquirer.acquireIds( IdType.NODE ) ).thenReturn( new IdAllocation( new IdRange(
                 PrimitiveLongCollections.EMPTY_LONG_ARRAY, 0, 10000 ), 0, 0 ) );
         return new ReplicatedIdGeneratorFactory( fileSystemAbstraction, ignoredDBName -> idRangeAcquirer, NullLogProvider.getInstance(),
-                new CommercialIdTypeConfigurationProvider( Config.defaults() ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME, panicker );
+                new CommercialIdTypeConfigurationProvider( Config.defaults() ),new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ), panicker );
     }
 }

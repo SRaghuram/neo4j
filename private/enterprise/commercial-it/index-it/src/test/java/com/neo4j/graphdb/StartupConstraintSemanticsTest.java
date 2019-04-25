@@ -5,14 +5,19 @@
  */
 package com.neo4j.graphdb;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -20,13 +25,15 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class StartupConstraintSemanticsTest
 {
     @Inject
     private TestDirectory dir;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldNotAllowOpeningADatabaseWithPECInCommunityEdition()
@@ -51,56 +58,60 @@ class StartupConstraintSemanticsTest
     private void assertThatCommunityCanStartOnNormalConstraint( String constraintCreationQuery )
     {
         // given
-        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
             graphDb.execute( constraintCreationQuery );
         }
         finally
         {
-            graphDb.shutdown();
+            managementService.shutdown();
         }
         graphDb = null;
 
         // when
         try
         {
-            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+            graphDb = getCommunityDatabase();
             // Should not get exception
         }
         finally
         {
             if ( graphDb != null )
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         }
+    }
+
+    private GraphDatabaseService getCommunityDatabase()
+    {
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( dir.storeDir() );
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )
     {
         // given
-        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
             graphDb.execute( constraintCreationQuery );
         }
         finally
         {
-            graphDb.shutdown();
+            managementService.shutdown();
         }
         graphDb = null;
 
         // when
         try
         {
-            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
-            fail( "should have failed to start!" );
-        }
-        // then
-        catch ( Exception e )
-        {
-            Throwable error = Exceptions.rootCause( e );
+            graphDb = getCommunityDatabase();
+            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            Throwable error = Exceptions.rootCause( databaseContext.failureCause() );
             assertThat( error, instanceOf( IllegalStateException.class ) );
             assertEquals( errorMessage, error.getMessage() );
         }
@@ -108,8 +119,14 @@ class StartupConstraintSemanticsTest
         {
             if ( graphDb != null )
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         }
+    }
+
+    private GraphDatabaseService getCommercialDatabase()
+    {
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( dir.storeDir() ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

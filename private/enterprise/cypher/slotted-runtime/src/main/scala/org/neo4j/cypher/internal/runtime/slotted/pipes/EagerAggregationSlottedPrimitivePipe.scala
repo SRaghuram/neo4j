@@ -29,21 +29,25 @@ case class EagerAggregationSlottedPrimitivePipe(source: Pipe,
 
   aggregations.values.foreach(_.registerOwningPipe(this))
 
-  private val (aggregationOffsets: IndexedSeq[Int], aggregationFunctions: IndexedSeq[AggregationExpression]) = {
+  private val (aggregationOffsets: Array[Int], aggregationFunctions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
-    (a.toIndexedSeq, b.toIndexedSeq)
+    (a.toArray, b.toArray)
   }
+  private val createAggregationFunctions: java.util.function.Function[LongArray, Array[AggregationFunction]] =
+    (_: LongArray) => aggregationFunctions.map(_.createAggregationFunction)
 
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
 
-    val result = new util.LinkedHashMap[LongArray, Seq[AggregationFunction]]()
+    val result = new util.LinkedHashMap[LongArray, Array[AggregationFunction]]()
 
-    def createResultRow(groupingKey: LongArray, aggregator: Seq[AggregationFunction]): ExecutionContext = {
+    def createResultRow(groupingKey: LongArray, aggregator: Array[AggregationFunction]): ExecutionContext = {
       val context = SlottedExecutionContext(slots)
       setKeyToCtx(context, groupingKey)
-      (aggregationOffsets zip aggregator.map(_.result(state))).foreach {
-        case (offset, value) => context.setRefAt(offset, value)
+      var i = 0
+      while (i < aggregations.size) {
+        context.setRefAt(aggregationOffsets(i), aggregator(i).result(state))
+        i += 1
       }
       context
     }
@@ -66,10 +70,6 @@ case class EagerAggregationSlottedPrimitivePipe(source: Pipe,
       }
     }
 
-    val createAggregationFunctions = new java.util.function.Function[LongArray, Seq[AggregationFunction]] {
-      override def apply(t: LongArray): Seq[AggregationFunction] = aggregationFunctions.map(_.createAggregationFunction)
-    }
-
     // Consume all input and aggregate
     input.foreach(ctx => {
       val keys = setKeyFromCtx(ctx)
@@ -79,7 +79,7 @@ case class EagerAggregationSlottedPrimitivePipe(source: Pipe,
 
     // Write the produced aggregation map to the output pipeline
     result.entrySet().iterator().asScala.map {
-      e: java.util.Map.Entry[LongArray, Seq[AggregationFunction]] => createResultRow(e.getKey, e.getValue)
+      e: java.util.Map.Entry[LongArray, Array[AggregationFunction]] => createResultRow(e.getKey, e.getValue)
     }
   }
 }

@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Set;
 
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -29,6 +32,17 @@ class PersonalUserManagerTest
     private EvilUserManager evilUserManager;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
+
+    private static final String ROLE_NAME = "custom";
+
+    @BeforeEach
+    void setup()
+    {
+        log = new AssertableLogProvider();
+        securityLog = new SecurityLog( log.getLog( getClass() ) );
+        EnterpriseUserManager realm = mock( EnterpriseUserManager.class );
+        evilUserManager = new EvilUserManager( realm );
+    }
 
     @Test
     void shouldLogFailureCreateUser()
@@ -55,13 +69,135 @@ class PersonalUserManagerTest
         log.assertExactly( error( "[Bob]: tried to create user `%s`: %s", "HeWhoShallNotBeNamed", "Permission denied." ) );
     }
 
-    @BeforeEach
-    void setup()
+    @Test
+    void shouldLogSuccessGrantPrivilege() throws IOException, InvalidArgumentsException
     {
-        log = new AssertableLogProvider();
-        securityLog = new SecurityLog( log.getLog( getClass() ) );
-        EnterpriseUserManager realm = mock( EnterpriseUserManager.class );
-        evilUserManager = new EvilUserManager( realm );
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        userManager.newRole( ROLE_NAME );
+        log.clear();
+
+        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
+        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, Resource.GRAPH, "*", ROLE_NAME ) );
+    }
+
+    @Test
+    void shouldLogFailureGrantPrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        log.clear();
+        evilUserManager.setFailNextCall();
+
+        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Alice]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "assignPrivilegeToRoleException" )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedGrantPrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Bob", false );
+        log.clear();
+
+        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Bob]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "Permission denied." ) );
+    }
+
+    @Test
+    void shouldLogSuccessRevokePrivilege() throws IOException, InvalidArgumentsException
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        userManager.newRole( ROLE_NAME );
+        log.clear();
+
+        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
+        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, Resource.GRAPH, "*", ROLE_NAME ) );
+    }
+
+    @Test
+    void shouldLogFailureRevokePrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        log.clear();
+        evilUserManager.setFailNextCall();
+
+        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Alice]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "revokePrivilegeFromRoleException" )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedRevokePrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Bob", false );
+        log.clear();
+
+        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Bob]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "Permission denied." ) );
+    }
+
+    @Test
+    void shouldLogSuccessSetAdmin() throws IOException, InvalidArgumentsException
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        userManager.newRole( ROLE_NAME );
+        log.clear();
+
+        userManager.setAdmin( ROLE_NAME, true );
+        userManager.setAdmin( ROLE_NAME, false );
+        log.assertExactly(
+                info( "[Alice]: %s admin privilege for role `%s`", "granted", ROLE_NAME ),
+                info( "[Alice]: %s admin privilege for role `%s`", "revoked", ROLE_NAME )
+        );
+    }
+
+    @Test
+    void shouldLogFailureSetAdmin()
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        log.clear();
+
+        evilUserManager.setFailNextCall();
+        catchInvalidArguments( () -> userManager.setAdmin( ROLE_NAME, true ) );
+        evilUserManager.setFailNextCall();
+        catchInvalidArguments( () -> userManager.setAdmin( ROLE_NAME, false ) );
+        log.assertExactly(
+                error( "[Alice]: tried to %s admin privilege for role `%s`: %s", "grant", ROLE_NAME, "setAdminException" ),
+                error( "[Alice]: tried to %s admin privilege for role `%s`: %s", "revoke", ROLE_NAME, "setAdminException" )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedShowPrivileges()
+    {
+        PersonalUserManager userManager = getUserManager( "Bob", false );
+        log.clear();
+
+        catchAuthorizationViolation( () -> userManager.showPrivilegesForUser( "Alice" ) );
+        log.assertExactly(
+                error( "[Bob]: tried to show privileges for user `%s`: %s", "Alice", "Permission denied." ) );
+    }
+
+    @Test
+    void shouldLogFailureShowPrivileges()
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        log.clear();
+
+        evilUserManager.setFailNextCall();
+        catchInvalidArguments( () -> userManager.showPrivilegesForUser( "IDoNotExist" ) );
+        log.assertExactly(
+                error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
+    }
+
+    private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
+    {
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( action, resource ) );
+        return dbPriv;
     }
 
     private PersonalUserManager getUserManager( String userName, boolean isAdmin )
@@ -69,7 +205,26 @@ class PersonalUserManagerTest
         return new PersonalUserManager( evilUserManager, new MockAuthSubject( userName ), securityLog, isAdmin );
     }
 
-    private AssertableLogProvider.LogMatcher error( String message, String... arguments )
+    private void catchInvalidArguments( ThrowingAction<Exception> f )
+    {
+        assertException( f, InvalidArgumentsException.class );
+    }
+
+    private void catchAuthorizationViolation( ThrowingAction<Exception> f )
+    {
+        assertException( f, AuthorizationViolationException.class );
+    }
+
+    private AssertableLogProvider.LogMatcher info( String message, Object... arguments )
+    {
+        if ( arguments.length == 0 )
+        {
+            return inLog( this.getClass() ).info( message );
+        }
+        return inLog( this.getClass() ).info( message, (Object[]) arguments );
+    }
+
+    private AssertableLogProvider.LogMatcher error( String message, Object... arguments )
     {
         return inLog( this.getClass() ).error( message, (Object[]) arguments );
     }
@@ -223,6 +378,56 @@ class PersonalUserManagerTest
                 throw new IOException( "removeRoleFromUserException" );
             }
             delegate.removeRoleFromUser( roleName, username );
+        }
+
+        @Override
+        public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new InvalidArgumentsException( "assignPrivilegeToRoleException" );
+            }
+            delegate.grantPrivilegeToRole( roleName, dbPrivilege );
+        }
+
+        @Override
+        public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new InvalidArgumentsException( "revokePrivilegeFromRoleException" );
+            }
+            delegate.revokePrivilegeFromRole( roleName, dbPrivilege );
+        }
+
+        @Override
+        public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new InvalidArgumentsException( "showPrivilegesForUserException" );
+            }
+            return delegate.showPrivilegesForUser( username );
+        }
+
+        @Override
+        public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+        {
+            return delegate.getPrivilegesForRoles( roles );
+        }
+
+        @Override
+        public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new InvalidArgumentsException( "setAdminException" );
+            }
+            delegate.setAdmin( roleName, setToAdmin );
         }
 
         @Override

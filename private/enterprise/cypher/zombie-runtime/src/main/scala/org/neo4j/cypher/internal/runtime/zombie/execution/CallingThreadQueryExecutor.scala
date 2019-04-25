@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.zombie.state.{StandardStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.zombie.state.{PipelineExecutions, StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
@@ -20,7 +20,9 @@ import org.neo4j.values.AnyValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor {
+class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor with WorkerWaker {
+
+  override def wakeAll(): Unit = ()
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -30,6 +32,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        schedulerTracer: SchedulerTracer,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
+                                       prePopulateResults: Boolean,
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
@@ -40,16 +43,25 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 transactionBinder,
                                 numberOfWorkers = 1,
                                 nExpressionSlots,
+                                prePopulateResults,
                                 inputDataStream)
 
-    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory)
-    executionState.initialize()
+    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory, this)
+    val pipelineExecutions = new PipelineExecutions(executablePipelines, executionState, queryContext, queryState, resources)
+
+    executionState.initializeState()
 
     val worker = new Worker(1, null, LazyScheduling, resources)
-    val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState, schedulerTracer.traceQuery())
+    val executingQuery = new ExecutingQuery(pipelineExecutions,
+                                            executionState,
+                                            queryContext,
+                                            queryState,
+                                            schedulerTracer.traceQuery())
     // TODO: currently busy looping until all work is done... this is a bad
     //       way to handle back-pressure with reactive results
-    while (worker.workOnQuery(executingQuery)) {}
+    while (!executingQuery.executionState.isCompleted) {
+      worker.workOnQuery(executingQuery)
+    }
     executingQuery
   }
 }

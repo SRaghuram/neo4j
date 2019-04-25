@@ -7,6 +7,7 @@ package org.neo4j.management;
 
 import org.neo4j.jmx.Description;
 import org.neo4j.jmx.ManagementInterface;
+import org.neo4j.kernel.database.DatabaseId;
 
 @ManagementInterface( name = Diagnostics.NAME )
 @Description( "Diagnostics provided by Neo4j" )
@@ -22,8 +23,8 @@ public interface Diagnostics
     String dumpAll(  );
 
     @Description( "Dump diagnostics information for the database with provided name to the log." )
-    void dumpDatabaseDiagnosticsToLog( String databaseName );
+    void dumpDatabaseDiagnosticsToLog( DatabaseId databaseId );
 
     @Description( "Dump diagnostics information for the database with provided name to JMX." )
-    String dumpDatabaseDiagnostics( String databaseName );
+    String dumpDatabaseDiagnostics( DatabaseId databaseId );
 }

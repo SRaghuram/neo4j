@@ -33,9 +33,10 @@ class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfigura
       val queryState = new OldQueryState(context,
                                          resources = null,
                                          params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots))
+                                         cursors = resources.expressionCursors,
+                                         queryIndexes = Array.empty[IndexReadSession],
+                                         expressionVariables = resources.expressionVariables(state.nExpressionSlots),
+                                         prePopulateResults = state.prepopulateResults)
 
       // Loop over the rows of the morsel and call the visitor for each one
       while (currentRow.isValidRow) {

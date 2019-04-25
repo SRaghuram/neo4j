@@ -19,12 +19,11 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,17 +41,19 @@ import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
@@ -68,51 +69,63 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
-import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.rule.CleanupRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.storable.RandomValues;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.first;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.impl.index.schema.FailingGenericNativeIndexProviderFactory.FailureType.SKIP_ONLINE_UPDATES;
-import static org.neo4j.test.TestGraphDatabaseFactory.INDEX_PROVIDERS_FILTER;
+import static org.neo4j.test.TestDatabaseManagementServiceBuilder.INDEX_PROVIDERS_FILTER;
 
-public class FulltextIndexConsistencyCheckIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+class FulltextIndexConsistencyCheckIT
 {
-    private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private final ExpectedException expectedException = ExpectedException.none();
-    private final CleanupRule cleanup = new CleanupRule();
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
 
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
+    private DatabaseManagementServiceInternalBuilder builder;
+    private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
-    private GraphDatabaseBuilder builder;
-
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
-        GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        if ( database != null )
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckEmptyDatabaseWithFulltextIndexingEnabled() throws Exception
+    void mustBeAbleToConsistencyCheckEmptyDatabaseWithFulltextIndexingEnabled() throws Exception
     {
-        createDatabase().shutdown();
+        createDatabase();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexWithOneLabelAndOneProperty() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexWithOneLabelAndOneProperty() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -126,12 +139,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Label.label( "Label" ) ).setProperty( "prop", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexWithOneLabelAndMultipleProperties() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexWithOneLabelAndMultipleProperties() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -149,12 +162,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Label.label( "Label" ) ).setProperty( "p2", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexWithMultipleLabelsAndOneProperty() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexWithMultipleLabelsAndOneProperty() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -170,12 +183,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Label.label( "L1" ) ).setProperty( "prop", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexWithManyLabelsAndOneProperty() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexWithManyLabelsAndOneProperty() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         // Enough labels to prevent inlining them into the node record, and instead require a dynamic label record to be allocated.
@@ -191,12 +204,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Stream.of( labels ).map( Label::label ).toArray( Label[]::new ) ).setProperty( "prop", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexWithMultipleLabelsAndMultipleProperties() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexWithMultipleLabelsAndMultipleProperties() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -234,12 +247,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Label.label( "L1" ) ).setProperty( "p2", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndOneProperty() throws Exception
+    void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndOneProperty() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         RelationshipType relationshipType = RelationshipType.withName( "R1" );
@@ -256,12 +269,12 @@ public class FulltextIndexConsistencyCheckIT
             node.createRelationshipTo( node, relationshipType ).setProperty( "p1", "value" ); // This relationship will have a different id value than the node.
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndMultipleProperties() throws Exception
+    void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndMultipleProperties() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         RelationshipType relationshipType = RelationshipType.withName( "R1" );
@@ -284,12 +297,12 @@ public class FulltextIndexConsistencyCheckIT
             node.createRelationshipTo( node, relationshipType ).setProperty( "p2", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndOneProperty() throws Exception
+    void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndOneProperty() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         RelationshipType relType1 = RelationshipType.withName( "R1" );
@@ -310,12 +323,12 @@ public class FulltextIndexConsistencyCheckIT
             n2.createRelationshipTo( n2, relType2 ).setProperty( "p1", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndMultipleProperties() throws Exception
+    void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndMultipleProperties() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         RelationshipType relType1 = RelationshipType.withName( "R1" );
@@ -348,12 +361,12 @@ public class FulltextIndexConsistencyCheckIT
             n1.createRelationshipTo( n2, relType2 ).setProperty( "p2", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeAndRelationshipIndexesAtTheSameTime() throws Exception
+    void mustBeAbleToConsistencyCheckNodeAndRelationshipIndexesAtTheSameTime() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -376,12 +389,12 @@ public class FulltextIndexConsistencyCheckIT
             r1.setProperty( "p2", "value" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencyCheckNodeIndexThatIsMissingNodesBecauseTheirPropertyValuesAreNotStrings() throws Exception
+    void mustBeAbleToConsistencyCheckNodeIndexThatIsMissingNodesBecauseTheirPropertyValuesAreNotStrings() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -395,12 +408,12 @@ public class FulltextIndexConsistencyCheckIT
             db.createNode( Label.label( "L1" ) ).setProperty( "p1", 1 );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustBeAbleToConsistencycheckRelationshipIndexThatIsMissingRelationshipsBecauseTheirPropertyValuesaAreNotStrings() throws Exception
+    void mustBeAbleToConsistencycheckRelationshipIndexThatIsMissingRelationshipsBecauseTheirPropertyValuesaAreNotStrings() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -415,12 +428,12 @@ public class FulltextIndexConsistencyCheckIT
             node.createRelationshipTo( node, RelationshipType.withName( "R1" ) ).setProperty( "p1", 1 );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void consistencyCheckerMustBeAbleToRunOnStoreWithFulltextIndexes() throws Exception
+    void consistencyCheckerMustBeAbleToRunOnStoreWithFulltextIndexes() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         Label[] labels = IntStream.range( 1, 7 ).mapToObj( i -> Label.label( "LABEL" + i ) ).toArray( Label[]::new );
@@ -469,13 +482,13 @@ public class FulltextIndexConsistencyCheckIT
             tx.success();
         }
 
-        db.shutdown();
+        managementService.shutdown();
 
         assertIsConsistent( checkConsistency() );
     }
 
     @Test
-    public void mustDiscoverNodeInStoreMissingFromIndex() throws Exception
+    void mustDiscoverNodeInStoreMissingFromIndex() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -501,16 +514,16 @@ public class FulltextIndexConsistencyCheckIT
             updater.process( IndexEntryUpdate.remove( nodeId, indexDescriptor, Values.stringValue( "value" ) ) );
         }
 
-        db.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
     }
 
-    @Ignore( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
+    @Disabled( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
             "The test is disabled until the consistency checker is extended with checks that will discover this sort of inconsistency." )
     @Test
-    public void mustDiscoverNodeInIndexMissingFromStore() throws Exception
+    void mustDiscoverNodeInIndexMissingFromStore() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -529,24 +542,25 @@ public class FulltextIndexConsistencyCheckIT
         }
 
         // Remove the property without updating the index
-        db.shutdown();
-        db = new TestGraphDatabaseFactory( NullLogProvider.getInstance() ).setFileSystem( fs )
+        managementService.shutdown();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( NullLogProvider.getInstance() ).setFileSystem( fs )
                 .removeExtensions( INDEX_PROVIDERS_FILTER )
                 .addExtension( new FailingGenericNativeIndexProviderFactory( SKIP_ONLINE_UPDATES ) )
-                .newEmbeddedDatabase( testDirectory.databaseDir() );
+                .newDatabaseManagementService( testDirectory.storeDir() );
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.getNodeById( nodeId ).removeProperty( "prop" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
     }
 
     @Test
-    public void mustDiscoverRelationshipInStoreMissingFromIndex() throws Exception
+    void mustDiscoverRelationshipInStoreMissingFromIndex() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -573,16 +587,16 @@ public class FulltextIndexConsistencyCheckIT
             updater.process( IndexEntryUpdate.remove( relId, indexDescriptor, Values.stringValue( "value" ) ) );
         }
 
-        db.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
     }
 
-    @Ignore( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
+    @Disabled( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
             "The test is disabled until the consistency checker is extended with checks that will discover this sort of inconsistency." )
     @Test
-    public void mustDiscoverRelationshipInIndexMissingFromStore() throws Exception
+    void mustDiscoverRelationshipInIndexMissingFromStore() throws Exception
     {
         GraphDatabaseService db = createDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -609,7 +623,7 @@ public class FulltextIndexConsistencyCheckIT
         PropertyRecord propRecord = stores.getPropertyStore().getRecord( propId, stores.getPropertyStore().newRecord(), RecordLoad.NORMAL );
         propRecord.setInUse( false );
         stores.getPropertyStore().updateRecord( propRecord );
-        db.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
@@ -617,7 +631,9 @@ public class FulltextIndexConsistencyCheckIT
 
     private GraphDatabaseService createDatabase()
     {
-        return cleanup.add( builder.newGraphDatabase() );
+        managementService = builder.newDatabaseManagementService();
+        database = managementService.database( DEFAULT_DATABASE_NAME );
+        return database;
     }
 
     private ConsistencyCheckService.Result checkConsistency() throws ConsistencyCheckIncompleteException

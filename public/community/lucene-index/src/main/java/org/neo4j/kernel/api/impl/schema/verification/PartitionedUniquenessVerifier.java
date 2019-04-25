@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.api.impl.schema.verification;
 
-import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.MultiTerms;
@@ -38,7 +37,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.impl.index.SearcherReference;
@@ -76,7 +74,7 @@ public class PartitionedUniquenessVerifier implements UniquenessVerifier
         {
             if ( LuceneDocumentStructure.useFieldForUniquenessVerification( field ) )
             {
-                TermsEnum terms = LuceneDocumentStructure.originalTerms( termsForField( field ), field );
+                TermsEnum terms = termsForField( field ).iterator();
                 BytesRef termsRef;
                 while ( (termsRef = terms.next()) != null )
                 {
@@ -112,11 +110,10 @@ public class PartitionedUniquenessVerifier implements UniquenessVerifier
         List<Terms> terms = new ArrayList<>();
         List<ReaderSlice> readerSlices = new ArrayList<>();
 
-        for ( LeafReader leafReader : allLeafReaders() )
+        List<LeafReader> leafReaders = allLeafReaders();
+        for ( LeafReader leafReader : leafReaders )
         {
-            Fields fields = leafReader.fields();
-
-            Terms leafTerms = fields.terms( fieldName );
+            Terms leafTerms = leafReader.terms( fieldName );
             if ( leafTerms != null )
             {
                 ReaderSlice readerSlice = new ReaderSlice( 0, Math.toIntExact( leafTerms.size() ), 0 );
@@ -200,7 +197,7 @@ public class PartitionedUniquenessVerifier implements UniquenessVerifier
         Set<String> allFields = new HashSet<>();
         for ( LeafReader leafReader : allLeafReaders() )
         {
-            Iterables.addAll( allFields, leafReader.fields() );
+            leafReader.getFieldInfos().forEach( info -> allFields.add( info.name ) );
         }
         return allFields;
     }

@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -45,7 +46,7 @@ import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -53,6 +54,7 @@ import static java.lang.Boolean.getBoolean;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.rule.SuppressOutput.suppress;
 
@@ -73,6 +75,7 @@ public class UniquenessRecoveryTest
             15/*SIGTERM - should run exit hooks*/,
             // none of these permit exit hooks to run:
             24, 26, 27, 30, 31};
+    private static DatabaseManagementService managementService;
 
     private static String param( String name )
     {
@@ -109,7 +112,7 @@ public class UniquenessRecoveryTest
         assumeNotNull( PID ); // this test can only run on UNIX
 
         // given
-        File path = dir.databaseDir().getAbsoluteFile();
+        File path = dir.storeDir().getAbsoluteFile();
         System.out.println( "in path: " + path );
         ProcessBuilder prototype = new ProcessBuilder( "java", "-ea", "-Xmx1G", "-Djava.awt.headless=true",
                 "-Dforce_create_constraint=" + config.force_create_constraint,
@@ -153,7 +156,7 @@ public class UniquenessRecoveryTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -199,7 +202,7 @@ public class UniquenessRecoveryTest
             System.out.println( "!! failed to add node" );
             e.printStackTrace( System.out );
             System.out.println( "... this is probably what we want :) -- [but let's let the parent process verify]" );
-            db.shutdown();
+            managementService.shutdown();
             System.exit( 0 );
         }
         catch ( Exception e )
@@ -289,7 +292,8 @@ public class UniquenessRecoveryTest
 
     private static GraphDatabaseService graphdb( File path )
     {
-        return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( path ).newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static void flushPageCache( GraphDatabaseService db )

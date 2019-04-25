@@ -95,7 +95,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
     val context = SlottedExecutionContext(slots)
     val setter = makeSetValueInSlotFunctionFor(slot)
 
-    a [ParameterWrongTypeException] should be thrownBy(setter(context, value))
+    a [ParameterWrongTypeException] should be thrownBy setter(context, value)
   }
 
   test("setter for non-nullable node slot") {
@@ -188,7 +188,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
 
     // The setter only throws if assertions are enabled
     ifAssertionsEnabled {
-      a[ParameterWrongTypeException] should be thrownBy (setter(context, id))
+      a[ParameterWrongTypeException] should be thrownBy setter(context, id)
     }
   }
 
@@ -198,7 +198,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
 
     // The setter only throws if assertions are enabled
     ifAssertionsEnabled {
-      a[ParameterWrongTypeException] should be thrownBy (setter(context, id))
+      a[ParameterWrongTypeException] should be thrownBy setter(context, id)
     }
   }
 

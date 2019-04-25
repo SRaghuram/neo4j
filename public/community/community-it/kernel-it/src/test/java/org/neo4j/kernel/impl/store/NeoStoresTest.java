@@ -36,8 +36,11 @@ import java.util.function.LongSupplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
@@ -52,7 +55,6 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.TransactionRecordState.PropertyReceiver;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -85,9 +87,8 @@ import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 import org.neo4j.string.UTF8;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.ConfigurablePageCacheRule;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.PageCacheRule;
@@ -524,8 +525,8 @@ public class NeoStoresTest
     public void setVersion() throws Exception
     {
         FileSystemAbstraction fileSystem = fs.get();
-        File storeDir = dir.directory();
-        createTestDatabase( fileSystem, storeDir ).shutdown();
+        File storeDir = dir.storeDir();
+        createShutdownTestDatabase( fileSystem, storeDir );
         DatabaseLayout databaseLayout = dir.databaseLayout();
         assertEquals( 0, MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.LOG_VERSION, 10 ) );
         assertEquals( 10, MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.LOG_VERSION, 12 ) );
@@ -558,7 +559,7 @@ public class NeoStoresTest
         }
 
         File file = databaseLayout.metadataStore();
-        try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE ) )
+        try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
             channel.write( ByteBuffer.wrap( UTF8.encode( "This is some data that is not a record." ) ) );
@@ -829,7 +830,9 @@ public class NeoStoresTest
     private void initializeStores( DatabaseLayout databaseLayout, Map<String,String> additionalConfig )
     {
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependency( Config.defaults( additionalConfig ) );
+        Config config = Config.defaults( additionalConfig );
+        config.augment( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE );
+        dependencies.satisfyDependency( config );
         ds = dsRule.getDatabase( databaseLayout, fs.get(), pageCache, dependencies );
         ds.start();
 
@@ -1419,11 +1422,11 @@ public class NeoStoresTest
         }
     }
 
-    private GraphDatabaseService createTestDatabase( FileSystemAbstraction fileSystem, File storeDir )
+    private static void createShutdownTestDatabase( FileSystemAbstraction fileSystem, File storeDir )
     {
-        return new TestGraphDatabaseFactory()
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
-                .newImpermanentDatabase( storeDir );
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) ).newImpermanentService( storeDir );
+        managementService.shutdown();
     }
 
     private <RECEIVER extends PropertyReceiver<PropertyKeyValue>> void nodeLoadProperties( long nodeId, RECEIVER receiver )

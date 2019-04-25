@@ -13,7 +13,7 @@ trait QueryExecutionHandle {
   /**
     * Wait for this QueryExecution to complete.
     *
-    * @return An optional error if anything went wrong with the query execution.
+    * TODO error handling
     */
-  def await(): Option[Throwable]
+  def await(): Unit
 }

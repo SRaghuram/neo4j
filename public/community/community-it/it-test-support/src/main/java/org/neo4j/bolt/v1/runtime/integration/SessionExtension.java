@@ -37,6 +37,7 @@ import org.neo4j.bolt.security.auth.BasicAuthentication;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.IOUtils;
@@ -44,23 +45,23 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
-import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.udc.UsageData;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class SessionExtension implements BeforeEachCallback, AfterEachCallback
 {
-    private final TestGraphDatabaseFactory graphDatabaseFactory;
+    private final TestDatabaseManagementServiceBuilder graphDatabaseFactory;
     private GraphDatabaseAPI gdb;
     private BoltStateMachineFactoryImpl boltFactory;
     private List<BoltStateMachine> runningMachines = new ArrayList<>();
     private boolean authEnabled;
+    private DatabaseManagementService managementService;
 
     public SessionExtension()
     {
-        this( new TestGraphDatabaseFactory() );
+        this( new TestDatabaseManagementServiceBuilder() );
     }
 
-    public SessionExtension( TestGraphDatabaseFactory graphDatabaseFactory )
+    public SessionExtension( TestDatabaseManagementServiceBuilder graphDatabaseFactory )
     {
         this.graphDatabaseFactory = graphDatabaseFactory;
     }
@@ -73,7 +74,7 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
         return machine;
     }
 
-    public DatabaseManager databaseManager()
+    public DatabaseManager<?> databaseManager()
     {
         assertTestStarted();
         DependencyResolver resolver = gdb.getDependencyResolver();
@@ -93,14 +94,15 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
     {
         Map<Setting<?>,String> configMap = new HashMap<>();
         configMap.put( GraphDatabaseSettings.auth_enabled, Boolean.toString( authEnabled ) );
-        gdb = (GraphDatabaseAPI) graphDatabaseFactory.newImpermanentDatabase( configMap );
+        managementService = graphDatabaseFactory.newImpermanentService( configMap );
+        gdb = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         DependencyResolver resolver = gdb.getDependencyResolver();
         Authentication authentication = authentication( resolver.resolveDependency( AuthManager.class ),
                 resolver.resolveDependency( UserManagerSupplier.class ) );
+        DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         Config config = resolver.resolveDependency( Config.class );
         boltFactory = new BoltStateMachineFactoryImpl(
-                resolver.resolveDependency( DatabaseManager.class ),
-                new UsageData( null ),
+                databaseManager,
                 authentication,
                 Clock.systemUTC(),
                 config,
@@ -123,7 +125,7 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
             e.printStackTrace();
         }
 
-        gdb.shutdown();
+        managementService.shutdown();
     }
 
     private void assertTestStarted()

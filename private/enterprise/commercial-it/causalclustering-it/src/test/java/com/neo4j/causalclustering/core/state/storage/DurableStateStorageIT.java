@@ -21,7 +21,6 @@ import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.SelectiveFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
@@ -33,8 +32,9 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
 class DurableStateStorageIT
@@ -71,7 +71,7 @@ class DurableStateStorageIT
         }
         catch ( Exception expected )
         {
-            ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "writeAll" );
+            verifyException( adversary, expected );
         }
 
         try ( LongState restoredState = new LongState( fs, dir, 4 ) )
@@ -105,8 +105,7 @@ class DurableStateStorageIT
         }
         catch ( Exception expected )
         {
-            // this stack trace should contain FSA.truncate()
-            ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "truncate" );
+            verifyException( adversary, expected );
         }
 
         try ( LongState restoredState = new LongState( fs, dir, 14 ) )
@@ -144,8 +143,7 @@ class DurableStateStorageIT
         }
         catch ( Exception expected )
         {
-            // this stack trace should contain force()
-            ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "force" );
+            verifyException( adversary, expected );
         }
 
         try ( LongState restoredState = new LongState( fs, dir, 14 ) )
@@ -171,13 +169,13 @@ class DurableStateStorageIT
 
         // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 1, true ),
-                FileSystemAbstraction.class.getMethod( "open", File.class, OpenMode.class ) );
+                FileSystemAbstraction.class.getMethod( "read", File.class ) );
         AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
 
         Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );
 
-        // stack trace should contain open()
-        ensureStackTraceContainsExpectedMethod( error.getCause().getStackTrace(), "open" );
+        // stack trace should contain read()
+        verifyException( adversary, error.getCause() );
 
         // Recovery over the normal filesystem after a failed recovery should proceed correctly
         try ( LongState recoveredState = new LongState( fs, dir, 14 ) )
@@ -207,7 +205,7 @@ class DurableStateStorageIT
         catch ( Exception expected )
         {
             // this stack trace should contain close()
-            ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "close" );
+            verifyException( adversary, expected );
         }
 
         try ( LongState restoredState = new LongState( fs, dir, 14 ) )
@@ -216,23 +214,17 @@ class DurableStateStorageIT
         }
     }
 
-    private static void ensureStackTraceContainsExpectedMethod( StackTraceElement[] stackTrace, String expectedMethodName )
+    private static void verifyException( MethodGuardedAdversary adversary, Throwable expectedException )
     {
-        for ( StackTraceElement stackTraceElement : stackTrace )
-        {
-            if ( stackTraceElement.getMethodName().equals( expectedMethodName ) )
-            {
-                return;
-            }
-        }
-        fail( "Method " + expectedMethodName + " was not part of the failure stack trace." );
+        assertTrue( adversary.getLastAdversaryException().isPresent() );
+        assertSame( adversary.getLastAdversaryException().get(), expectedException );
     }
 
     private static class LongState implements AutoCloseable
     {
         private final DurableStateStorage<Long> stateStorage;
         private long theState;
-        private LifeSupport lifeSupport = new LifeSupport();
+        private final LifeSupport lifeSupport = new LifeSupport();
 
         LongState( FileSystemAbstraction fileSystemAbstraction, File stateDir,
                 int numberOfEntriesBeforeRotation )

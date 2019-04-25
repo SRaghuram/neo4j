@@ -11,11 +11,11 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -197,7 +196,7 @@ public class AkkaCoreTopologyDowningIT
 
     private void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
     {
-        assertEventually( () -> services.topologyService().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
+        assertEventually( () -> services.topologyService().allCoreServers().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
     }
 
     private TopologyServiceComponents createAndStartListResolver( int myPort, int... otherPorts ) throws Throwable
@@ -236,7 +235,7 @@ public class AkkaCoreTopologyDowningIT
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                new MemberId( UUID.randomUUID() ),
+                new TestDiscoveryMember(),
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,

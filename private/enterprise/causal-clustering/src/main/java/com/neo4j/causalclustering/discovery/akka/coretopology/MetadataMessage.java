@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.util.Collections.unmodifiableMap;
@@ -44,9 +43,14 @@ public class MetadataMessage
         return Optional.ofNullable( metadata.get( address ) );
     }
 
+    public Stream<CoreServerInfoForMemberId> getStream()
+    {
+        return metadata.values().stream();
+    }
+
     public Stream<CoreServerInfoForMemberId> getStream( UniqueAddress address )
     {
-        return Streams.ofNullable( metadata.get( address ) );
+        return Stream.ofNullable( metadata.get( address ) );
     }
 
     @Override

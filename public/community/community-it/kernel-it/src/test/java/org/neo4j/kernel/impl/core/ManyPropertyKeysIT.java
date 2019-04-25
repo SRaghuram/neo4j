@@ -24,6 +24,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -45,12 +48,13 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.OtherThreadExecutor;
 import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Tests for handling many property keys (even after restart of database)
@@ -65,6 +69,7 @@ class ManyPropertyKeysIT
     private FileSystemAbstraction fileSystem;
     @Inject
     private PageCache pageCache;
+    private DatabaseManagementService managementService;
 
     @Test
     void creating_many_property_keys_should_have_all_loaded_the_next_restart() throws Exception
@@ -75,21 +80,21 @@ class ManyPropertyKeysIT
         int countBefore = propertyKeyCount( db );
 
         // WHEN
-        db.shutdown();
+        managementService.shutdown();
         db = database();
         createNodeWithProperty( db, key( 2800 ), true );
 
         // THEN
         assertEquals( countBefore, propertyKeyCount( db ) );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
-    void concurrently_creating_same_property_key_in_different_transactions_should_end_up_with_same_key_id()
-            throws Exception
+    void concurrently_creating_same_property_key_in_different_transactions_should_end_up_with_same_key_id() throws Exception
     {
         // GIVEN
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         OtherThreadExecutor<WorkerState> worker1 = new OtherThreadExecutor<>( "w1", new WorkerState( db ) );
         OtherThreadExecutor<WorkerState> worker2 = new OtherThreadExecutor<>( "w2", new WorkerState( db ) );
         worker1.execute( new BeginTx() );
@@ -106,12 +111,15 @@ class ManyPropertyKeysIT
 
         // THEN
         assertEquals( 1, propertyKeyCount( db ) );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private GraphDatabaseAPI database()
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseAPI databaseWithManyPropertyKeys( int propertyKeyCount )

@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.test;
 
+import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -23,8 +23,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
-
-import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -83,14 +81,13 @@ public class ConstantDataConstantAugment extends BaseDatabaseBenchmark
             @Override
             public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
-                File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath() );
+                GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store() );
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
                     tx.success();
                 }
-                db.shutdown();
+                ManagedStore.getManagementService().shutdown();
             }
 
             @Override

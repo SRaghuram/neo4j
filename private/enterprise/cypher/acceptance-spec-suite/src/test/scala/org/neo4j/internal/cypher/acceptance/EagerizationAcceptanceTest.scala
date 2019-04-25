@@ -101,7 +101,7 @@ class EagerizationAcceptanceTest
   test("should be eager between relationship property writes in QG head and reads in horizon") {
     val n1 = createNode()
     val n2 = createNode()
-    relate(n1, n2, ("val" -> 1))
+    relate(n1, n2, "val" -> 1)
 
     val query =
       """MATCH (n)-[r]-(m)
@@ -121,7 +121,7 @@ class EagerizationAcceptanceTest
   test("should be eager between relationship property writes in QG tail and reads in horizon") {
     val n1 = createNode()
     val n2 = createNode()
-    relate(n1, n2, ("val" -> 1))
+    relate(n1, n2, "val" -> 1)
 
     val query =
       """UNWIND [1] as i WITH *
@@ -738,7 +738,7 @@ class EagerizationAcceptanceTest
   test("should not introduce eagerness for leaf create match") {
     val query = "CREATE () WITH * MATCH () RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should not(includeSomewhere.aPlan("ReadOnly"))
         plan should includeSomewhere.nTimes(0, aPlan().withName(EagerRegEx))
       }))

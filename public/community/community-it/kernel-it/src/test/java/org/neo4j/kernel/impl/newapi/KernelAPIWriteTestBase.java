@@ -21,17 +21,16 @@ package org.neo4j.kernel.impl.newapi;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
-
-import java.io.File;
-import java.io.IOException;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
-
-import static org.neo4j.kernel.impl.newapi.TestUtils.createTemporaryFolder;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 /**
  * KernelAPIWriteTestBase is the basis of write tests targeting the Kernel API.
@@ -45,12 +44,14 @@ import static org.neo4j.kernel.impl.newapi.TestUtils.createTemporaryFolder;
  * @param <WriteSupport> The test support for the current test.
  */
 @SuppressWarnings( "WeakerAccess" )
+@ExtendWith( TestDirectoryExtension.class )
 public abstract class KernelAPIWriteTestBase<WriteSupport extends KernelAPIWriteTestSupport>
 {
-    protected static File folder;
-
     protected static KernelAPIWriteTestSupport testSupport;
     protected static GraphDatabaseService graphDb;
+
+    @Inject
+    private TestDirectory testDirectory;
 
     /**
      * Creates a new instance of WriteSupport, which will be used to execute the concrete test
@@ -58,13 +59,12 @@ public abstract class KernelAPIWriteTestBase<WriteSupport extends KernelAPIWrite
     public abstract WriteSupport newTestSupport();
 
     @BeforeEach
-    public void setupGraph() throws IOException
+    public void setupGraph()
     {
         if ( testSupport == null )
         {
-            folder = createTemporaryFolder();
             testSupport = newTestSupport();
-            testSupport.setup( folder );
+            testSupport.setup( testDirectory.storeDir() );
             graphDb = testSupport.graphBackdoor();
         }
         testSupport.clearGraph();
@@ -82,7 +82,6 @@ public abstract class KernelAPIWriteTestBase<WriteSupport extends KernelAPIWrite
         if ( testSupport != null )
         {
             testSupport.tearDown();
-            folder.delete();
             testSupport = null;
         }
     }

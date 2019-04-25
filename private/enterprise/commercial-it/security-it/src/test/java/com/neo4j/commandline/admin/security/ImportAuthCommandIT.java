@@ -8,10 +8,10 @@ package com.neo4j.commandline.admin.security;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +30,10 @@ import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.LegacyCredential;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.COMMAND_NAME;
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
@@ -41,8 +43,7 @@ import static com.neo4j.commandline.admin.security.ImportAuthCommand.USER_ARG_NA
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -52,31 +53,31 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
-public class ImportAuthCommandIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+class ImportAuthCommandIT
 {
     private static final String ALTERNATIVE_USER_STORE_FILENAME = "users_to_import";
     private static final String ALTERNATIVE_ROLE_STORE_FILENAME = "roles_to_import";
 
-    private final DefaultFileSystemRule fileSystem = new DefaultFileSystemRule();
-    private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystem );
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( testDirectory ).around( fileSystem );
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
+    private TestDirectory testDirectory;
 
     private File confDir;
     private File homeDir;
     private OutsideWorld out;
     private AdminTool tool;
 
-    @Before
-    public void setup() throws IOException
+    @BeforeEach
+    void setup() throws IOException
     {
         File graphDir = testDirectory.directory();
         confDir = new File( graphDir, "conf" );
         homeDir = new File( graphDir, "home" );
         fileSystem.mkdirs( confDir );
         fileSystem.mkdirs( homeDir );
-        fileSystem.create( new File( confDir, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
+        fileSystem.write( new File( confDir, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
         out = mock( OutsideWorld.class );
         resetOutsideWorldMock();
         resetSystemDatabaseDirectory();
@@ -84,7 +85,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
+    void shouldImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -104,7 +105,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldImportAuthWithGivenUserStoreFile() throws Throwable
+    void shouldImportAuthWithGivenUserStoreFile() throws Throwable
     {
         // Given
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -125,7 +126,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldImportAuthWithGivenRoleStoreFile() throws Throwable
+    void shouldImportAuthWithGivenRoleStoreFile() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "alice", "bob" );
@@ -144,7 +145,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldImportAuthWithGivenUserAndRoleStoreFiles() throws Throwable
+    void shouldImportAuthWithGivenUserAndRoleStoreFiles() throws Throwable
     {
         // Given
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "alice", "bob" );
@@ -164,7 +165,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldOverwriteImportFiles() throws Throwable
+    void shouldOverwriteImportFiles() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jim", "john" );
@@ -200,7 +201,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldErrorGivenNonExistingUserFile() throws Throwable
+    void shouldErrorGivenNonExistingUserFile() throws Throwable
     {
         // Given only a default role store file
         insertRole( ROLE_STORE_FILENAME, "taskmaster" );
@@ -216,7 +217,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldErrorGivenNonExistingRoleFile() throws Throwable
+    void shouldErrorGivenNonExistingRoleFile() throws Throwable
     {
         // Given only a default user store file
         insertUsers( USER_STORE_FILENAME, "alice" );
@@ -232,7 +233,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldErrorWithNonExistingDefaultUserAndRoleStoreFiles()
+    void shouldErrorWithNonExistingDefaultUserAndRoleStoreFiles()
     {
         // Given no default user or role store files
 
@@ -246,7 +247,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldOfflineImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
+    void shouldOfflineImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -264,7 +265,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldOfflineImportAuthIncrementally() throws Throwable
+    void shouldOfflineImportAuthIncrementally() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -295,7 +296,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldFailOfflineImportExistingUser() throws Throwable
+    void shouldFailOfflineImportExistingUser() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -327,7 +328,7 @@ public class ImportAuthCommandIT
     }
 
     @Test
-    public void shouldOfflineImportExistingUserAfterReset() throws Throwable
+    void shouldOfflineImportExistingUserAfterReset() throws Throwable
     {
         // Given
         insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
@@ -420,12 +421,12 @@ public class ImportAuthCommandIT
 
     private void assertNoUserImportFile()
     {
-        assertFalse( fileSystem.fileExists( getFile( CommercialSecurityModule.USER_IMPORT_FILENAME ) ) );
+        Assertions.assertFalse( fileSystem.fileExists( getFile( CommercialSecurityModule.USER_IMPORT_FILENAME ) ) );
     }
 
     private void assertNoRoleImportFile()
     {
-        assertFalse( fileSystem.fileExists( getFile( CommercialSecurityModule.ROLE_IMPORT_FILENAME ) ) );
+        Assertions.assertFalse( fileSystem.fileExists( getFile( CommercialSecurityModule.ROLE_IMPORT_FILENAME ) ) );
     }
 
     private void assertSuccessfulOutputMessage()
@@ -449,12 +450,14 @@ public class ImportAuthCommandIT
         verify( out, times( numberOfTimes ) ).stdOutLine( "Users and roles files imported into system graph." );
     }
 
-    private void assertSystemDbExists()
+    private void assertSystemDbExists() throws IOException
     {
         File systemDbStore = DatabaseLayout.of( getSystemDbDirectory() ).metadataStore();
         // NOTE: Because creating the system database is done on the real file system we cannot use our EphemeralFileSystemRule here
-        FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        assertTrue( fs.fileExists( systemDbStore ) );
+        try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
+        {
+            assertTrue( fs.fileExists( systemDbStore ) );
+        }
     }
 
     private File getSystemDbDirectory()

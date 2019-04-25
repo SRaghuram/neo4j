@@ -5,7 +5,7 @@
  */
 package com.neo4j.procedure.multidb;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +16,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
@@ -23,6 +25,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -37,6 +40,7 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.of;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.Iterators.single;
 
@@ -49,32 +53,34 @@ class MultiDatabaseProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI database;
-    private DatabaseManager databaseManager;
+    private DatabaseManager<?> databaseManager;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        database = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager();
     }
 
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
-    void proceduresOperatesIncorrectDatabaseScope()
+    void proceduresOperatesIncorrectDatabaseScope() throws DatabaseExistsException
     {
         String firstName = "first";
         String secondName = "second";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
+        DatabaseContext firstDatabase = databaseManager.createDatabase( new DatabaseId( firstName ) );
+        DatabaseContext secondDatabase = databaseManager.createDatabase( new DatabaseId( secondName ) );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.getDatabaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.getDatabaseFacade();
+        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
+        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
 
         createLabel( firstFacade, firstName );
         createLabel( secondFacade, secondName );
@@ -87,7 +93,7 @@ class MultiDatabaseProcedureIT
     }
 
     @Test
-    void proceduresUseDatabaseLocalValueMapper() throws KernelException
+    void proceduresUseDatabaseLocalValueMapper() throws KernelException, DatabaseExistsException
     {
         GlobalProcedures globalProcedures = database.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( MappingProcedure.class );
@@ -95,11 +101,11 @@ class MultiDatabaseProcedureIT
         String firstName = "mapperFirst";
         String secondName = "mapperSecond";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
+        DatabaseContext firstDatabase = databaseManager.createDatabase( new DatabaseId( firstName ) );
+        DatabaseContext secondDatabase = databaseManager.createDatabase( new DatabaseId( secondName ) );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.getDatabaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.getDatabaseFacade();
+        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
+        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
 
         createMarkerNode( firstFacade );
         createMarkerNode( secondFacade );
@@ -146,7 +152,7 @@ class MultiDatabaseProcedureIT
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return database.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -51,8 +51,8 @@ case class ExpandIntoSlottedPipe(source: Pipe,
 
     input.flatMap {
       inputRow =>
-        val fromNode = getFromNodeFunction(inputRow)
-        val toNode = getToNodeFunction(inputRow)
+        val fromNode = getFromNodeFunction.applyAsLong(inputRow)
+        val toNode = getToNodeFunction.applyAsLong(inputRow)
 
         if (entityIsNull(fromNode) || entityIsNull(toNode))
           Iterator.empty

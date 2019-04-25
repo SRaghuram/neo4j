@@ -26,6 +26,7 @@ import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -69,7 +70,7 @@ public class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
-    private final String databaseName = DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     private TestDirectory testDirectory = TestDirectory.testDirectory();
     private EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
@@ -90,7 +91,7 @@ public class ReplicatedTokenStateMachineTest
 
         // when
         byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
         assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
@@ -107,7 +108,7 @@ public class ReplicatedTokenStateMachineTest
 
         // when
         byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
         assertNull( registry.getId( "Person" ) );
@@ -125,9 +126,9 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         ReplicatedTokenRequest winningRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) ) );
         ReplicatedTokenRequest losingRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ) ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -148,9 +149,9 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         ReplicatedTokenRequest winningRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) ) );
         ReplicatedTokenRequest losingRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ) ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -175,7 +176,7 @@ public class ReplicatedTokenStateMachineTest
 
         // when
         byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), logIndex, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then
         List<TransactionRepresentation> transactions = commitProcess.transactionsToApply;

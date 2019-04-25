@@ -2,10 +2,6 @@
 DROP CONSTRAINT ON ( annoation:Annoation ) ASSERT annoation.event_id IS UNIQUE
 DROP CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS UNIQUE
 DROP CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
-DROP CONSTRAINT ON ( profile:Profile ) ASSERT profile.async IS UNIQUE
-DROP CONSTRAINT ON ( profile:Profile ) ASSERT profile.async_flamegraph IS UNIQUE
-DROP CONSTRAINT ON ( profile:Profile ) ASSERT profile.jfr IS UNIQUE
-DROP CONSTRAINT ON ( profile:Profile ) ASSERT profile.jfr_flamegraph IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
 // Exists

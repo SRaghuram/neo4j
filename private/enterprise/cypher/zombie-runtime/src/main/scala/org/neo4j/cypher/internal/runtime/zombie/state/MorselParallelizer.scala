@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 
 /**
-  * Allows consuming the same input morsel in parallel.
+  * Allows executing over the same input morsel in parallel.
   */
 trait MorselParallelizer {
 

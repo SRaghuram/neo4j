@@ -38,7 +38,7 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   protected def registerProcedureReturningSingleValue(value: AnyRef) =
-    registerProcedure("my.first.value") { builder =>
+    registerProcedure("my.first.value") { _ =>
       val builder = procedureSignature(Array("my", "first"), "value")
       builder.out("out", Neo4jTypes.NTAny)
 
@@ -50,7 +50,7 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
     }
 
   protected def registerUserFunction(value: AnyValue, typ: Neo4jTypes.AnyType = Neo4jTypes.NTAny) =
-    registerUserDefinedFunction("my.first.value") { builder =>
+    registerUserDefinedFunction("my.first.value") { _ =>
       val builder = functionSignature(Array("my", "first"), "value")
       builder.out(typ)
 
@@ -60,7 +60,7 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
     }
 
   protected def registerUserAggregationFunction(value: AnyRef, typ: Neo4jTypes.AnyType = Neo4jTypes.NTAny) =
-    registerUserDefinedAggregationFunction("my.first.value") { builder =>
+    registerUserDefinedAggregationFunction("my.first.value") { _ =>
       val builder = functionSignature(Array("my", "first"), "value")
       builder.out(typ)
 

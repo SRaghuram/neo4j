@@ -24,17 +24,18 @@ import org.junit.Test;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.facade.embedded.EmbeddedGraphDatabase;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.service.Services;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Base class for testing a {@link ExtensionFactory}. The base test cases in this
@@ -47,6 +48,7 @@ public abstract class ExtensionFactoryContractTest
 
     @Rule
     public final TestDirectory target = TestDirectory.testDirectory();
+    protected DatabaseManagementService managementService;
 
     public ExtensionFactoryContractTest( String key, Class<? extends ExtensionFactory<?>> extClass )
     {
@@ -57,7 +59,8 @@ public abstract class ExtensionFactoryContractTest
     protected GraphDatabaseAPI graphDb( int instance )
     {
         Map<String, String> config = configuration( instance );
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( config ).newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder().setConfig( config ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     /**
@@ -66,7 +69,6 @@ public abstract class ExtensionFactoryContractTest
      *
      * @param instance   used for differentiating multiple instances that will run
      *                   simultaneously.
-     * @return configuration for an {@link EmbeddedGraphDatabase} that
      */
     protected Map<String, String> configuration( int instance )
     {

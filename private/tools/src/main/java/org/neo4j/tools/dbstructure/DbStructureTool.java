@@ -5,12 +5,13 @@
  */
 package org.neo4j.tools.dbstructure;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureArgumentFormatter;
@@ -19,6 +20,7 @@ import org.neo4j.kernel.impl.util.dbstructure.GraphDbStructureGuide;
 import org.neo4j.kernel.impl.util.dbstructure.InvocationTracer;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class DbStructureTool
 {
@@ -52,7 +54,8 @@ public class DbStructureTool
                 generatedClassWithPackage
         );
 
-        GraphDatabaseService graph = instantiateGraphDatabase( dbDir );
+        DatabaseManagementService managementService = instantiateGraphDatabase( dbDir );
+        GraphDatabaseService graph = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             if ( writeToFile )
@@ -74,19 +77,16 @@ public class DbStructureTool
         }
         finally
         {
-            graph.shutdown();
+            managementService.shutdown();
         }
     }
 
-    protected GraphDatabaseService instantiateGraphDatabase( String dbDir )
+    private static DatabaseManagementService instantiateGraphDatabase( String dbDir )
     {
-        return new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( dbDir ) );
+        return new CommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( new File( dbDir ) );
     }
 
-    private void traceDb( String generator,
-                                 String generatedClazzPackage, String generatedClazzName,
-                                 GraphDatabaseService graph,
-                                 Appendable output )
+    private static void traceDb( String generator, String generatedClazzPackage, String generatedClazzName, GraphDatabaseService graph, Appendable output )
             throws IOException
     {
         InvocationTracer<DbStructureVisitor> tracer = new InvocationTracer<>(
@@ -104,7 +104,7 @@ public class DbStructureTool
         tracer.close();
     }
 
-    private Pair<String, String> parseClassNameWithPackage( String classNameWithPackage )
+    private static Pair<String, String> parseClassNameWithPackage( String classNameWithPackage )
     {
         if ( classNameWithPackage.contains( "%" ) )
         {

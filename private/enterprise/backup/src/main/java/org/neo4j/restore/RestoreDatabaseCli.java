@@ -18,6 +18,7 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
 
@@ -46,13 +47,13 @@ public class RestoreDatabaseCli implements AdminCommand
     @Override
     public void execute( String[] incomingArguments ) throws IncorrectUsage, CommandFailed
     {
-        String databaseName;
+        DatabaseId databaseId;
         String fromPath;
         boolean forceOverwrite;
 
         try
         {
-            databaseName = arguments.parse( incomingArguments ).get( ARG_DATABASE );
+            databaseId = new DatabaseId( arguments.parse( incomingArguments ).get( ARG_DATABASE ) );
             fromPath = arguments.get( "from" );
             forceOverwrite = arguments.getBoolean( "force" );
         }
@@ -66,7 +67,7 @@ public class RestoreDatabaseCli implements AdminCommand
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
             RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fileSystem,
-                    new File( fromPath ), config, databaseName, forceOverwrite );
+                    new File( fromPath ), config, databaseId, forceOverwrite );
             restoreDatabaseCommand.execute();
         }
         catch ( IOException e )

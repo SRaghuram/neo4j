@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
@@ -47,7 +46,7 @@ public class MigrationTestUtils
             throws IOException
     {
         byte[] versionBytes = UTF8.encode( versionString );
-        try ( StoreChannel fileChannel = fileSystem.open( storeFile, OpenMode.READ_WRITE ) )
+        try ( StoreChannel fileChannel = fileSystem.write( storeFile ) )
         {
             fileChannel.position( fileSystem.getFileSize( storeFile ) - versionBytes.length );
             fileChannel.write( ByteBuffer.wrap( versionBytes ) );
@@ -99,8 +98,8 @@ public class MigrationTestUtils
             File otherFile = new File( other, originalFile.getName() );
             if ( !fileSystem.isDirectory( originalFile ) )
             {
-                try ( StoreChannel originalChannel = fileSystem.open( originalFile, OpenMode.READ );
-                      StoreChannel otherChannel = fileSystem.open( otherFile, OpenMode.READ ) )
+                try ( StoreChannel originalChannel = fileSystem.read( originalFile );
+                      StoreChannel otherChannel = fileSystem.read( otherFile ) )
                 {
                     ByteBuffer buffer = ByteBuffer.allocate( bufferBatchSize );
                     while ( true )

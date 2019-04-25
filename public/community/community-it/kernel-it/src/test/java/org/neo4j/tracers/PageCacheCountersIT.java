@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToLongFunction;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -45,12 +46,13 @@ import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PageCacheCountersIT
 {
@@ -59,11 +61,13 @@ public class PageCacheCountersIT
     private GraphDatabaseService db;
     private ExecutorService executors;
     private int numberOfWorkers;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp()
     {
-        db = new TestGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         numberOfWorkers = Runtime.getRuntime().availableProcessors();
         executors = Executors.newFixedThreadPool( numberOfWorkers );
     }
@@ -73,7 +77,7 @@ public class PageCacheCountersIT
     {
         executors.shutdown();
         executors.awaitTermination( 5, TimeUnit.SECONDS );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test( timeout = 60_000 )

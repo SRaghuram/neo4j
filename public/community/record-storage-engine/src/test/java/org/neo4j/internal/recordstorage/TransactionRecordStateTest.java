@@ -19,7 +19,9 @@
  */
 package org.neo4j.internal.recordstorage;
 
+import org.eclipse.collections.api.LongIterable;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.list.mutable.primitive.LongArrayList;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Rule;
 import org.junit.Test;
@@ -233,14 +235,12 @@ public class TransactionRecordStateTest
         // -- later recovering that tx, there should be only one update for each type
         assertTrue( extractor.containsAnyEntityOrPropertyUpdate() );
         MutableLongSet recoveredNodeIds = new LongHashSet();
-        recoveredNodeIds.addAll( extractor.nodeCommandsById().keySet() );
-        recoveredNodeIds.addAll( extractor.propertyCommandsByNodeIds().keySet() );
+        recoveredNodeIds.addAll( entityIds( extractor.getNodeCommands() ) );
         assertEquals( 1, recoveredNodeIds.size() );
         assertEquals( nodeId, recoveredNodeIds.longIterator().next() );
 
         MutableLongSet recoveredRelIds = new LongHashSet();
-        recoveredRelIds.addAll( extractor.relationshipCommandsById().keySet() );
-        recoveredRelIds.addAll( extractor.propertyCommandsByRelationshipIds().keySet() );
+        recoveredRelIds.addAll( entityIds( extractor.getRelationshipCommands() ) );
         assertEquals( 1, recoveredRelIds.size() );
         assertEquals( relId, recoveredRelIds.longIterator().next() );
     }
@@ -766,7 +766,7 @@ public class TransactionRecordStateTest
     public void shouldLockUpdatedNodes() throws Exception
     {
         // given
-        LockService locks = mock( LockService.class, new Answer<Object>()
+        LockService locks = mock( LockService.class, new Answer<>()
         {
             @Override
             public synchronized Object answer( final InvocationOnMock invocation )
@@ -1438,8 +1438,7 @@ public class TransactionRecordStateTest
         List<Iterable<IndexEntryUpdate<SchemaDescriptor>>> updates = new ArrayList<>();
         OnlineIndexUpdates onlineIndexUpdates =
                 new OnlineIndexUpdates( neoStores.getNodeStore(), schemaCache, new PropertyPhysicalToLogicalConverter( neoStores.getPropertyStore() ), reader );
-        onlineIndexUpdates.feed( extractor.propertyCommandsByNodeIds(), extractor.propertyCommandsByRelationshipIds(), extractor.nodeCommandsById(),
-                extractor.relationshipCommandsById() );
+        onlineIndexUpdates.feed( extractor.getNodeCommands(), extractor.getRelationshipCommands() );
         updates.add( onlineIndexUpdates );
         reader.close();
         return updates;
@@ -1589,5 +1588,19 @@ public class TransactionRecordStateTest
         StorageIndexReference descriptor = new DefaultStorageIndexReference( forLabel( labeId, propertyKeyIds ), false, nextRuleId++, null );
         schemaCache.addSchemaRule( descriptor );
         return descriptor;
+    }
+
+    private LongIterable entityIds( EntityCommandGrouper.Cursor cursor )
+    {
+        LongArrayList list = new LongArrayList();
+        if ( cursor.nextEntity() )
+        {
+            while ( cursor.nextProperty() != null )
+            {
+                // Just get any potential property commands out of the way
+            }
+            list.add( cursor.currentEntityId() );
+        }
+        return list;
     }
 }

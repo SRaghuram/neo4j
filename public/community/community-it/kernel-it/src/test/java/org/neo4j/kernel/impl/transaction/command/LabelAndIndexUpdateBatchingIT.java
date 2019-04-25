@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Visitor;
@@ -39,10 +40,11 @@ import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.singleOrNull;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
@@ -60,6 +62,7 @@ public class LabelAndIndexUpdateBatchingIT
 {
     private static final String PROPERTY_KEY = "key";
     private static final Label LABEL = Label.label( "label" );
+    private DatabaseManagementService managementService;
 
     @Test
     public void indexShouldIncludeNodesCreatedPreviouslyInBatch() throws Exception
@@ -70,7 +73,8 @@ public class LabelAndIndexUpdateBatchingIT
 
         // a bunch of nodes (to have the index population later on to decide to use label scan for population)
         List<TransactionRepresentation> transactions;
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         String nodeN = "our guy";
         String otherNode = "just to create the tokens";
         try
@@ -100,10 +104,11 @@ public class LabelAndIndexUpdateBatchingIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
-        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         TransactionCommitProcess commitProcess =
                 db.getDependencyResolver().resolveDependency( TransactionCommitProcess.class );
         try
@@ -126,7 +131,7 @@ public class LabelAndIndexUpdateBatchingIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
     }

@@ -528,11 +528,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -558,11 +558,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -594,11 +594,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -632,7 +632,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
@@ -668,11 +668,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
 
-    1 until 90 foreach { i =>
+    1 until 90 foreach { _ =>
       createLabeledNode("Person")
     }
 
-    1 until 20 foreach { i =>
+    1 until 20 foreach { _ =>
       createLabeledNode("Movie")
     }
 
@@ -777,11 +777,10 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
       }))
 
     result.columnAs[Node]("f").toList should equal(List(node))
-    result.executionPlanDescription() should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
   }
 
   test("should handle join hint solved multiple times") {
@@ -798,29 +797,5 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     }))
 
     result.toList should equal (List(Map("c" -> 4)))
-  }
-
-  //---------------------------------------------------------------------------
-  // Verification helpers
-
-  private def verifyJoinHintUnfulfillableOnRunWithConfig(initQuery: String, query: String, expectedResult: Any): Unit = {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "false") {
-      db =>
-        db.execute(initQuery)
-        val result = db.execute(query)
-        shouldHaveNoWarnings(result)
-        import scala.collection.JavaConverters._
-        result.asScala.toList.map(_.asScala) should equal(expectedResult)
-
-        val explainResult = db.execute(s"EXPLAIN $query")
-        shouldHaveWarning(explainResult, Status.Statement.JoinHintUnfulfillableWarning)
-    }
-
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
-      db =>
-        db.execute(initQuery)
-        intercept[QueryExecutionException](db.execute(query)).getStatusCode should equal("Neo.DatabaseError.Statement.ExecutionFailed")
-        intercept[QueryExecutionException](db.execute(s"EXPLAIN $query")).getStatusCode should equal("Neo.DatabaseError.Statement.ExecutionFailed")
-    }
   }
 }

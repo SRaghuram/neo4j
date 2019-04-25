@@ -25,7 +25,6 @@ import java.io.IOException;
 
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCursor;
@@ -51,7 +50,7 @@ public class BlockReader<KEY,VALUE> implements Closeable
         this.layout = layout;
         this.byteBufferFactory = byteBufferFactory;
         this.blockSize = blockSize;
-        this.channel = fs.open( file, OpenMode.READ );
+        this.channel = fs.read( file );
     }
 
     BlockEntryReader<KEY,VALUE> nextBlock() throws IOException
@@ -61,7 +60,7 @@ public class BlockReader<KEY,VALUE> implements Closeable
         {
             return null;
         }
-        StoreChannel blockChannel = fs.open( file, OpenMode.READ );
+        StoreChannel blockChannel = fs.read( file );
         blockChannel.position( position );
         PageCursor pageCursor = new ReadableChannelPageCursor( new ReadAheadChannel<>( blockChannel, byteBufferFactory.newBuffer( blockSize ) ) );
         BlockEntryReader<KEY,VALUE> blockEntryReader = new BlockEntryReader<>( pageCursor, layout );

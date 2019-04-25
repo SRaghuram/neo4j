@@ -19,7 +19,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
@@ -103,7 +102,7 @@ public class OnlineBackupExecutor
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
-        private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
+        private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
 
         private Builder()
         {

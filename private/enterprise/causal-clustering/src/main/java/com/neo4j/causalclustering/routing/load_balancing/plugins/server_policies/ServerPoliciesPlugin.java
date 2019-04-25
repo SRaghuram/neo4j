@@ -6,19 +6,22 @@
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
@@ -26,13 +29,12 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
-import static com.neo4j.causalclustering.routing.Util.asList;
-import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
@@ -48,10 +50,11 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     public static final String PLUGIN_NAME = "server_policies";
 
     private TopologyService topologyService;
-    private LeaderLocator leaderLocator;
+    private LeaderService leaderService;
     private Long timeToLive;
     private boolean allowReadsOnFollowers;
     private Policies policies;
+    private boolean shouldShuffle;
 
     @Override
     public void validate( Config config, Log log ) throws InvalidSettingException
@@ -67,14 +70,15 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public void init( TopologyService topologyService, LeaderLocator leaderLocator,
+    public void init( TopologyService topologyService, LeaderService leaderService,
             LogProvider logProvider, Config config ) throws InvalidFilterSpecification
     {
         this.topologyService = topologyService;
-        this.leaderLocator = leaderLocator;
+        this.leaderService = leaderService;
         this.timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
         this.policies = FilteringPolicyLoader.load( config, PLUGIN_NAME, logProvider.getLog( getClass() ) );
+        this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
     }
 
     @Override
@@ -84,43 +88,54 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( MapValue context ) throws ProcedureException
+    public boolean isShufflingPlugin()
     {
+        return true;
+    }
+
+    @Override
+    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
+    {
+        var dbId = new DatabaseId( databaseName );
         Policy policy = policies.selectFor( context );
 
-        CoreTopology coreTopology = topologyService.localCoreServers();
-        ReadReplicaTopology rrTopology = topologyService.localReadReplicas();
+        CoreTopology coreTopology = coreTopologyFor( dbId );
+        ReadReplicaTopology rrTopology = readReplicaTopology( dbId );
 
-        return new RoutingResult( routeEndpoints( coreTopology, rrTopology ), writeEndpoints( coreTopology ),
-                readEndpoints( coreTopology, rrTopology, policy ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( dbId ),
+                readEndpoints( coreTopology, rrTopology, policy, dbId ), timeToLive );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
+    private List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology, Policy policy )
     {
-        return coreTopology.members()
-                .values()
-                .stream()
-                .map( extractBoltAddress() )
-                .collect( toList() );
-    }
+        Set<ServerInfo> routers = coreTopology.members().entrySet().stream()
+                .map( e ->
+                {
+                    MemberId m = e.getKey();
+                    CoreServerInfo c = e.getValue();
+                    return new ServerInfo( c.connectors().boltAddress(), m, c.groups() );
+                } ).collect( Collectors.toSet() );
 
-    private List<AdvertisedSocketAddress> writeEndpoints( CoreTopology cores )
-    {
+        Set<ServerInfo> preferredRouters = policy.apply( routers );
+        List<ServerInfo> otherRouters = routers.stream().filter( r -> !preferredRouters.contains( r ) ).collect( Collectors.toList() );
+        List<ServerInfo> preferredRoutersList = new ArrayList<>( preferredRouters );
 
-        MemberId leader;
-        try
+        if ( shouldShuffle )
         {
-            leader = leaderLocator.getLeader();
-        }
-        catch ( NoLeaderFoundException e )
-        {
-            return emptyList();
+            Collections.shuffle( preferredRoutersList );
+            Collections.shuffle( otherRouters );
         }
 
-        return asList( cores.find( leader ).map( extractBoltAddress() ) );
+        return Stream.concat( preferredRouters.stream(), otherRouters.stream() )
+                .map( ServerInfo::boltAddress ).collect( Collectors.toList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy )
+    private List<AdvertisedSocketAddress> writeEndpoints( DatabaseId databaseId )
+    {
+        return leaderService.getLeaderBoltAddress( databaseId ).map( List::of ).orElse( emptyList() );
+    }
+
+    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, DatabaseId databaseId )
     {
 
         Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
@@ -128,29 +143,45 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                         entry.getValue().groups() ) )
                 .collect( Collectors.toSet() );
 
-        if ( allowReadsOnFollowers || possibleReaders.size() == 0 )
+        if ( allowReadsOnFollowers || possibleReaders.isEmpty() )
         {
-            Set<MemberId> validCores = coreTopology.members().keySet();
-            try
+            Map<MemberId,CoreServerInfo> coreMembers = coreTopology.members();
+            Set<MemberId> validCores = coreMembers.keySet();
+
+            Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseId );
+            if ( optionalLeaderId.isPresent() )
             {
-                MemberId leader = leaderLocator.getLeader();
-                validCores = validCores.stream().filter( memberId -> !memberId.equals( leader ) ).collect( Collectors.toSet() );
+                MemberId leaderId = optionalLeaderId.get();
+                validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( Collectors.toSet() );
             }
-            catch ( NoLeaderFoundException ignored )
-            {
-                // we might end up using the leader for reading during this ttl, should be fine in general
-            }
+            // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
 
             for ( MemberId validCore : validCores )
             {
-                Optional<CoreServerInfo> coreServerInfo = coreTopology.find( validCore );
-                coreServerInfo.ifPresent(
-                        coreServerInfo1 -> possibleReaders.add(
-                                new ServerInfo( coreServerInfo1.connectors().boltAddress(), validCore, coreServerInfo1.groups() ) ) );
+                CoreServerInfo coreServerInfo = coreMembers.get( validCore );
+                if ( coreServerInfo != null )
+                {
+                    possibleReaders.add( new ServerInfo( coreServerInfo.connectors().boltAddress(), validCore, coreServerInfo.groups() ) );
+                }
             }
         }
 
-        Set<ServerInfo> readers = policy.apply( possibleReaders );
+        List<ServerInfo> readers = new ArrayList<>( policy.apply( possibleReaders ) );
+
+        if ( shouldShuffle )
+        {
+            Collections.shuffle( readers );
+        }
         return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
+    }
+
+    private CoreTopology coreTopologyFor( DatabaseId databaseId )
+    {
+        return topologyService.coreTopologyForDatabase( databaseId );
+    }
+
+    private ReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
+    {
+        return topologyService.readReplicaTopologyForDatabase( databaseId );
     }
 }

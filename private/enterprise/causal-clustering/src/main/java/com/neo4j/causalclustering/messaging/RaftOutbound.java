@@ -63,10 +63,10 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
         }
         else
         {
-            Optional<CoreServerInfo> coreServerInfo = coreTopologyService.localCoreServers().find( to );
-            if ( coreServerInfo.isPresent() )
+            CoreServerInfo targetCoreInfo = coreTopologyService.allCoreServers().get( to );
+            if ( targetCoreInfo != null )
             {
-                outbound.send( coreServerInfo.get().getRaftServer(), RaftMessages.ClusterIdAwareMessage.of( clusterId.get(), message ), block );
+                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.ClusterIdAwareMessage.of( clusterId.get(), message ), block );
             }
             else
             {

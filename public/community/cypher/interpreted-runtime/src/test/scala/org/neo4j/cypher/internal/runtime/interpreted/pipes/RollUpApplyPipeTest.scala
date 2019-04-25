@@ -35,7 +35,7 @@ class RollUpApplyPipeTest extends CypherFunSuite with PipeTestSupport {
   test("when rhs returns nothing, an empty collection should be produced") {
     // given
     val lhs = createLhs(1)
-    val rhs = pipeWithResults { (state) => Iterator() }
+    val rhs = pipeWithResults { state => Iterator() }
     val pipe = RollUpApplyPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Set("a"))()
 
     // when
@@ -94,12 +94,12 @@ class RollUpApplyPipeTest extends CypherFunSuite with PipeTestSupport {
   }
 
   private def createRhs(data: Any*) = {
-    val rhsData = data.map { case v => Map("y" -> v) }
+    val rhsData = data.map(v => Map("y" -> v))
     new FakePipe(rhsData.iterator)
   }
 
   private def createLhs(data: Any*) = {
-    val lhsData = data.map { case v => Map("a" -> v) }
+    val lhsData = data.map(v => Map("a" -> v))
     new FakePipe(lhsData.iterator)
   }
 }

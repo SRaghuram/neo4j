@@ -146,7 +146,7 @@ class AuxGenerator(val packageName: String, val generator: CodeGenerator)(implic
             codeGenType match {
               // TODO: Primitive nodes and relationships including correct ordering of nulls
               // TODO: Extract shared code between cases
-              case CypherCodeGenType(symbols.CTInteger, reprType) if RepresentationType.isPrimitive(reprType) => {
+              case CypherCodeGenType(symbols.CTInteger, reprType) if RepresentationType.isPrimitive(reprType) =>
                 /*
                 E.g.
                 long thisValue_a = this.a
@@ -166,8 +166,7 @@ class AuxGenerator(val packageName: String, val generator: CodeGenerator)(implic
                 using(l2.ifStatement(Expression.lt(otherValueVariable, thisValueVariable))) { l3 =>
                   l3.returns(Expression.constant(greaterThanSortResult(sortOrder)))
                 }
-              }
-              case CypherCodeGenType(symbols.CTFloat, reprType) if RepresentationType.isPrimitive(reprType) => {
+              case CypherCodeGenType(symbols.CTFloat, reprType) if RepresentationType.isPrimitive(reprType) =>
                 // We use Double.compare(double, double) which handles float equality properly
                 /*
                 E.g.
@@ -193,8 +192,7 @@ class AuxGenerator(val packageName: String, val generator: CodeGenerator)(implic
                 using(l2.ifStatement(Expression.notEqual(compareResult, Expression.constant(0)))) { l3 =>
                   l3.returns(compareResult)
                 }
-              }
-              case CypherCodeGenType(symbols.CTBoolean, reprType) if RepresentationType.isPrimitive(reprType) => {
+              case CypherCodeGenType(symbols.CTBoolean, reprType) if RepresentationType.isPrimitive(reprType) =>
                 /*
                 E.g.
                 boolean thisValue_a = this.a
@@ -212,8 +210,7 @@ class AuxGenerator(val packageName: String, val generator: CodeGenerator)(implic
                     Expression.constant(greaterThanSortResult(sortOrder)),
                     Expression.constant(lessThanSortResult(sortOrder))))
                 }
-              }
-              case _ => {
+              case _ =>
                 // Use CypherOrderability.compare which handles mixed-types according to Cypher orderability semantics
                 val compareResultName = s"compare_$fieldName"
                 val compareResult = l2.declare(typeRef[Int], compareResultName)
@@ -241,7 +238,6 @@ class AuxGenerator(val packageName: String, val generator: CodeGenerator)(implic
                 using(l2.ifStatement(Expression.notEqual(compareResult, Expression.constant(0)))) { l3 =>
                   l3.returns(compareResult)
                 }
-              }
             }
           }
         }

@@ -8,6 +8,9 @@ package org.neo4j.cypher.internal.runtime.zombie
 object Zombie {
   val DEBUG = false
   def debug(msg: => String): Unit =
-    if (DEBUG)
-      println(msg)
+    if (DEBUG) {
+      // Not using println because that is synchronized and can hide
+      // parallel problems.
+      print(msg + "\n")
+    }
 }

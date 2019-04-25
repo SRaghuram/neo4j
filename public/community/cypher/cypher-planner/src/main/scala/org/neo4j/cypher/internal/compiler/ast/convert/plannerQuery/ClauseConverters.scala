@@ -80,7 +80,7 @@ object ClauseConverters {
     if (aggregationsMap.nonEmpty)
       AggregatingQueryProjection(groupingExpressions = projectionMap, aggregationExpressions = aggregationsMap)
     else if (distinct)
-      DistinctQueryProjection(groupingKeys = projectionMap)
+      DistinctQueryProjection(groupingExpressions = projectionMap)
     else
       RegularQueryProjection(projections = projectionMap)
   }
@@ -458,7 +458,7 @@ object ClauseConverters {
         && builder.currentQueryGraph.shortestPathPatterns.isEmpty
         && ri.items.forall {
         case item: AliasedReturnItem => item.expression == item.variable
-        case x => throw new InternalException("This should have been rewritten to an AliasedReturnItem.")
+        case _ => throw new InternalException("This should have been rewritten to an AliasedReturnItem.")
       } && builder.readOnly =>
       val selections = asSelections(where)
       builder.

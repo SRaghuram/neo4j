@@ -7,13 +7,11 @@ package com.neo4j.causalclustering.error_handling;
 
 import com.neo4j.causalclustering.net.Server;
 
-import java.util.function.Supplier;
-
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityRequirement;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 
 import static com.neo4j.causalclustering.error_handling.PanicException.EXCEPTION;
 
@@ -23,9 +21,9 @@ public final class PanicEventHandlers
     {
     }
 
-    public static DbHealthPanicEventHandler dbHealthEventHandler( Supplier<DatabaseHealth> databaseHealthSupplier )
+    public static DbHealthPanicEventHandler dbHealthEventHandler( Health internalDatabasesHealth )
     {
-        return new DbHealthPanicEventHandler( databaseHealthSupplier );
+        return new DbHealthPanicEventHandler( internalDatabasesHealth );
     }
 
     public static RaiseAvailabilityGuardEventHandler raiseAvailabilityGuardEventHandler( AvailabilityGuard availabilityGuard )
@@ -45,21 +43,17 @@ public final class PanicEventHandlers
 
     private static class DbHealthPanicEventHandler implements PanicEventHandler
     {
-        private final Supplier<DatabaseHealth> databaseHealthSupplier;
+        private final Health internalDatabasesHealth;
 
-        private DbHealthPanicEventHandler( Supplier<DatabaseHealth> databaseHealthSupplier )
+        private DbHealthPanicEventHandler( Health internalDatabasesHealth )
         {
-            this.databaseHealthSupplier = databaseHealthSupplier;
+            this.internalDatabasesHealth = internalDatabasesHealth;
         }
 
         @Override
         public void onPanic()
         {
-            DatabaseHealth databaseHealth = databaseHealthSupplier.get();
-            if ( databaseHealth != null )
-            {
-                databaseHealth.panic( EXCEPTION );
-            }
+            internalDatabasesHealth.panic( EXCEPTION );
         }
     }
 

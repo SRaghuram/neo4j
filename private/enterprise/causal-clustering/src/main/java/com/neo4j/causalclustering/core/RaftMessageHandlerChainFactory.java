@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider;
-import com.neo4j.causalclustering.core.consensus.ConsensusModule;
+import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
@@ -55,17 +55,17 @@ public class RaftMessageHandlerChainFactory
         this.config = globalModule.getGlobalConfig();
     }
 
-    public LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> createMessageHandlerChain( ConsensusModule consensusModule,
+    public LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> createMessageHandlerChain( RaftGroup raftGroup,
             CoreServerModule coreServerModule )
     {
         RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider,
-                consensusModule.raftMachine(), coreServerModule.downloadService(),
+                raftGroup.raftMachine(), coreServerModule.downloadService(),
                 coreServerModule.commandApplicationProcess(), catchupAddressProvider, panicker );
 
         ComposableMessageHandler monitoringHandler = RaftMessageMonitoringHandler.composable( clock, monitors );
         ComposableMessageHandler batchingMessageHandler = createBatchingHandler();
-        ComposableMessageHandler leaderAvailabilityHandler = LeaderAvailabilityHandler.composable( consensusModule.getLeaderAvailabilityTimers(),
-                monitors.newMonitor( RaftMessageTimerResetMonitor.class ), consensusModule.raftMachine()::term );
+        ComposableMessageHandler leaderAvailabilityHandler = LeaderAvailabilityHandler.composable( raftGroup.getLeaderAvailabilityTimers(),
+                monitors.newMonitor( RaftMessageTimerResetMonitor.class ), raftGroup.raftMachine()::term );
         ComposableMessageHandler clusterBindingHandler = ClusterBindingHandler.composable( raftMessageDispatcher, logProvider );
 
         return clusterBindingHandler

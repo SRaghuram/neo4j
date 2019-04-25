@@ -11,14 +11,16 @@ import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.database.DatabaseId;
+
+import static java.util.stream.Collectors.toSet;
 
 class ReadReplicaViewMessage
 {
@@ -28,24 +30,33 @@ class ReadReplicaViewMessage
 
     ReadReplicaViewMessage( Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas )
     {
-        this.clusterClientReadReplicas = Collections.unmodifiableMap( new HashMap<>( clusterClientReadReplicas ) );
+        this.clusterClientReadReplicas = Map.copyOf( clusterClientReadReplicas );
     }
 
     Stream<ActorRef> topologyClient( ActorRef clusterClient )
     {
-        return Streams.ofNullable( clusterClientReadReplicas.get( clusterClient ) )
+        return Stream.ofNullable( clusterClientReadReplicas.get( clusterClient ) )
                 .map( ReadReplicaViewRecord::topologyClientActorRef );
     }
 
-    ReadReplicaTopology toReadReplicaTopology()
+    ReadReplicaTopology toReadReplicaTopology( DatabaseId databaseId )
     {
         Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
                 .values()
                 .stream()
+                .filter( info -> info.readReplicaInfo().getDatabaseIds().contains( databaseId ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
                 .collect( CollectorsUtil.pairsToMap() );
 
-        return new ReadReplicaTopology( knownReadReplicas );
+        return new ReadReplicaTopology( databaseId, knownReadReplicas );
+    }
+
+    Set<DatabaseId> databaseIds()
+    {
+        return clusterClientReadReplicas.values().stream()
+                .map( ReadReplicaViewRecord::readReplicaInfo )
+                .flatMap( info -> info.getDatabaseIds().stream() )
+                .collect( toSet() );
     }
 
     @Override

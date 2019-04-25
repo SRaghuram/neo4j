@@ -74,7 +74,7 @@ trait MethodStructure[E] {
   def toSet(value: E): E
   def newDistinctSet(name: String, codeGenTypes: Iterable[CodeGenType])
   def distinctSetIfNotContains(name: String, structure: Map[String,(CodeGenType,E)])(block: MethodStructure[E] => Unit)
-  def distinctSetIterate(name: String, key: HashableTupleDescriptor)(block: (MethodStructure[E]) => Unit)
+  def distinctSetIterate(name: String, key: HashableTupleDescriptor)(block: MethodStructure[E] => Unit)
   def newUniqueAggregationKey(varName: String, structure: Map[String, (CodeGenType,E)]): Unit
   def newAggregationMap(name: String, keyTypes: IndexedSeq[CodeGenType]): Unit
   def aggregationMapGet(name: String, varName: String, key: Map[String,(CodeGenType,E)], keyVar: String)
@@ -88,7 +88,7 @@ trait MethodStructure[E] {
   def sortTableSort(name: String, tableDescriptor: SortTableDescriptor): Unit
   def sortTableIterate(name: String, tableDescriptor: SortTableDescriptor,
                        varNameToField: Map[String, String])
-                      (block: (MethodStructure[E]) => Unit): Unit
+                      (block: MethodStructure[E] => Unit): Unit
 
   def loadVariable(varName: String): E
 

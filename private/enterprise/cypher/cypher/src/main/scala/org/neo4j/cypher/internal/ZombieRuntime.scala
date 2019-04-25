@@ -6,17 +6,16 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics, _}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
@@ -58,23 +57,16 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, stateDefinition, physicalPlan.slotConfigurations)
 
     pipelineBuilder.build(physicalPlan.logicalPlan)
-    val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
+    val operatorFactory = new OperatorFactory(stateDefinition, converters, true, queryIndexes)
+
+    //=======================================================
+    val fuseOperators = new FuseOperators(operatorFactory, context.config.fuseOperators, context.tokenContext)
 
     val executablePipelines =
       for (p <- pipelineBuilder.pipelines) yield {
-        val headOperator = operatorFactory.create(p.headPlan)
-        val middleOperators = p.middlePlans.flatMap(operatorFactory.createMiddle)
-        val produceResultOperator = p.produceResults.map(operatorFactory.createProduceResults)
-
-        ExecutablePipeline(p.id,
-                           headOperator,
-                           middleOperators,
-                           produceResultOperator,
-                           p.serial,
-                           physicalPlan.slotConfigurations(p.headPlan.id),
-                           p.lhsRowBuffer,
-                           p.output)
+        fuseOperators.compilePipeline(p)
       }
+    //=======================================================
 
     val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
 
@@ -105,7 +97,6 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      prePopulateResults: Boolean,
                      inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
-
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
@@ -113,6 +104,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               stateDefinition,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
                               nExpressionSlots,
+                              prePopulateResults,
                               inputDataStream,
                               logicalPlan,
                               queryContext,
@@ -135,6 +127,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             stateDefinition: StateDefinition,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
+                            prePopulateResults: Boolean,
                             inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
@@ -155,6 +148,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   schedulerTracer,
                                                   queryIndexes,
                                                   nExpressionSlots,
+                                                  prePopulateResults,
                                                   visitor)
 
       executionHandle.await()

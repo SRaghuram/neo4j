@@ -5,15 +5,15 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
+import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,23 +22,23 @@ import org.neo4j.logging.NullLogProvider;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ProtocolInstallerRepositoryTest
+class ProtocolInstallerRepositoryTest
 {
-    private List<ModifierProtocolInstaller<Orientation.Client>> clientModifiers =
+    private final List<ModifierProtocolInstaller<Orientation.Client>> clientModifiers =
             asList( new SnappyClientInstaller(),
                     new LZOClientInstaller(),
                     new LZ4ClientInstaller(),
                     new LZ4HighCompressionClientInstaller(),
                     new Rot13ClientInstaller() );
-    private List<ModifierProtocolInstaller<Orientation.Server>> serverModifiers =
+    private final List<ModifierProtocolInstaller<Orientation.Server>> serverModifiers =
             asList( new SnappyServerInstaller(),
                     new LZOServerInstaller(),
                     new LZ4ServerInstaller(),
@@ -47,38 +47,38 @@ public class ProtocolInstallerRepositoryTest
 
     private final NettyPipelineBuilderFactory pipelineBuilderFactory =
             new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
-    private final RaftProtocolClientInstallerV1.Factory raftProtocolClientInstaller =
-            new RaftProtocolClientInstallerV1.Factory( pipelineBuilderFactory, NullLogProvider.getInstance() );
-    private final RaftProtocolServerInstallerV1.Factory raftProtocolServerInstaller =
-            new RaftProtocolServerInstallerV1.Factory( null, pipelineBuilderFactory, DEFAULT_DATABASE_NAME, NullLogProvider.getInstance() );
+    private final RaftProtocolClientInstallerV2.Factory raftProtocolClientInstaller =
+            new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, NullLogProvider.getInstance() );
+    private final RaftProtocolServerInstallerV2.Factory raftProtocolServerInstaller =
+            new RaftProtocolServerInstallerV2.Factory( null, pipelineBuilderFactory, NullLogProvider.getInstance() );
 
     private final ProtocolInstallerRepository<Orientation.Client> clientRepository =
-            new ProtocolInstallerRepository<>( asList( raftProtocolClientInstaller ), clientModifiers );
+            new ProtocolInstallerRepository<>( List.of( raftProtocolClientInstaller ), clientModifiers );
     private final ProtocolInstallerRepository<Orientation.Server> serverRepository =
-            new ProtocolInstallerRepository<>( asList( raftProtocolServerInstaller ), serverModifiers );
+            new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstaller ), serverModifiers );
 
     @Test
-    public void shouldReturnRaftServerInstaller()
+    void shouldReturnRaftServerInstaller()
     {
         assertEquals(
                 raftProtocolServerInstaller.applicationProtocol(),
-                serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_1, emptyList() ) ).applicationProtocol() );
+                serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, emptyList() ) ).applicationProtocol() );
     }
 
     @Test
-    public void shouldReturnRaftClientInstaller()
+    void shouldReturnRaftClientInstaller()
     {
         assertEquals(
                 raftProtocolClientInstaller.applicationProtocol(),
-                clientRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_1, emptyList() ) ).applicationProtocol() );
+                clientRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, emptyList() ) ).applicationProtocol() );
     }
 
     @Test
-    public void shouldReturnModifierProtocolsForClient()
+    void shouldReturnModifierProtocolsForClient()
     {
         // given
         Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
         Collection<Collection<Protocol.ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
@@ -88,11 +88,11 @@ public class ProtocolInstallerRepositoryTest
     }
 
     @Test
-    public void shouldReturnModifierProtocolsForServer()
+    void shouldReturnModifierProtocolsForServer()
     {
         // given
         Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
         Collection<Collection<Protocol.ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
@@ -102,13 +102,13 @@ public class ProtocolInstallerRepositoryTest
     }
 
     @Test
-    public void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForClient()
+    void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForClient()
     {
         // given
         Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION;
 
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
         Collection<Collection<Protocol.ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
@@ -118,13 +118,13 @@ public class ProtocolInstallerRepositoryTest
     }
 
     @Test
-    public void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForServer()
+    void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForServer()
     {
         // given
         Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_VALIDATING;
 
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
         Collection<Collection<Protocol.ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
@@ -134,69 +134,70 @@ public class ProtocolInstallerRepositoryTest
     }
 
     @Test
-    public void shouldUseDifferentInstancesOfProtocolInstaller()
+    void shouldUseDifferentInstancesOfProtocolInstaller()
     {
         // given
-        ProtocolStack protocolStack1 = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( TestProtocols.TestModifierProtocols.SNAPPY ) );
-        ProtocolStack protocolStack2 = new ProtocolStack( ApplicationProtocols.RAFT_1, asList( TestProtocols.TestModifierProtocols.LZO ) );
+        ProtocolStack protocolStack1 = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( TestProtocols.TestModifierProtocols.SNAPPY ) );
+        ProtocolStack protocolStack2 = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( TestProtocols.TestModifierProtocols.LZO ) );
 
         // when
-        ProtocolInstaller protocolInstaller1 = clientRepository.installerFor( protocolStack1 );
-        ProtocolInstaller protocolInstaller2 = clientRepository.installerFor( protocolStack2 );
+        ProtocolInstaller<Orientation.Client> protocolInstaller1 = clientRepository.installerFor( protocolStack1 );
+        ProtocolInstaller<Orientation.Client> protocolInstaller2 = clientRepository.installerFor( protocolStack2 );
 
         // then
         assertThat( protocolInstaller1, not( sameInstance( protocolInstaller2 ) ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldThrowIfAttemptingToCreateInstallerForMultipleModifiersWithSameIdentifier()
+    @Test
+    void shouldThrowIfAttemptingToCreateInstallerForMultipleModifiersWithSameIdentifier()
     {
         // given
         ProtocolStack protocolStack = new ProtocolStack(
-                ApplicationProtocols.RAFT_1,
+                ApplicationProtocols.RAFT_2,
                 asList( TestProtocols.TestModifierProtocols.SNAPPY, TestProtocols.TestModifierProtocols.LZO ) );
 
-        // when
-        clientRepository.installerFor( protocolStack );
-
-        // then throw
+        // then
+        assertThrows( IllegalArgumentException.class, () -> clientRepository.installerFor( protocolStack ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldNotInitialiseIfMultipleInstallersForSameProtocolForServer()
+    @Test
+    void shouldNotInitialiseIfMultipleInstallersForSameProtocolForServer()
     {
-        new ProtocolInstallerRepository<>( asList( raftProtocolServerInstaller, raftProtocolServerInstaller ), emptyList() );
+        assertThrows( IllegalArgumentException.class,
+                () -> new ProtocolInstallerRepository<>( asList( raftProtocolServerInstaller, raftProtocolServerInstaller ), emptyList() ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldNotInitialiseIfMultipleInstallersForSameProtocolForClient()
+    @Test
+    void shouldNotInitialiseIfMultipleInstallersForSameProtocolForClient()
     {
-        new ProtocolInstallerRepository<>( asList( raftProtocolClientInstaller, raftProtocolClientInstaller ), emptyList() );
+        assertThrows( IllegalArgumentException.class,
+                () -> new ProtocolInstallerRepository<>( asList( raftProtocolClientInstaller, raftProtocolClientInstaller ), emptyList() ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIfUnknownProtocolForServer()
+    @Test
+    void shouldThrowIfUnknownProtocolForServer()
     {
-        serverRepository.installerFor( new ProtocolStack( TestProtocols.TestApplicationProtocols.RAFT_3, emptyList() ) );
+        assertThrows( IllegalStateException.class,
+                () -> serverRepository.installerFor( new ProtocolStack( TestProtocols.TestApplicationProtocols.RAFT_3, emptyList() ) ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIfUnknownProtocolForClient()
+    @Test
+    void shouldThrowIfUnknownProtocolForClient()
     {
-        clientRepository.installerFor( new ProtocolStack( TestProtocols.TestApplicationProtocols.RAFT_3, emptyList() ) );
+        assertThrows( IllegalStateException.class,
+                () -> clientRepository.installerFor( new ProtocolStack( TestProtocols.TestApplicationProtocols.RAFT_3, emptyList() ) ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIfUnknownModifierProtocol()
+    @Test
+    void shouldThrowIfUnknownModifierProtocol()
     {
         // given
         // setup used TestModifierProtocols, doesn't know about production protocols
         Protocol.ModifierProtocol unknownProtocol = ModifierProtocols.COMPRESSION_SNAPPY;
 
-        // when
-        serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_1, asList( unknownProtocol ) ) );
-
-        // then throw
+        // then
+        assertThrows( IllegalStateException.class,
+                () -> serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( unknownProtocol ) ) ) );
     }
 
     // Dummy installers

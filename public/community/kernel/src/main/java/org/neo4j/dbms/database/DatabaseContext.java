@@ -23,33 +23,29 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
-import static java.util.Objects.requireNonNull;
-
-public class DatabaseContext
+public interface DatabaseContext
 {
-    private final Database database;
-    private final GraphDatabaseFacade databaseFacade;
+    Database database();
 
-    public DatabaseContext( Database database, GraphDatabaseFacade databaseFacade )
+    /**
+     * Returns a per-database {@link Dependencies} object.
+     * These per-database dependencies sit in a tree underneath the parent, global dependencies.
+     * If you `satisfy` an instance of a type on this object then you may only `resolve` it on this object.
+     * However, if you `resolve` a type which is satisfied on the global dependencies but not here, that
+     * will work fine. You will receive the global instance.
+     *
+     * @return dependencies service for this database
+     */
+    default Dependencies dependencies()
     {
-        requireNonNull( database );
-        requireNonNull( databaseFacade );
-        this.database = database;
-        this.databaseFacade = databaseFacade;
+        return database().getDependencyResolver();
     }
 
-    public Database getDatabase()
-    {
-        return database;
-    }
+    GraphDatabaseFacade databaseFacade();
 
-    public Dependencies getDependencies()
-    {
-        return database.getDependencyResolver();
-    }
+    void fail( Throwable t );
 
-    public GraphDatabaseFacade getDatabaseFacade()
-    {
-        return databaseFacade;
-    }
+    boolean isFailed();
+
+    Throwable failureCause();
 }

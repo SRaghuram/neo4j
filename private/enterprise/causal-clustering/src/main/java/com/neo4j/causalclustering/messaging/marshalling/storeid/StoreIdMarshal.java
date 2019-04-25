@@ -6,13 +6,13 @@
 package com.neo4j.causalclustering.messaging.marshalling.storeid;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.handler.codec.DecoderException;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.storageengine.api.StoreId;
 
 public final class StoreIdMarshal extends SafeChannelMarshal<StoreId>
 {
@@ -32,6 +32,7 @@ public final class StoreIdMarshal extends SafeChannelMarshal<StoreId>
         channel.put( (byte) 1 );
         channel.putLong( storeId.getCreationTime() );
         channel.putLong( storeId.getRandomId() );
+        channel.putLong( storeId.getStoreVersion() );
         channel.putLong( storeId.getUpgradeTime() );
         channel.putLong( storeId.getUpgradeId() );
     }
@@ -51,8 +52,9 @@ public final class StoreIdMarshal extends SafeChannelMarshal<StoreId>
 
         long creationTime = channel.getLong();
         long randomId = channel.getLong();
+        long storeVersion = channel.getLong();
         long upgradeTime = channel.getLong();
         long upgradeId = channel.getLong();
-        return new StoreId( creationTime, randomId, upgradeTime, upgradeId );
+        return new StoreId( creationTime, randomId, storeVersion, upgradeTime, upgradeId );
     }
 }

@@ -22,6 +22,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.StoreLockException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.Validators;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
@@ -31,9 +32,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 public class UnbindFromClusterCommand implements AdminCommand
 {
     private static final Arguments arguments = new Arguments().withDatabase();
-    private Path homeDir;
-    private Path configDir;
-    private OutsideWorld outsideWorld;
+    private final Path homeDir;
+    private final Path configDir;
+    private final OutsideWorld outsideWorld;
 
     UnbindFromClusterCommand( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {
@@ -59,11 +60,11 @@ public class UnbindFromClusterCommand implements AdminCommand
     {
         try
         {
-            String databaseName = arguments.parse( args ).get( ARG_DATABASE );
+            DatabaseId databaseId = new DatabaseId( arguments.parse( args ).get( ARG_DATABASE ) );
             Config config = loadNeo4jConfig( homeDir, configDir );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
             File databasesRoot = config.get( databases_root_path );
-            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseName );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseId.name() );
 
             boolean hasDatabase = true;
             try

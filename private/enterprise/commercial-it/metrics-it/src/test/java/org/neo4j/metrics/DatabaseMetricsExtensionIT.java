@@ -18,11 +18,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -175,25 +178,25 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void registerDatabaseMetricsOnDatabaseStart()
+    public void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
-        databaseManager.createDatabase( "testdb" );
+        databaseManager.createDatabase( new DatabaseId( "testdb" ) );
 
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
     }
 
     @Test
-    public void removeDatabaseMetricsOnDatabaseStop()
+    public void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
-        String testDbName = "testdb";
+        DatabaseId testDbName = new DatabaseId( "testdb" );
         databaseManager.createDatabase( testDbName );
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
 

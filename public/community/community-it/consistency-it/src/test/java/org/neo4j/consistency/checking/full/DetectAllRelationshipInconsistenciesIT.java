@@ -31,6 +31,7 @@ import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -53,12 +54,13 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
@@ -69,6 +71,7 @@ public class DetectAllRelationshipInconsistenciesIT
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     @Rule
     public final RuleChain rules = RuleChain.outerRule( random ).around( directory ).around( fileSystemRule );
+    private DatabaseManagementService managementService;
 
     @Test
     public void shouldDetectSabotagedRelationshipWhereEverItIs() throws Exception
@@ -103,7 +106,7 @@ public class DetectAllRelationshipInconsistenciesIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         // THEN the checker should find it, where ever it is in the store
@@ -131,7 +134,7 @@ public class DetectAllRelationshipInconsistenciesIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -150,11 +153,11 @@ public class DetectAllRelationshipInconsistenciesIT
 
     private GraphDatabaseAPI getGraphDatabaseAPI()
     {
-        TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-        GraphDatabaseService database = factory.newEmbeddedDatabaseBuilder( directory.databaseDir() )
+        TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+        managementService = factory.newEmbeddedDatabaseBuilder( directory.storeDir() )
                 .setConfig( GraphDatabaseSettings.record_format, getRecordFormatName() )
-                .setConfig( "dbms.backup.enabled", "false" )
-                .newGraphDatabase();
+                .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         return (GraphDatabaseAPI) database;
     }
 

@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.client;
 
+import com.google.common.collect.Lists;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.client.model.ProfileLoader;
 import com.neo4j.bench.client.model.ProfilerRecordings;
@@ -15,7 +16,9 @@ import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -93,5 +96,24 @@ public class AddProfilesCommand implements Runnable
         {
             throw new RuntimeException( "Error encountered while trying to update test run report", e );
         }
+    }
+
+    public static List<String> argsFor( Path profilesDir,
+                                        Path testRunReportJson,
+                                        String s3BucketPath,
+                                        String s3ArchivePath,
+                                        boolean ignoreUnrecognizedFiles )
+    {
+        List<String> args = Lists.newArrayList(
+                "add-profiles",
+                AddProfilesCommand.CMD_DIR, profilesDir.toAbsolutePath().toString(),
+                AddProfilesCommand.CMD_TEST_RUN_RESULTS, testRunReportJson.toAbsolutePath().toString(),
+                AddProfilesCommand.CMD_S3_BUCKET, s3BucketPath,
+                AddProfilesCommand.CMD_ARCHIVE, s3ArchivePath );
+        if ( ignoreUnrecognizedFiles )
+        {
+            args.add( AddProfilesCommand.CMD_IGNORE_UNRECOGNIZED_FILES );
+        }
+        return args;
     }
 }

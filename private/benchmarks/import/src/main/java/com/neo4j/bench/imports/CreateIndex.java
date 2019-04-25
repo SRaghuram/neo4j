@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.imports;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.util.Arrays;
@@ -14,19 +14,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexPopulationProgress;
+import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.Args;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 public class CreateIndex
 {
-    private void run( String storeDir, List<String> indexPatterns )
+    private void run( String storeDirString, List<String> indexPatterns )
     {
-        GraphDatabaseService db = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( storeDir ) );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( new File( storeDirString ) )
+                .newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             Map<IndexDefinition,Integer> indexes = new HashMap<>();
@@ -34,8 +41,14 @@ public class CreateIndex
             {
                 for ( String indexPattern : indexPatterns )
                 {
-                    String[] split = splitPattern( indexPattern );
-                    IndexDefinition index = db.schema().indexFor( Label.label( split[0] ) ).on( split[1] ).create();
+                    String[] labelAndProperties = splitLabel( indexPattern );
+                    String[] properties = splitProperties( labelAndProperties[1] );
+                    IndexCreator indexCreator = db.schema().indexFor( Label.label( labelAndProperties[0] ) );
+                    for ( String property : properties )
+                    {
+                        indexCreator = indexCreator.on( property );
+                    }
+                    IndexDefinition index = indexCreator.create();
                     indexes.put( index, 0 );
                 }
                 tx.success();
@@ -57,7 +70,7 @@ public class CreateIndex
                     catch ( IllegalStateException e )
                     {
                         if ( !(e.getMessage().contains( "Expected index to come online within a reasonable time" ) ||
-                                e.getMessage().contains( "Expected all indexes to come online within a reasonable time" )) )
+                               e.getMessage().contains( "Expected all indexes to come online within a reasonable time" )) )
                         {
                             throw e;
                         }
@@ -83,7 +96,7 @@ public class CreateIndex
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -108,9 +121,14 @@ public class CreateIndex
         }
     }
 
-    private static String[] splitPattern( String indexPattern )
+    private static String[] splitLabel( String indexPattern )
     {
         return indexPattern.split( ":" );
+    }
+
+    private static String[] splitProperties( String properties )
+    {
+        return properties.split( "," );
     }
 
     public static void main( String[] args )
@@ -132,8 +150,12 @@ public class CreateIndex
         }
         for ( String indexPattern : indexPatterns )
         {
-            String[] split = splitPattern( indexPattern );
+            String[] split = splitLabel( indexPattern );
             if ( split.length != 2 )
+            {
+                return false;
+            }
+            if ( splitProperties( split[1] ).length < 1 )
             {
                 return false;
             }
@@ -143,6 +165,6 @@ public class CreateIndex
 
     private static IllegalArgumentException illegalArgsException( String[] args )
     {
-        return new IllegalArgumentException( "SYNTAX: --storeDir <dir> [<label>:<prop> ]+ provided arguments where " + Arrays.toString( args ) );
+        return new IllegalArgumentException( "SYNTAX: --storeDir <dir> [<label>:<prop1[,prop2]+> ]+ provided arguments where " + Arrays.toString( args ) );
     }
 }

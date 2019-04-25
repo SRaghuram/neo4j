@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.exceptions.StoreFailureException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -42,7 +44,6 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorImpl;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
@@ -53,8 +54,7 @@ import org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
-import org.neo4j.storageengine.api.StoreFailureException;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -66,8 +66,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.RelationshipType.withName;
-import static org.neo4j.io.fs.FileUtils.deleteRecursively;
 
 @PageCacheExtension
 class IdGeneratorTest
@@ -78,6 +78,7 @@ class IdGeneratorTest
     private FileSystemAbstraction fileSystem;
     @Inject
     private PageCache pageCache;
+    private DatabaseManagementService managementService;
 
     @Test
     void cannotCreateIdGeneratorWithNullFileSystem()
@@ -126,7 +127,7 @@ class IdGeneratorTest
             {
                 closeIdGenerator( idGenerator );
                 // verify that id generator is ok
-                StoreChannel fileChannel = fileSystem.open( idGeneratorFile(), OpenMode.READ_WRITE );
+                StoreChannel fileChannel = fileSystem.write( idGeneratorFile() );
                 ByteBuffer buffer = ByteBuffer.allocate( 9 );
                 fileChannel.readAll( buffer );
                 buffer.flip();
@@ -513,9 +514,7 @@ class IdGeneratorTest
     @Test
     void commandsGetWrittenOnceSoThatFreedIdsGetsAddedOnlyOnce() throws Exception
     {
-        File storeDir = new File( "target/var/free-id-once" );
-        deleteRecursively( storeDir );
-        GraphDatabaseService db = createTestDatabase( storeDir );
+        GraphDatabaseService db = createTestDatabase( testDirectory.storeDir() );
         RelationshipType type = withName( "SOME_TYPE" );
 
         // This transaction will, if some commands may be executed more than
@@ -544,12 +543,12 @@ class IdGeneratorTest
         }
         tx.success();
         tx.close();
-        db.shutdown();
+        managementService.shutdown();
 
         // After a clean shutdown, create new nodes and relationships and see so
         // that
         // all ids are unique.
-        db = createTestDatabase( storeDir );
+        db = createTestDatabase( testDirectory.storeDir() );
         tx = db.beginTx();
         commonNode = db.getNodeById( commonNode.getId() );
         for ( int i = 0; i < 100; i++ )
@@ -575,7 +574,7 @@ class IdGeneratorTest
             Iterables.lastOrNull( node.getRelationships() );
         }
         tx.close();
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -682,8 +681,8 @@ class IdGeneratorTest
 
     private GraphDatabaseService createTestDatabase( File storeDir )
     {
-        return new TestGraphDatabaseFactory()
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
-                .newImpermanentDatabase( storeDir );
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) ).newImpermanentService( storeDir );
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

@@ -15,6 +15,7 @@ import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,8 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 public class OptionsBuilder
 {
-    // TODO error policy
-
+    private Neo4jDeployment neo4jDeployment = Neo4jDeployment.embedded();
     private Query query;
     private List<ProfilerType> profilers = new ArrayList<>();
     private List<String> jvmArgs = new ArrayList<>();
@@ -36,12 +36,14 @@ public class OptionsBuilder
     private int forks = 1;
     private int warmupCount = 1;
     private int measurementCount = 1;
-    private boolean doPrintResults = true;
+    private Duration minMeasurementDuration = Duration.ofSeconds( 0 );
+    private Duration maxMeasurementDuration = Duration.ofMinutes( 10 );
     private Path jvmFile;
     private TimeUnit unit = TimeUnit.MILLISECONDS;
 
     public Options build()
     {
+        Objects.requireNonNull( neo4jDeployment );
         Objects.requireNonNull( query );
         Objects.requireNonNull( profilers );
         Objects.requireNonNull( jvmArgs );
@@ -53,8 +55,11 @@ public class OptionsBuilder
         // neo4j config is allowed to be null
         // jvm is allowed to be null
         Objects.requireNonNull( unit );
+        Objects.requireNonNull( minMeasurementDuration );
+        Objects.requireNonNull( maxMeasurementDuration );
 
         return new Options(
+                neo4jDeployment,
                 query,
                 profilers,
                 jvmArgs,
@@ -67,9 +72,16 @@ public class OptionsBuilder
                 forks,
                 warmupCount,
                 measurementCount,
-                doPrintResults,
+                minMeasurementDuration,
+                maxMeasurementDuration,
                 Jvm.bestEffort( jvmFile ),
                 unit );
+    }
+
+    public OptionsBuilder withNeo4jDeployment( Neo4jDeployment neo4jDeployment )
+    {
+        this.neo4jDeployment = neo4jDeployment;
+        return this;
     }
 
     public OptionsBuilder withQuery( Query query )
@@ -138,12 +150,6 @@ public class OptionsBuilder
         return this;
     }
 
-    public OptionsBuilder withPrintResults( boolean doPrintResults )
-    {
-        this.doPrintResults = doPrintResults;
-        return this;
-    }
-
     public OptionsBuilder withJvm( Path jvmFile )
     {
         this.jvmFile = jvmFile;
@@ -153,6 +159,18 @@ public class OptionsBuilder
     public OptionsBuilder withUnit( TimeUnit unit )
     {
         this.unit = unit;
+        return this;
+    }
+
+    public OptionsBuilder withMinDuration( Duration minMeasurementDuration )
+    {
+        this.minMeasurementDuration = minMeasurementDuration;
+        return this;
+    }
+
+    public OptionsBuilder withMaxDuration( Duration maxMeasurementDuration )
+    {
+        this.maxMeasurementDuration = maxMeasurementDuration;
         return this;
     }
 }

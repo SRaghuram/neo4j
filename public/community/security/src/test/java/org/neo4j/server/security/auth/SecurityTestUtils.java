@@ -22,12 +22,31 @@ package org.neo4j.server.security.auth;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.server.security.systemgraph.BasicInMemorySystemGraphOperations;
+import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
+import org.neo4j.server.security.systemgraph.SystemGraphCredential;
+import org.neo4j.time.Clocks;
+
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 public class SecurityTestUtils
 {
     private SecurityTestUtils()
     {
+    }
+
+    public static BasicSystemGraphRealm simpleBasicSystemGraphRealm( Config config )
+    {
+        return new BasicSystemGraphRealm(
+                new BasicInMemorySystemGraphOperations(),
+                null,
+                false,
+                new SecureHasher(),
+                new BasicPasswordPolicy(),
+                new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config ),
+                true
+        );
     }
 
     public static Map<String,Object> authToken( String username, String password )
@@ -38,5 +57,10 @@ public class SecurityTestUtils
     public static byte[] password( String passwordString )
     {
         return passwordString != null ? passwordString.getBytes( StandardCharsets.UTF_8 ) : null;
+    }
+
+    public static SystemGraphCredential credentialFor( String passwordString )
+    {
+        return SystemGraphCredential.createCredentialForPassword( password( passwordString ), new SecureHasher() );
     }
 }

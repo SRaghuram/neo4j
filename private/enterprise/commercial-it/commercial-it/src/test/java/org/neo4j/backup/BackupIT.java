@@ -8,7 +8,7 @@ package org.neo4j.backup;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.TestWithRecordFormats;
 import org.eclipse.collections.impl.factory.Maps;
 import org.junit.jupiter.api.AfterEach;
@@ -39,11 +39,11 @@ import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -53,7 +53,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
@@ -159,13 +159,14 @@ class BackupIT
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
     private DatabaseLayout serverStoreLayout;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void beforeEach()
     {
         databases = new ArrayList<>();
-        serverStoreLayout = DatabaseLayout.of( testDirectory.storeDir( "server" ), DEFAULT_DATABASE_NAME );
-        serverStorePath = serverStoreLayout.databaseDirectory();
+        serverStorePath = testDirectory.storeDir( "server" );
+        serverStoreLayout = DatabaseLayout.of( serverStorePath, DEFAULT_DATABASE_NAME );
         otherServerPath = DatabaseLayout.of( testDirectory.storeDir( "otherServer" ), DEFAULT_DATABASE_NAME ).databaseDirectory();
         backupsDir = testDirectory.storeDir( "backups" );
         backupDatabaseLayout = DatabaseLayout.of( backupsDir, DEFAULT_DATABASE_NAME );
@@ -175,7 +176,10 @@ class BackupIT
     @AfterEach
     void afterEach()
     {
-        databases.forEach( GraphDatabaseService::shutdown );
+        if ( managementService != null )
+        {
+            managementService.shutdown();
+        }
         databases.clear();
     }
 
@@ -183,8 +187,8 @@ class BackupIT
     void makeSureFullFailsWhenDifferentDbExists( String recordFormatName )
     {
         createInitialDataSet( serverStorePath, recordFormatName );
+        createInitialDataSet( backupsDir, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
-        createInitialDataSet( backupDatabasePath, recordFormatName );
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
@@ -209,7 +213,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
 
         executeBackup( db );
-        db.shutdown();
+        managementService.shutdown();
 
         long firstChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
         assertNotEquals( 0, firstChecksum );
@@ -219,7 +223,7 @@ class BackupIT
         db = startDb( serverStorePath );
 
         executeBackupWithoutFallbackToFull( db );
-        db.shutdown();
+        managementService.shutdown();
 
         long secondChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
         assertNotEquals( 0, secondChecksum );
@@ -262,7 +266,7 @@ class BackupIT
         executeBackup( db );
 
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
-        db.shutdown();
+        managementService.shutdown();
 
         DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
@@ -287,7 +291,7 @@ class BackupIT
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
 
         // Then check real incremental
-        db.shutdown();
+        managementService.shutdown();
         addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
 
@@ -305,7 +309,7 @@ class BackupIT
         // Grab initial backup from server A
         executeBackup( db );
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
-        db.shutdown();
+        managementService.shutdown();
 
         // Create data set X+Y on server B
         createInitialDataSet( otherServerPath, recordFormatName );
@@ -317,7 +321,7 @@ class BackupIT
         final GraphDatabaseService finalDb = db;
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( finalDb ) );
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
-        db.shutdown();
+        managementService.shutdown();
 
         // Just make sure incremental backup can be received properly from
         // server A, even after a failed attempt from server B
@@ -496,7 +500,7 @@ class BackupIT
 
         assertTrue( backupDatabaseLayout.databaseDirectory().mkdirs() );
         File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
-        fs.create( incorrectFile ).close();
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
@@ -521,7 +525,7 @@ class BackupIT
         File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
         File incorrectFile = new File( incorrectDir, "jibberishfile" );
         fs.mkdirs( incorrectDir );
-        fs.create( incorrectFile ).close();
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
@@ -631,10 +635,11 @@ class BackupIT
 
         // propagate to backup new properties with reclaimed ids
         executeBackupWithoutFallbackToFull( db );
+        managementService.shutdown();
 
         // it should be possible to at this point to start db based on our backup and create couple of properties
         // their ids should not clash with already existing
-        GraphDatabaseService backupDb = startDbWithoutOnlineBackup( backupDatabasePath );
+        GraphDatabaseService backupDb = startDbWithoutOnlineBackup( backupsDir );
         try
         {
             try ( Transaction transaction = backupDb.beginTx() )
@@ -658,7 +663,7 @@ class BackupIT
         }
         finally
         {
-            backupDb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -691,7 +696,7 @@ class BackupIT
 
         long lastCommittedTxBefore = getLastCommittedTx( db );
 
-        db.shutdown();
+        managementService.shutdown();
         FileUtils.deleteFile( oldLog );
         GraphDatabaseService dbAfterRestart = startDb( serverStorePath );
 
@@ -716,7 +721,7 @@ class BackupIT
         // when
         long lastCommittedTx = getLastCommittedTx( db );
         executeBackup( db );
-        db.shutdown();
+        managementService.shutdown();
 
         // then
         // pull transactions is always executed after a full backup
@@ -819,7 +824,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
         addLotsOfData( db );
-        db.shutdown();
+        managementService.shutdown();
 
         db = startDb( serverStorePath, Maps.mutable.of( read_only, TRUE ) );
 
@@ -918,7 +923,7 @@ class BackupIT
 
     private void forceTransactionLogRotation( GraphDatabaseService db ) throws IOException
     {
-        for ( int i = 0; i < 1000; i++ )
+        for ( int i = 0; i < 10; i++ )
         {
             createNode( db );
             rotateAndCheckPoint( db );
@@ -1043,7 +1048,7 @@ class BackupIT
         finally
         {
             representation = DbRepresentation.of( db );
-            db.shutdown();
+            managementService.shutdown();
         }
         return representation;
     }
@@ -1058,7 +1063,7 @@ class BackupIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -1074,7 +1079,10 @@ class BackupIT
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
-        return startDbWithoutOnlineBackup( path, record_format.getDefaultValue() );
+        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE,
+                record_format, record_format.getDefaultValue(),
+                transaction_logs_root_path, path.getAbsolutePath() );
+        return startDb( path, settings );
     }
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )
@@ -1085,7 +1093,7 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
     {
-        GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
+        DatabaseManagementServiceInternalBuilder builder = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( path );
 
         settings.putIfAbsent( online_backup_enabled, TRUE );
         for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )
@@ -1093,7 +1101,8 @@ class BackupIT
             builder.setConfig( entry.getKey(), entry.getValue() );
         }
 
-        GraphDatabaseService db = builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         databases.add( db );
         return db;
     }
@@ -1102,8 +1111,8 @@ class BackupIT
     {
         Config config = Config.builder()
                 .withSetting( online_backup_enabled, FALSE )
-                .withSetting( GraphDatabaseSettings.default_database, backupDatabasePath.getName() ).build();
-        return DbRepresentation.of( backupDatabasePath, config );
+                .withSetting( transaction_logs_root_path, backupsDir.getAbsolutePath() ).build();
+        return DbRepresentation.of( backupDatabaseLayout, config );
     }
 
     private void executeBackup( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
@@ -1136,12 +1145,12 @@ class BackupIT
         executeBackup( context, monitors );
     }
 
-    private void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         executeBackup( context, new Monitors() );
     }
 
-    private void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
 
@@ -1156,7 +1165,7 @@ class BackupIT
 
     private OnlineBackupContext.Builder defaultBackupContextBuilder( AdvertisedSocketAddress address )
     {
-        Path dir = backupDatabasePath.getParentFile().toPath();
+        Path dir = backupsDir.toPath();
 
         return OnlineBackupContext.builder()
                 .withAddress( address )

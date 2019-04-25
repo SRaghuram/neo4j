@@ -20,39 +20,35 @@
 package org.neo4j.cypher.internal.compiler.planner
 
 import org.neo4j.csv.reader.Configuration
-import org.neo4j.cypher.internal.compiler.{CypherPlannerConfiguration, NotImplementedPlanContext, StatsDivergenceCalculator, SyntaxExceptionCreator}
 import org.neo4j.cypher.internal.compiler.phases._
 import org.neo4j.cypher.internal.compiler.planner.logical.Metrics.{CardinalityModel, QueryGraphCardinalityModel, QueryGraphSolverInput}
+import org.neo4j.cypher.internal.compiler.planner.logical._
 import org.neo4j.cypher.internal.compiler.planner.logical.cardinality.QueryGraphCardinalityModel
 import org.neo4j.cypher.internal.compiler.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.planner.logical.plans.rewriter.unnestApply
-import org.neo4j.cypher.internal.compiler.planner.logical.steps.replacePropertyLookupsWithVariables
-import org.neo4j.cypher.internal.compiler.planner.logical.steps.{LogicalPlanProducer, devNullListener}
-import org.neo4j.cypher.internal.compiler.planner.logical._
+import org.neo4j.cypher.internal.compiler.planner.logical.steps.{LogicalPlanProducer, devNullListener, replacePropertyLookupsWithVariables}
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
+import org.neo4j.cypher.internal.compiler.{CypherPlannerConfiguration, NotImplementedPlanContext, StatsDivergenceCalculator, SyntaxExceptionCreator}
 import org.neo4j.cypher.internal.ir.{PeriodicCommit, PlannerQuery, ProvidedOrder, QueryGraph}
-import org.neo4j.cypher.internal.planner.spi._
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.IndexDescriptor.{OrderCapability, ValueCapability}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.helpers.collection.Visitable
-import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor
+import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions.PatternExpression
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.parser.CypherParser
-import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer, ValidatingRewriterStepSequencer}
 import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer.newPlain
 import org.neo4j.cypher.internal.v4_0.rewriting.rewriters._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Attribute
-import org.neo4j.cypher.internal.v4_0.util.attribution.Attributes
+import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer, ValidatingRewriterStepSequencer}
+import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Attributes}
 import org.neo4j.cypher.internal.v4_0.util.helpers.fixedPoint
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherTestSupport
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.cypher.internal.v4_0.util.{Cardinality, Cost, PropertyKeyId}
-import org.scalatest.matchers.BeMatcher
-import org.scalatest.matchers.MatchResult
+import org.neo4j.helpers.collection.Visitable
+import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor
+import org.scalatest.matchers.{BeMatcher, MatchResult}
 
 import scala.language.reflectiveCalls
 import scala.reflect.ClassTag
@@ -60,7 +56,7 @@ import scala.reflect.ClassTag
 trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstructionTestSupport with LogicalPlanConstructionTestSupport {
   self: CypherFunSuite =>
 
-  var parser = new CypherParser
+  val parser = new CypherParser
   val rewriterSequencer: String => ValidatingRewriterStepSequencer = RewriterStepSequencer.newValidating
   val innerVariableNamer = new GeneratingNamer
   var astRewriter = new ASTRewriter(rewriterSequencer, literalExtraction = Never, getDegreeRewriting = true, innerVariableNamer = innerVariableNamer)
@@ -103,28 +99,35 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
 
       override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
         val label = config.labelsById(labelId)
-        config.indexes.filter(p => p._1 == label).map(p => newIndexDescriptor(p._1, p._2)).iterator
+        config.indexes.collect {
+          case (indexDef, indexType) if indexDef.label == label =>
+            newIndexDescriptor(indexDef, config.indexes(indexDef))
+        }.iterator
       }
 
       override def uniqueIndexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
         val label = config.labelsById(labelId)
-        config.uniqueIndexes.filter(p => p._1 == label).map(p => newIndexDescriptor(p._1, p._2)).iterator
+        config.indexes.collect {
+          case (indexDef, indexType) if indexType.isUnique && indexDef.label == label =>
+            newIndexDescriptor(indexDef, config.indexes(indexDef))
+        }.iterator
       }
 
       override def getPropertiesWithExistenceConstraint(labelName: String): Set[String] = {
         config.constraints.filter(p => p._1 == labelName).flatMap(p => p._2)
       }
 
-      private def newIndexDescriptor(labelName: String, propertyKeys: Seq[String]) = {
+      private def newIndexDescriptor(indexDef: IndexDef, indexType: IndexType) = {
         // Our fake index either can always or never return property values
-        val canGetValue = if (config.indexesWithValues((labelName, propertyKeys))) CanGetValue else DoNotGetValue
-        val valueCapability: ValueCapability = _ => propertyKeys.map(_ => canGetValue)
-        val orderCapability: OrderCapability = _ => config.indexesWithOrdering.getOrElse((labelName, propertyKeys), IndexOrderCapability.NONE)
+        val canGetValue = if (indexType.withValues) CanGetValue else DoNotGetValue
+        val valueCapability: ValueCapability = _ => indexDef.propertyKeys.map(_ => canGetValue)
+        val orderCapability: OrderCapability = _ => indexType.withOrdering
         IndexDescriptor(
-          semanticTable.resolvedLabelNames(labelName),
-          propertyKeys.map(semanticTable.resolvedPropertyKeyNames(_)),
+          semanticTable.resolvedLabelNames(indexDef.label),
+          indexDef.propertyKeys.map(semanticTable.resolvedPropertyKeyNames(_)),
           valueCapability = valueCapability,
-          orderCapability = orderCapability
+          orderCapability = orderCapability,
+          isUnique = indexType.isUnique
         )
       }
 
@@ -134,18 +137,16 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
 
       override def indexExistsForLabel(labelId: Int): Boolean = {
         val labelName = config.labelsById(labelId)
-        config.indexes.exists(_._1 == labelName) || config.uniqueIndexes.exists(_._1 == labelName)
+        config.indexes.keys.exists(_.label == labelName)
       }
 
       override def indexExistsForLabelAndProperties(labelName: String, propertyKey: Seq[String]): Boolean =
-        config.indexes((labelName, propertyKey)) || config.uniqueIndexes((labelName, propertyKey))
+        config.indexes.contains(IndexDef(labelName, propertyKey))
 
-
-      override def indexGetForLabelAndProperties(labelName: String, propertyKeys: Seq[String]): Option[IndexDescriptor] =
-        if (config.indexes((labelName, propertyKeys)) || config.uniqueIndexes((labelName, propertyKeys))) {
-          Some(newIndexDescriptor(labelName, propertyKeys))
-        } else
-          None
+      override def indexGetForLabelAndProperties(labelName: String, propertyKeys: Seq[String]): Option[IndexDescriptor] = {
+        val indexDef = IndexDef(labelName, propertyKeys)
+        config.indexes.get(indexDef).map(indexType => newIndexDescriptor(indexDef, indexType))
+      }
 
       override def getOptPropertyKeyId(propertyKeyName: String): Option[Int] =
         semanticTable.resolvedPropertyKeyNames.get(propertyKeyName).map(_.id)
@@ -176,7 +177,7 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
       Do[PlannerContext, LogicalPlanState, LogicalPlanState]((state, context) => removeApply(state, context, state.planningAttributes.solveds, Attributes(idGen, state.planningAttributes.cardinalities)))
 
 
-    private def removeApply(input: LogicalPlanState, context: PlannerContext, solveds: Solveds, attributes: Attributes): LogicalPlanState = {
+    private def removeApply(input: LogicalPlanState, context: PlannerContext, solveds: Solveds, attributes: Attributes[LogicalPlan]): LogicalPlanState = {
       val newPlan = input.logicalPlan.endoRewrite(fixedPoint(unnestApply(solveds, attributes)))
       input.copy(maybeLogicalPlan = Some(newPlan))
     }
@@ -249,7 +250,7 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
     }
   }
 
-  def set[T](plan: LogicalPlan, attribute: Attribute[T], t: T): LogicalPlan = {
+  def set[T](plan: LogicalPlan, attribute: Attribute[LogicalPlan, T], t: T): LogicalPlan = {
     attribute.set(plan.id, t)
     plan
   }

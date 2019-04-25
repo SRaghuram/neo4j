@@ -34,6 +34,9 @@ import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.LayoutConfig.of;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -50,6 +53,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     private final File neo4jHome;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
+    private final MemberId memberId;
     private final String boltAdvertisedSocketAddress;
     private final Config memberConfig;
     private ReadReplicaGraphDatabase database;
@@ -66,6 +70,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
             String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
     {
         this.serverId = serverId;
+        this.memberId = new MemberId( UUID.randomUUID() );
 
         String initialHosts = coreMemberDiscoveryAddresses.stream().map( AdvertisedSocketAddress::toString )
                 .collect( joining( "," ) );
@@ -91,6 +96,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         config.put( new BoltConnector( "bolt" ).enabled.name(), "true" );
         config.put( new BoltConnector( "bolt" ).listen_address.name(), listenAddress( listenAddress, boltPort ) );
         config.put( new BoltConnector( "bolt" ).advertised_address.name(), boltAdvertisedSocketAddress );
+        config.put( new BoltConnector( "bolt" ).encryption_level.name(), DISABLED.name() );
         config.put( new HttpConnector( "http", Encryption.NONE ).type.name(), "HTTP" );
         config.put( new HttpConnector( "http", Encryption.NONE ).enabled.name(), "true" );
         config.put( new HttpConnector( "http", Encryption.NONE ).listen_address.name(), listenAddress( listenAddress, httpPort ) );
@@ -111,18 +117,13 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
     }
 
     @Override
     public String boltAdvertisedAddress()
     {
         return boltAdvertisedSocketAddress;
-    }
-
-    public String routingURI()
-    {
-        return String.format( "bolt+routing://%s", boltAdvertisedSocketAddress );
     }
 
     @Override
@@ -142,7 +143,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         {
             try
             {
-                database.shutdown();
+                database.getManagementService().shutdown();
             }
             finally
             {
@@ -199,9 +200,9 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     }
 
     @Override
-    public File databaseDirectory()
+    public DatabaseLayout databaseLayout()
     {
-        return defaultDatabaseLayout.databaseDirectory();
+        return defaultDatabaseLayout;
     }
 
     public String toString()
@@ -225,9 +226,9 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         updateConfig( CausalClusteringSettings.upstream_selection_strategy, key );
     }
 
-    public MemberId memberId()
+    MemberId memberId()
     {
-        return new MemberId( new UUID( ((long) serverId) << 32, 0 ) );
+        return memberId;
     }
 
     @Override

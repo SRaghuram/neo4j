@@ -20,8 +20,8 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
   test("single grouping key single morsel aggregation") {
     val groupSlot = RefSlot(0, nullable = false, CTAny)
     val aggregation = new AggregationReduceOperator(workId,
-                                                    Array(AggregationOffsets(1, ReferenceFromSlot(1), 1, DummyEvenNodeIdAggregation(0))),
-                                                    SlottedGroupingExpression1(groupSlot, new DummyExpression()))
+      Array(AggregationOffsets(1, ReferenceFromSlot(1), 1, DummyEvenNodeIdAggregation(0))),
+      SlottedGroupingExpression1(SlotExpression(groupSlot, new DummyExpression())))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
         .addRow(Refs(Values.stringValue("k1"), Values.longArray(Array(2 * i))))
@@ -44,10 +44,11 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val aggregation = new AggregationReduceOperator(workId,
-                                                    Array(AggregationOffsets(2, ReferenceFromSlot(2), 2, DummyEvenNodeIdAggregation(0))),
-                                                    SlottedGroupingExpression2(
-                                                       groupSlot1, new DummyExpression(),
-                                                       groupSlot2, new DummyExpression()))
+      Array(AggregationOffsets(2, ReferenceFromSlot(2), 2, DummyEvenNodeIdAggregation(0))),
+      SlottedGroupingExpression2(
+        SlotExpression(groupSlot1, new DummyExpression()),
+        SlotExpression(groupSlot2, new DummyExpression())
+      ))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
         .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.longArray(Array(2 * i))))
@@ -71,11 +72,12 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
     val aggregation = new AggregationReduceOperator(workId,
-                                                    Array(AggregationOffsets(3, ReferenceFromSlot(3), 3, DummyEvenNodeIdAggregation(0))),
-                                                    SlottedGroupingExpression3(
-                                                      groupSlot1, new DummyExpression(),
-                                                      groupSlot2, new DummyExpression(),
-                                                      groupSlot3, new DummyExpression()))
+      Array(AggregationOffsets(3, ReferenceFromSlot(3), 3, DummyEvenNodeIdAggregation(0))),
+      SlottedGroupingExpression3(
+        SlotExpression(groupSlot1, new DummyExpression()),
+        SlotExpression(groupSlot2, new DummyExpression()),
+        SlotExpression(groupSlot3, new DummyExpression())
+      ))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
         .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.longArray(Array(2 * i))))
@@ -102,13 +104,13 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
     val groupSlot4 = RefSlot(3, nullable = false, CTAny)
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
     val aggregation = new AggregationReduceOperator(workId,
-                                                    Array(AggregationOffsets(5, ReferenceFromSlot(5), 5, DummyEvenNodeIdAggregation(0))),
-                                                    SlottedGroupingExpression(
-                                                      Array(SlotExpression(groupSlot1, new DummyExpression()),
-                                                            SlotExpression(groupSlot2, new DummyExpression()),
-                                                            SlotExpression(groupSlot3, new DummyExpression()),
-                                                            SlotExpression(groupSlot4, new DummyExpression()),
-                                                            SlotExpression(groupSlot5, new DummyExpression()))))
+      Array(AggregationOffsets(5, ReferenceFromSlot(5), 5, DummyEvenNodeIdAggregation(0))),
+      SlottedGroupingExpression(
+        Array(SlotExpression(groupSlot1, new DummyExpression()),
+          SlotExpression(groupSlot2, new DummyExpression()),
+          SlotExpression(groupSlot3, new DummyExpression()),
+          SlotExpression(groupSlot4, new DummyExpression()),
+          SlotExpression(groupSlot5, new DummyExpression()))))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
         .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.stringValue("k14"), Values.stringValue("k15"), Values.longArray(Array(2 * i))))

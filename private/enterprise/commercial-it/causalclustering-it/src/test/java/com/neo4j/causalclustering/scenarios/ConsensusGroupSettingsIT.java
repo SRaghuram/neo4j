@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,17 +41,14 @@ public class ConsensusGroupSettingsIT
         // given
         int numberOfCoreSeversToRemove = 3;
 
-        cluster.awaitLeader();
-
         // when
         for ( int i = 0; i < numberOfCoreSeversToRemove; i++ )
         {
-            cluster.removeCoreMember( cluster.getMemberWithRole( Role.LEADER ) );
-            cluster.awaitLeader( 30, SECONDS );
+            CoreClusterMember leader = cluster.awaitLeader();
+            cluster.removeCoreMember( leader );
         }
 
         // then
-
         assertEquals(3, cluster.coreMembers().iterator().next().raft().replicationMembers().size());
     }
 }

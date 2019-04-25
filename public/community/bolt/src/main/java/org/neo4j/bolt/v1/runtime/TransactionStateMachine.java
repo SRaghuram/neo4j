@@ -41,6 +41,7 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.values.virtual.MapValue;
 
@@ -52,13 +53,13 @@ public class TransactionStateMachine implements StatementProcessor
     private final TransactionStateMachineSPI spi;
     final MutableTransactionState ctx;
     State state = State.AUTO_COMMIT;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public TransactionStateMachine( String databaseName, TransactionStateMachineSPI spi, AuthenticationResult authenticationResult, Clock clock )
+    public TransactionStateMachine( DatabaseId databaseId, TransactionStateMachineSPI spi, AuthenticationResult authenticationResult, Clock clock )
     {
         this.spi = spi;
         ctx = new MutableTransactionState( authenticationResult, clock );
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     public State state()
@@ -226,9 +227,9 @@ public class TransactionStateMachine implements StatementProcessor
     }
 
     @Override
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     @Override
@@ -256,23 +257,9 @@ public class TransactionStateMachine implements StatementProcessor
                             Duration txTimeout, Map<String,Object> txMetadata )
                             throws KernelException
                     {
-                        statement = parseStatement( ctx, statement );
                         waitForBookmark( spi, bookmark );
                         execute( ctx, spi, statement, params, spi.isPeriodicCommit( statement ), txTimeout, txMetadata );
                         return AUTO_COMMIT;
-                    }
-
-                    private String parseStatement( MutableTransactionState ctx, String statement )
-                    {
-                        if ( statement.isEmpty() )
-                        {
-                            statement = ctx.lastStatement;
-                        }
-                        else
-                        {
-                            ctx.lastStatement = statement;
-                        }
-                        return statement;
                     }
 
                     void execute( MutableTransactionState ctx, TransactionStateMachineSPI spi, String statement, MapValue params, boolean isPeriodicCommit,
@@ -288,7 +275,7 @@ public class TransactionStateMachine implements StatementProcessor
                         boolean failed = true;
                         try
                         {
-                            int statementId = StatementMetadata.ABSENT_STATEMENT_ID;
+                            int statementId = StatementMetadata.ABSENT_QUERY_ID;
 
                             BoltResultHandle resultHandle = spi.executeQuery( ctx.loginContext, statement, params, txTimeout, txMetadata );
                             BoltResult result = startExecution( resultHandle );
@@ -374,7 +361,7 @@ public class TransactionStateMachine implements StatementProcessor
                     State rollbackTransaction( MutableTransactionState ctx, TransactionStateMachineSPI spi )
                     {
                         // add dummy outcome useful for < Bolt V3, i.e. `RUN "ROLLBACK" & PULL_ALL`
-                        int statementId = StatementMetadata.ABSENT_STATEMENT_ID;
+                        int statementId = StatementMetadata.ABSENT_QUERY_ID;
                         ctx.statementOutcomes.put( statementId, new StatementOutcome( BoltResult.EMPTY ) );
 
                         return AUTO_COMMIT;
@@ -397,14 +384,6 @@ public class TransactionStateMachine implements StatementProcessor
                         checkState( ignored1 == null, "Explicit Transaction should not run with tx_timeout" );
                         checkState( ignored2 == null, "Explicit Transaction should not run with tx_metadata" );
 
-                        if ( statement.isEmpty() )
-                        {
-                            statement = ctx.lastStatement;
-                        }
-                        else
-                        {
-                            ctx.lastStatement = statement;
-                        }
                         if ( spi.isPeriodicCommit( statement ) )
                         {
                             throw new QueryExecutionKernelException( new InvalidSemanticsException(
@@ -414,7 +393,7 @@ public class TransactionStateMachine implements StatementProcessor
                         else
                         {
                             // generate real statement ID only when nested statements in transaction are supported
-                            int statementId = spi.supportsNestedStatementsInTransaction() ? ctx.nextStatementId() : StatementMetadata.ABSENT_STATEMENT_ID;
+                            int statementId = spi.supportsNestedStatementsInTransaction() ? ctx.nextStatementId() : StatementMetadata.ABSENT_QUERY_ID;
 
                             BoltResultHandle resultHandle = spi.executeQuery( ctx.loginContext, statement, params, null, null /*ignored in explict tx run*/ );
                             BoltResult result = startExecution( resultHandle );
@@ -432,7 +411,7 @@ public class TransactionStateMachine implements StatementProcessor
                     Bookmark streamResult( MutableTransactionState ctx, TransactionStateMachineSPI spi, int statementId, ResultConsumer resultConsumer )
                             throws Throwable
                     {
-                        if ( statementId == StatementMetadata.ABSENT_STATEMENT_ID )
+                        if ( statementId == StatementMetadata.ABSENT_QUERY_ID )
                         {
                             statementId = ctx.lastStatementId;
                         }
@@ -661,17 +640,14 @@ public class TransactionStateMachine implements StatementProcessor
         /** The current transaction, if present */
         KernelTransaction currentTransaction;
 
-        /** Last Cypher statement executed */
-        String lastStatement = "";
-
         final Map<Integer,StatementOutcome> statementOutcomes = new HashMap<>();
 
         final Clock clock;
 
         /**
-         * Used to handle RUN + PULL combo that arrives at the same time. PULL will not contain stmt_id in this case
+         * Used to handle RUN + PULL combo that arrives at the same time. PULL will not contain qid in this case
          */
-        int lastStatementId = StatementMetadata.ABSENT_STATEMENT_ID;
+        int lastStatementId = StatementMetadata.ABSENT_QUERY_ID;
 
         StatementMetadata lastStatementMetadata;
 
@@ -707,6 +683,6 @@ public class TransactionStateMachine implements StatementProcessor
     @Override
     public String toString()
     {
-        return "TransactionStateMachine{" + "state=" + state + ", databaseName='" + databaseName + '\'' + '}';
+        return "TransactionStateMachine{" + "state=" + state + ", databaseId='" + databaseId + '\'' + '}';
     }
 }

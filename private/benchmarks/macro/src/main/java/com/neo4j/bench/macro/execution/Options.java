@@ -14,10 +14,9 @@ import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static java.util.stream.Collectors.toList;
 
 public class Options
 {
@@ -28,6 +27,7 @@ public class Options
         PROFILE
     }
 
+    private final Neo4jDeployment neo4jDeployment;
     private final Query query;
     private final List<ProfilerType> profilers;
     private final List<String> jvmArgs;
@@ -40,11 +40,13 @@ public class Options
     private final int forks;
     private final int warmupCount;
     private final int measurementCount;
-    private final boolean doPrintResults;
+    private final Duration minMeasurementDuration;
+    private final Duration maxMeasurementDuration;
     private final Jvm jvm;
     private final TimeUnit unit;
 
-    Options( Query query,
+    Options( Neo4jDeployment neo4jDeployment,
+             Query query,
              List<ProfilerType> profilers,
              List<String> jvmArgs,
              Planner planner,
@@ -56,10 +58,12 @@ public class Options
              int forks,
              int warmupCount,
              int measurementCount,
-             boolean doPrintResults,
+             Duration minMeasurementDuration,
+             Duration maxMeasurementDuration,
              Jvm jvm,
              TimeUnit unit )
     {
+        this.neo4jDeployment = neo4jDeployment;
         this.query = query;
         this.profilers = profilers;
         this.jvmArgs = jvmArgs;
@@ -72,9 +76,15 @@ public class Options
         this.forks = forks;
         this.warmupCount = warmupCount;
         this.measurementCount = measurementCount;
-        this.doPrintResults = doPrintResults;
+        this.minMeasurementDuration = minMeasurementDuration;
+        this.maxMeasurementDuration = maxMeasurementDuration;
         this.jvm = jvm;
         this.unit = unit;
+    }
+
+    public Neo4jDeployment neo4jDeployment()
+    {
+        return neo4jDeployment;
     }
 
     public Query query()
@@ -85,16 +95,6 @@ public class Options
     public List<ProfilerType> profilers()
     {
         return profilers;
-    }
-
-    public List<ProfilerType> internalProfilers()
-    {
-        return profilers.stream().filter( ProfilerType::isInternal ).collect( toList() );
-    }
-
-    public List<ProfilerType> externalProfiler()
-    {
-        return profilers.stream().filter( ProfilerType::isExternal ).collect( toList() );
     }
 
     public List<String> jvmArgs()
@@ -147,9 +147,14 @@ public class Options
         return measurementCount;
     }
 
-    public boolean doPrintResults()
+    public Duration minDuration()
     {
-        return doPrintResults;
+        return minMeasurementDuration;
+    }
+
+    public Duration maxDuration()
+    {
+        return maxMeasurementDuration;
     }
 
     public Jvm jvm()

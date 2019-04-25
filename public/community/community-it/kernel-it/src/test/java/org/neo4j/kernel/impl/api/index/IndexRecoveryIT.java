@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -66,7 +67,7 @@ import org.neo4j.kernel.recovery.RecoveryMonitor;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -87,6 +88,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.Config.defaults;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.impl.api.index.SchemaIndexTestHelper.singleInstanceIndexProviderFactory;
@@ -110,6 +112,7 @@ class IndexRecoveryIT
     private final String key = "number_of_bananas_owned";
     private final Label myLabel = label( "MyLabel" );
     private final Monitors monitors = new Monitors();
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws MisconfiguredIndexException
@@ -126,7 +129,7 @@ class IndexRecoveryIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -293,15 +296,16 @@ class IndexRecoveryIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
-        TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
         factory.setFileSystem( fs );
         factory.setExtensions( singletonList( mockedIndexProviderFactory ) );
         factory.setMonitors( monitors );
-        db = (GraphDatabaseAPI) factory.newImpermanentDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( default_schema_provider, PROVIDER_DESCRIPTOR.name() ).newGraphDatabase();
+        managementService = factory.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+                .setConfig( default_schema_provider, PROVIDER_DESCRIPTOR.name() ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void killDb()
@@ -309,7 +313,7 @@ class IndexRecoveryIT
         if ( db != null )
         {
             fs = fs.snapshot();
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

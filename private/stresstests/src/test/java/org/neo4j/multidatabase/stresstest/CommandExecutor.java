@@ -5,15 +5,18 @@
  */
 package org.neo4j.multidatabase.stresstest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.multidatabase.stresstest.commands.CreateManagerCommand;
 import org.neo4j.multidatabase.stresstest.commands.DatabaseManagerCommand;
 import org.neo4j.multidatabase.stresstest.commands.DropManagerCommand;
@@ -29,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
-    private final DatabaseManager databaseManager;
+    private final DatabaseManager<?> databaseManager;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
     private final ThreadLocalRandom random;
@@ -40,7 +43,7 @@ class CommandExecutor implements Runnable
     private int stopStartCommands;
     private int dropCommands;
 
-    CommandExecutor( DatabaseManager databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
+    CommandExecutor( DatabaseManager<?> databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
     {
         this.databaseManager = databaseManager;
         this.executionLatch = executionLatch;
@@ -55,17 +58,17 @@ class CommandExecutor implements Runnable
         {
             try
             {
-                List<String> databases = databaseManager.listDatabases();
+                List<DatabaseId> databases = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
                 {
-                    command = new CreateManagerCommand( databaseManager, createDatabaseName() );
+                    command = new CreateManagerCommand( databaseManager, createDatabaseId() );
                     createCommands++;
                 }
                 else
                 {
-                    String database = getRandomDatabaseName( databases );
+                    DatabaseId database = getRandomDatabaseName( databases );
                     int operation = random.nextInt( 100 );
                     if ( operation < 80 )
                     {
@@ -79,7 +82,7 @@ class CommandExecutor implements Runnable
                     }
                     else if ( operation < 95 )
                     {
-                        command = new CreateManagerCommand( databaseManager, createDatabaseName() );
+                        command = new CreateManagerCommand( databaseManager, createDatabaseId() );
                         createCommands++;
                     }
                     else
@@ -91,7 +94,10 @@ class CommandExecutor implements Runnable
                 command.execute();
                 commandCounter.incrementAndGet();
             }
-            catch ( TransientTransactionFailureException | TransactionFailureException | IllegalStateException | DatabaseShutdownException e )
+            catch ( TransientTransactionFailureException |
+                    TransactionFailureException |
+                    DatabaseShutdownException |
+                    DatabaseNotFoundException e )
             {
                 // ignore
             }
@@ -106,12 +112,12 @@ class CommandExecutor implements Runnable
         executionLatch.countDown();
     }
 
-    private String createDatabaseName()
+    private DatabaseId createDatabaseId()
     {
-        return "database" + dbCounter.getAndIncrement();
+        return new DatabaseId( "database" + dbCounter.getAndIncrement() );
     }
 
-    private String getRandomDatabaseName( List<String> databases )
+    private DatabaseId getRandomDatabaseName( List<DatabaseId> databases )
     {
         int knownDatabases = databases.size();
         return databases.get( random.nextInt( knownDatabases ) );

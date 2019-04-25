@@ -74,7 +74,7 @@ case class SingleNode(name: String,
 
   def relTypes = Seq.empty
 
-  def rewrite(f: (Expression) => Expression) = SingleNode(name, labels.map(_.typedRewrite[KeyToken](f)), properties.rewrite(f))
+  def rewrite(f: Expression => Expression) = SingleNode(name, labels.map(_.typedRewrite[KeyToken](f)), properties.rewrite(f))
 
   def children = Seq.empty
 
@@ -115,7 +115,7 @@ case class RelatedTo(left: SingleNode,
 
   val possibleStartPoints: Seq[(String, CypherType)] = left.possibleStartPoints ++ right.possibleStartPoints :+ relName->CTRelationship
 
-  def rewrite(f: (Expression) => Expression) =
+  def rewrite(f: Expression => Expression) =
     new RelatedTo(left.rewrite(f), right.rewrite(f), relName, relTypes, direction, properties.rewrite(f))
 
   def rels = Seq(relName)
@@ -180,7 +180,7 @@ case class VarLengthRelatedTo(pathName: String,
     if (info == "") "" else "[" + info + "]"
   }
 
-  def rewrite(f: (Expression) => Expression) =
+  def rewrite(f: Expression => Expression) =
     new VarLengthRelatedTo(pathName, left.rewrite(f), right.rewrite(f),
       minHops, maxHops, relTypes, direction, relIterator, properties.rewrite(f))
 
@@ -230,7 +230,7 @@ case class ShortestPath(pathName: String,
   lazy val possibleStartPoints: Seq[(String, NodeType)] = left.possibleStartPoints ++ right.possibleStartPoints
 
   def rewrite(f: Expression => Expression) =
-    new ShortestPath(pathName, left.rewrite(f), right.rewrite(f), relTypes, dir, allowZeroLength, maxDepth, single, relIterator)
+    ShortestPath(pathName, left.rewrite(f), right.rewrite(f), relTypes, dir, allowZeroLength, maxDepth, single, relIterator)
 
   def rels = Seq()
 

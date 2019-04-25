@@ -15,14 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -61,7 +59,6 @@ class ClusterStateIT
             // global simple storage
             File clusterIdStateDir = new File( clusterStateDirectory, "cluster-id-state" );
             File coreMemberIdStateDir = new File( clusterStateDirectory, "core-member-id-state" );
-            File databaseNameStateDir = new File( clusterStateDirectory, "db-name-state" );
 
             // database specific durable storage (a/b)
             File lastFlushedStateDir = new File( defaultDatabaseStateDir, "last-flushed-state" );
@@ -77,7 +74,6 @@ class ClusterStateIT
 
             assertTrue( clusterIdStateDir.isDirectory() );
             assertTrue( coreMemberIdStateDir.isDirectory() );
-            assertTrue( databaseNameStateDir.isDirectory() );
             assertTrue( lastFlushedStateDir.isDirectory() );
             assertTrue( membershipStateDir.isDirectory() );
             assertTrue( sessionTrackerStateDir.isDirectory() );
@@ -89,7 +85,6 @@ class ClusterStateIT
 
             assertTrue( new File( clusterIdStateDir, "cluster-id" ).isFile() );
             assertTrue( new File( coreMemberIdStateDir, "core-member-id" ).isFile() );
-            assertTrue( new File( databaseNameStateDir, "db-name" ).isFile() );
 
             assertTrue( new File( lastFlushedStateDir, "last-flushed.a" ).isFile() );
             assertTrue( new File( lastFlushedStateDir, "last-flushed.b" ).isFile() );
@@ -114,43 +109,5 @@ class ClusterStateIT
             assertTrue( new File( idAllocationStateDir, "id-allocation.a" ).isFile() );
             assertTrue( new File( idAllocationStateDir, "id-allocation.b" ).isFile() );
         }
-    }
-
-    @Test
-    void shouldMigrateDatabaseStateFromOldLocation() throws IOException
-    {
-        /* Used to live under
-
-             cluster-state/lock-token-state
-             cluster-state/id-allocation-state
-
-           but have now been migrated to
-
-             cluster-state/db/<name.db>/lock-token-state
-             cluster-state/db/<name.db>/id-allocation-state
-        */
-
-        CoreClusterMember core = cluster.randomCoreMember( true ).orElseThrow( IllegalStateException::new );
-        core.shutdown();
-
-        File databaseStateDir = new File( core.clusterStateDirectory(), "db" );
-        File defaultDatabaseStateDir = new File( databaseStateDir, DEFAULT_DATABASE_NAME );
-        File lockTokenStateDir = new File( defaultDatabaseStateDir, "lock-token-state" );
-        File idAllocationStateDir = new File( defaultDatabaseStateDir, "id-allocation-state" );
-
-        assertTrue( lockTokenStateDir.exists() );
-        assertTrue( idAllocationStateDir.exists() );
-
-        // move to old location
-        fs.moveToDirectory( lockTokenStateDir, core.clusterStateDirectory() );
-        fs.moveToDirectory( idAllocationStateDir, core.clusterStateDirectory() );
-
-        assertFalse( lockTokenStateDir.exists() );
-        assertFalse( idAllocationStateDir.exists() );
-
-        core.start();
-
-        assertTrue( lockTokenStateDir.exists() );
-        assertTrue( idAllocationStateDir.exists() );
     }
 }

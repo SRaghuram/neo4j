@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -18,10 +19,11 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
@@ -62,12 +64,14 @@ public class ClassicNeo4jDatabase
         private final File baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
-        private String databaseName = DEFAULT_DATABASE_NAME;
+        private DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         private boolean needRecover;
+        private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;
         private String recordFormat = Standard.LATEST_NAME;
         private File transactionLogsRootDirectoryAbsolute;
         private File databasesRootDirectoryAbsolute;
+        private DatabaseManagementService managementService;
 
         Neo4jDatabaseBuilder( File baseDirectoryAbsolute, FileSystemAbstraction fileSystem )
         {
@@ -87,15 +91,21 @@ public class ClassicNeo4jDatabase
             }
         }
 
-        public Neo4jDatabaseBuilder databaseName( String databaseName )
+        public Neo4jDatabaseBuilder databaseId( DatabaseId databaseId )
         {
-            this.databaseName = databaseName;
+            this.databaseId = databaseId;
             return this;
         }
 
         public Neo4jDatabaseBuilder needToRecover()
         {
             this.needRecover = true;
+            return this;
+        }
+
+        public Neo4jDatabaseBuilder transactionLogsInDatabaseFolder()
+        {
+            this.transactionLogsInDatabaseFolder = true;
             return this;
         }
 
@@ -120,14 +130,14 @@ public class ClassicNeo4jDatabase
 
         public ClassicNeo4jDatabase build() throws IOException
         {
-            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseName );
-            GraphDatabaseService db = new TestGraphDatabaseFactory()
-                    .setFileSystem( fileSystem )
-                    .newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRootDirectoryAbsolute.getAbsolutePath() )
-                    .newGraphDatabase();
+            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
+            managementService = new TestDatabaseManagementServiceBuilder()
+                        .setFileSystem( fileSystem )
+                        .newEmbeddedDatabaseBuilder( databasesRootDirectoryAbsolute )
+                        .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                        .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                        .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() ).newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( databaseId.name() );
 
             for ( int i = 0; i < (nrOfNodes / 2); i++ )
             {
@@ -146,10 +156,16 @@ public class ClassicNeo4jDatabase
             }
             else
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
             return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
+        }
+
+        private String getTransactionLogsRoot()
+        {
+            File directory = transactionLogsInDatabaseFolder ? databasesRootDirectoryAbsolute : transactionLogsRootDirectoryAbsolute;
+            return directory.getAbsolutePath();
         }
 
         /**
@@ -171,7 +187,7 @@ public class ClassicNeo4jDatabase
                 fileSystem.copyFile( file, new File( temporaryDirectory, file.getName() ) );
             }
 
-            db.shutdown();
+            managementService.shutdown();
 
             /* Delete proper transaction logs. */
             for ( File file : logFiles.logFiles() )

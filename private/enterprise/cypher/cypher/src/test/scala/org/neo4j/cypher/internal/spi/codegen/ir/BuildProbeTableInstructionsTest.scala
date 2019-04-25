@@ -81,7 +81,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
     // Then
     results should have size 3
-    val (a :: b :: c :: Nil) = results
+    val a :: b :: c :: Nil = results
     checkNodeResult(1, a)
     checkNodeResult(2, b)
     checkNodeResult(42, c)
@@ -100,7 +100,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
     // Then
     results should have size 4
-    val (a :: b :: c :: d :: Nil) = results
+    val a :: b :: c :: d :: Nil = results
     checkNodeResult(1, a)
     checkNodeResult(1, b)
     checkNodeResult(2, c)
@@ -122,7 +122,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
     // Then
     results should have size 2
-    val (a :: b :: Nil) = results
+    val a :: b :: Nil = results
     checkNodeResult(42, a)
     checkNodeResult(4242, b)
   }
@@ -141,7 +141,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
     // Then
     results should have size 4
-    val (a :: b :: c:: d :: Nil) = results
+    val a :: b :: c:: d :: Nil = results
     checkNodeResult(42, a)
     checkNodeResult(42, b)
     checkNodeResult(4242, c)

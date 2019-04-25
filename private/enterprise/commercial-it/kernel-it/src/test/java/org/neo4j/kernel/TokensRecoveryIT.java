@@ -5,15 +5,16 @@
  */
 package org.neo4j.kernel;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -23,6 +24,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.count;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -34,6 +36,7 @@ class TokensRecoveryIT
     private TestDirectory testDirectory;
     @Inject
     private EphemeralFileSystemAbstraction fs;
+    private DatabaseManagementService managementService;
 
     @Test
     void tokenCreateCommandsMustUpdateTokenHoldersDuringRecoveryWithFulltextIndex()
@@ -49,7 +52,7 @@ class TokensRecoveryIT
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
         // Recover and start the database again.
         db = startDatabase( crashedFs );
@@ -61,7 +64,7 @@ class TokensRecoveryIT
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -78,7 +81,7 @@ class TokensRecoveryIT
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
         // Recover and start the database again.
         db = startDatabase( crashedFs );
@@ -90,15 +93,16 @@ class TokensRecoveryIT
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private GraphDatabaseService startDatabase( EphemeralFileSystemAbstraction fs )
     {
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.setFileSystem( fs ).newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
+        DatabaseManagementServiceInternalBuilder builder = factory.setFileSystem( fs ).newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( online_backup_enabled, "false" );
         builder.setConfig( GraphDatabaseSettings.check_point_policy, "periodic" );
-        return builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

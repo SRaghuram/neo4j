@@ -11,10 +11,12 @@ import com.neo4j.causalclustering.core.state.Result;
 
 import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface CoreReplicatedContent extends ReplicatedContent
 {
     void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback );
 
     //TODO: Should this instead exist on Replicated Content, and if so how do we handle e.g. MemberIdSet?
-    String databaseName();
+    DatabaseId databaseId();
 }

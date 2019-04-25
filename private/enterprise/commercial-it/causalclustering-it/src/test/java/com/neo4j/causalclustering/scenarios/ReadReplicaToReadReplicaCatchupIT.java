@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -41,7 +42,7 @@ public class ReadReplicaToReadReplicaCatchupIT
                     .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
                     .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" )
                     .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withDiscoveryServiceType( DiscoveryServiceType.HAZELCAST );
+                    .withDiscoveryServiceType( DiscoveryServiceType.AKKA );
 
     @Test
     public void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable
@@ -67,7 +68,7 @@ public class ReadReplicaToReadReplicaCatchupIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            coreClusterMember.disableCatchupServer();
+            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().disable();
         }
 
         // when

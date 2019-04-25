@@ -74,7 +74,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     {
         try
         {
-            indexFile = managedStore.store().resolve( INDEX_FILE ).toFile();
+            indexFile = managedStore.store().graphDbDirectory().resolve( INDEX_FILE ).toFile();
             layout = layout().create( keySize(), valueSize() );
             pageCache = createPageCache( indexFile );
             gbpTree = createGBPTree( pageCache, indexFile, layout );
@@ -95,7 +95,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
             @Override
             public void augment( int threads, StoreAndConfig storeAndConfig )
             {
-                indexFile = storeAndConfig.store().resolve( INDEX_FILE ).toFile();
+                indexFile = storeAndConfig.store().graphDbDirectory().resolve( INDEX_FILE ).toFile();
                 layout = layout().create( keySize(), valueSize() );
                 try ( PageCache pageCache = createPageCache( indexFile );
                       GBPTree<AdaptableKey,AdaptableValue> gbpTree = createGBPTree(

@@ -41,10 +41,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.Extractors;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.internal.batchimport.AdditionalInitialIds;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.Group;
+import org.neo4j.internal.batchimport.input.Groups;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.InputEntityDecorators;
+import org.neo4j.internal.batchimport.input.csv.Configuration;
+import org.neo4j.internal.batchimport.input.csv.CsvInput;
+import org.neo4j.internal.batchimport.input.csv.DataFactories;
+import org.neo4j.internal.batchimport.input.csv.DataFactory;
+import org.neo4j.internal.batchimport.input.csv.Header;
+import org.neo4j.internal.batchimport.input.csv.Type;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -54,23 +72,6 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.Configuration;
-import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Collectors;
-import org.neo4j.unsafe.impl.batchimport.input.Group;
-import org.neo4j.unsafe.impl.batchimport.input.Groups;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators;
-import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
-import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories;
-import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static com.neo4j.bench.ldbc.Domain.Forum;
 import static com.neo4j.bench.ldbc.Domain.HasMember;
@@ -90,14 +91,15 @@ import static com.neo4j.bench.ldbc.Domain.WorksAt;
 import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
 
     @Override
     public void load(
-            File dbDir,
+            File storeDir,
             File csvDataDir,
             File importerProperties,
             LdbcDateCodec.Format fromCsvFormat,
@@ -112,15 +114,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         }
 
         System.out.println( format( "Source CSV Dir:        %s", csvDataDir ) );
-        System.out.println( format( "Target DB Dir:         %s", dbDir ) );
+        System.out.println( format( "Target DB Dir:         %s", storeDir ) );
         System.out.println( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
         System.out.println( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
         System.out.println( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
         System.out.println( format( "With Unique:           %s", withUnique ) );
         System.out.println( format( "With Mandatory:        %s", withMandatory ) );
 
-        System.out.println( format( "Clear DB directory: %s", dbDir ) );
-        FileUtils.deleteDirectory( dbDir );
+        System.out.println( format( "Clear DB directory: %s", storeDir ) );
+        FileUtils.deleteDirectory( storeDir );
 
         TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
                 new TimeStampedRelationshipTypesCache();
@@ -153,8 +155,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 
         Extractors extractors = new Extractors( ';' );
 
-        org.neo4j.unsafe.impl.batchimport.input.csv.Configuration configuration =
-                new org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.Default()
+        Configuration configuration =
+                new Configuration.Default()
                 {
                     @Override
                     public char delimiter()
@@ -918,9 +920,6 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 
         // note: assumes input factories are called in order they are given, and two times: first->last, first->last
 
-        int denseNodeThreshold = 1;
-        Configuration batchImporterConfiguration = new LdbcImporterConfig();
-
         Input input = new CsvInput(
                 nodeDataFactories,
                 new LdbcHeaderFactory( nodeHeaders.stream().toArray( Header[]::new ) ),
@@ -937,15 +936,13 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
-        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
-        Collector badCollector =
-                Collectors.badCollector( System.out, tagClassesFiles.stream().map( path -> (int) path.toFile().length() ).mapToInt( i -> i ).sum(),
-                        Collectors.collect( true, false, false ) );
+        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( 1 ) );
+        Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(
-                DatabaseLayout.of( dbDir ),
+                Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
                 null,
-                batchImporterConfiguration,
+                new LdbcImporterConfig(),
                 logService,
                 ExecutionMonitors.defaultVisible( jobScheduler ),
                 AdditionalInitialIds.EMPTY,
@@ -953,7 +950,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
                 jobScheduler,
-                badCollector
+                badCollector,
+                TransactionLogsInitializer.INSTANCE
         );
 
         System.out.println( "Loading CSV files" );
@@ -973,7 +971,9 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         System.out.println( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, importerProperties );
+        File dbDir = new File( storeDir, DEFAULT_DATABASE_NAME );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 
@@ -988,7 +988,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
         System.out.printf( "Shutting down..." );
-        db.shutdown();
+        managementService.shutdown();
         System.out.println( "Done" );
     }
 }

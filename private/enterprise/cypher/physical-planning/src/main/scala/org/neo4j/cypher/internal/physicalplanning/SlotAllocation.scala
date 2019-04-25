@@ -5,14 +5,14 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.ir.{HasHeaders, NoHeaders, ShortestPathPattern}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.ir.{HasHeaders, NoHeaders, ShortestPathPattern}
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.v4_0.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.{Foldable, InternalException, UnNamedNameGenerator}
@@ -307,11 +307,11 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case leaf: RelationshipCountFromCountStore =>
         slots.newReference(leaf.idName, false, CTInteger)
 
-      case leaf: Input =>
-        for (v <- leaf.nodes)
-          slots.newLong(v, true, CTNode)
-        for (v <- leaf.variables)
-          slots.newReference(v, true, CTAny)
+      case Input(nodes, variables, nullableInput) =>
+        for (v <- nodes)
+          slots.newLong(v, nullableInput, CTNode)
+        for (v <- variables)
+          slots.newReference(v, nullableInput, CTAny)
 
       case p => throw new SlotAllocationFailed(s"Don't know how to handle $p")
     }
@@ -334,6 +334,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     lp match {
 
       case Distinct(_, groupingExpressions) =>
+        addGroupingSlots(groupingExpressions, source, slots)
+
+      case OrderedDistinct(_, groupingExpressions, _) =>
         addGroupingSlots(groupingExpressions, source, slots)
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>

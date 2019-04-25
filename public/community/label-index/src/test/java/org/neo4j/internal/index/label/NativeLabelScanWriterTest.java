@@ -22,7 +22,6 @@ package org.neo4j.internal.index.label;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -30,8 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.index.internal.gbptree.ValueMerger;
 import org.neo4j.index.internal.gbptree.ValueMergers;
 import org.neo4j.index.internal.gbptree.Writer;
@@ -158,6 +156,12 @@ public class NativeLabelScanWriterTest
             }
         }
 
+        @Override
+        public void mergeIfExists( LabelScanKey labelScanKey, LabelScanValue labelScanValue, ValueMerger<LabelScanKey,LabelScanValue> valueMerger )
+        {
+            throw new UnsupportedOperationException( "Should not be called" );
+        }
+
         private static LabelScanValue clone( LabelScanValue value )
         {
             LabelScanValue result = new LabelScanValue();
@@ -177,7 +181,7 @@ public class NativeLabelScanWriterTest
         }
 
         @SuppressWarnings( "unchecked" )
-        RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> nodesFor( int labelId )
+        Seeker<LabelScanKey,LabelScanValue> nodesFor( int labelId )
         {
             Map<LabelScanKey,LabelScanValue> forLabel = data.get( labelId );
             if ( forLabel == null )
@@ -185,17 +189,21 @@ public class NativeLabelScanWriterTest
                 forLabel = Collections.emptyMap();
             }
 
-            Map.Entry<LabelScanKey,LabelScanValue>[] entries =
-                    forLabel.entrySet().toArray( new Map.Entry[forLabel.size()] );
-            return new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+            Map.Entry<LabelScanKey,LabelScanValue>[] entries = forLabel.entrySet().toArray( new Entry[0] );
+            return new Seeker<>()
             {
                 private int arrayIndex = -1;
 
                 @Override
-                public Hit<LabelScanKey,LabelScanValue> get()
+                public LabelScanKey key()
                 {
-                    Entry<LabelScanKey,LabelScanValue> entry = entries[arrayIndex];
-                    return new MutableHit<>( entry.getKey(), entry.getValue() );
+                    return entries[arrayIndex].getKey();
+                }
+
+                @Override
+                public LabelScanValue value()
+                {
+                    return entries[arrayIndex].getValue();
                 }
 
                 @Override

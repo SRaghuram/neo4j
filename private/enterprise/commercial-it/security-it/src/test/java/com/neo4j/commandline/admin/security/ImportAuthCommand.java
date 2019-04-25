@@ -11,7 +11,7 @@ import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +27,7 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -42,6 +43,7 @@ import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
 public class ImportAuthCommand implements AdminCommand
@@ -69,6 +71,7 @@ public class ImportAuthCommand implements AdminCommand
     private final Path homeDir;
     private final Path configDir;
     private OutsideWorld outsideWorld;
+    private static DatabaseManagementService managementService;
 
     ImportAuthCommand( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {
@@ -188,17 +191,19 @@ public class ImportAuthCommand implements AdminCommand
             }
             finally
             {
-                systemDb.shutdown();
+                managementService.shutdown();
             }
         }
     }
 
-    private GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
+    private static GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        File systemDbStoreDir = new File( databaseDir, IMPORT_SYSTEM_DATABASE_NAME );
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        return factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
+        managementService = factory.newEmbeddedDatabaseBuilder( databaseDir )
+                .setConfig( default_database, IMPORT_SYSTEM_DATABASE_NAME )
+                .newDatabaseManagementService();
+        return managementService.database( IMPORT_SYSTEM_DATABASE_NAME );
     }
 
     private RealmLifecycle createSystemGraphRealmForOfflineImport( GraphDatabaseService db, Config config,
@@ -208,7 +213,7 @@ public class ImportAuthCommand implements AdminCommand
 
         SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
 
-        DatabaseManager databaseManager = getDatabaseManager( db );
+        DatabaseManager<?> databaseManager = getDatabaseManager( db );
         return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
@@ -217,7 +222,7 @@ public class ImportAuthCommand implements AdminCommand
                 shouldResetSystemGraphAuthBeforeImport );
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseService db )
+    private DatabaseManager<?> getDatabaseManager( GraphDatabaseService db )
     {
         return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

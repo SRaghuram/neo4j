@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -14,9 +14,9 @@ import org.junit.runners.Suite.SuiteClasses;
 
 import java.util.UUID;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.SchemaWrite;
@@ -102,8 +102,7 @@ public class PropertyConstraintValidationIT
         }
     }
 
-    public static class NodePropertyExistenceConstraintValidationIT
-            extends AbstractPropertyExistenceConstraintValidationIT
+    public static class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExistenceConstraintValidationIT
     {
         @Test
         public void shouldAllowNoopLabelUpdate() throws Exception
@@ -306,11 +305,10 @@ public class PropertyConstraintValidationIT
         abstract int entityCount() throws TransactionFailureException;
 
         @Override
-        protected GraphDatabaseService createGraphDatabase()
+        protected DatabaseManagementService createDatabaseService()
         {
-            return new TestCommercialGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
-                    .newEmbeddedDatabaseBuilder( testDir.storeDir() )
-                    .newGraphDatabase();
+            return new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( testDir.getFileSystem() )
+                        .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
         }
 
         @Test

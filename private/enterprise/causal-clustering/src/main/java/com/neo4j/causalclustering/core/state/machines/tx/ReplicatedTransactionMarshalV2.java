@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.messaging.ByteBufBacked;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import io.netty.buffer.ByteBuf;
 
 import java.io.ByteArrayOutputStream;
@@ -15,6 +16,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
 public class ReplicatedTransactionMarshalV2
@@ -25,24 +27,24 @@ public class ReplicatedTransactionMarshalV2
 
     public static void marshal( WritableChannel writableChannel, ByteArrayReplicatedTransaction replicatedTransaction ) throws IOException
     {
-        StringMarshal.marshal( writableChannel, replicatedTransaction.databaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
         int length = replicatedTransaction.getTxBytes().length;
         writableChannel.putInt( length );
         writableChannel.put( replicatedTransaction.getTxBytes(), length );
     }
 
-    public static ReplicatedTransaction unmarshal( ReadableChannel channel ) throws IOException
+    public static ReplicatedTransaction unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         int txBytesLength = channel.getInt();
         byte[] txBytes = new byte[txBytesLength];
         channel.get( txBytes, txBytesLength );
-        return ReplicatedTransaction.from( txBytes, databaseName );
+        return ReplicatedTransaction.from( txBytes, databaseId );
     }
 
     public static void marshal( WritableChannel writableChannel, TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException
     {
-        StringMarshal.marshal( writableChannel, replicatedTransaction.databaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
         if ( writableChannel instanceof ByteBufBacked )
         {
             /*

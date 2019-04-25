@@ -8,15 +8,13 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
-import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
+import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
@@ -28,22 +26,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
+import org.neo4j.storageengine.api.StoreId;
 
 class CatchupClient implements VersionedCatchupClients
 {
     private static final int REQUEST_SENT_TIMEOUT = 1;
     private static final TimeUnit REQUEST_SENT_TIME_UNIT = TimeUnit.MINUTES;
-    private final String defaultDatabaseName;
     private final CompletableFuture<CatchupChannel> channelFuture;
     private final Duration inactivityTimeout;
     private final Log log;
 
-    CatchupClient( CompletableFuture<CatchupChannel> channelFuture, String defaultDatabaseName, Duration inactivityTimeout, Log log )
+    CatchupClient( CompletableFuture<CatchupChannel> channelFuture, Duration inactivityTimeout, Log log )
     {
         this.channelFuture = channelFuture;
         this.inactivityTimeout = inactivityTimeout;
-        this.defaultDatabaseName = defaultDatabaseName;
         this.log = log;
     }
 
@@ -66,10 +64,10 @@ class CatchupClient implements VersionedCatchupClients
     }
 
     @Override
-    public <RESULT> NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request )
+    public <RESULT> NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( channelFuture, defaultDatabaseName, log );
-        return reqBuilder.v1( v1Request );
+        Builder<RESULT> reqBuilder = new Builder<>( channelFuture, log );
+        return reqBuilder.v3( v3Request );
     }
 
     @Override
@@ -80,32 +78,14 @@ class CatchupClient implements VersionedCatchupClients
     private class Builder<RESULT> implements CatchupRequestBuilder<RESULT>
     {
         private final CompletableFuture<CatchupChannel> channel;
-        private final String defaultDatabaseName;
         private final Log log;
-        private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
-        private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
         private CatchupResponseCallback<RESULT> responseHandler;
 
-        private Builder( CompletableFuture<CatchupChannel> channel, String defaultDatabaseName, Log log )
+        private Builder( CompletableFuture<CatchupChannel> channel, Log log )
         {
             this.channel = channel;
-            this.defaultDatabaseName = defaultDatabaseName;
             this.log = log;
-        }
-
-        @Override
-        public NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request )
-        {
-            this.v1Request = v1Request;
-            return this;
-        }
-
-        @Override
-        public NeedsV3Handler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request )
-        {
-            this.v2Request = v2Request;
-            return this;
         }
 
         @Override
@@ -138,17 +118,7 @@ class CatchupClient implements VersionedCatchupClients
 
         private OperationProgressMonitor<RESULT> performRequest( ApplicationProtocol protocol, CatchupChannel catchupChannel )
         {
-            if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_1 ) )
-            {
-                CatchupClient.V1 client = new CatchupClient.V1( catchupChannel, defaultDatabaseName );
-                return performRequest( client, v1Request, protocol, catchupChannel );
-            }
-            else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_2 ) )
-            {
-                CatchupClient.V2 client = new CatchupClient.V2( catchupChannel, defaultDatabaseName );
-                return performRequest( client, v2Request, protocol, catchupChannel );
-            }
-            else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
+            if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
             {
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );
                 return performRequest( client, v3Request, protocol, catchupChannel );
@@ -184,104 +154,6 @@ class CatchupClient implements VersionedCatchupClients
         }
     }
 
-    private static class V1 implements CatchupClientV1
-    {
-        private final CatchupChannel channel;
-        private final String defaultDatabaseName;
-
-        V1( CatchupChannel channel, String defaultDatabaseName )
-        {
-            this.channel = channel;
-            this.defaultDatabaseName = defaultDatabaseName;
-        }
-
-        @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
-        {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest( defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreId> getStoreId()
-        {
-            return handler -> makeBlockingRequest( new GetStoreIdRequest( defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId )
-        {
-            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId )
-        {
-            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId )
-        {
-            return handler -> makeBlockingRequest( new GetIndexFilesRequest( storeId, indexId, requiredTxId, defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId )
-        {
-            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, defaultDatabaseName ), handler, channel );
-        }
-
-    }
-
-    private static class V2 implements CatchupClientV2
-    {
-        private final CatchupChannel channel;
-        private final String defaultDatabaseName;
-
-        private V2( CatchupChannel channel, String defaultDatabaseName )
-        {
-            this.channel = channel;
-            this.defaultDatabaseName = defaultDatabaseName;
-        }
-
-        @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
-        {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest( defaultDatabaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreId> getStoreId( String databaseName )
-        {
-            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
-        {
-            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName )
-        {
-            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName )
-        {
-            return handler -> makeBlockingRequest( new GetIndexFilesRequest( storeId, indexId, requiredTxId, databaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName )
-        {
-            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ), handler, channel );
-        }
-
-    }
-
     private static class V3 implements CatchupClientV3
     {
         private final CatchupChannel channel;
@@ -292,39 +164,33 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName )
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreId> getStoreId( String databaseName )
+        public PreparedRequest<StoreId> getStoreId( DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName )
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseId ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName )
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId )
         {
-            return handler -> makeBlockingRequest( new GetIndexFilesRequest( storeId, indexId, requiredTxId, databaseName ), handler, channel );
-        }
-
-        @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName )
-        {
-            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseId ), handler, channel );
         }
 
     }

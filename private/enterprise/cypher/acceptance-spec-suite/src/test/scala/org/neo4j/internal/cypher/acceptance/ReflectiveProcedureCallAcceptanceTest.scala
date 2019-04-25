@@ -102,7 +102,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val counters = setUpProcedures()
 
     val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
-    val result = graph.execute(defaultQuery)
+    graph.execute(defaultQuery)
 
     // Close the transaction directly without pulling the result
     tx.close()

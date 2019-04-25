@@ -58,7 +58,14 @@ abstract class BaseExecutionResultBuilderFactory(pipe: Pipe,
                        input: InputDataStream,
                        subscriber: QuerySubscriber): RuntimeResult = {
       val state = createQueryState(params, prePopulateResults, input)
-      val results = pipe.createResults(state)
+      //pipe.createResults, may fail early and if so we must make sure to close the state
+      val results = try {
+        pipe.createResults(state)
+      } catch {
+        case e: Throwable =>
+          state.close()
+          throw e
+      }
       val resultIterator = buildResultIterator(results, readOnly)
       new PipeExecutionResult(resultIterator, columns.toArray, state, queryProfile, subscriber)
     }
@@ -84,7 +91,7 @@ case class InterpretedExecutionResultBuilderFactory(pipe: Pipe,
   case class InterpretedExecutionResultBuilder(queryContext: QueryContext) extends BaseExecutionResultBuilder {
     override def createQueryState(params: MapValue, prePopulateResults: Boolean, input: InputDataStream): QueryState = {
       val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
-
+      queryContext.resources.trace(cursors)
       new QueryState(queryContext,
                      externalResource,
                      createParameterArray(params, parameterMapping),

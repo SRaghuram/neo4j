@@ -6,6 +6,11 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.client.profiling.RecordingType;
+import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.micro.benchmarks.cypher.AllNodesScan;
@@ -13,18 +18,11 @@ import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
 import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.profiling.RecordingType;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.TestDirectorySupport;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -34,6 +32,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -42,19 +41,18 @@ import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirecto
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
-
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class InteractiveRunIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class InteractiveRunIT
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
+    void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
     {
         Class benchmark = ReadById.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -66,7 +64,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunAllMethodsOfBenchmarkClass() throws Exception
+    void shouldRunAllMethodsOfBenchmarkClass() throws Exception
     {
         Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -77,7 +75,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
+    void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
     {
         Class benchmark = ConcurrentReadWriteLabelsV2.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -88,7 +86,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunConstantDataConstantAugment() throws Exception
+    void shouldRunConstantDataConstantAugment() throws Exception
     {
         Class benchmark = ConstantDataConstantAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -99,7 +97,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunConstantDataVariableAugment() throws Exception
+    void shouldRunConstantDataVariableAugment() throws Exception
     {
         Class benchmark = ConstantDataVariableAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -110,7 +108,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
+    void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
     {
         Class benchmark = DefaultDisabled.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -121,7 +119,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldNotThrowExceptionWhenErrorPolicyIsSkip() throws Exception
+    void shouldNotThrowExceptionWhenErrorPolicyIsSkip() throws Exception
     {
         Class benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
@@ -133,7 +131,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldThrowExceptionWhenErrorPolicyIsFail()
+    void shouldThrowExceptionWhenErrorPolicyIsFail()
     {
         Class benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
@@ -173,8 +171,9 @@ public class InteractiveRunIT
         // (3) for each JFR recording file a FlameGraph should be created
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
+//        IN 4.0 we do NOT generate Flamegraphs
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
-        assertThat( jfrFlameGraphCount, equalTo( expectedBenchmarkCount ) );
+        assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 
         // expected number of stores are present
         try ( Stream<Path> paths = Files.list( storesDir.toPath() ) )
@@ -182,11 +181,7 @@ public class InteractiveRunIT
             List<String> pathNames = paths
                     .filter( Files::isDirectory )
                     .filter( Stores::isTopLevelDir )
-                    .map( p ->
-                          {
-                              System.out.println( "DB : " + p );
-                              return p;
-                          } )
+                    .peek( p -> System.out.println( "DB : " + p ) )
                     .map( Path::toString )
                     .collect( toList() );
             assertThat( "Found: " + pathNames, pathNames.size(), equalTo( expectedStoreCount ) );

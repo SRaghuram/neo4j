@@ -7,7 +7,6 @@ package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.Project;
 import com.neo4j.bench.client.model.Repository;
@@ -17,6 +16,7 @@ import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -43,14 +44,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class RunExportCommandIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class RunExportCommandIT
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldThrowExceptionWhenNoBenchmarkIsEnabled() throws Exception
+    void shouldThrowExceptionWhenNoBenchmarkIsEnabled()
     {
         assertThrows( RuntimeException.class, () ->
         {
@@ -102,7 +103,7 @@ public class RunExportCommandIT
     }
 
     @Test
-    public void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
+    void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
     {
         // Create empty Neo4j configuration file
         File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );
@@ -179,6 +180,6 @@ public class RunExportCommandIT
                     equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount,
-                    equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
+                    equalTo( 0 ) );
     }
 }

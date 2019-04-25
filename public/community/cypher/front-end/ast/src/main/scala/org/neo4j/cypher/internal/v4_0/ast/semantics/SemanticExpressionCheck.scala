@@ -318,9 +318,9 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
         check(ctx, x.expr) chain
           check(ctx, x.idx) chain
           typeSwitch(x.expr) {
-            case exprT =>
+            exprT =>
               typeSwitch(x.idx) {
-                case idxT =>
+                idxT =>
                   val listT = CTList(CTAny).covariant & exprT
                   val mapT = CTMap.covariant & exprT
                   val exprIsList = listT != TypeSpec.none
@@ -361,10 +361,10 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
       case x:VariableSelector =>
         check(ctx, x.id)
 
-      case x:PropertySelector =>
+      case _:PropertySelector =>
         SemanticCheckResult.success
 
-      case x:AllPropertiesSelector =>
+      case _:AllPropertiesSelector =>
         SemanticCheckResult.success
 
       case x:DesugaredMapProjection =>
@@ -419,6 +419,20 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
 
       case x:SemanticCheckableExpression =>
         x.semanticCheck(ctx)
+
+      // EXISTS
+      case x:ExistsSubClause =>
+        SemanticState.recordCurrentScope(x) chain
+        withScopedState { // saves us from leaking to the outside
+          SemanticPatternCheck.check(Pattern.SemanticContext.Match, x.pattern) chain
+          // TODO: remove once multiple patterns is supported
+            when(x.pattern.patternParts.size > 1) {
+              SemanticError("Multiple patterns are not supported for MATCH inside an EXISTS subclause.", x.pattern.patternParts(1).position)
+            } ifOkChain
+            when(x.optionalWhereExpression.isDefined) {
+              check(ctx, x.optionalWhereExpression.get)
+            }
+        }
 
       case x:Expression => semanticCheckFallback(ctx, x)
     }
@@ -537,7 +551,7 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
         TypeSpec.none
 
     val durationTypes =
-      if (lhsTypes containsAny (CTDuration.covariant))
+      if (lhsTypes containsAny CTDuration.covariant)
         CTDate.covariant | CTTime.covariant | CTLocalTime.covariant |
           CTDateTime.covariant | CTLocalDateTime.covariant | CTDuration.covariant
       else

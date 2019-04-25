@@ -12,6 +12,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -22,7 +23,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
 
@@ -41,26 +41,6 @@ public class Server extends SuspendableLifeCycle
     private EventLoopGroup workerGroup;
     private Channel channel;
     private ListenSocketAddress listenAddress;
-
-    public Server( ChildInitializer childInitializer, LogProvider debugLogProvider, LogProvider userLogProvider, ListenSocketAddress listenAddress,
-            String serverName, Executor executor, BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName, executor, bootstrapConfiguration );
-    }
-
-    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName, Executor executor,
-            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName, executor,
-                bootstrapConfiguration );
-    }
-
-    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-            ListenSocketAddress listenAddress, String serverName, Executor executor,
-            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
-    {
-        this( childInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, null, bootstrapConfiguration );
-    }
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
             ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
@@ -144,9 +124,16 @@ public class Server extends SuspendableLifeCycle
             debugLog.warn( "Interrupted while closing channel." );
         }
 
-        if ( workerGroup != null && workerGroup.shutdownGracefully( 2, 5, TimeUnit.SECONDS ).awaitUninterruptibly( 10, TimeUnit.SECONDS ) )
+        if ( workerGroup != null )
         {
-            debugLog.warn( "Worker group not shutdown within 10 seconds." );
+            // A quiet period of exactly zero cannot be used because that won't finish all queued tasks,
+            // which is the guarantee we want, because we don't care about a quiet period per se.
+            Future<?> fShutdown = workerGroup.shutdownGracefully( 100, 5000, TimeUnit.MILLISECONDS );
+            if ( !fShutdown.awaitUninterruptibly( 15000, TimeUnit.MILLISECONDS ) )
+            {
+                // This is not really expected to ever happen.
+                debugLog.warn( "Worker group not shutdown within time limit." );
+            }
         }
         workerGroup = null;
     }
@@ -186,17 +173,11 @@ public class Server extends SuspendableLifeCycle
 
     private void registerListenAddress()
     {
-        if ( portRegister != null )
-        {
-            portRegister.register( serverName, listenAddress );
-        }
+        portRegister.register( serverName, listenAddress );
     }
 
     private void deregisterListenAddress()
     {
-        if ( portRegister != null )
-        {
-            portRegister.deregister( serverName );
-        }
+        portRegister.deregister( serverName );
     }
 }

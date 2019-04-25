@@ -95,7 +95,7 @@ public abstract class IndexProviderCompatibilityTestSuite
     public boolean supportsBooleanRangeQueries()
     {
         return false;
-    };
+    }
 
     public boolean supportFullValuePrecisionForNumbers()
     {
@@ -137,7 +137,7 @@ public abstract class IndexProviderCompatibilityTestSuite
         @Rule
         public RuleChain ruleChain;
 
-        protected File graphDbDir;
+        File graphDbDir;
         protected FileSystemAbstraction fs;
         protected IndexProvider indexProvider;
         protected StoreIndexDescriptor descriptor;
@@ -149,12 +149,12 @@ public abstract class IndexProviderCompatibilityTestSuite
         public void setup()
         {
             fs = pageCacheAndDependenciesRule.fileSystem();
-            graphDbDir = pageCacheAndDependenciesRule.directory().databaseDir();
+            graphDbDir = pageCacheAndDependenciesRule.directory().storeDir();
             PageCache pageCache = pageCacheAndDependenciesRule.pageCache();
             indexProvider = testSuite.createIndexProvider( pageCache, fs, graphDbDir );
         }
 
-        public Compatibility( IndexProviderCompatibilityTestSuite testSuite, IndexDescriptor descriptor )
+        Compatibility( IndexProviderCompatibilityTestSuite testSuite, IndexDescriptor descriptor )
         {
             this.testSuite = testSuite;
             this.descriptor = descriptor.withId( 17 );

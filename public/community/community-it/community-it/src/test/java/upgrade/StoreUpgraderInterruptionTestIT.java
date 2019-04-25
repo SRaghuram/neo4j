@@ -37,6 +37,7 @@ import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -60,11 +61,10 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.MigrationProgressMonitor;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -73,6 +73,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.checkNeoStoreHasDefaultFormatVersion;
 
@@ -165,7 +166,7 @@ public class StoreUpgraderInterruptionTestIT
 
     private SchemaIndexMigrator createIndexMigrator()
     {
-        return new SchemaIndexMigrator( fs, IndexProvider.EMPTY, StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ) );
+        return new SchemaIndexMigrator( fs, IndexProvider.EMPTY, StorageEngineFactory.selectStorageEngine() );
     }
 
     @Test
@@ -232,8 +233,9 @@ public class StoreUpgraderInterruptionTestIT
 
     private static void startStopDatabase( File storeDir )
     {
-        GraphDatabaseService databaseService = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                        .setConfig( GraphDatabaseSettings.allow_upgrade, "true" ).newGraphDatabase();
-        databaseService.shutdown();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
+                        .setConfig( GraphDatabaseSettings.allow_upgrade, "true" ).newDatabaseManagementService();
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+        managementService.shutdown();
     }
 }

@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.id.IdContainer;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
@@ -70,8 +69,7 @@ public class IdFilesSanityCheckIT
 
         // then
         leader.shutdown(); // we need to shutdown to access the ID-files "raw"
-        DatabaseLayout databaseLayout = DatabaseLayout.of( leader.databaseDirectory() );
-        long freeIdCount = getFreeIdCount( databaseLayout.idNodeStore() );
+        long freeIdCount = getFreeIdCount( leader.databaseLayout().idNodeStore() );
         assertEquals( 0, freeIdCount );
     }
 

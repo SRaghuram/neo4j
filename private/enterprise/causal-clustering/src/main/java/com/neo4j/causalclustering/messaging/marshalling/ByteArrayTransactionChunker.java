@@ -6,14 +6,17 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
+import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class ByteArrayTransactionChunker implements ChunkedInput<ByteBuf>
 {
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final ByteArrayChunkedEncoder byteChunker;
 
     private boolean dbNameWritten;
@@ -21,7 +24,7 @@ public class ByteArrayTransactionChunker implements ChunkedInput<ByteBuf>
     public ByteArrayTransactionChunker( ByteArrayReplicatedTransaction tx )
     {
         this.byteChunker = new ByteArrayChunkedEncoder( tx.getTxBytes() );
-        this.databaseName = tx.databaseName();
+        this.databaseId = tx.databaseId();
     }
 
     @Override
@@ -54,14 +57,14 @@ public class ByteArrayTransactionChunker implements ChunkedInput<ByteBuf>
             ByteBuf buffer = allocator.buffer();
             try
             {
-                StringMarshal.marshal( buffer, databaseName );
+                DatabaseIdMarshal.INSTANCE.marshal( databaseId, new NetworkWritableChannel( buffer ) );
                 dbNameWritten = true;
                 return buffer;
             }
             catch ( Throwable t )
             {
                 buffer.release();
-                throw t;
+                throw new RuntimeException( t );
             }
         }
         else

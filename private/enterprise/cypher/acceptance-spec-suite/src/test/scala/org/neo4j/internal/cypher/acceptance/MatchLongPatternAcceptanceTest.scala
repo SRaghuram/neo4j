@@ -5,11 +5,10 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.GraphDatabaseSettings.{cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
@@ -18,7 +17,7 @@ import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.ImpermanentGraphDatabase
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -34,7 +33,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   )
 
   test("changing idp max table size should affect IDP inner loop count") {
-    graph.shutdown()
+    managementService.shutdown()
     // GIVEN
     val numberOfPatternRelationships = 13
     val maxTableSizes = Seq(128, 64, 32, 16)
@@ -54,7 +53,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   test("changing idp iteration duration threshold should affect IDP inner loop count") {
     // GIVEN
-    graph.shutdown()
+    managementService.shutdown()
     val numberOfPatternRelationships = 13
     val iterationDurationThresholds = Seq(1000, 500, 10)
 
@@ -269,16 +268,15 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   }
 
   private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
-    val config: util.Map[String, String] = m.map {
-      case (setting, settingValue) => setting.name() -> settingValue
-    }.toMap.asJava
-
-    val graph = new GraphDatabaseCypherService(new ImpermanentGraphDatabase(new File("target/test-data/pattern-acceptance"), config))
+    val config: util.Map[Setting[_], String] = m.toMap.asJava
+    val managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService(config)
+    val database = managementService.database(DEFAULT_DATABASE_NAME)
+    val graph = new GraphDatabaseCypherService(database)
     try {
       val engine = ExecutionEngineHelper.createEngine(graph)
       run(engine, graph)
     } finally {
-      graph.shutdown()
+      managementService.shutdown()
     }
   }
 

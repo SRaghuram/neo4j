@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -39,10 +40,14 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.io.fs.IoPrimitiveUtils;
+import org.neo4j.io.layout.DatabaseLayout;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 public class DbRepresentation
 {
@@ -65,9 +70,7 @@ public class DbRepresentation
                     NodeRep nodeRep = new NodeRep( node );
                     result.nodes.put( node.getId(), nodeRep );
                     result.highestNodeId = Math.max( node.getId(), result.highestNodeId );
-                    result.highestRelationshipId =
-                            Math.max( nodeRep.highestRelationshipId, result.highestRelationshipId );
-
+                    result.highestRelationshipId = Math.max( nodeRep.highestRelationshipId, result.highestRelationshipId );
                 }
                 for ( IndexDefinition indexDefinition : db.schema().getIndexes() )
                 {
@@ -89,25 +92,42 @@ public class DbRepresentation
         }
     }
 
-    public static DbRepresentation of( File storeDir )
+    public static DbRepresentation of( File databaseDirectory )
     {
-        return of( storeDir, Config.defaults() );
+        return of( databaseDirectory, Config.defaults() );
     }
 
-    public static DbRepresentation of( File storeDir, Config config )
+    public static DbRepresentation of( File databaseDirectory, Config config )
     {
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceInternalBuilder builder =
+                new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
         builder.setConfig( config.getRaw() );
 
-        GraphDatabaseService db = builder.newGraphDatabase();
+        DatabaseManagementService managementService = builder.newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( config.get( default_database ) );
         try
         {
             return of( db );
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
+    }
+
+    public static DbRepresentation of( DatabaseLayout databaseLayout )
+    {
+        return of( databaseLayout.databaseDirectory(),
+                Config.builder().withSetting( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() )
+                                .withSetting( default_database, databaseLayout.getDatabaseName() )
+                        .build());
+    }
+
+    public static DbRepresentation of( DatabaseLayout databaseLayout, Config config )
+    {
+        config.augment( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
+        config.augment( default_database, databaseLayout.getDatabaseName() );
+        return of( databaseLayout.databaseDirectory(), config );
     }
 
     @Override

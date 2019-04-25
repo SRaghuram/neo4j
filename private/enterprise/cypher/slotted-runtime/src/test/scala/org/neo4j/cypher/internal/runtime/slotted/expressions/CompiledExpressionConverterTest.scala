@@ -38,6 +38,6 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
 
     // Then
     converter.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
-    log.toString should startWith(s"Failed to compile expression: $e")
+    log.toString should include(s"Failed to compile expression: $e")
   }
 }

@@ -45,7 +45,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
@@ -99,12 +98,12 @@ public abstract class GBPTreeConcurrencyITBase<KEY,VALUE>
     private GBPTree<KEY,VALUE> createIndex() throws IOException
     {
         int pageSize = 512;
-        layout = getLayout( random );
+        layout = getLayout( random, pageSize );
         PageCache pageCache = pageCacheExtension.getPageCache( fileSystem, config().withPageSize( pageSize ).withAccessChecks( true ) );
         return index = new GBPTreeBuilder<>( pageCache, testDirectory.file( "index" ), layout ).build();
     }
 
-    protected abstract TestLayout<KEY,VALUE> getLayout( RandomRule random );
+    protected abstract TestLayout<KEY,VALUE> getLayout( RandomRule random, int pageSize );
 
     @AfterEach
     void consistencyCheckAndClose() throws IOException
@@ -530,7 +529,7 @@ public abstract class GBPTreeConcurrencyITBase<KEY,VALUE>
             long start = readerInstruction.start();
             long end = readerInstruction.end();
             boolean forward = start <= end;
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor = index.seek( key( start ), key( end ) ) )
+            try ( Seeker<KEY,VALUE> cursor = index.seek( key( start ), key( end ) ) )
             {
                 if ( expectToSee.hasNext() )
                 {
@@ -538,8 +537,8 @@ public abstract class GBPTreeConcurrencyITBase<KEY,VALUE>
                     while ( cursor.next() )
                     {
                         // Actual
-                        long lastSeenKey = keySeed( cursor.get().key() );
-                        long lastSeenValue = valueSeed( cursor.get().value() );
+                        long lastSeenKey = keySeed( cursor.key() );
+                        long lastSeenValue = valueSeed( cursor.value() );
 
                         if ( lastSeenKey != lastSeenValue )
                         {

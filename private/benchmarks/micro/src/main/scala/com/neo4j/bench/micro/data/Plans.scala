@@ -7,10 +7,10 @@ package com.neo4j.bench.micro.data
 
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.v4_0.expressions
+import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
@@ -169,7 +169,7 @@ object Plans {
 
   def astOrs(es: Expression*): Expression = Ors(es.toSet)(Pos)
 
-  def astAnds(es: Expression*): Expression = Ands(es.toSet)(Pos)
+  def astAnds(es: Expression*): Ands = Ands(es.toSet)(Pos)
 
   def astMap(kvs: (String, Expression)*): Expression = MapExpression(kvs.map {
                                                                                case (key, value) => PropertyKeyName(key)(Pos) -> value

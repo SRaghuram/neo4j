@@ -20,10 +20,10 @@
 package org.neo4j.kernel.impl.index.schema;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,8 +31,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.test.rule.RandomRule;
@@ -113,25 +112,25 @@ public class NativeDistinctValuesProgressorTest
         return strings;
     }
 
-    private Collection<Hit<StringIndexKey,NativeIndexValue>> asHitData( Value[] strings )
+    private Collection<Pair<StringIndexKey,NativeIndexValue>> asHitData( Value[] strings )
     {
-        Collection<Hit<StringIndexKey,NativeIndexValue>> data = new ArrayList<>( strings.length );
+        Collection<Pair<StringIndexKey,NativeIndexValue>> data = new ArrayList<>( strings.length );
         for ( int i = 0; i < strings.length; i++ )
         {
             StringIndexKey key = layout.newKey();
             key.initialize( i );
             key.initFromValue( 0, strings[i], NEUTRAL );
-            data.add( new SimpleHit<>( key, INSTANCE ) );
+            data.add( Pair.of( key, INSTANCE ) );
         }
         return data;
     }
 
-    private static class DataCursor implements RawCursor<Hit<StringIndexKey,NativeIndexValue>,IOException>
+    private static class DataCursor implements Seeker<StringIndexKey,NativeIndexValue>
     {
-        private final Iterator<Hit<StringIndexKey,NativeIndexValue>> iterator;
-        private Hit<StringIndexKey,NativeIndexValue> current;
+        private final Iterator<Pair<StringIndexKey,NativeIndexValue>> iterator;
+        private Pair<StringIndexKey,NativeIndexValue> current;
 
-        DataCursor( Collection<Hit<StringIndexKey,NativeIndexValue>> data )
+        DataCursor( Collection<Pair<StringIndexKey,NativeIndexValue>> data )
         {
             this.iterator = data.iterator();
         }
@@ -154,9 +153,15 @@ public class NativeDistinctValuesProgressorTest
         }
 
         @Override
-        public Hit<StringIndexKey,NativeIndexValue> get()
+        public StringIndexKey key()
         {
-            return current;
+            return current.getKey();
+        }
+
+        @Override
+        public NativeIndexValue value()
+        {
+            return current.getValue();
         }
     }
 }

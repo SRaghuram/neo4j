@@ -10,20 +10,22 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import java.util.Collections;
 import java.util.Map;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class BoundState
 {
     private final ClusterId clusterId;
-    private final Map<String,CoreSnapshot> coreSnapshotsByDatabaseName;
+    private final Map<DatabaseId,CoreSnapshot> coreSnapshotsByDatabaseId;
 
     BoundState( ClusterId clusterId )
     {
         this( clusterId, Collections.emptyMap() );
     }
 
-    BoundState( ClusterId clusterId, Map<String,CoreSnapshot> coreSnapshotsByDatabaseName )
+    BoundState( ClusterId clusterId, Map<DatabaseId,CoreSnapshot> coreSnapshotsByDatabaseId )
     {
         this.clusterId = clusterId;
-        this.coreSnapshotsByDatabaseName = coreSnapshotsByDatabaseName;
+        this.coreSnapshotsByDatabaseId = coreSnapshotsByDatabaseId;
     }
 
     public ClusterId clusterId()
@@ -31,8 +33,8 @@ public class BoundState
         return clusterId;
     }
 
-    public Map<String,CoreSnapshot> snapshots()
+    public Map<DatabaseId,CoreSnapshot> snapshots()
     {
-        return coreSnapshotsByDatabaseName;
+        return coreSnapshotsByDatabaseId;
     }
 }

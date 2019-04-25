@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdSequence;
@@ -44,7 +45,6 @@ import org.neo4j.logging.Logger;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 import org.neo4j.util.Bits;
 import org.neo4j.util.concurrent.ArrayQueueOutOfOrderSequence;
 import org.neo4j.util.concurrent.OutOfOrderSequence;
@@ -86,7 +86,8 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET( 12, "Byte offset in the log file where the last transaction commit entry " +
                                                      "has been written into" ),
         LAST_TRANSACTION_COMMIT_TIMESTAMP( 13, "Commit time timestamp for last committed transaction" ),
-        UPGRADE_TRANSACTION_COMMIT_TIMESTAMP( 14, "Commit timestamp of transaction the most recent upgrade was performed at" );
+        UPGRADE_TRANSACTION_COMMIT_TIMESTAMP( 14, "Commit timestamp of transaction the most recent upgrade was performed at" ),
+        LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP( 15, "Timestamp of last attempt to perform a recovery on the store with missing files." );
 
         private final int id;
         private final String description;
@@ -210,6 +211,7 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         lastClosedTx.set( transactionId, new long[]{logVersion, byteOffset} );
         highestCommittedTransaction.set( transactionId, checksum, commitTimestamp );
     }
+
     /**
      * Writes a record in a neostore file.
      * This method only works for neostore files of the current version.
@@ -431,17 +433,6 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         {
             setRecord( Position.LOG_VERSION, version );
             versionField = version;
-        }
-    }
-
-    public void setLastTransactionCommitTimestamp( long timestamp )
-    {
-        // Preventing race with transactionCommitted() and assure record is consistent with highestCommittedTransaction
-        synchronized ( transactionCommittedLock )
-        {
-            setRecord( Position.LAST_TRANSACTION_COMMIT_TIMESTAMP, timestamp );
-            TransactionId transactionId = highestCommittedTransaction.get();
-            highestCommittedTransaction.set( transactionId.transactionId(), transactionId.checksum(), timestamp );
         }
     }
 
@@ -848,6 +839,17 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         }
     }
 
+    @Override
+    public void resetLastClosedTransaction( long transactionId, long logVersion, long byteOffset )
+    {
+        assertNotClosed();
+        setRecord( Position.LAST_TRANSACTION_ID, transactionId );
+        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_VERSION, logVersion );
+        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET, byteOffset );
+        setRecord( Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP, System.currentTimeMillis() );
+        lastClosedTx.set( transactionId, new long[]{logVersion, byteOffset} );
+    }
+
     public void logRecords( final Logger log )
     {
         scanAllFields( PF_SHARED_READ_LOCK, cursor ->
@@ -875,8 +877,7 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
     }
 
     @Override
-    public <FAILURE extends Exception> void accept(
-            org.neo4j.kernel.impl.store.RecordStore.Processor<FAILURE> processor, MetaDataRecord record )
+    public <FAILURE extends Exception> void accept( Processor<FAILURE> processor, MetaDataRecord record )
     {
         throw new UnsupportedOperationException();
     }

@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.io.pagecache.DelegatingPageCache;
@@ -50,7 +51,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.NullLogger;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -63,6 +63,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -240,6 +241,24 @@ class MetaDataStoreTest
         MetaDataStore metaDataStore = newMetaDataStore();
         metaDataStore.close();
         assertThrows( StoreFileClosedException.class, () -> metaDataStore.setLastCommittedAndClosedTransactionId( 1, 2, BASE_TX_COMMIT_TIMESTAMP, 3, 4 ) );
+    }
+
+    @Test
+    void setLastClosedTransactionFailWhenStoreIsClosed()
+    {
+        MetaDataStore metaDataStore = newMetaDataStore();
+        metaDataStore.close();
+        assertThrows( StoreFileClosedException.class, () -> metaDataStore.resetLastClosedTransaction( 1, 2, 3 ) );
+    }
+
+    @Test
+    void setLastClosedTransactionOverridesLastClosedTransactionInformation()
+    {
+        MetaDataStore metaDataStore = newMetaDataStore();
+        metaDataStore.resetLastClosedTransaction( 3, 4, 5 );
+
+        assertEquals( 3L, metaDataStore.getLastClosedTransactionId() );
+        assertArrayEquals( new long[]{3, 4, 5}, metaDataStore.getLastClosedTransaction() );
     }
 
     @Test
@@ -525,7 +544,7 @@ class MetaDataStoreTest
     private File createMetaDataFile() throws IOException
     {
         File file = testDirectory.databaseLayout().metadataStore();
-        fs.create( file ).close();
+        fs.write( file ).close();
         return file;
     }
 

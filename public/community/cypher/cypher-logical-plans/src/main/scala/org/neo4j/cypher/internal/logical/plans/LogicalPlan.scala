@@ -24,9 +24,9 @@ import java.lang.reflect.Method
 import org.neo4j.cypher.internal.ir.{PlannerQuery, Strictness}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
-import org.neo4j.cypher.internal.v4_0.util.{Foldable, InternalException, Rewritable}
 import org.neo4j.cypher.internal.v4_0.util.Rewritable._
-import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, IdGen, SameId}
+import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, IdGen, Identifiable, SameId}
+import org.neo4j.cypher.internal.v4_0.util.{Foldable, InternalException, Rewritable}
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -45,7 +45,8 @@ abstract class LogicalPlan(idGen: IdGen)
   extends Product
   with Foldable
   with Strictness
-  with Rewritable {
+  with Rewritable
+  with Identifiable {
 
   self =>
 
@@ -61,7 +62,7 @@ abstract class LogicalPlan(idGen: IdGen)
       rhs.fold(Map.empty[Property, CachedNodeProperty])(_.availableCachedNodeProperties)
   }
 
-  val id: Id = idGen.id()
+  override val id: Id = idGen.id()
 
   override val hashCode: Int = MurmurHash3.productHash(self)
 
@@ -157,7 +158,7 @@ abstract class LogicalPlan(idGen: IdGen)
           (plan.lhs, plan.rhs) match {
             case (None, None) =>
               sb.append("}")
-            case (Some(l), None) =>
+            case (Some(_), None) =>
               childrenHeap.push((System.lineSeparator() + "  " * level + "}", level + 1, None))
               childrenHeap.push(("LHS -> ", level + 1, plan.lhs))
             case _ =>
@@ -186,11 +187,14 @@ abstract class LogicalPlan(idGen: IdGen)
         acc => acc :+ SchemaIndexSeekUsage(idName, label.nameId.id, label.name, properties.map(_.propertyKeyToken.name))
       case NodeUniqueIndexSeek(idName, label, properties, _, _, _) =>
         acc => acc :+ SchemaIndexSeekUsage(idName, label.nameId.id, label.name, properties.map(_.propertyKeyToken.name))
-      case NodeIndexScan(idName, label, property, _, _) =>
-        acc => acc :+ SchemaIndexScanUsage(idName, label.nameId.id, label.name, property.propertyKeyToken.name)
+      case NodeIndexScan(idName, label, properties, _, _) =>
+        acc => acc :+ SchemaIndexScanUsage(idName, label.nameId.id, label.name, properties.map(_.propertyKeyToken.name))
       }
   }
 }
+
+// Marker interface for all plans that aggregate inputs.
+trait AggregatingPlan extends LogicalPlan
 
 abstract class LogicalLeafPlan(idGen: IdGen) extends LogicalPlan(idGen) with LazyLogicalPlan {
   final val lhs = None
@@ -251,4 +255,4 @@ sealed trait IndexUsage {
 }
 
 final case class SchemaIndexSeekUsage(identifier: String, labelId : Int, label: String, propertyKeys: Seq[String]) extends IndexUsage
-final case class SchemaIndexScanUsage(identifier: String, labelId : Int, label: String, propertyKey: String) extends IndexUsage
+final case class SchemaIndexScanUsage(identifier: String, labelId : Int, label: String, propertyKeys: Seq[String]) extends IndexUsage

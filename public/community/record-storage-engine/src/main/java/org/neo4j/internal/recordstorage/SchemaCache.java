@@ -19,14 +19,10 @@
  */
 package org.neo4j.internal.recordstorage;
 
-import org.eclipse.collections.api.iterator.IntIterator;
-import org.eclipse.collections.api.map.primitive.IntObjectMap;
-import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
-import org.eclipse.collections.api.set.primitive.IntSet;
-import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,21 +32,23 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.StampedLock;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.common.EntityType;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptorLookupSet;
 import org.neo4j.internal.schema.SchemaDescriptorPredicates;
 import org.neo4j.internal.schema.SchemaDescriptorSupplier;
 import org.neo4j.internal.schema.SchemaRule;
+import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 import org.neo4j.storageengine.api.ConstraintRule;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageIndexReference;
 
-import static java.util.Collections.emptyIterator;
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 
 /**
  * A cache of {@link SchemaRule schema rules} as well as enforcement of schema consistency.
@@ -170,21 +168,32 @@ public class SchemaCache
         return schemaCacheState.indexDescriptorsForLabel( labelId );
     }
 
-    Iterator<StorageIndexReference> indexesByNodeProperty( int propertyId )
-    {
-        return schemaCacheState.indexesByNodeProperty( propertyId );
-    }
-
     StorageIndexReference indexDescriptorForName( String name )
     {
         return schemaCacheState.indexDescriptorByName( name );
     }
 
-    public <INDEX_KEY extends SchemaDescriptorSupplier> Set<INDEX_KEY> getIndexesRelatedTo(
-            long[] changedEntityTokens, long[] unchangedEntityTokens, IntSet properties, EntityType entityType,
-            Function<StorageIndexReference,INDEX_KEY> converter )
+    public Set<SchemaDescriptor> getIndexesRelatedTo(
+            long[] changedEntityTokens, long[] unchangedEntityTokens, int[] properties,
+            boolean propertyListIsComplete, EntityType entityType )
     {
-        return schemaCacheState.getIndexesRelatedTo( changedEntityTokens, unchangedEntityTokens, properties, entityType, converter );
+        return schemaCacheState.getIndexesRelatedTo( entityType, changedEntityTokens, unchangedEntityTokens, properties, propertyListIsComplete );
+    }
+
+    public Collection<IndexBackedConstraintDescriptor> getUniquenessConstraintsRelatedTo( long[] changedLabels, long[] unchangedLabels, int[] properties,
+            boolean propertyListIsComplete, EntityType entityType )
+    {
+        return schemaCacheState.getUniquenessConstraintsRelatedTo( entityType, changedLabels, unchangedLabels, properties, propertyListIsComplete );
+    }
+
+    public boolean hasRelatedSchema( long[] labels, int propertyKey, EntityType entityType )
+    {
+        return schemaCacheState.hasRelatedSchema( labels, propertyKey, entityType );
+    }
+
+    public boolean hasRelatedSchema( int label, EntityType entityType )
+    {
+        return schemaCacheState.hasRelatedSchema( label, entityType );
     }
 
     private static class SchemaCacheState
@@ -195,8 +204,10 @@ public class SchemaCache
         private final MutableLongObjectMap<ConstraintRule> constraintRuleById;
 
         private final Map<SchemaDescriptor,StorageIndexReference> indexDescriptors;
-        private final EntityDescriptors indexDescriptorsByNode;
-        private final EntityDescriptors indexDescriptorsByRelationship;
+        private final SchemaDescriptorLookupSet<SchemaDescriptor> indexDescriptorsByNode;
+        private final SchemaDescriptorLookupSet<SchemaDescriptor> indexDescriptorsByRelationship;
+        private final SchemaDescriptorLookupSet<IndexBackedConstraintDescriptor> uniquenessConstraintsByNode;
+        private final SchemaDescriptorLookupSet<IndexBackedConstraintDescriptor> uniquenessConstraintsByRelationship;
         private final Map<String,StorageIndexReference> indexDescriptorsByName;
 
         private final Map<Class<?>,Object> dependantState;
@@ -209,8 +220,10 @@ public class SchemaCache
             this.constraintRuleById = new LongObjectHashMap<>();
 
             this.indexDescriptors = new HashMap<>();
-            this.indexDescriptorsByNode = new EntityDescriptors();
-            this.indexDescriptorsByRelationship = new EntityDescriptors();
+            this.indexDescriptorsByNode = new SchemaDescriptorLookupSet<>();
+            this.indexDescriptorsByRelationship = new SchemaDescriptorLookupSet<>();
+            this.uniquenessConstraintsByNode = new SchemaDescriptorLookupSet<>();
+            this.uniquenessConstraintsByRelationship = new SchemaDescriptorLookupSet<>();
             this.indexDescriptorsByName = new HashMap<>();
             this.dependantState = new ConcurrentHashMap<>();
             load( rules );
@@ -224,10 +237,24 @@ public class SchemaCache
             this.constraints = new HashSet<>( schemaCacheState.constraints );
 
             this.indexDescriptors = new HashMap<>( schemaCacheState.indexDescriptors );
-            this.indexDescriptorsByNode = new EntityDescriptors( schemaCacheState.indexDescriptorsByNode );
-            this.indexDescriptorsByRelationship = new EntityDescriptors( schemaCacheState.indexDescriptorsByRelationship );
+            this.indexDescriptorsByNode = new SchemaDescriptorLookupSet<>();
+            this.indexDescriptorsByRelationship = new SchemaDescriptorLookupSet<>();
+            this.uniquenessConstraintsByNode = new SchemaDescriptorLookupSet<>();
+            this.uniquenessConstraintsByRelationship = new SchemaDescriptorLookupSet<>();
+            // Now fill the node/relationship sets
+            this.indexDescriptorById.forEachValue( index -> selectIndexSetByEntityType( index.schema().entityType() ).add( index.schema() ) );
+            this.constraintRuleById.forEachValue( this::cacheUniquenessConstraint );
             this.indexDescriptorsByName = new HashMap<>( schemaCacheState.indexDescriptorsByName );
             this.dependantState = new ConcurrentHashMap<>();
+        }
+
+        private void cacheUniquenessConstraint( ConstraintRule constraint )
+        {
+            ConstraintDescriptor descriptor = constraint.getConstraintDescriptor();
+            if ( descriptor.enforcesUniqueness() )
+            {
+                selectUniquenessConstraintSetByEntityType( descriptor.schema().entityType() ).add( (IndexBackedConstraintDescriptor) descriptor );
+            }
         }
 
         private void load( Iterable<SchemaRule> schemaRuleIterator )
@@ -278,39 +305,80 @@ public class SchemaCache
             return indexDescriptorsByName.get( name );
         }
 
-        Iterator<StorageIndexReference> indexesByNodeProperty( int propertyId )
-        {
-            Set<StorageIndexReference> indexes = indexDescriptorsByNode.byPropertyKey.get( propertyId );
-            return (indexes == null) ? emptyIterator() : indexes.iterator();
-        }
-
         Iterator<StorageIndexReference> indexDescriptorsForLabel( int labelId )
         {
-            Set<StorageIndexReference> forLabel = indexDescriptorsByNode.byEntity.get( labelId );
-            return forLabel == null ? emptyIterator() : forLabel.iterator();
+            return Iterators.map( indexDescriptors::get,
+                    getSchemaRelatedTo( indexDescriptorsByNode, new long[]{labelId}, EMPTY_LONG_ARRAY, EMPTY_INT_ARRAY, false ).iterator() );
         }
 
-        <INDEX_KEY extends SchemaDescriptorSupplier> Set<INDEX_KEY> getIndexesRelatedTo( long[] changedEntityTokens, long[] unchangedEntityTokens,
-                IntSet properties, EntityType entityType, Function<StorageIndexReference,INDEX_KEY> converter )
+        Set<SchemaDescriptor> getIndexesRelatedTo( EntityType entityType, long[] changedEntityTokens,
+                long[] unchangedEntityTokens, int[] properties, boolean propertyListIsComplete )
         {
-            EntityDescriptors entityDescriptors = descriptorsByEntityType( entityType );
+            return getSchemaRelatedTo( selectIndexSetByEntityType( entityType ), changedEntityTokens, unchangedEntityTokens, properties,
+                    propertyListIsComplete );
+        }
 
-            // Grab all indexes relevant to a changed property.
-            Set<StorageIndexReference> indexesByProperties = extractIndexesByProperties( properties, entityDescriptors.byPropertyKey );
+        Set<IndexBackedConstraintDescriptor> getUniquenessConstraintsRelatedTo( EntityType entityType, long[] changedEntityTokens,
+                long[] unchangedEntityTokens, int[] properties, boolean propertyListIsComplete )
+        {
+            return getSchemaRelatedTo( selectUniquenessConstraintSetByEntityType( entityType ), changedEntityTokens, unchangedEntityTokens, properties,
+                    propertyListIsComplete );
+        }
 
-            // Make sure that that index really is relevant by intersecting it with indexes relevant for unchanged entity tokens.
-            Set<StorageIndexReference> indexesByUnchangedEntityTokens = new HashSet<>();
-            visitIndexesByEntityTokens( unchangedEntityTokens, entityDescriptors.byEntity, indexesByUnchangedEntityTokens::add );
-            indexesByProperties.retainAll( indexesByUnchangedEntityTokens );
+        <T extends SchemaDescriptorSupplier> Set<T> getSchemaRelatedTo( SchemaDescriptorLookupSet<T> set, long[] changedEntityTokens,
+                long[] unchangedEntityTokens, int[] properties, boolean propertyListIsComplete )
+        {
+            if ( set.isEmpty() )
+            {
+                return Collections.emptySet();
+            }
 
-            // Add the indexes relevant for the changed entity tokens.
-            Set<INDEX_KEY> descriptors = new HashSet<>();
-            visitIndexesByEntityTokens( changedEntityTokens, entityDescriptors.byEntity, index -> descriptors.add( converter.apply( index ) ) );
-            indexesByProperties.forEach( index -> descriptors.add( converter.apply( index ) ) );
+            Set<T> descriptors = new HashSet<>();
+            if ( propertyListIsComplete )
+            {
+                set.matchingDescriptorsForCompleteListOfProperties( descriptors, changedEntityTokens, properties );
+            }
+            else
+            {
+                // At the time of writing this the commit process won't load the complete list of property keys for an entity.
+                // Because of this the matching cannot be as precise as if the complete list was known.
+                // Anyway try to make the best out of it and narrow down the list of potentially related indexes as much as possible.
+                if ( properties.length == 0 )
+                {
+                    // Only labels changed. Since we don't know which properties this entity has let's include all indexes for the changed labels.
+                    set.matchingDescriptors( descriptors, changedEntityTokens );
+                }
+                else if ( changedEntityTokens.length == 0 )
+                {
+                    // Only properties changed. Since we don't know which other properties this entity has let's include all indexes
+                    // for the (unchanged) labels on this entity that has any match on any of the changed properties.
+                    set.matchingDescriptorsForPartialListOfProperties( descriptors, unchangedEntityTokens, properties );
+                }
+                else
+                {
+                    // Both labels and properties changed.
+                    // All indexes for the changed labels must be included.
+                    // Also include all indexes for any of the changed or unchanged labels that has any match on any of the changed properties.
+                    set.matchingDescriptors( descriptors, changedEntityTokens );
+                    set.matchingDescriptorsForPartialListOfProperties( descriptors, unchangedEntityTokens, properties );
+                }
+            }
             return descriptors;
         }
 
-        private EntityDescriptors descriptorsByEntityType( EntityType entityType )
+        boolean hasRelatedSchema( long[] labels, int propertyKey, EntityType entityType )
+        {
+            return selectIndexSetByEntityType( entityType ).has( labels, propertyKey ) ||
+                    selectUniquenessConstraintSetByEntityType( entityType ).has( labels, propertyKey );
+        }
+
+        boolean hasRelatedSchema( int label, EntityType entityType )
+        {
+            return selectIndexSetByEntityType( entityType ).has( label ) ||
+                    selectUniquenessConstraintSetByEntityType( entityType ).has( label );
+        }
+
+        private SchemaDescriptorLookupSet<SchemaDescriptor> selectIndexSetByEntityType( EntityType entityType )
         {
             switch ( entityType )
             {
@@ -323,34 +391,17 @@ public class SchemaCache
             }
         }
 
-        private void visitIndexesByEntityTokens( long[] entityTokenIds, IntObjectMap<Set<StorageIndexReference>> descriptors,
-                Consumer<StorageIndexReference> visitor )
+        private SchemaDescriptorLookupSet<IndexBackedConstraintDescriptor> selectUniquenessConstraintSetByEntityType( EntityType entityType )
         {
-            for ( long label : entityTokenIds )
+            switch ( entityType )
             {
-                Set<StorageIndexReference> forLabel = descriptors.get( (int) label );
-                if ( forLabel != null )
-                {
-                    for ( StorageIndexReference match : forLabel )
-                    {
-                        visitor.accept( match );
-                    }
-                }
+            case NODE:
+                return uniquenessConstraintsByNode;
+            case RELATIONSHIP:
+                return uniquenessConstraintsByRelationship;
+            default:
+                throw new IllegalArgumentException( entityType.name() );
             }
-        }
-
-        private Set<StorageIndexReference> extractIndexesByProperties( IntSet properties, IntObjectMap<Set<StorageIndexReference>> descriptorsByProperty )
-        {
-            Set<StorageIndexReference> set = new HashSet<>();
-            for ( IntIterator iterator = properties.intIterator(); iterator.hasNext(); )
-            {
-                Set<StorageIndexReference> forProperty = descriptorsByProperty.get( iterator.next() );
-                if ( forProperty != null )
-                {
-                    set.addAll( forProperty );
-                }
-            }
-            return set;
         }
 
         <P, T> T getOrCreateDependantState( Class<T> type, Function<P,T> factory, P parameter )
@@ -365,6 +416,7 @@ public class SchemaCache
                 ConstraintRule constraintRule = (ConstraintRule) rule;
                 constraintRuleById.put( constraintRule.getId(), constraintRule );
                 constraints.add( constraintSemantics.readConstraint( constraintRule ) );
+                cacheUniquenessConstraint( constraintRule );
             }
             else if ( rule instanceof StorageIndexReference )
             {
@@ -373,17 +425,7 @@ public class SchemaCache
                 SchemaDescriptor schemaDescriptor = index.schema();
                 indexDescriptors.put( schemaDescriptor, index );
                 indexDescriptorsByName.put( rule.name(), index );
-
-                // Per entity type
-                EntityDescriptors entityDescriptors = descriptorsByEntityType( schemaDescriptor.entityType() );
-                for ( int entityToken : schemaDescriptor.getEntityTokenIds() )
-                {
-                    entityDescriptors.byEntity.getIfAbsentPut( entityToken, HashSet::new ).add( index );
-                }
-                for ( int propertyKeyToken : schemaDescriptor.getPropertyIds() )
-                {
-                    entityDescriptors.byPropertyKey.getIfAbsentPut( propertyKeyToken, HashSet::new ).add( index );
-                }
+                selectIndexSetByEntityType( schemaDescriptor.entityType() ).add( schemaDescriptor );
             }
         }
 
@@ -392,7 +434,13 @@ public class SchemaCache
             if ( constraintRuleById.containsKey( id ) )
             {
                 ConstraintRule rule = constraintRuleById.remove( id );
-                constraints.remove( rule.getConstraintDescriptor() );
+                ConstraintDescriptor constraintDescriptor = rule.getConstraintDescriptor();
+                constraints.remove( constraintDescriptor );
+                if ( constraintDescriptor.enforcesUniqueness() )
+                {
+                    selectUniquenessConstraintSetByEntityType( constraintDescriptor.schema().entityType() ).remove(
+                            (IndexBackedConstraintDescriptor) constraintDescriptor );
+                }
             }
             else if ( indexDescriptorById.containsKey( id ) )
             {
@@ -400,47 +448,7 @@ public class SchemaCache
                 SchemaDescriptor schema = index.schema();
                 indexDescriptors.remove( schema );
                 indexDescriptorsByName.remove( index.name(), index );
-
-                EntityDescriptors entityDescriptors = descriptorsByEntityType( schema.entityType() );
-                for ( int entityTokenId : schema.getEntityTokenIds() )
-                {
-                    Set<StorageIndexReference> forLabel = entityDescriptors.byEntity.get( entityTokenId );
-                    forLabel.remove( index );
-                    if ( forLabel.isEmpty() )
-                    {
-                        entityDescriptors.byEntity.remove( entityTokenId );
-                    }
-                }
-
-                for ( int propertyId : index.schema().getPropertyIds() )
-                {
-                    Set<StorageIndexReference> forProperty = entityDescriptors.byPropertyKey.get( propertyId );
-                    forProperty.remove( index );
-                    if ( forProperty.isEmpty() )
-                    {
-                        entityDescriptors.byPropertyKey.remove( propertyId );
-                    }
-                }
-            }
-        }
-
-        private static class EntityDescriptors
-        {
-            private final MutableIntObjectMap<Set<StorageIndexReference>> byEntity;
-            private final MutableIntObjectMap<Set<StorageIndexReference>> byPropertyKey;
-
-            EntityDescriptors( EntityDescriptors copyFrom )
-            {
-                byEntity = new IntObjectHashMap<>( copyFrom.byEntity.size() );
-                byPropertyKey = new IntObjectHashMap<>( copyFrom.byPropertyKey.size() );
-                copyFrom.byEntity.forEachKeyValue( ( k, v ) -> byEntity.put( k, new HashSet<>( v ) ) );
-                copyFrom.byPropertyKey.forEachKeyValue( ( k, v ) -> byPropertyKey.put( k, new HashSet<>( v ) ) );
-            }
-
-            EntityDescriptors()
-            {
-                byEntity = new IntObjectHashMap<>();
-                byPropertyKey = new IntObjectHashMap<>();
+                selectIndexSetByEntityType( schema.entityType() ).remove( schema );
             }
         }
     }

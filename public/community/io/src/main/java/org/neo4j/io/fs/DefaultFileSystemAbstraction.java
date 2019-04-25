@@ -28,7 +28,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
@@ -36,20 +35,27 @@ import java.nio.charset.Charset;
 import java.nio.file.CopyOption;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.WatchService;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.io.fs.watcher.DefaultFileSystemWatcher;
 import org.neo4j.io.fs.watcher.FileWatcher;
 
 import static java.lang.String.format;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 /**
  * Default file system abstraction that creates files using the underlying file system.
  */
 public class DefaultFileSystemAbstraction implements FileSystemAbstraction
 {
-    static final String UNABLE_TO_CREATE_DIRECTORY_FORMAT = "Unable to create directory path [%s] for Neo4j store.";
+    static final String UNABLE_TO_CREATE_DIRECTORY_FORMAT = "Unable to write directory path [%s] for Neo4j store.";
+    private static final Set<OpenOption> WRITE_OPTIONS = Set.of( READ, WRITE, CREATE );
+    private static final Set<OpenOption> READ_OPTIONS = Set.of( READ );
 
     @Override
     public FileWatcher fileWatcher() throws IOException
@@ -59,10 +65,9 @@ public class DefaultFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public StoreFileChannel open( File fileName, OpenMode openMode ) throws IOException
+    public StoreFileChannel open( File fileName, Set<OpenOption> options ) throws IOException
     {
-        // Returning only the channel is ok, because the channel, when close()d will close its parent File.
-        FileChannel channel = new RandomAccessFile( fileName, openMode.mode() ).getChannel();
+        FileChannel channel = FileChannel.open( fileName.toPath(), options );
         return getStoreFileChannel( channel );
     }
 
@@ -91,9 +96,15 @@ public class DefaultFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public StoreFileChannel create( File fileName ) throws IOException
+    public StoreFileChannel write( File fileName ) throws IOException
     {
-        return open( fileName, OpenMode.READ_WRITE );
+        return open( fileName, WRITE_OPTIONS );
+    }
+
+    @Override
+    public StoreFileChannel read( File fileName ) throws IOException
+    {
+        return open( fileName, READ_OPTIONS );
     }
 
     @Override

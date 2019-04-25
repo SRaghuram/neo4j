@@ -22,21 +22,26 @@ import java.util.function.Consumer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader.UnexpectedUpgradingStoreFormatException;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -48,7 +53,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class RecordFormatsMigrationIT
@@ -61,6 +67,7 @@ class RecordFormatsMigrationIT
     private DefaultFileSystemAbstraction fileSystem;
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @Test
     void migrateLatestStandardToLatestHighLimit() throws Exception
@@ -99,8 +106,18 @@ class RecordFormatsMigrationIT
         executeAndStopDb( startDb( HighLimit.NAME ), RecordFormatsMigrationIT::createNode );
         assertLatestHighLimitStore();
 
-        Exception exception = assertThrows( Exception.class, this::startStandardFormatDb );
-        assertThat( getRootCause( exception ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+        GraphDatabaseService database = startStandardFormatDb();
+        try
+        {
+            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            assertThat( getRootCause( databaseContext.failureCause() ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
         assertLatestHighLimitStore();
     }
 
@@ -130,19 +147,20 @@ class RecordFormatsMigrationIT
 
     private GraphDatabaseService startDb( String recordFormatName )
     {
-        return getGraphDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.record_format, recordFormatName )
-                .newGraphDatabase();
+        managementService = getGraphDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.record_format, recordFormatName ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDb()
     {
-        return getGraphDatabaseBuilder().newGraphDatabase();
+        managementService = getGraphDatabaseBuilder().newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseBuilder getGraphDatabaseBuilder()
+    private DatabaseManagementServiceInternalBuilder getGraphDatabaseBuilder()
     {
-        return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        return new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
@@ -170,7 +188,7 @@ class RecordFormatsMigrationIT
         }
     }
 
-    private static void executeAndStopDb( GraphDatabaseService db, Consumer<GraphDatabaseService> action )
+    private void executeAndStopDb( GraphDatabaseService db, Consumer<GraphDatabaseService> action )
     {
         try
         {
@@ -178,7 +196,7 @@ class RecordFormatsMigrationIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

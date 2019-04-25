@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,7 +79,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
 
     BoltInteraction( Map<String,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
     {
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         fileSystem = fileSystemSupplier.get();
         server = new Neo4jWithSocket( getClass(),
                 factory,
@@ -110,6 +110,12 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     public GraphDatabaseFacade getLocalGraph()
     {
         return (GraphDatabaseFacade) server.graphDatabaseService();
+    }
+
+    @Override
+    public void shutdown()
+    {
+        server.shutdownDatabase();
     }
 
     @Override
@@ -197,7 +203,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
             subject.client.disconnect();
         }
         subjects.clear();
-        server.graphDatabaseService().shutdown();
+        shutdown();
         fileSystem.close();
     }
 
@@ -222,7 +228,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     @Override
     public void assertSessionKilled( BoltSubject subject )
     {
-        assertThat( subject.client, util.eventuallyDisconnects() );
+        assertThat( subject.client, TransportTestUtil.eventuallyDisconnects() );
     }
 
     @Override

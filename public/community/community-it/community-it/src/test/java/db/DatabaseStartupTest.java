@@ -23,35 +23,44 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -65,28 +74,41 @@ class DatabaseStartupTest
     {
         // given
         // create a store
-        File databaseDir = testDirectory.databaseDir();
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+        File storeDirectory = testDirectory.storeDir();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode();
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
 
         // mess up the version in the metadatastore
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               ThreadPoolJobScheduler scheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = createPageCache( fileSystem, scheduler ) )
         {
-            MetaDataStore.setRecord( pageCache, testDirectory.databaseLayout().metadataStore(),
+            MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(),
                     MetaDataStore.Position.STORE_VERSION, MetaDataStore.versionStringToLong( "bad" ));
         }
 
-        RuntimeException exception = assertThrows( RuntimeException.class, () -> new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDir ) );
-        Throwable throwable = exception.getCause().getCause();
-        assertThat( throwable, instanceOf( IllegalArgumentException.class ) );
-        assertEquals( "Unknown store version 'bad'", throwable.getMessage() );
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+        try
+        {
+            assertThrows( TransactionFailureException.class, databaseService::beginTx );
+            DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( databaseLayout.getDatabaseName() ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            Throwable throwable = findCauseOrSuppressed( databaseContext.failureCause(), e -> e instanceof IllegalArgumentException ).get();
+            assertEquals( "Unknown store version 'bad'", throwable.getMessage() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
@@ -94,14 +116,16 @@ class DatabaseStartupTest
     {
         // given
         // create a store
-        File databaseDirectory = testDirectory.databaseDir();
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+        File storeDirectory = testDirectory.storeDir();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDirectory );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode();
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
 
         // mess up the version in the metadatastore
         String badStoreVersion = "bad";
@@ -109,38 +133,55 @@ class DatabaseStartupTest
               ThreadPoolJobScheduler scheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = createPageCache( fileSystem, scheduler ) )
         {
-            MetaDataStore.setRecord( pageCache, testDirectory.databaseLayout().metadataStore(), MetaDataStore.Position.STORE_VERSION,
+            MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.STORE_VERSION,
                     MetaDataStore.versionStringToLong( badStoreVersion ) );
         }
 
-        RuntimeException exception = assertThrows( RuntimeException.class,
-                () -> new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory ).setConfig( GraphDatabaseSettings.allow_upgrade,
-                        "true" ).newGraphDatabase() );
-        assertThat( exception.getCause().getCause(), instanceOf( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
+        managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDirectory )
+                .setConfig( GraphDatabaseSettings.allow_upgrade, TRUE ).newDatabaseManagementService();
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+        try
+        {
+            assertThrows( TransactionFailureException.class, databaseService::beginTx );
+            DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( databaseLayout.getDatabaseName() ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            Optional<Throwable> upgradeException =
+                    findCauseOrSuppressed( databaseContext.failureCause(), e -> e instanceof StoreUpgrader.UnexpectedUpgradingStoreVersionException );
+            assertTrue( upgradeException.isPresent() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
     void startTestDatabaseOnProvidedNonAbsoluteFile()
     {
         File directory = new File( "notAbsoluteDirectory" );
-        new TestGraphDatabaseFactory().newImpermanentDatabase( directory ).shutdown();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService( directory );
+        managementService.shutdown();
     }
 
     @Test
     void startCommunityDatabaseOnProvidedNonAbsoluteFile()
     {
         File directory = new File( "notAbsoluteDirectory" );
-        EphemeralCommunityFacadeFactory factory = new EphemeralCommunityFacadeFactory();
-        GraphDatabaseFactory databaseFactory = new EphemeralGraphDatabaseFactory( factory );
-        GraphDatabaseService service = databaseFactory.newEmbeddedDatabase( directory );
-        service.shutdown();
+        EphemeralCommunityManagementServiceFactory factory = new EphemeralCommunityManagementServiceFactory();
+        DatabaseManagementServiceBuilder databaseFactory = new EphemeralDatabaseManagementServiceBuilder( factory );
+        DatabaseManagementService managementService = databaseFactory.newDatabaseManagementService( directory );
+        GraphDatabaseService service = managementService.database( DEFAULT_DATABASE_NAME );
+        managementService.shutdown();
     }
 
     @Test
     void dumpSystemDiagnosticLoggingOnStartup()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider();
-        GraphDatabaseService database = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.databaseDir() );
+        DatabaseManagementService managementService =
+                new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).newDatabaseManagementService( testDirectory.storeDir() );
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             logProvider.assertContainsMessageContaining( "System diagnostics" );
@@ -157,13 +198,18 @@ class DatabaseStartupTest
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
-    private static class EphemeralCommunityFacadeFactory extends GraphDatabaseFacadeFactory
+    private static DatabaseManager<?> getDatabaseManager( GraphDatabaseAPI databaseService )
     {
-        EphemeralCommunityFacadeFactory()
+        return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
+    }
+
+    private static class EphemeralCommunityManagementServiceFactory extends DatabaseManagementServiceFactory
+    {
+        EphemeralCommunityManagementServiceFactory()
         {
             super( DatabaseInfo.COMMUNITY, CommunityEditionModule::new );
         }
@@ -182,17 +228,17 @@ class DatabaseStartupTest
         }
     }
 
-    private static class EphemeralGraphDatabaseFactory extends GraphDatabaseFactory
+    private static class EphemeralDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
     {
-        private final EphemeralCommunityFacadeFactory factory;
+        private final EphemeralCommunityManagementServiceFactory factory;
 
-        EphemeralGraphDatabaseFactory( EphemeralCommunityFacadeFactory factory )
+        EphemeralDatabaseManagementServiceBuilder( EphemeralCommunityManagementServiceFactory factory )
         {
             this.factory = factory;
         }
 
         @Override
-        protected GraphDatabaseFacadeFactory getGraphDatabaseFacadeFactory()
+        protected DatabaseManagementServiceFactory getGraphDatabaseFacadeFactory()
         {
             return factory;
         }

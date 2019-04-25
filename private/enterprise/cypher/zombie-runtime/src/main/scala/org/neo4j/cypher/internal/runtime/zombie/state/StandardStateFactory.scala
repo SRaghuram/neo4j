@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, StandardBuffer}
 
 /**
   * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
@@ -14,15 +15,15 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 object StandardStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new StandardBuffer[T]
 
-  override def newTracker(): Tracker = new StandardTracker
+  override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker
 
   override def newIdAllocator(): IdAllocator = new StandardIdAllocator
 
   override def newLock(id: String): Lock = new NoLock(id)
 
-  override def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                           argumentSlotOffset: Int,
-                                                           constructor: () => T): ArgumentStateMap[T] = {
-    new StandardArgumentStateMap[T](reducePlanId, argumentSlotOffset, constructor)
+  override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                                                       argumentSlotOffset: Int,
+                                                       factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
+    new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
   }
 }

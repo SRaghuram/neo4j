@@ -19,11 +19,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public abstract class QueryGraphMaker
 {
@@ -51,22 +53,22 @@ public abstract class QueryGraphMaker
 
     public static void createDbFromQueryGraphMaker(
             QueryGraphMaker queryGraphMaker,
-            String dbDir,
+            String dbDirString,
             Neo4jSchema neo4jSchema ) throws Exception
     {
         System.out.println();
         System.out.println( MapUtils.prettyPrint( queryGraphMaker.params() ) );
         System.out.println( queryGraphMaker.queryString() );
-        GraphDatabaseService db = Neo4jDb.newDb(
-                new File( dbDir ),
-                DriverConfigUtils.neo4jTestConfig() );
+        File dbDir = new File( dbDirString );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createDbFromCypherQuery(
                 db,
                 queryGraphMaker.queryString(),
                 queryGraphMaker.params(),
                 neo4jSchema );
         LdbcIndexer.waitForIndexesToBeOnline( db );
-        db.shutdown();
+        managementService.shutdown();
     }
 
     public static void createDbFromCypherQuery(

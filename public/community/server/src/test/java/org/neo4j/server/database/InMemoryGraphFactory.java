@@ -23,22 +23,25 @@ import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class InMemoryGraphFactory implements GraphFactory
 {
     @Override
-    public GraphDatabaseFacade newGraphDatabase( Config config, ExternalDependencies dependencies )
+    public DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
-        File storeDir = new File( config.get( GraphDatabaseSettings.databases_root_path ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        config.augment( stringMap( GraphDatabaseSettings.ephemeral.name(), "true",
-                new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" ) );
-        return new ImpermanentGraphDatabase( storeDir, config, GraphDatabaseDependencies.newDependencies( dependencies ) );
+        File storeDir = new File( config.get( GraphDatabaseSettings.databases_root_path ), DEFAULT_DATABASE_NAME );
+        return new TestDatabaseManagementServiceBuilder().setExtensions( dependencies.extensions() )
+                .setMonitors( dependencies.monitors() )
+                .newImpermanentDatabaseBuilder( storeDir )
+                .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( new BoltConnector( "bolt" ).enabled, Settings.TRUE )
+                .setConfig( config ).newDatabaseManagementService();
     }
 }

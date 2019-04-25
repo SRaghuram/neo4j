@@ -31,10 +31,11 @@ import org.neo4j.bolt.v1.runtime.StatementProcessorReleaseManager;
 import org.neo4j.bolt.v4.runtime.TransactionStateMachineV4SPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -49,54 +50,58 @@ class TransactionStateMachineSPIProviderV4Test
     @Test
     void shouldReturnTransactionStateMachineSPIIfDatabaseExists() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManager( "database" );
+        DatabaseId databaseId = new DatabaseId( "database" );
+        DatabaseManager<?> databaseManager = databaseManager( databaseId );
         TransactionStateMachineSPIProvider spiProvider = newSpiProvider( databaseManager );
 
-        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( "database", mock( StatementProcessorReleaseManager.class ) );
+        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( databaseId, mock( StatementProcessorReleaseManager.class ) );
         assertThat( spi, instanceOf( TransactionStateMachineV4SPI.class ) );
     }
 
     @Test
     void shouldReturnDefaultTransactionStateMachineSPIWithEmptyDatabasename() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManager( "neo4j" );
+        DatabaseId databaseId = new DatabaseId( "neo4j" );
+        DatabaseManager<?> databaseManager = databaseManager( databaseId );
         TransactionStateMachineSPIProvider spiProvider = newSpiProvider( databaseManager );
 
-        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( "", mock( StatementProcessorReleaseManager.class ) );
+        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( new DatabaseId( "" ), mock( StatementProcessorReleaseManager.class ) );
         assertThat( spi, instanceOf( TransactionStateMachineV4SPI.class ) );
     }
 
     @Test
     void shouldErrorIfDatabaseNotFound() throws Throwable
     {
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
-        when( databaseManager.getDatabaseContext( "database" ) ).thenReturn( Optional.empty() );
+        DatabaseManager<?> databaseManager = mock( DatabaseManager.class );
+        var databaseId = new DatabaseId( "database" );
+        when( databaseManager.getDatabaseContext( databaseId ) ).thenReturn( Optional.empty() );
         TransactionStateMachineSPIProvider spiProvider = newSpiProvider( databaseManager );
 
         BoltIOException error = assertThrows( BoltIOException.class, () ->
-                spiProvider.getTransactionStateMachineSPI( "database", mock( StatementProcessorReleaseManager.class ) ) );
-        assertThat( error.status(), equalTo( Status.Request.Invalid ) );
-        assertThat( error.getMessage(), containsString( "The database requested does not exists. Requested database name: 'database'." ) );
+                spiProvider.getTransactionStateMachineSPI( databaseId, mock( StatementProcessorReleaseManager.class ) ) );
+        assertThat( error.status(), equalTo( Status.Database.DatabaseNotFound ) );
+        assertThat( error.getMessage(), containsString( "The database requested does not exist. Requested database name: 'database'." ) );
     }
 
-    private DatabaseManager databaseManager( String databaseName )
+    private DatabaseManager<StandaloneDatabaseContext> databaseManager( DatabaseId databaseId )
     {
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
-        DatabaseContext databaseContext = mock( DatabaseContext.class );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = mock( DatabaseManager.class );
+        StandaloneDatabaseContext databaseContext = mock( StandaloneDatabaseContext.class );
         Dependencies dependencies = mock( Dependencies.class );
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
 
-        when( databaseManager.getDatabaseContext( databaseName ) ).thenReturn( Optional.of( databaseContext ) );
-        when( databaseContext.getDependencies() ).thenReturn( dependencies );
+        when( databaseManager.getDatabaseContext( databaseId ) ).thenReturn( Optional.of( databaseContext ) );
+        when( databaseContext.dependencies() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( GraphDatabaseQueryService.class ) ).thenReturn( queryService );
         when( queryService.getDependencyResolver() ).thenReturn( mock( DependencyResolver.class ) );
 
         return databaseManager;
     }
 
-    private TransactionStateMachineSPIProvider newSpiProvider( DatabaseManager databaseManager )
+    private TransactionStateMachineSPIProvider newSpiProvider( DatabaseManager<?> databaseManager )
     {
-        return new TransactionStateMachineSPIProviderV4( databaseManager, "neo4j",
+        return new TransactionStateMachineSPIProviderV4( databaseManager, new DatabaseId( "neo4j" ),
                 mock( BoltChannel.class ), Duration.ZERO, mock( Clock.class ) );
     }
 }

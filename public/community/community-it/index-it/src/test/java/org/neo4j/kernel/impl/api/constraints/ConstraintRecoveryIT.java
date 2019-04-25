@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -36,7 +37,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -45,7 +46,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE20;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.helpers.collection.Iterables.single;
 
@@ -66,9 +68,9 @@ class ConstraintRecoveryIT
     void shouldHaveAvailableOrphanedConstraintIndexIfUniqueConstraintCreationFails()
     {
         // given
-        File pathToDb = testDirectory.databaseDir();
+        File pathToDb = testDirectory.storeDir();
 
-        TestGraphDatabaseFactory dbFactory = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder dbFactory = new TestDatabaseManagementServiceBuilder();
         dbFactory.setFileSystem( fs );
 
         final EphemeralFileSystemAbstraction[] storeInNeedOfRecovery = new EphemeralFileSystemAbstraction[1];
@@ -90,15 +92,15 @@ class ConstraintRecoveryIT
 
         // This test relies on behaviour that is specific to the Lucene populator, where uniqueness is controlled
         // after index has been populated, which is why we're using NATIVE20 and index booleans (they end up in Lucene)
-        db = (GraphDatabaseAPI) dbFactory.newImpermanentDatabaseBuilder( pathToDb )
-                .setConfig( default_schema_provider, NATIVE20.providerName() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = dbFactory.newImpermanentDatabaseBuilder( pathToDb )
+                .setConfig( default_schema_provider, NATIVE30.providerName() ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
         {
             for ( int i = 0; i < 2; i++ )
             {
-                db.createNode( LABEL ).setProperty( KEY, true );
+                db.createNode( LABEL ).setProperty( KEY, "true" );
             }
 
             tx.success();
@@ -111,14 +113,15 @@ class ConstraintRecoveryIT
                 db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
             }
         } );
-        db.shutdown();
+        managementService.shutdown();
 
         assertTrue( monitorCalled.get() );
 
         // when
-        dbFactory = new TestGraphDatabaseFactory();
+        dbFactory = new TestDatabaseManagementServiceBuilder();
         dbFactory.setFileSystem( storeInNeedOfRecovery[0] );
-        db = (GraphDatabaseAPI) dbFactory.newImpermanentDatabase( pathToDb );
+        DatabaseManagementService secondManagementService = dbFactory.newImpermanentService( pathToDb );
+        db = (GraphDatabaseAPI) secondManagementService.database( DEFAULT_DATABASE_NAME );
 
         // then
         try ( Transaction ignore = db.beginTx() )
@@ -143,6 +146,6 @@ class ConstraintRecoveryIT
             assertEquals( KEY, single( orphanedConstraintIndex.getPropertyKeys() ) );
         }
 
-        db.shutdown();
+        managementService.shutdown();
     }
 }

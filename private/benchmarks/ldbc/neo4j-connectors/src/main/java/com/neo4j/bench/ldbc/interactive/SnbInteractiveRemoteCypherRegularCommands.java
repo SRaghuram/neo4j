@@ -80,11 +80,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommands
 {
@@ -117,9 +119,10 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
     {
         if ( null != dbDir )
         {
-            GraphDatabaseService db = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).newGraphDatabase();
+            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             LdbcIndexer.waitForIndexesToBeOnline( db );
-            registerShutdownHook( db );
+            registerShutdownHook( managementService );
 
             GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
             if ( !metadata.timestampResolution().equals( LdbcDateCodec.Resolution.NOT_APPLICABLE ) ||
@@ -129,8 +132,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
             }
             System.out.printf( metadata.toString() );
 
-            dbConnectionState = new Neo4jConnectionState(
-                    db,
+            dbConnectionState = new Neo4jConnectionState( managementService, db,
                     uri,
                     authToken,
                     loggingService,
@@ -141,8 +143,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         }
         else
         {
-            dbConnectionState = new Neo4jConnectionState(
-                    null,
+            dbConnectionState = new Neo4jConnectionState( null, null,
                     uri,
                     authToken,
                     loggingService,
@@ -203,14 +204,14 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         db.registerOperationHandler( LdbcUpdate8AddFriendship.class, LdbcUpdate8HandlerRemoteCypher.class );
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
+    private static void registerShutdownHook( final DatabaseManagementService managementService )
     {
         Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override
             public void run()
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         } );
     }

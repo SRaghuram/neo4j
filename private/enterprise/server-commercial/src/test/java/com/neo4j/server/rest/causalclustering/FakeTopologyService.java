@@ -21,11 +21,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
@@ -33,7 +37,6 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
-    private final String dbName = "dbName";
     private final MemberId myself;
 
     FakeTopologyService( Collection<MemberId> cores, Collection<MemberId> replicas, MemberId myself, RoleInfo myselfRole )
@@ -45,7 +48,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
 
         for ( MemberId coreMemberId : cores )
         {
-            CoreServerInfo coreServerInfo = coreServerInfo( dbName );
+            CoreServerInfo coreServerInfo = coreServerInfo();
             coreMembers.put( coreMemberId, coreServerInfo );
             roles.put( coreMemberId, RoleInfo.FOLLOWER );
         }
@@ -53,68 +56,66 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
         replicaMembers = new HashMap<>();
         for ( MemberId replicaMemberId : replicas )
         {
-            ReadReplicaInfo readReplicaInfo = readReplicaInfo( dbName );
+            ReadReplicaInfo readReplicaInfo = readReplicaInfo();
             replicaMembers.put( replicaMemberId, readReplicaInfo );
             roles.put( replicaMemberId, RoleInfo.READ_REPLICA );
         }
 
         if ( RoleInfo.READ_REPLICA.equals( myselfRole ) )
         {
-            replicaMembers.put( myself, readReplicaInfo( dbName ) );
+            replicaMembers.put( myself, readReplicaInfo() );
             roles.put( myself, RoleInfo.READ_REPLICA );
         }
         else
         {
-            coreMembers.put( myself, coreServerInfo( dbName ) );
+            coreMembers.put( myself, coreServerInfo() );
             roles.put( myself, RoleInfo.FOLLOWER );
         }
         roles.put( myself, myselfRole );
     }
 
-    private CoreServerInfo coreServerInfo( String dbName )
+    private static CoreServerInfo coreServerInfo()
     {
         AdvertisedSocketAddress raftServer = new AdvertisedSocketAddress( "hostname", 1234 );
         AdvertisedSocketAddress catchupServer = new AdvertisedSocketAddress( "hostname", 1234 );
         ClientConnectorAddresses clientConnectors = new ClientConnectorAddresses( Collections.emptyList() );
+        Set<String> groups = Set.of();
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
         boolean refuseToBeLeader = false;
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, dbName, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, clientConnectors, groups, databaseIds, refuseToBeLeader );
     }
 
-    private ReadReplicaInfo readReplicaInfo( String dbName )
+    private static ReadReplicaInfo readReplicaInfo()
     {
-        ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
+        ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( List.of() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 1234 );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, dbName );
+        Set<String> groups = Set.of();
+        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 
     @Override
-    public String localDBName()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return dbName;
+        return coreMembers;
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new CoreTopology( clusterId, true, coreMembers );
+        return new CoreTopology( databaseId, clusterId, true, coreMembers );
     }
 
     @Override
-    public CoreTopology localCoreServers()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return new CoreTopology( clusterId, true, coreMembers );
+        return replicaMembers;
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return new ReadReplicaTopology( replicaMembers );
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return new ReadReplicaTopology( replicaMembers );
+        return new ReadReplicaTopology( databaseId, replicaMembers );
     }
 
     @Override

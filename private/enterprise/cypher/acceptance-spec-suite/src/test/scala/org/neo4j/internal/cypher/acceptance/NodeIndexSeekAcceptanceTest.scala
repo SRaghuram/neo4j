@@ -131,6 +131,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("Should allow OR with index scan and regex predicates") {
     graph.createIndex("User", "prop")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop" -> s"${i}_val"), "User"))
+    Range(0, 100).map(_ => createLabeledNode("User"))
+    resampleIndexes()
 
     val query =
       """MATCH (c:User)

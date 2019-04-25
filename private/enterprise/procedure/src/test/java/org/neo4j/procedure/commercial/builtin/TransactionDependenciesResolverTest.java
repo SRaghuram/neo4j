@@ -18,6 +18,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.lock.ResourceType;
@@ -150,7 +151,7 @@ class TransactionDependenciesResolverTest
 
     private ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, DEFAULT_DATABASE_NAME, "test", "testQuey",
+        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new DatabaseId( DEFAULT_DATABASE_NAME ), "test", "testQuey",
                 VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 Clocks.nanoClock(), CpuClock.NOT_AVAILABLE, HeapAllocation.NOT_AVAILABLE );

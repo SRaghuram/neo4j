@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -33,12 +32,10 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     @Rule
     public ClusterRule clusterRule = new ClusterRule()
             .withNumberOfReadReplicas( 0 )
-            .withSharedCoreParam( UdcSettings.udc_enabled, Settings.FALSE )
             .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
             .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, Settings.TRUE )
             .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
             .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? "false" : "true" )
-            .withSharedReadReplicaParam( UdcSettings.udc_enabled, Settings.FALSE )
             .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
             .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, Settings.TRUE )
             .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )

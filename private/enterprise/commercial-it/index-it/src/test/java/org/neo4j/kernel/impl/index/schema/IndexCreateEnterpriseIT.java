@@ -5,21 +5,21 @@
  */
 package org.neo4j.kernel.impl.index.schema;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Test;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.SchemaWrite;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class IndexCreateEnterpriseIT extends IndexCreateIT
 {
     private static final IndexCreator NODE_KEY_CREATOR = SchemaWrite::nodeKeyConstraintCreate;
 
     @Override
-    protected TestGraphDatabaseFactory createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     @Test

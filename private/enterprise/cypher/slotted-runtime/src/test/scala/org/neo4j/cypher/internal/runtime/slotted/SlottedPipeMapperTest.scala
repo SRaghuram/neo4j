@@ -6,26 +6,23 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.mockito.Mockito._
-
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, ForeachApply, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Literal, Property, Variable}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
-import org.neo4j.cypher.internal.runtime.interpreted.commands.values.KeyToken
-import org.neo4j.cypher.internal.runtime.interpreted.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, RelationshipProperty, SlottedCommandProjection, SlottedExpressionConverters}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, LabelToken, SemanticDirection}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand, VariablePredicate}
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, SemanticDirection}
 import org.neo4j.cypher.internal.v4_0.util.LabelId
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -150,6 +147,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         predicates.True()
       )()
     )
+    pipe.asInstanceOf[FilterPipe].predicate.owningPipe should equal(pipe)
   }
 
   test("single node with expand") {
@@ -369,6 +367,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       -1, -1,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
     )())
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
 
   test("single node with varlength expand into") {
@@ -424,6 +424,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SlottedPipeMapper.NO_PREDICATE_OFFSET, // no relationship predicate
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
 
   test("let's skip this one") {
@@ -460,65 +462,6 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
           .newLong("x", false, CTNode)
           .newLong("z", false, CTNode),
         Size(1, 0))()
-    )())
-  }
-
-  ignore("aggregation used for distinct") {
-    // given
-    val leaf = NodeByLabelScan("x", label, Set.empty)
-    val distinct = Aggregation(leaf, Map("x" -> varFor("x")), Map.empty)
-
-    // when
-    val pipe = build(distinct)
-
-    // then
-    pipe should equal(DistinctPipe(
-      NodesByLabelScanSlottedPipe("x", LazyLabel("label"), X_NODE_SLOTS, Size.zero)(),
-      Map("x" -> commands.expressions.Variable("x"))
-    )())
-  }
-
-  ignore("optional travels through aggregation used for distinct") {
-    // given OPTIONAL MATCH (x) RETURN DISTINCT x, x.propertyKey
-    val leaf = NodeByLabelScan("x", label, Set.empty)
-    val optional = Optional(leaf)
-    val distinct = Aggregation(optional,
-      groupingExpressions = Map("x" -> varFor("x"), "x.propertyKey" -> prop("x", "propertyKey")),
-      aggregationExpression = Map.empty)
-
-    // when
-    val pipe = build(distinct)
-
-    // then
-    val labelScan = NodesByLabelScanSlottedPipe("x", LazyLabel("label"), X_NODE_SLOTS, Size.zero)()
-    val optionalPipe = OptionalSlottedPipe(labelScan, Array(X_NODE_SLOTS("x")), X_NODE_SLOTS, Size.zero)()
-    pipe should equal(DistinctPipe(
-      optionalPipe,
-      Map("x" -> Variable("x"), "x.propertyKey" -> Property(Variable("x"), KeyToken.Resolved("propertyKey", 0, PropertyKey)))
-    )())
-  }
-
-  ignore("optional travels through aggregation") {
-    // given OPTIONAL MATCH (x) RETURN x, x.propertyKey, count(*)
-    val leaf = NodeByLabelScan("x", label, Set.empty)
-    val optional = Optional(leaf)
-    val distinct = Aggregation(optional,
-      groupingExpressions = Map("x" -> varFor("x"), "x.propertyKey" -> prop("x", "propertyKey")),
-      aggregationExpression = Map("count" -> CountStar()(pos)))
-
-    // when
-    val pipe = build(distinct)
-
-    // then
-    val nodeByLabelScan = NodesByLabelScanSlottedPipe("x", LazyLabel("label"), X_NODE_SLOTS, Size.zero)()
-    val grouping = Map(
-      "x" -> Variable("x"),
-      "x.propertyKey" -> Property(Variable("x"), KeyToken.Resolved("propertyKey", 0, PropertyKey))
-    )
-    pipe should equal(EagerAggregationPipe(
-      OptionalSlottedPipe(nodeByLabelScan, Array(X_NODE_SLOTS("x")), X_NODE_SLOTS, Size.zero)(),
-      keyExpressions = grouping,
-      aggregations = Map("count" -> commands.expressions.CountStar())
     )())
   }
 
@@ -584,6 +527,34 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     )
   }
 
+  test("foreach") {
+    // given
+    val lhs = NodeByLabelScan("x", labelName("label1"), Set.empty)
+    val rhs = NodeByLabelScan("y", LabelName("label2")(pos), Set.empty) // This would be meaningless as a real-world example
+    val foreach = ForeachApply(lhs, rhs, "z", listOfInt(1, 2))
+
+    // when
+    val pipe = build(foreach)
+
+    // then
+    val lhsSlots = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
+      .newReference("z", nullable = true, CTAny)
+
+    val rhsSlots = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
+      .newReference("z", nullable = true, CTAny)
+      .newLong("y", nullable = false, CTNode)
+
+    pipe should equal(ForeachSlottedPipe(
+      NodesByLabelScanSlottedPipe("x", LazyLabel("label1"), lhsSlots, Size.zero)(),
+      NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size(nLongs = 1, nReferences = 1))(),
+      lhsSlots("z"),
+      commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2)))()
+    )
+    pipe.asInstanceOf[ForeachSlottedPipe].expression.owningPipe should equal(pipe)
+  }
+
   test("that argument does not apply here") {
     // given MATCH (x) MATCH (x)<-[r]-(y)
     val lhs = NodeByLabelScan("x", labelName("label1"), Set.empty)
@@ -625,7 +596,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       NodeIndexScanSlottedPipe(
         "n",
         LabelToken("Awesome", LabelId(0)),
-        SlottedIndexedProperty(0, None),
+        Seq(SlottedIndexedProperty(0, None)),
         0,
         IndexOrderNone,
         SlotConfiguration.empty.newLong("n", false, CTNode), Size.zero)())

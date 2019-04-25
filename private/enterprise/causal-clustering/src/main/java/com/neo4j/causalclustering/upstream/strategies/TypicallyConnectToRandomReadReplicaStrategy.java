@@ -12,10 +12,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.function.Predicates.not;
 
@@ -37,35 +39,39 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     }
 
     @Override
-    public Optional<MemberId> upstreamDatabase()
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
     {
         if ( counter.shouldReturnCoreMemberId() )
         {
-            return randomCoreMember();
+            return randomCoreMember( databaseId );
         }
         else
         {
             // shuffled members
-            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.localReadReplicas().members().keySet() );
+            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( databaseId ).members().keySet() );
             Collections.shuffle( readReplicaMembers );
 
-            List<MemberId> coreMembers = new ArrayList<>( topologyService.localCoreServers().members().keySet() );
+            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreTopologyForDatabase( databaseId ).members().keySet() );
             Collections.shuffle( coreMembers );
 
             return Stream.concat( readReplicaMembers.stream(), coreMembers.stream() ).filter( not( myself::equals ) ).findFirst();
         }
     }
 
-    private Optional<MemberId> randomCoreMember()
+    private Optional<MemberId> randomCoreMember( DatabaseId databaseId )
     {
-        List<MemberId> coreMembersNotSelf =
-                topologyService.localCoreServers().members().keySet().stream().filter( not( myself::equals ) ).collect( Collectors.toList() );
-        Collections.shuffle( coreMembersNotSelf );
-        if ( coreMembersNotSelf.size() == 0 )
+        List<MemberId> coreMembersNotSelf = topologyService.coreTopologyForDatabase( databaseId )
+                .members().keySet().stream()
+                .filter( not( myself::equals ) )
+                .collect( Collectors.toList() );
+
+        if ( coreMembersNotSelf.isEmpty() )
         {
             return Optional.empty();
         }
-        return Optional.of( coreMembersNotSelf.get( 0 ) );
+
+        int randomIndex = ThreadLocalRandom.current().nextInt( coreMembersNotSelf.size() );
+        return Optional.of( coreMembersNotSelf.get( randomIndex ) );
     }
 
     private static class ModuloCounter

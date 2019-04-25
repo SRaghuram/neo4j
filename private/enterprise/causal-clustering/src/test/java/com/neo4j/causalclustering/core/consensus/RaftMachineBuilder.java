@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
-import com.neo4j.causalclustering.core.consensus.membership.RaftGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftMembers;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
@@ -38,7 +38,7 @@ public class RaftMachineBuilder
     private final MemberId member;
 
     private int expectedClusterSize;
-    private RaftGroup.Builder memberSetBuilder;
+    private RaftMembers.Builder memberSetBuilder;
 
     private TermState termState = new TermState();
     private StateStorage<TermState> termStateStorage = new InMemoryStateStorage<>( termState );
@@ -67,7 +67,7 @@ public class RaftMachineBuilder
     private CommitListener commitListener = commitIndex -> {};
     private InFlightCache inFlightCache = new ConsecutiveInFlightCache();
 
-    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftGroup.Builder memberSetBuilder )
+    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder )
     {
         this.member = member;
         this.expectedClusterSize = expectedClusterSize;
@@ -81,7 +81,7 @@ public class RaftMachineBuilder
                 leaderAvailabilityTimers = new LeaderAvailabilityTimers( Duration.ofMillis( electionTimeout ), Duration.ofMillis( heartbeatInterval ), clock,
                 timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
-        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator,
+        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
                 memberSetBuilder, raftLog, logProvider, expectedClusterSize, leaderAvailabilityTimers.getElectionTimeout(), clock, catchupTimeout,
                 raftMembership );
         membershipManager.setRecoverFromIndexSupplier( () -> 0 );

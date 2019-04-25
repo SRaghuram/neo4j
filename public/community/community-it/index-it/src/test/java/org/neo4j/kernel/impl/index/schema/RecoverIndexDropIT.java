@@ -25,11 +25,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.api.index.IndexMap;
@@ -46,7 +46,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.recovery.RecoveryMonitor;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -54,6 +54,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.test.TestLabels.LABEL_ONE;
 
@@ -82,17 +83,20 @@ class RecoverIndexDropIT
     {
         // given a transaction stream ending in an INDEX DROP command.
         CommittedTransactionRepresentation dropTransaction = prepareDropTransaction();
-        File storeDir = directory.databaseDir();
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        var databaseLayout = directory.databaseLayout();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( directory.storeDir() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createIndex( db );
-        db.shutdown();
-        appendDropTransactionToTransactionLog( directory.databaseDir(), dropTransaction );
+        managementService.shutdown();
+        appendDropTransactionToTransactionLog( directory.databaseLayout().getTransactionLogsDirectory(), dropTransaction );
 
         // when recovering this (the drop transaction with the index file intact)
         Monitors monitors = new Monitors();
         AssertRecoveryIsPerformed recoveryMonitor = new AssertRecoveryIsPerformed();
         monitors.addMonitorListener( recoveryMonitor );
-        db = new TestGraphDatabaseFactory().setMonitors( monitors ).newEmbeddedDatabase( storeDir );
+        managementService = new TestDatabaseManagementServiceBuilder().setMonitors( monitors )
+                .newDatabaseManagementService( directory.storeDir() );
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             assertTrue( recoveryMonitor.recoveryWasPerformed );
@@ -107,7 +111,7 @@ class RecoverIndexDropIT
         finally
         {
             // and the ability to shut down w/o failing on still open files
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -121,11 +125,11 @@ class RecoverIndexDropIT
         }
     }
 
-    private void appendDropTransactionToTransactionLog( File databaseDirectory, CommittedTransactionRepresentation dropTransaction ) throws IOException
+    private void appendDropTransactionToTransactionLog( File transactionLogsDirectory, CommittedTransactionRepresentation dropTransaction ) throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory, fs ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs ).build();
         File logFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
-        StoreChannel writeStoreChannel = fs.open( logFile, OpenMode.READ_WRITE );
+        StoreChannel writeStoreChannel = fs.write( logFile );
         writeStoreChannel.position( writeStoreChannel.size() );
         try ( PhysicalFlushableChannel writeChannel = new PhysicalFlushableChannel( writeStoreChannel ) )
         {
@@ -135,7 +139,9 @@ class RecoverIndexDropIT
 
     private CommittedTransactionRepresentation prepareDropTransaction() throws IOException
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.directory( "preparation" ) );
+        DatabaseManagementService managementService =
+                new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( directory.directory( "preparation" ) );
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             // Create index
@@ -150,7 +156,7 @@ class RecoverIndexDropIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

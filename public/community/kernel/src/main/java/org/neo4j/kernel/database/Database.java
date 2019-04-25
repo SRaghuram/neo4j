@@ -46,7 +46,6 @@ import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.index.label.LoggingMonitor;
 import org.neo4j.internal.index.label.NativeLabelScanStore;
 import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -140,8 +139,9 @@ import org.neo4j.lock.ReentrantLockService;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.monitoring.DatabaseEventHandlers;
+import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
@@ -158,7 +158,8 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
-import static org.neo4j.helpers.Exceptions.throwIfUnchecked;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.fail;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
@@ -194,7 +195,7 @@ public class Database extends LifecycleAdapter
     private final StoreCopyCheckPointMutex storeCopyCheckPointMutex;
     private final CollectionsFactorySupplier collectionsFactorySupplier;
     private final Locks locks;
-    private final DatabaseEventHandlers eventHandlers;
+    private final DatabaseEventListeners eventHandlers;
     private final DatabaseMigratorFactory databaseMigratorFactory;
 
     private Dependencies databaseDependencies;
@@ -203,7 +204,7 @@ public class Database extends LifecycleAdapter
     private DatabaseConfig config;
     private DatabaseAvailabilityGuard databaseAvailabilityGuard;
     private DatabaseAvailability databaseAvailability;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final DatabaseLayout databaseLayout;
     private final boolean readOnly;
     private final IdController idController;
@@ -227,7 +228,7 @@ public class Database extends LifecycleAdapter
 
     public Database( DatabaseCreationContext context )
     {
-        this.databaseName = context.getDatabaseName();
+        this.databaseId = context.getDatabaseId();
         this.databaseLayout = context.getDatabaseLayout();
         this.config = context.getDatabaseConfig();
         this.idGeneratorFactory = context.getIdGeneratorFactory();
@@ -254,7 +255,7 @@ public class Database extends LifecycleAdapter
         this.ioLimiter = context.getIoLimiter();
         this.clock = context.getClock();
         this.accessCapability = context.getAccessCapability();
-        this.eventHandlers = context.getEventHandlers();
+        this.eventHandlers = context.getDatabaseEventListeners();
 
         this.readOnly = context.getGlobalConfig().get( GraphDatabaseSettings.read_only );
         this.idController = context.getIdController();
@@ -359,7 +360,11 @@ public class Database extends LifecycleAdapter
             Supplier<IdController.ConditionSnapshot> transactionsSnapshotSupplier = () -> kernelModule.kernelTransactions().get();
             idController.initialize( transactionsSnapshotSupplier );
 
-            storageEngine = buildStorageEngine( databasePageCache, databaseSchemaState, versionContextSupplier, storageEngineFactory );
+            storageEngine = storageEngineFactory.instantiate( fs, databaseLayout, config, databasePageCache, tokenHolders, databaseSchemaState,
+                    constraintSemantics, lockService, idGeneratorFactory, idController, databaseHealth, versionContextSupplier, logProvider );
+
+            life.add( storageEngine );
+            life.add( storageEngine.schemaAndTokensLifecycle() );
             life.add( logFiles );
 
             // Label index
@@ -417,41 +422,20 @@ public class Database extends LifecycleAdapter
 
             databaseDependencies.resolveDependency( DbmsDiagnosticsManager.class ).dumpDatabaseDiagnostics( this );
 
+            life.add( databaseHealth );
             life.add( databaseAvailabilityGuard );
             life.add( databaseAvailability );
             life.setLast( checkpointerLifecycle );
-        }
-        catch ( Throwable e )
-        {
-            // Something unexpected happened during startup
-            msgLog.warn( "Exception occurred while setting up store modules. Attempting to close things down.", e );
-            try
-            {
-                // Close the storage engine, so that locks are released properly
-                if ( storageEngine != null )
-                {
-                    storageEngine.forceClose();
-                }
-            }
-            catch ( Exception closeException )
-            {
-                msgLog.error( "Couldn't close database after startup failure", closeException );
-            }
-            throwIfUnchecked( e );
-            throw new RuntimeException( e );
-        }
-        try
-        {
             life.start();
+            eventHandlers.databaseStart( databaseId.name() );
         }
         catch ( Throwable e )
         {
             // Something unexpected happened during startup
-            msgLog.warn( "Exception occurred while starting the datasource. Attempting to close things down.", e );
+            msgLog.warn( "Exception occurred while starting the database. Trying to stop already started components.", e );
             try
             {
-                life.shutdown();
-                storageEngine.forceClose();
+                executeAll( () -> safeLifeShutdown( life ), () -> safeStorageEngineClose( storageEngine ) );
             }
             catch ( Exception closeException )
             {
@@ -460,7 +444,7 @@ public class Database extends LifecycleAdapter
             throw new RuntimeException( e );
         }
         /*
-         * At this point recovery has completed and the datasource is ready for use. Whatever panic might have
+         * At this point recovery has completed and the database is ready for use. Whatever panic might have
          * happened before has been healed. So we can safely set the kernel health to ok.
          * This right now has any real effect only in the case of internal restarts (for example, after a store copy).
          * Standalone instances will have to be restarted by the user, as is proper for all database panics.
@@ -484,20 +468,7 @@ public class Database extends LifecycleAdapter
 
     private void upgradeStore() throws IOException
     {
-        databaseMigratorFactory.createDatabaseMigrator( databaseLayout, databaseDependencies ).migrate();
-    }
-
-    private StorageEngine buildStorageEngine( PageCache pageCache, SchemaState schemaState, VersionContextSupplier versionContextSupplier,
-            StorageEngineFactory storageEngineFactory )
-    {
-        Dependencies storageEngineDependencies = new Dependencies();
-        storageEngineDependencies.satisfyDependencies( databaseLayout, config, pageCache, fs, logService, tokenHolders, schemaState, constraintSemantics,
-                lockService, databaseHealth, idGeneratorFactory, idController, versionContextSupplier );
-
-        StorageEngine storageEngine = storageEngineFactory.instantiate( storageEngineDependencies, databaseDependencies );
-        life.add( storageEngine );
-        life.add( storageEngine.schemaAndTokensLifecycle() );
-        return storageEngine;
+        databaseMigratorFactory.createDatabaseMigrator( databaseLayout, storageEngineFactory, databaseDependencies ).migrate();
     }
 
     /**
@@ -534,6 +505,11 @@ public class Database extends LifecycleAdapter
                 databaseSchemaState, indexStatisticsStore );
         storageEngine.addIndexUpdateListener( indexingService );
         return indexingService;
+    }
+
+    public boolean isSystem()
+    {
+        return SYSTEM_DATABASE_NAME.equals( databaseId.name() );
     }
 
     /**
@@ -637,7 +613,7 @@ public class Database extends LifecycleAdapter
                         transactionHeaderInformationFactory, transactionCommitProcess, hooks, transactionStats, databaseAvailabilityGuard, globalTracers,
                         storageEngine, globalProcedures, transactionIdStore, clock, cpuClockRef,
                         heapAllocationRef, accessCapability, versionContextSupplier, collectionsFactorySupplier,
-                        constraintSemantics, databaseSchemaState, tokenHolders, getDatabaseName(), indexingService, labelScanStore, indexStatisticsStore,
+                        constraintSemantics, databaseSchemaState, tokenHolders, getDatabaseId(), indexingService, labelScanStore, indexStatisticsStore,
                         databaseDependencies ) );
 
         buildTransactionMonitor( kernelTransactions, clock, config );
@@ -710,10 +686,10 @@ public class Database extends LifecycleAdapter
             return;
         }
 
+        eventHandlers.databaseShutdown( databaseId.name() );
         life.stop();
         awaitAllClosingTransactions();
         life.shutdown();
-        eventHandlers.shutdown();
         started = false;
     }
 
@@ -733,7 +709,7 @@ public class Database extends LifecycleAdapter
         }
         catch ( IOException e )
         {
-            logService.getInternalLog( Database.class ).warn( format( "Failed to remove dropped database '%s' files.", databaseName ), e );
+            logService.getInternalLog( Database.class ).warn( format( "Failed to remove dropped database '%s' files.", databaseId ), e );
             throw new UncheckedIOException( e );
         }
     }
@@ -813,7 +789,7 @@ public class Database extends LifecycleAdapter
             AtomicReference<HeapAllocation> heapAllocationRef )
     {
         QueryRegistrationOperations queryRegistrationOperations =
-                new StackingQueryRegistrationOperations( clock, cpuClockRef, heapAllocationRef, databaseName );
+                new StackingQueryRegistrationOperations( clock, cpuClockRef, heapAllocationRef, databaseId );
 
         return new StatementOperationParts( queryRegistrationOperations );
     }
@@ -823,19 +799,14 @@ public class Database extends LifecycleAdapter
         return storeCopyCheckPointMutex;
     }
 
-    public String getDatabaseName()
+    public DatabaseId getDatabaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     public TokenHolders getTokenHolders()
     {
         return tokenHolders;
-    }
-
-    public DatabaseEventHandlers getEventHandlers()
-    {
-        return eventHandlers;
     }
 
     public TransactionEventHandlers getTransactionEventHandlers()
@@ -846,6 +817,11 @@ public class Database extends LifecycleAdapter
     public DatabaseAvailabilityGuard getDatabaseAvailabilityGuard()
     {
         return databaseAvailabilityGuard;
+    }
+
+    public Health getDatabaseHealth()
+    {
+        return databaseHealth;
     }
 
     private void prepareForDrop()
@@ -877,5 +853,21 @@ public class Database extends LifecycleAdapter
                 return asList( reader.indexesGetAll() ).iterator();
             }
         };
+    }
+
+    private static void safeStorageEngineClose( StorageEngine storageEngine )
+    {
+        if ( storageEngine != null )
+        {
+            storageEngine.forceClose();
+        }
+    }
+
+    private static void safeLifeShutdown( LifeSupport life )
+    {
+        if ( life != null )
+        {
+            life.shutdown();
+        }
     }
 }

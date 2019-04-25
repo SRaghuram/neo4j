@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -27,13 +26,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.service.Services;
-import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 
-import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,10 +50,12 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 class RemoteStoreTest
 {
-    private StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "cars" );
+
+    private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
     private DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "destination" ) );
-    private CatchupAddressProvider catchupAddressProvider = fromSingleAddress( localhost );
+    private CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( localhost );
     private TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
     @Test
@@ -181,8 +181,8 @@ class RemoteStoreTest
         RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
-        when( catchupAddressProvider.primary() ).thenReturn( localhost );
-        when( catchupAddressProvider.secondary() ).thenReturn( localhost );
+        when( catchupAddressProvider.primary( DATABASE_ID ) ).thenReturn( localhost );
+        when( catchupAddressProvider.secondary( DATABASE_ID ) ).thenReturn( localhost );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(), any() ) ).thenReturn(
@@ -198,8 +198,8 @@ class RemoteStoreTest
 
         doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
 
-        verify( catchupAddressProvider, times( 3 ) ).secondary();
-        verify( catchupAddressProvider, times( 1 ) ).primary();
+        verify( catchupAddressProvider, times( 3 ) ).secondary( DATABASE_ID );
+        verify( catchupAddressProvider, times( 1 ) ).primary( DATABASE_ID );
     }
 
     @Test
@@ -208,8 +208,8 @@ class RemoteStoreTest
         RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider secondaryFailingAddressProvider = mock( CatchupAddressProvider.class );
-        when( secondaryFailingAddressProvider.secondary() ).thenThrow( CatchupAddressResolutionException.class );
-        when( secondaryFailingAddressProvider.primary() ).thenReturn( localhost );
+        when( secondaryFailingAddressProvider.secondary( DATABASE_ID ) ).thenThrow( CatchupAddressResolutionException.class );
+        when( secondaryFailingAddressProvider.primary( DATABASE_ID ) ).thenReturn( localhost );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( secondaryFailingAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
@@ -226,15 +226,14 @@ class RemoteStoreTest
         doStoreCopy( storeCopyClient, txPullClient, secondaryFailingAddressProvider,
                 Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() );
 
-        verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary();
+        verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary( DATABASE_ID );
     }
 
     private void doStoreCopy( StoreCopyClient storeCopyClient, TxPullClient txPullClient, CatchupAddressProvider catchupAddressProvider, Config config )
             throws IOException, StoreCopyFailedException
     {
-        RemoteStore remoteStore =
-                new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null, storeCopyClient, txPullClient, factory( writer ),
-                        config, new Monitors(), selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ) );
+        RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
+                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }

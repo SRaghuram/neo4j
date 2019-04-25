@@ -27,11 +27,12 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.kernel.impl.locking.LockCountVisitor;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.community.CommunityLockClient;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.OtherThreadRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -41,6 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.Exceptions.rootCause;
 
@@ -52,6 +54,7 @@ public class GraphDatabaseShutdownTest
     public final OtherThreadRule<Void> t2 = new OtherThreadRule<>( "T2" );
     @Rule
     public final OtherThreadRule<Void> t3 = new OtherThreadRule<>( "T3" );
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp()
@@ -62,7 +65,7 @@ public class GraphDatabaseShutdownTest
     @After
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -80,7 +83,7 @@ public class GraphDatabaseShutdownTest
             tx.acquireWriteLock( node );
             assertThat( lockCount( locks ), greaterThanOrEqualTo( 1 ) );
 
-            db.shutdown();
+            managementService.shutdown();
 
             db.createNode();
             tx.success();
@@ -122,7 +125,7 @@ public class GraphDatabaseShutdownTest
                 // Wait for T3 to start waiting for this node write lock
                 t3.get().waitUntilWaiting( details -> details.isAt( CommunityLockClient.class, "acquireExclusive" ) );
 
-                db.shutdown();
+                managementService.shutdown();
 
                 shutdownCalled.countDown();
                 tx.success();
@@ -176,8 +179,8 @@ public class GraphDatabaseShutdownTest
 
     private GraphDatabaseAPI newDb()
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .newImpermanentDatabaseBuilder()
-                .newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newImpermanentDatabaseBuilder().newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

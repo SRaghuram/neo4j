@@ -5,18 +5,17 @@
  */
 package org.neo4j.consistency;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -24,29 +23,38 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.schema.DefaultLabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
 
-public class HalfCreatedConstraintIT
+@ExtendWith( TestDirectoryExtension.class )
+class HalfCreatedConstraintIT
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void uniqueIndexWithoutOwningConstraintIsIgnoredDuringCheck() throws Exception
+    void uniqueIndexWithoutOwningConstraintIsIgnoredDuringCheck() throws Exception
     {
-        File databaseDir = testDirectory.databaseDir();
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             createNodes( marker, property, database );
@@ -55,27 +63,27 @@ public class HalfCreatedConstraintIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
 
-        ConsistencyCheckService.Result checkResult = ConsistencyCheckTool.runConsistencyCheckTool( new String[]{databaseDir.getAbsolutePath()},
-                emptyPrintStream(), emptyPrintStream() );
-        assertTrue( String.join( System.lineSeparator(), Files.readAllLines( checkResult.reportFile().toPath() ) ), checkResult.isSuccessful() );
+        ConsistencyCheckService service = new ConsistencyCheckService();
+        ConsistencyCheckService.Result checkResult =
+                service.runFullConsistencyCheck( databaseLayout, Config.defaults(), NONE, NullLogProvider.getInstance(), false );
+        assertTrue( checkResult.isSuccessful(), Files.readString( checkResult.reportFile().toPath() ) );
     }
 
     private static void waitForIndexPopulationFailure( GraphDatabaseService database )
     {
-        try ( Transaction ignored = database.beginTx() )
+        IllegalStateException exception = assertThrows( IllegalStateException.class, () ->
         {
-            database.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
-            fail( "Unique index population should fail." );
-        }
-        catch ( IllegalStateException e )
-        {
-            assertThat( e.getMessage(), containsString(
+            try ( Transaction ignored = database.beginTx() )
+            {
+                database.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
+            }
+        } );
+        assertThat( exception.getMessage(), containsString(
                     "Index IndexDefinition[label:MARKER on:property] (IndexRule[id=1, descriptor=Index( UNIQUE, :label[0](property[0]) ), " +
                             "provider={key=native-btree, version=1.0}, owner=null]) entered a FAILED state. Please see database logs.: Cause of failure:" ) );
-        }
     }
 
     private static void addIndex( GraphDatabaseService database ) throws SchemaKernelException
@@ -103,10 +111,5 @@ public class HalfCreatedConstraintIT
             }
             transaction.success();
         }
-    }
-
-    private static PrintStream emptyPrintStream()
-    {
-        return new PrintStream( org.neo4j.io.NullOutputStream.NULL_OUTPUT_STREAM );
     }
 }

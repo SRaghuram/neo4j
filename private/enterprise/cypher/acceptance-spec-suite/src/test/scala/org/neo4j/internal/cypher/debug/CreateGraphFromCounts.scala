@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.GraphDatabaseTestSupport
-import org.neo4j.graphdb.{ConstraintViolationException, Label, Node}
+import org.neo4j.graphdb.{ConstraintViolationException, Label, Node, RelationshipType}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -76,19 +76,26 @@ trait CreateGraphFromCounts {
             val labelName = ""
             val nodes = nodeMap.getOrElseUpdate(labelName, new ArrayBuffer)
             for (_ <- 0 until 10) {
-              // Just create _some_ unlabeled node
               nodes += graph.createNode()
             }
           case Some(labelName) =>
             val label = Label.label(labelName)
             val nodes = nodeMap.getOrElseUpdate(labelName, new ArrayBuffer)
-            for (_ <- 0L until nodeLabel.count) {
+            for (_ <- 0L until 10) {
               nodes += graph.createNode(label)
             }
         }
       }
 
-      // TODO if you ever want to create relationships, here would be a good spot
+      for(relType <- row.data.relationships) {
+        val startNodes = relType.startLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
+        val endNodes = relType.endLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
+        val relTypeName = relType.relationshipType.getOrElse("__REL")
+
+        for ((start, end) <- startNodes.zip(endNodes)) {
+          start.createRelationshipTo(end, RelationshipType.withName(relTypeName))
+        }
+      }
     }
   }
 

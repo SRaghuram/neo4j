@@ -63,7 +63,6 @@ case class RelationshipCountFromCountStoreInstruction(opName: String, variable: 
 
   override def children = Seq(inner)
 
-
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     super.init(generator)
 
@@ -96,6 +95,4 @@ case class RelationshipCountFromCountStoreInstruction(opName: String, variable: 
       case _ => ()
     }
   }
-
-  private def tokenVar = s"${variable.name}LabelToken"
 }

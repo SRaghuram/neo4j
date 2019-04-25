@@ -12,11 +12,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
-import org.eclipse.collections.api.iterator.LongIterator;
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.api.set.primitive.MutableLongSet;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
-import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +34,6 @@ public class PrepareStoreCopyResponse
     }
 
     private final File[] files;
-    private final LongSet indexIds;
     private final long lastCheckPointedTransactionId;
     private final Status status;
 
@@ -49,23 +43,17 @@ public class PrepareStoreCopyResponse
         {
             throw new IllegalStateException( "Cannot create error result from state: " + errorStatus );
         }
-        return new PrepareStoreCopyResponse( new File[0], LongSets.immutable.empty(), 0, errorStatus );
+        return new PrepareStoreCopyResponse( new File[0], 0, errorStatus );
     }
 
-    public static PrepareStoreCopyResponse success( File[] storeFiles, LongSet indexIds, long lastCheckPointedTransactionId )
+    public static PrepareStoreCopyResponse success( File[] storeFiles, long lastCheckPointedTransactionId )
     {
-        return new PrepareStoreCopyResponse( storeFiles, indexIds, lastCheckPointedTransactionId, Status.SUCCESS );
+        return new PrepareStoreCopyResponse( storeFiles, lastCheckPointedTransactionId, Status.SUCCESS );
     }
 
-    public LongSet getIndexIds()
-    {
-        return indexIds;
-    }
-
-    private PrepareStoreCopyResponse( File[] files, LongSet indexIds, long lastCheckPointedTransactionId, Status status )
+    private PrepareStoreCopyResponse( File[] files, long lastCheckPointedTransactionId, Status status )
     {
         this.files = files;
-        this.indexIds = indexIds;
         this.lastCheckPointedTransactionId = lastCheckPointedTransactionId;
         this.status = status;
     }
@@ -99,14 +87,13 @@ public class PrepareStoreCopyResponse
         PrepareStoreCopyResponse that = (PrepareStoreCopyResponse) o;
         return lastCheckPointedTransactionId == that.lastCheckPointedTransactionId &&
                Arrays.equals( files, that.files ) &&
-               Objects.equals( indexIds, that.indexIds ) &&
                status == that.status;
     }
 
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( indexIds, lastCheckPointedTransactionId, status );
+        int result = Objects.hash( lastCheckPointedTransactionId, status );
         result = 31 * result + Arrays.hashCode( files );
         return result;
     }
@@ -119,7 +106,6 @@ public class PrepareStoreCopyResponse
             buffer.putInt( prepareStoreCopyResponse.status.ordinal() );
             buffer.putLong( prepareStoreCopyResponse.lastCheckPointedTransactionId );
             marshalFiles( buffer, prepareStoreCopyResponse.files );
-            marshalIndexIds( buffer, prepareStoreCopyResponse.indexIds );
         }
 
         @Override
@@ -129,8 +115,7 @@ public class PrepareStoreCopyResponse
             Status status = Status.values()[ordinal];
             long transactionId = channel.getLong();
             File[] files = unmarshalFiles( channel );
-            LongSet indexIds = unmarshalIndexIds( channel );
-            return new PrepareStoreCopyResponse( files, indexIds, transactionId, status );
+            return new PrepareStoreCopyResponse( files, transactionId, status );
         }
 
         private static void marshalFiles( WritableChannel buffer, File[] files ) throws IOException
@@ -139,17 +124,6 @@ public class PrepareStoreCopyResponse
             for ( File file : files )
             {
                 putBytes( buffer, file.getName() );
-            }
-        }
-
-        private void marshalIndexIds( WritableChannel buffer, LongSet indexIds ) throws IOException
-        {
-            buffer.putInt( indexIds.size() );
-            LongIterator itr = indexIds.longIterator();
-            while ( itr.hasNext() )
-            {
-                long indexId = itr.next();
-                buffer.putLong( indexId );
             }
         }
 
@@ -168,17 +142,6 @@ public class PrepareStoreCopyResponse
         {
             byte[] name = readBytes( channel );
             return new File( UTF8.decode( name ) );
-        }
-
-        private LongSet unmarshalIndexIds( ReadableChannel channel ) throws IOException
-        {
-            int numberOfIndexIds = channel.getInt();
-            MutableLongSet indexIds = new LongHashSet( numberOfIndexIds );
-            for ( int i = 0; i < numberOfIndexIds; i++ )
-            {
-                indexIds.add( channel.getLong() );
-            }
-            return indexIds;
         }
 
         private static void putBytes( WritableChannel buffer, String value ) throws IOException

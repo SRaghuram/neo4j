@@ -34,9 +34,9 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
   test("when rhs returns nothing, an empty collection should be produced") {
     // given
     val lhs = createLhs(1)
-    val rhs = pipeWithResults { (state) => Iterator() }
+    val rhs = pipeWithResults { state => Iterator() }
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = ("y" -> ReferenceFromSlot(0)),
+      identifierToCollect = "y" -> ReferenceFromSlot(0),
       nullableIdentifiers = Set("a"), slots)()
 
     // when
@@ -52,9 +52,9 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
   test("when rhs has null values on nullableIdentifiers, a null value should be produced") {
     // given
     val lhs = createLhs(null, 1)
-    val rhs = pipeWithResults { (state) => Iterator() }
+    val rhs = pipeWithResults { state => Iterator() }
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = ("y" -> ReferenceFromSlot(0)),
+      identifierToCollect = "y" -> ReferenceFromSlot(0),
       nullableIdentifiers = Set("a"), slots)()
 
     // when
@@ -75,7 +75,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     val rhs = createRhs(1, 2, 3, 4)
     val yOffset = rhs.slots.getReferenceOffsetFor("y")
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = ("y" -> ReferenceFromSlot(yOffset)),
+      identifierToCollect = "y" -> ReferenceFromSlot(yOffset),
       nullableIdentifiers = Set("a"), slots)()
 
     // when
@@ -95,7 +95,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     val rhs = createRhsWithNumberOfNodes(2)
     val yOffset = rhs.slots.getLongOffsetFor("y")
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = ("y" -> NodeFromSlot(yOffset)),
+      identifierToCollect = "y" -> NodeFromSlot(yOffset),
       nullableIdentifiers = Set("a"), slots)()
 
     val queryContext = Mockito.mock(classOf[QueryContext])
@@ -135,7 +135,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
       }
     })
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = ("y" -> ReferenceFromSlot(0)),
+      identifierToCollect = "y" -> ReferenceFromSlot(0),
       nullableIdentifiers = Set("a"), slots)()
 
     // when
@@ -145,22 +145,22 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
   }
 
   private def createRhs(data: Any*) = {
-    val rhsData = data.map { case v => Map("y" -> v) }
+    val rhsData = data.map(v => Map("y" -> v))
     val rhsPipeline = slots.copy()
       .newReference("y", nullable = false, CTNumber)
-    new FakeSlottedPipe(rhsData, rhsPipeline)
+    FakeSlottedPipe(rhsData, rhsPipeline)
   }
 
   private def createRhsWithNumberOfNodes(numberOfNodes: Int) = {
     val rhsData = for (i <- 0 until numberOfNodes) yield Map("y" -> i)
     val rhsPipeline = slots.copy()
       .newLong("y", nullable = false, CTNode)
-    new FakeSlottedPipe(rhsData, rhsPipeline)
+    FakeSlottedPipe(rhsData, rhsPipeline)
   }
 
   private def createLhs(data: Any*) = {
-    val lhsData = data.map { case v => Map("a" -> v) }
-    new FakeSlottedPipe(lhsData, slots)
+    val lhsData = data.map(v => Map("a" -> v))
+    FakeSlottedPipe(lhsData, slots)
   }
 }
 

@@ -16,7 +16,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -130,7 +129,7 @@ class DurableStateStorageTest
          * should nevertheless be correct
          */
         ByteBuffer forReadingBackIn = ByteBuffer.allocate( 10_000 );
-        StoreChannel lastWrittenTo = fileSystem.open( stateFileA(), OpenMode.READ );
+        StoreChannel lastWrittenTo = fileSystem.read( stateFileA() );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();
 

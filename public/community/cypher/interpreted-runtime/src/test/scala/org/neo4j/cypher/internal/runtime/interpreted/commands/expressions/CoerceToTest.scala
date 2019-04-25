@@ -34,7 +34,7 @@ import scala.language.postfixOps
 
 class CoerceToTest extends CypherFunSuite {
 
-  implicit var openCases: Counter = Counter()
+  implicit val openCases: Counter = Counter()
   implicit val qtx = mock[QueryContext]
   implicit val state = QueryStateHelper.emptyWith(query = qtx)
 
@@ -218,7 +218,7 @@ class CoerceToTest extends CypherFunSuite {
 
       case class TestExpression(in: AnyValue) extends Expression {
 
-        override def rewrite(f: (Expression) => Expression): Expression = this
+        override def rewrite(f: Expression => Expression): Expression = this
 
         override def arguments: Seq[Expression] = Seq.empty
 

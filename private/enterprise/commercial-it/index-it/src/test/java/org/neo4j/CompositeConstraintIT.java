@@ -5,19 +5,22 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.consistency.ConsistencyCheckTool;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -25,6 +28,8 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CompositeConstraintIT
@@ -35,9 +40,9 @@ class CompositeConstraintIT
     @Test
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
 
         Label label = Label.label( "label" );
 
@@ -65,16 +70,17 @@ class CompositeConstraintIT
             node.setProperty( "b", new double[]{0.7, 0.5, 0.3} );
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
 
-        ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( testDirectory.storeDir() );
+        ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( testDirectory.databaseLayout() );
         assertTrue( consistencyCheckResult.isSuccessful(), "Database is consistent" );
     }
 
-    private static ConsistencyCheckService.Result checkDbConsistency( File databaseDirectory )
-            throws ConsistencyCheckTool.ToolFailureException
+    private static ConsistencyCheckService.Result checkDbConsistency( DatabaseLayout databaseLayout )
+            throws ConsistencyCheckIncompleteException
     {
-        return ConsistencyCheckTool.runConsistencyCheckTool( new String[]{databaseDirectory.getAbsolutePath()}, System.out, System.err );
+        ConsistencyCheckService service = new ConsistencyCheckService();
+        return service.runFullConsistencyCheck( databaseLayout, Config.defaults(), NONE, NullLogProvider.getInstance(), false );
     }
 
     private static void awaitIndex( GraphDatabaseService database )

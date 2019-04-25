@@ -22,18 +22,17 @@ package org.neo4j.index;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 
+import org.neo4j.batchinsert.BatchInserter;
+import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.id.IdGeneratorImpl;
 import org.neo4j.internal.id.ReservedIdException;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
-import org.neo4j.unsafe.batchinsert.BatchInserters;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -52,8 +51,7 @@ public class BatchInsertionIT
     public void shouldIndexNodesWithMultipleLabels() throws Exception
     {
         // Given
-        File path = dbRule.databaseLayout().databaseDirectory();
-        BatchInserter inserter = BatchInserters.inserter( path, fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( dbRule.databaseLayout(), fileSystemRule.get() );
 
         inserter.createNode( map( "name", "Bob" ), label( "User" ), label( "Admin" ) );
 
@@ -70,18 +68,13 @@ public class BatchInsertionIT
             assertThat( count( db.findNodes( label( "User" ), "name", "Bob" ) ), equalTo(1L) );
             assertThat( count( db.findNodes( label( "Admin" ), "name", "Bob" ) ), equalTo(1L) );
         }
-        finally
-        {
-            db.shutdown();
-        }
     }
 
     @Test
     public void shouldNotIndexNodesWithWrongLabel() throws Exception
     {
         // Given
-        File file = new File( dbRule.getDatabaseDirAbsolutePath() );
-        BatchInserter inserter = BatchInserters.inserter( file, fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( dbRule.databaseLayout(), fileSystemRule.get() );
 
         inserter.createNode( map("name", "Bob"), label( "User" ), label("Admin"));
 
@@ -96,18 +89,13 @@ public class BatchInsertionIT
         {
             assertThat( count( db.findNodes( label( "Banana" ), "name", "Bob" ) ), equalTo( 0L ) );
         }
-        finally
-        {
-            db.shutdown();
-        }
 
     }
 
     @Test
     public void shouldBeAbleToMakeRepeatedCallsToSetNodeProperty() throws Exception
     {
-        File file = dbRule.databaseLayout().databaseDirectory();
-        BatchInserter inserter = BatchInserters.inserter( file, fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( dbRule.databaseLayout(), fileSystemRule.get() );
         long nodeId = inserter.createNode( Collections.emptyMap() );
 
         final Object finalValue = 87;
@@ -123,17 +111,12 @@ public class BatchInsertionIT
         {
             assertThat( db.getNodeById( nodeId ).getProperty( "a" ), equalTo( finalValue ) );
         }
-        finally
-        {
-            db.shutdown();
-        }
     }
 
     @Test
     public void shouldBeAbleToMakeRepeatedCallsToSetNodePropertyWithMultiplePropertiesPerBlock() throws Exception
     {
-        File file = dbRule.databaseLayout().databaseDirectory();
-        BatchInserter inserter = BatchInserters.inserter( file, fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( dbRule.databaseLayout(), fileSystemRule.get() );
         long nodeId = inserter.createNode( Collections.emptyMap() );
 
         final Object finalValue1 = 87;
@@ -152,25 +135,18 @@ public class BatchInsertionIT
             assertThat( db.getNodeById( nodeId ).getProperty( "a" ), equalTo( finalValue1 ) );
             assertThat( db.getNodeById( nodeId ).getProperty( "b" ), equalTo( finalValue2 ) );
         }
-        finally
-        {
-            db.shutdown();
-        }
     }
 
     @Test( expected = ReservedIdException.class )
     public void makeSureCantCreateNodeWithMagicNumber() throws IOException
     {
         // given
-        File path = dbRule.databaseLayout().databaseDirectory();
-        BatchInserter inserter = BatchInserters.inserter( path, fileSystemRule.get() );
-
+        BatchInserter inserter = BatchInserters.inserter( dbRule.databaseLayout(), fileSystemRule.get() );
         try
         {
             // when
             long id = IdGeneratorImpl.INTEGER_MINUS_ONE;
             inserter.createNode( id, null );
-
             // then throws
         }
         finally

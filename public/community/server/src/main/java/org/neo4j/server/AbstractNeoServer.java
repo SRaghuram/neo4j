@@ -64,10 +64,10 @@ import org.neo4j.server.rest.repr.InputFormatProvider;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.OutputFormatProvider;
 import org.neo4j.server.rest.repr.RepresentationFormatRepository;
-import org.neo4j.server.rest.transactional.TransactionFacade;
-import org.neo4j.server.rest.transactional.TransactionHandleRegistry;
-import org.neo4j.server.rest.transactional.TransactionRegistry;
-import org.neo4j.server.rest.transactional.TransitionalPeriodTransactionMessContainer;
+import org.neo4j.server.http.cypher.TransactionFacade;
+import org.neo4j.server.http.cypher.TransactionHandleRegistry;
+import org.neo4j.server.http.cypher.TransactionRegistry;
+import org.neo4j.server.http.cypher.TransitionalPeriodTransactionMessContainer;
 import org.neo4j.server.rest.web.DatabaseActions;
 import org.neo4j.server.web.RotatingRequestLog;
 import org.neo4j.server.web.SimpleUriBuilder;
@@ -75,7 +75,6 @@ import org.neo4j.server.web.WebServer;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
-import org.neo4j.udc.UsageData;
 
 import static java.lang.Math.round;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -420,23 +419,8 @@ public abstract class AbstractNeoServer implements NeoServer
         binder.addLazyBinding( userManagerSupplier, UserManagerSupplier.class );
         binder.addSingletonBinding( userLogProvider, LogProvider.class );
         binder.addSingletonBinding( userLogProvider.getLog( NeoServer.class ), Log.class );
-        binder.addSingletonBinding( resolveDependency( UsageData.class ), UsageData.class );
 
         return binder;
-    }
-
-    @SuppressWarnings( "unchecked" )
-    private <T extends ServerModule> T getModule( Class<T> clazz )
-    {
-        for ( ServerModule sm : serverModules )
-        {
-            if ( sm.getClass() == clazz )
-            {
-                return (T) sm;
-            }
-        }
-
-        return null;
     }
 
     protected <T> T resolveDependency( Class<T> type )

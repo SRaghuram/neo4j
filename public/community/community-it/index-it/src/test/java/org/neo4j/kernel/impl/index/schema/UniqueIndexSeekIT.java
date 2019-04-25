@@ -19,13 +19,17 @@
  */
 package org.neo4j.kernel.impl.index.schema;
 
-import org.junit.jupiter.api.Test;
+import org.hamcrest.core.CombinableMatcher;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -36,11 +40,12 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory30;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.index.schema.tracking.TrackingIndexExtensionFactory;
-import org.neo4j.kernel.impl.index.schema.tracking.TrackingReadersIndexAccessor;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -48,25 +53,31 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20.DESCRIPTOR;
+import static org.neo4j.kernel.impl.index.schema.tracking.TrackingReadersIndexAccessor.numberOfClosedReaders;
+import static org.neo4j.kernel.impl.index.schema.tracking.TrackingReadersIndexAccessor.numberOfOpenReaders;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class UniqueIndexSeekIT
 {
     @Inject
     private TestDirectory directory;
+    private DatabaseManagementService managementService;
 
-    @Test
-    void uniqueIndexSeekDoNotLeakIndexReaders() throws KernelException
+    @ParameterizedTest
+    @MethodSource( "indexProviderFactories" )
+    void uniqueIndexSeekDoNotLeakIndexReaders( AbstractIndexProviderFactory providerFactory ) throws KernelException
     {
-        TrackingIndexExtensionFactory indexExtensionFactory = new TrackingIndexExtensionFactory();
-        GraphDatabaseAPI database = createDatabase( indexExtensionFactory );
+        TrackingIndexExtensionFactory indexExtensionFactory = new TrackingIndexExtensionFactory( providerFactory );
+        GraphDatabaseAPI database = createDatabase( indexExtensionFactory, providerFactory.descriptor() );
         DependencyResolver dependencyResolver = database.getDependencyResolver();
         Config config = dependencyResolver.resolveDependency( Config.class );
         try
@@ -79,25 +90,38 @@ class UniqueIndexSeekIT
             generateRandomData( database, label, nameProperty );
 
             assertNotNull( indexExtensionFactory.getIndexProvider( config.get( default_database ) ) );
-            assertThat( TrackingReadersIndexAccessor.numberOfClosedReaders(), greaterThan( 0L ) );
-            assertThat( TrackingReadersIndexAccessor.numberOfOpenReaders(), greaterThan( 0L ) );
-            assertEquals( TrackingReadersIndexAccessor.numberOfClosedReaders(), TrackingReadersIndexAccessor.numberOfOpenReaders() );
+            assertThat( numberOfClosedReaders(), greaterThan( 0L ) );
+            assertThat( numberOfOpenReaders(), greaterThan( 0L ) );
+            assertThat( numberOfClosedReaders(), closeTo( numberOfOpenReaders(), 1 ) );
 
             lockNodeUsingUniqueIndexSeek( database, label, nameProperty );
 
-            assertEquals( TrackingReadersIndexAccessor.numberOfClosedReaders(), TrackingReadersIndexAccessor.numberOfOpenReaders() );
+            assertThat( numberOfClosedReaders(), closeTo( numberOfOpenReaders(), 1 ) );
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
-    private GraphDatabaseAPI createDatabase( TrackingIndexExtensionFactory indexExtensionFactory )
+    private static Stream<AbstractIndexProviderFactory> indexProviderFactories()
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                        .setExtensions( singletonList( indexExtensionFactory ) ).newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                        .setConfig( default_schema_provider, DESCRIPTOR.name() ).newGraphDatabase();
+        return Stream.of(
+                new NativeLuceneFusionIndexProviderFactory30(),
+                new GenericNativeIndexProviderFactory() );
+    }
+
+    private static CombinableMatcher<Long> closeTo( long from, long delta )
+    {
+        return both( greaterThanOrEqualTo( from ) ).and( lessThanOrEqualTo( from + delta ) );
+    }
+
+    private GraphDatabaseAPI createDatabase( TrackingIndexExtensionFactory indexExtensionFactory, IndexProviderDescriptor descriptor )
+    {
+        managementService = new TestDatabaseManagementServiceBuilder()
+                        .setExtensions( singletonList( indexExtensionFactory ) ).newEmbeddedDatabaseBuilder( directory.storeDir() )
+                        .setConfig( default_schema_provider, descriptor.name() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static void lockNodeUsingUniqueIndexSeek( GraphDatabaseAPI database, Label label, String nameProperty ) throws KernelException

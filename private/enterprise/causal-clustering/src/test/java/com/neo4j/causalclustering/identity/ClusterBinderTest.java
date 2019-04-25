@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.hazelcast.core.OperationTimeoutException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -27,6 +26,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
@@ -38,13 +38,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ClusterBinderTest
 {
@@ -53,68 +51,22 @@ public class ClusterBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final String dbName = config.get( CausalClusteringSettings.database );
+    private final DatabaseId databaseId = new DatabaseId( "my_database" );
 
     private ClusterBinder clusterBinder( SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService )
     {
-        return new ClusterBinder( clusterIdStorage, new StubSimpleStorage<>(), topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), coreBootstrapper, dbName, minCoreHosts, new Monitors() );
-    }
-
-    @Test
-    public void shouldRetryWhenPublishFailsWithTransientErrors() throws Throwable
-    {
-        // given
-        Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
-                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
-
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
-        CoreTopologyService topologyService = mock( CoreTopologyService.class );
-
-        when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ) // Cause a retry one
-                .thenReturn( true ); // Then succeed
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
-
-        // when
-        binder.bindToCluster();
-
-        // then
-        verify( topologyService, atLeast( 2 ) ).setClusterId( any(), anyString() );
-    }
-
-    @Test( expected = TimeoutException.class )
-    public void shouldTimeoutIfPublishContinuallyFailsWithTransientErrors() throws Throwable
-    {
-        // given
-        Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
-                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
-
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
-        CoreTopologyService topologyService = mock( CoreTopologyService.class );
-
-        when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ); // Causes a retry
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-
-        ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
-
-        // when
-        binder.bindToCluster();
+        return new ClusterBinder( databaseId, clusterIdStorage, topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
+                Duration.of( 3_000, MILLIS ), coreBootstrapper, minCoreHosts, new Monitors() );
     }
 
     @Test
     public void shouldTimeoutWhenNotBootstrappableAndNobodyElsePublishesClusterId() throws Throwable
     {
         // given
-        CoreTopology unboundTopology = new CoreTopology( null, false, emptyMap() );
+        CoreTopology unboundTopology = new CoreTopology( databaseId, null, false, emptyMap() );
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( unboundTopology );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -130,7 +82,7 @@ public class ClusterBinderTest
         }
 
         // then
-        verify( topologyService, atLeast( 2 ) ).localCoreServers();
+        verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( databaseId );
     }
 
     @Test
@@ -138,11 +90,11 @@ public class ClusterBinderTest
     {
         // given
         ClusterId publishedClusterId = new ClusterId( UUID.randomUUID() );
-        CoreTopology unboundTopology = new CoreTopology( null, false, emptyMap() );
-        CoreTopology boundTopology = new CoreTopology( publishedClusterId, false, emptyMap() );
+        CoreTopology unboundTopology = new CoreTopology( databaseId, null, false, emptyMap() );
+        CoreTopology boundTopology = new CoreTopology( databaseId, publishedClusterId, false, emptyMap() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( unboundTopology ).thenReturn( boundTopology );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology ).thenReturn( boundTopology );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -153,7 +105,7 @@ public class ClusterBinderTest
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         assertEquals( publishedClusterId, clusterId.get() );
-        verify( topologyService, atLeast( 2 ) ).localCoreServers();
+        verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( databaseId );
     }
 
     @Test
@@ -163,7 +115,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, "default" ) ).thenReturn( true );
+        when( topologyService.setClusterId( previouslyBoundClusterId, databaseId ) ).thenReturn( true );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -174,7 +126,7 @@ public class ClusterBinderTest
         binder.bindToCluster();
 
         // then
-        verify( topologyService ).setClusterId( previouslyBoundClusterId, "default" );
+        verify( topologyService ).setClusterId( previouslyBoundClusterId, databaseId );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         assertEquals( previouslyBoundClusterId, clusterId.get() );
@@ -187,7 +139,7 @@ public class ClusterBinderTest
         ClusterId previouslyBoundClusterId = new ClusterId( UUID.randomUUID() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setClusterId( previouslyBoundClusterId, "default" ) ).thenReturn( false );
+        when( topologyService.setClusterId( previouslyBoundClusterId, databaseId ) ).thenReturn( false );
 
         StubSimpleStorage<ClusterId> clusterIdStorage = new StubSimpleStorage<>();
         clusterIdStorage.writeState( previouslyBoundClusterId );
@@ -210,18 +162,17 @@ public class ClusterBinderTest
     public void shouldBootstrapWhenBootstrappable() throws Throwable
     {
         // given
-        String databaseName = DEFAULT_DATABASE_NAME;
         Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        CoreTopology bootstrappableTopology = new CoreTopology( null, true, members );
+        CoreTopology bootstrappableTopology = new CoreTopology( databaseId, null, true, members );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
-        when( topologyService.setClusterId( any(), eq("default" ) ) ).thenReturn( true );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );
+        when( topologyService.setClusterId( any(), eq( databaseId ) ) ).thenReturn( true );
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
-        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseName, snapshot ) );
+        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseId, snapshot ) );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -232,8 +183,8 @@ public class ClusterBinderTest
         verify( coreBootstrapper ).bootstrap( any() );
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
-        verify( topologyService ).setClusterId( clusterId.get(), "default" );
-        assertEquals( singletonMap( databaseName, snapshot ), boundState.snapshots() );
+        verify( topologyService ).setClusterId( clusterId.get(), databaseId );
+        assertEquals( singletonMap( databaseId, snapshot ), boundState.snapshots() );
     }
 
     private class StubSimpleStorage<T> implements SimpleStorage<T>

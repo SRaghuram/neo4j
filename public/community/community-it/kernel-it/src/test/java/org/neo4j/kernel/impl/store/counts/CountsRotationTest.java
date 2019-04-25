@@ -43,12 +43,13 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.counts.CountsVisitor;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
@@ -70,7 +71,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.register.Register;
 import org.neo4j.register.Registers;
 import org.neo4j.test.AdversarialPageCacheGraphDatabaseFactory;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
@@ -82,6 +83,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.counts.FileVersion.INITIAL_MINOR_VERSION;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -104,15 +106,15 @@ public class CountsRotationTest
                                           .around( testDir );
 
     private FileSystemAbstraction fs;
-    private GraphDatabaseBuilder dbBuilder;
+    private DatabaseManagementServiceInternalBuilder dbBuilder;
     private PageCache pageCache;
 
     @Before
     public void setup()
     {
         fs = fsRule.get();
-        dbBuilder = new TestGraphDatabaseFactory().setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) )
-                .newImpermanentDatabaseBuilder( testDir.databaseDir() );
+        dbBuilder = new TestDatabaseManagementServiceBuilder().setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) )
+                .newImpermanentDatabaseBuilder( testDir.storeDir() );
         pageCache = pcRule.getPageCache( fs );
     }
 
@@ -120,10 +122,11 @@ public class CountsRotationTest
     public void shouldCreateEmptyCountsTrackerStoreWhenCreatingDatabase()
     {
         // GIVEN
-        GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         // WHEN
-        db.shutdown();
+        managementService.shutdown();
 
         // THEN
         assertTrue( fs.fileExists( alphaStoreFile() ) );
@@ -154,7 +157,8 @@ public class CountsRotationTest
             throws Throwable
     {
         // Given
-        dbBuilder.newGraphDatabase().shutdown();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        managementService.shutdown();
         CountsTracker store = createCountsTracker( pageCache,
                 Config.defaults( GraphDatabaseSettings.counts_store_rotation_timeout, "100ms" ) );
         try ( Lifespan lifespan = new Lifespan( store ) )
@@ -184,7 +188,8 @@ public class CountsRotationTest
     public void rotationShouldNotCauseUnmappedFileProblem() throws IOException
     {
         // GIVEN
-        GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         DependencyResolver resolver = db.getDependencyResolver();
         RecordStorageEngine storageEngine = resolver.resolveDependency( RecordStorageEngine.class );
@@ -213,7 +218,7 @@ public class CountsRotationTest
         assertEquals( "Should perform at least 100 rotations.", rotations, Math.min( rotations, countStore.txId() - startTxId) );
         assertTrue( "Should perform more then 0 lookups without exceptions.", lookupsCounter.get() > 0 );
 
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private static ThrowingFunction<CountsTracker,Void,RuntimeException> countStoreLookup(
@@ -235,7 +240,8 @@ public class CountsRotationTest
     public void shouldRotateCountsStoreWhenClosingTheDatabase()
     {
         // GIVEN
-        GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( A );
@@ -243,7 +249,7 @@ public class CountsRotationTest
         }
 
         // WHEN
-        db.shutdown();
+        managementService.shutdown();
 
         // THEN
         assertTrue( fs.fileExists( alphaStoreFile() ) );
@@ -265,7 +271,8 @@ public class CountsRotationTest
     public void shouldRotateCountsStoreWhenRotatingLog() throws IOException
     {
         // GIVEN
-        GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         // WHEN doing a transaction (actually two, the label-mini-tx also counts)
         try ( Transaction tx = db.beginTx() )
@@ -314,7 +321,7 @@ public class CountsRotationTest
         }
         assertEquals( 1, tracker.nodeCount( labelId, newDoubleLongRegister() ).readSecond() );
 
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test( timeout = 60_000 )
@@ -325,9 +332,9 @@ public class CountsRotationTest
                 NodeStore.class );
         adversary.disable();
 
-        GraphDatabaseService db = AdversarialPageCacheGraphDatabaseFactory.create( fs, adversary )
-                .newEmbeddedDatabaseBuilder( testDir.databaseDir() )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = AdversarialPageCacheGraphDatabaseFactory.create( fs, adversary )
+                .newEmbeddedDatabaseBuilder( testDir.storeDir() ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         CountDownLatch txStartLatch = new CountDownLatch( 1 );
         CountDownLatch txCommitLatch = new CountDownLatch( 1 );
@@ -362,7 +369,7 @@ public class CountsRotationTest
         adversary.disable();
 
         // shutdown should complete without any problems
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private static void await( CountDownLatch latch )

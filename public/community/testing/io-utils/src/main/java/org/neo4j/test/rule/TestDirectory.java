@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Random;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -63,6 +65,8 @@ import static java.lang.String.format;
 public class TestDirectory extends ExternalResource
 {
     private static final String DEFAULT_DATABASE_DIRECTORY = "neo4j";
+    private static final Path DEFAULT_TX_LOGS_LOCATION = Path.of( "data", "tx-logs" );
+
     /**
      * This value is mixed into the hash string, along with the test name,
      * that we use for uniquely naming test directories.
@@ -198,9 +202,16 @@ public class TestDirectory extends ExternalResource
         return storeLayout;
     }
 
+    public StoreLayout storeLayout( String name )
+    {
+        File storeDirectory = new File( testDirectory, name );
+        createDirectory( storeDirectory );
+        return StoreLayout.of( storeDirectory, createTestStoreLayout( storeDirectory ) );
+    }
+
     public DatabaseLayout databaseLayout()
     {
-        createDirectory( defaultDatabaseLayout.databaseDirectory() );
+        createDirectory( defaultDatabaseLayout );
         return defaultDatabaseLayout;
     }
 
@@ -218,7 +229,14 @@ public class TestDirectory extends ExternalResource
 
     public DatabaseLayout databaseLayout( File storeDir )
     {
-        DatabaseLayout databaseLayout = StoreLayout.of( storeDir ).databaseLayout( DEFAULT_DATABASE_DIRECTORY );
+        DatabaseLayout databaseLayout = StoreLayout.of( storeDir, createTestStoreLayout( storeDir ) ).databaseLayout( DEFAULT_DATABASE_DIRECTORY );
+        createDirectory( databaseLayout );
+        return databaseLayout;
+    }
+
+    public DatabaseLayout databaseLayout( File storeDir, StoreLayoutConfig storeLayoutConfig )
+    {
+        DatabaseLayout databaseLayout = StoreLayout.of( storeDir, storeLayoutConfig ).databaseLayout( DEFAULT_DATABASE_DIRECTORY );
         createDirectory( databaseLayout );
         return databaseLayout;
     }
@@ -226,7 +244,7 @@ public class TestDirectory extends ExternalResource
     public DatabaseLayout databaseLayout( String name )
     {
         DatabaseLayout databaseLayout = storeLayout.databaseLayout( name );
-        createDirectory( databaseLayout.databaseDirectory() );
+        createDirectory( databaseLayout );
         return databaseLayout;
     }
 
@@ -298,7 +316,7 @@ public class TestDirectory extends ExternalResource
             test = "static";
         }
         testDirectory = prepareDirectoryForTest( test );
-        storeLayout = StoreLayout.of( testDirectory );
+        storeLayout = StoreLayout.of( testDirectory, createTestStoreLayout( testDirectory ) );
         defaultDatabaseLayout = storeLayout.databaseLayout( DEFAULT_DATABASE_DIRECTORY );
     }
 
@@ -333,7 +351,7 @@ public class TestDirectory extends ExternalResource
         {
             if ( !fileSystem.fileExists( file ) )
             {
-                fileSystem.create( file ).close();
+                fileSystem.write( file ).close();
             }
         }
         catch ( IOException e )
@@ -342,15 +360,15 @@ public class TestDirectory extends ExternalResource
         }
     }
 
-    private void createDirectory( File databaseDirectory )
+    private void createDirectory( File directory )
     {
         try
         {
-            fileSystem.mkdirs( databaseDirectory );
+            fileSystem.mkdirs( directory );
         }
         catch ( IOException e )
         {
-            throw new UncheckedIOException( "Failed to create directory: " + databaseDirectory, e );
+            throw new UncheckedIOException( "Failed to create directory: " + directory, e );
         }
     }
 
@@ -429,6 +447,11 @@ public class TestDirectory extends ExternalResource
         return testClassBaseFolder;
     }
 
+    private TestDirectoryLayoutConfig createTestStoreLayout( File layoutRoot )
+    {
+        return new TestDirectoryLayoutConfig( layoutRoot );
+    }
+
     private static File locateTarget( Class<?> owningTest )
     {
         try
@@ -445,5 +468,23 @@ public class TestDirectory extends ExternalResource
             // ignored
         }
         return new File( "target" );
+    }
+
+    private class TestDirectoryLayoutConfig implements StoreLayoutConfig
+    {
+        private final File layoutRoot;
+
+        TestDirectoryLayoutConfig( File layoutRoot )
+        {
+            this.layoutRoot = layoutRoot;
+        }
+
+        @Override
+        public Optional<File> getTransactionLogsRootDirectory()
+        {
+            File txLogsRoot = layoutRoot.toPath().resolve( DEFAULT_TX_LOGS_LOCATION ).toFile();
+            TestDirectory.this.createDirectory( txLogsRoot );
+            return Optional.of( txLogsRoot );
+        }
     }
 }

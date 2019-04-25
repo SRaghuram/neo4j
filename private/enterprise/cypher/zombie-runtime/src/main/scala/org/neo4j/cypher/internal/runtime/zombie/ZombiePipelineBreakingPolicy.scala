@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
 object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
 
@@ -15,19 +15,30 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
     lp match {
       // leaf operators
       case _: AllNodesScan |
+           _: NodeByLabelScan |
+           _: NodeIndexSeek |
+           _: NodeUniqueIndexSeek |
+           _: NodeIndexContainsScan |
+           _: NodeIndexScan |
+           _: Input |
            _: Argument // TODO: breaking on argument is often silly. Let's not do that when avoidable.
       => true
 
       // 1 child operators
       case _: Expand |
+           _: UnwindCollection |
            _: Sort
       => true
 
-      case _: ProduceResult
+      case _: ProduceResult |
+           _: Limit |
+           _: Projection |
+           _: Selection
         => false
 
       // 2 child operators
-      case _: Apply
+      case _: Apply |
+           _: NodeHashJoin
       => true
 
       case plan =>

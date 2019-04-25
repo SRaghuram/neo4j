@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,7 +32,7 @@ public class PrepareStoreCopyResponseMarshalTest
         long transactionId = Long.MAX_VALUE;
 
         // when a transaction id is serialised
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( new File[0], LongSets.immutable.empty(), transactionId );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( new File[0], transactionId );
         sendToChannel( prepareStoreCopyResponse, embeddedChannel );
 
         // then it can be deserialised
@@ -50,7 +48,7 @@ public class PrepareStoreCopyResponseMarshalTest
                 new File[]{new File( "File a.txt" ), new File( "file-b" ), new File( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), new File( "" )};
 
         // when
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LongSets.immutable.empty(), 0L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, 0L );
         sendToChannel( prepareStoreCopyResponse, embeddedChannel );
 
         // then it can be deserialised
@@ -68,10 +66,9 @@ public class PrepareStoreCopyResponseMarshalTest
         // given
         File[] files =
                 new File[]{new File( "File a.txt" ), new File( "file-b" ), new File( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), new File( "" )};
-        LongSet indexIds = LongSets.immutable.of( 13 );
 
         // when
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, indexIds, 1L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, 1L );
         sendToChannel( prepareStoreCopyResponse, embeddedChannel );
 
         // then it can be deserialised
@@ -81,7 +78,6 @@ public class PrepareStoreCopyResponseMarshalTest
         {
             assertEquals( 1, Stream.of( readPrepareStoreCopyResponse.getFiles() ).map( File::getName ).filter( f -> f.equals( file.getName() ) ).count() );
         }
-        assertEquals( prepareStoreCopyResponse.getIndexIds(), readPrepareStoreCopyResponse.getIndexIds() );
     }
 
     private static void sendToChannel( PrepareStoreCopyResponse prepareStoreCopyResponse, EmbeddedChannel embeddedChannel )

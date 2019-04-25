@@ -31,28 +31,32 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public abstract class Neo4jTestCase
 {
     private static GraphDatabaseService graphDb;
     private Transaction tx;
+    private static DatabaseManagementService managementService;
 
     @BeforeClass
     public static void setUpDb()
     {
-        graphDb = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        graphDb = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterClass
     public static void tearDownDb()
     {
-        graphDb.shutdown();
+        managementService.shutdown();
     }
 
     @Before

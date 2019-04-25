@@ -13,6 +13,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.function.Predicates;
+
 public interface Protocol<IMPL extends Comparable<IMPL>>
 {
     String category();
@@ -60,10 +62,10 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
 
     enum ApplicationProtocols implements ApplicationProtocol
     {
-        RAFT_1( ApplicationProtocolCategory.RAFT, 1 ),
+        // support for raft V1 was removed in neo4j 4.0
         RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
-        CATCHUP_1( ApplicationProtocolCategory.CATCHUP, 1 ),
-        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, 2 ),
+
+        // support for catchup V1 and V2 was removed in neo4j 4.0
         CATCHUP_3( ApplicationProtocolCategory.CATCHUP, 3 );
 
         private final Integer version;
@@ -90,6 +92,11 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
         public static Optional<ApplicationProtocol> find( ApplicationProtocolCategory category, Integer version )
         {
             return Protocol.find( ApplicationProtocols.values(), category, version, Function.identity() );
+        }
+
+        public static List<ApplicationProtocol> withCategory( ApplicationProtocolCategory category )
+        {
+            return Protocol.filterCategory( ApplicationProtocols.values(), category, Predicates.alwaysTrue() );
         }
 
         public static List<ApplicationProtocol> filterByVersion( ApplicationProtocolCategory category, Predicate<Integer> versionPredicate )

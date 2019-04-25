@@ -15,9 +15,11 @@ import io.airlift.airline.OptionType;
 
 import java.io.File;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "inspect",
@@ -30,7 +32,7 @@ public class InspectCommand implements Runnable
             description = "Target Neo4j database directory",
             title = "DB Directory",
             required = true )
-    private File dbDir;
+    private File storeDir;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
@@ -44,7 +46,7 @@ public class InspectCommand implements Runnable
     public void run()
     {
         System.out.println( format( "Target Neo4j Directory             : %s",
-                (null == dbDir) ? null : dbDir.getAbsolutePath() ) );
+                                    (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
         System.out.println( format( "Database Configuration File        : %s",
                 (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
 
@@ -62,10 +64,11 @@ public class InspectCommand implements Runnable
         try
         {
             System.out.println( "Starting database..." );
-            GraphDatabaseService db = Neo4jDb.newDb( dbDir, dbConfigurationFile );
+            DatabaseManagementService managementService = Neo4jDb.newDb( new File( storeDir, DEFAULT_DATABASE_NAME ), dbConfigurationFile );
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
             System.out.println( metadataProxy.toString() );
-            db.shutdown();
+            managementService.shutdown();
         }
         catch ( Exception e )
         {

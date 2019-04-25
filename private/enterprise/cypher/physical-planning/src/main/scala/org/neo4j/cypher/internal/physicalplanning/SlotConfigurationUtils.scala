@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import java.util.function.ToLongFunction
+
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
 import org.neo4j.cypher.internal.v4_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
@@ -60,7 +62,7 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
     * that given an ExecutionContext returns a long.
     */
-  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType): ExecutionContext => Long =
+  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType): ToLongFunction[ExecutionContext] =
     (slot, returnType) match {
       case (LongSlot(offset, _, _), CTNode | CTRelationship) =>
         (context: ExecutionContext) =>
@@ -120,14 +122,14 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the node id.
     */
-  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot): ExecutionContext => Long =
+  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot): ToLongFunction[ExecutionContext] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTNode)
 
   /**
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the relationship id.
     */
-  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot): ExecutionContext => Long =
+  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot): ToLongFunction[ExecutionContext] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship)
 
   /**

@@ -22,9 +22,9 @@ package org.neo4j.index.internal.gbptree;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.index.internal.gbptree.GBPTree.Monitor;
@@ -63,7 +63,7 @@ class CrashGenerationCleaner
         this.monitor = monitor;
     }
 
-    static long batchSize( long pagesToClean, int threads )
+    private static long batchSize( long pagesToClean, int threads )
     {
         // Batch size at most maxBatchSize, at least minBatchSize and trying to give each thread 100 batches each
         return min( MAX_BATCH_SIZE, max( MIN_BATCH_SIZE, pagesToClean / (100 * threads) ) );
@@ -83,11 +83,12 @@ class CrashGenerationCleaner
         long batchSize = batchSize( pagesToClean, threads );
         AtomicLong nextId = new AtomicLong( lowTreeNodeId );
         AtomicReference<Throwable> error = new AtomicReference<>();
-        AtomicInteger cleanedPointers = new AtomicInteger();
+        LongAdder cleanedPointers = new LongAdder();
+        LongAdder numberOfTreeNodes = new LongAdder();
         CountDownLatch activeThreadLatch = new CountDownLatch( threads );
         for ( int i = 0; i < threads; i++ )
         {
-            executor.submit( cleaner( nextId, batchSize, cleanedPointers, activeThreadLatch, error ) );
+            executor.submit( cleaner( nextId, batchSize, numberOfTreeNodes, cleanedPointers, activeThreadLatch, error ) );
         }
 
         try
@@ -118,11 +119,11 @@ class CrashGenerationCleaner
         }
 
         long endTime = currentTimeMillis();
-        monitor.cleanupFinished( pagesToClean, cleanedPointers.get(), endTime - startTime );
+        monitor.cleanupFinished( pagesToClean, numberOfTreeNodes.sum(), cleanedPointers.sum(), endTime - startTime );
     }
 
-    private Runnable cleaner( AtomicLong nextId, long batchSize, AtomicInteger cleanedPointers, CountDownLatch activeThreadLatch,
-            AtomicReference<Throwable> error )
+    private Runnable cleaner( AtomicLong nextId, long batchSize, LongAdder numberOfTreeNodes, LongAdder cleanedPointers,
+            CountDownLatch activeThreadLatch, AtomicReference<Throwable> error )
     {
         return () ->
         {
@@ -132,16 +133,23 @@ class CrashGenerationCleaner
                 long localNextId;
                 while ( ( localNextId = nextId.getAndAdd( batchSize )) < highTreeNodeId )
                 {
+                    int localNumberOfTreeNodes = 0;
                     for ( int i = 0; i < batchSize && localNextId < highTreeNodeId; i++, localNextId++ )
                     {
                         PageCursorUtil.goTo( cursor, "clean", localNextId );
 
-                        if ( hasCrashedGSPP( treeNode, cursor ) )
+                        boolean isTreeNode = isTreeNode( cursor );
+                        if ( isTreeNode )
                         {
-                            writeCursor.next( cursor.getCurrentPageId() );
-                            cleanTreeNode( treeNode, writeCursor, cleanedPointers );
+                            localNumberOfTreeNodes++;
+                            if ( hasCrashedGSPP( this.treeNode, cursor ) )
+                            {
+                                writeCursor.next( cursor.getCurrentPageId() );
+                                cleanTreeNode( this.treeNode, writeCursor, cleanedPointers );
+                            }
                         }
                     }
+                    numberOfTreeNodes.add( localNumberOfTreeNodes );
 
                     // Check error status after a batch, to reduce volatility overhead.
                     // Is this over thinking things? Perhaps
@@ -164,22 +172,27 @@ class CrashGenerationCleaner
 
     // === Methods about checking if a tree node has crashed pointers ===
 
-    private boolean hasCrashedGSPP( TreeNode<?,?> treeNode, PageCursor cursor ) throws IOException
+    private boolean isTreeNode( PageCursor cursor ) throws IOException
     {
         boolean isTreeNode;
-        int keyCount;
         do
         {
             isTreeNode = TreeNode.nodeType( cursor ) == TreeNode.NODE_TYPE_TREE_NODE;
+        }
+        while ( cursor.shouldRetry() );
+        PageCursorUtil.checkOutOfBounds( cursor );
+        return isTreeNode;
+    }
+
+    private boolean hasCrashedGSPP( TreeNode<?,?> treeNode, PageCursor cursor ) throws IOException
+    {
+        int keyCount;
+        do
+        {
             keyCount = TreeNode.keyCount( cursor );
         }
         while ( cursor.shouldRetry() );
         PageCursorUtil.checkOutOfBounds( cursor );
-
-        if ( !isTreeNode )
-        {
-            return false;
-        }
 
         boolean hasCrashed;
         do
@@ -216,7 +229,7 @@ class CrashGenerationCleaner
 
     // === Methods about actually cleaning a discovered crashed tree node ===
 
-    private void cleanTreeNode( TreeNode<?,?> treeNode, PageCursor cursor, AtomicInteger cleanedPointers )
+    private void cleanTreeNode( TreeNode<?,?> treeNode, PageCursor cursor, LongAdder cleanedPointers )
     {
         cleanCrashedGSPP( cursor, TreeNode.BYTE_POS_SUCCESSOR, cleanedPointers );
         cleanCrashedGSPP( cursor, TreeNode.BYTE_POS_LEFTSIBLING, cleanedPointers );
@@ -232,7 +245,7 @@ class CrashGenerationCleaner
         }
     }
 
-    private void cleanCrashedGSPP( PageCursor cursor, int gsppOffset, AtomicInteger cleanedPointers )
+    private void cleanCrashedGSPP( PageCursor cursor, int gsppOffset, LongAdder cleanedPointers )
     {
         cleanCrashedGSP( cursor, gsppOffset, cleanedPointers );
         cleanCrashedGSP( cursor, gsppOffset + GenerationSafePointer.SIZE, cleanedPointers );
@@ -241,13 +254,13 @@ class CrashGenerationCleaner
     /**
      * NOTE: No shouldRetry is used because cursor is assumed to be a write cursor.
      */
-    private void cleanCrashedGSP( PageCursor cursor, int gspOffset, AtomicInteger cleanedPointers )
+    private void cleanCrashedGSP( PageCursor cursor, int gspOffset, LongAdder cleanedPointers )
     {
         if ( hasCrashedGSP( cursor, gspOffset ) )
         {
             cursor.setOffset( gspOffset );
             GenerationSafePointer.clean( cursor );
-            cleanedPointers.incrementAndGet();
+            cleanedPointers.increment();
         }
     }
 

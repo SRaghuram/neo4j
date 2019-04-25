@@ -109,34 +109,14 @@ public enum ProfilerType
 
     public Optional<SecondaryRecordingCreator> maybeSecondaryRecordingCreator()
     {
-        if ( hasSecondaryRecordingCreator() )
+        if ( hasSecondaryRecordingCreator() && missingSecondaryEnvironmentVariables().isEmpty() )
         {
-            List<String> missingSecondaryEnvironmentVariables = missingSecondaryEnvironmentVariables();
-            if ( !missingSecondaryEnvironmentVariables.isEmpty() )
-            {
-                String sorryMessage = "-----------------------------------------------------------------------------------------------------------\n" +
-                                      "-----------------------------------  NO SECONDARY RECORDINGS FOR YOU  -------------------------------------\n" +
-                                      "-----------------------------------------------------------------------------------------------------------\n" +
-                                      "Sorry, I ('" + name() + "' profiler) am unable to generate " + secondaryRecordings + " from my profiler recordings\n" +
-                                      "You are missing some environment variables that I need: " + missingSecondaryEnvironmentVariables + "\n" +
-                                      "-----------------------------------------------------------------------------------------------------------";
-                System.out.println( sorryMessage );
-                return Optional.empty();
-            }
-            else
-            {
-                return Optional.of( secondaryRecordingCreator );
-            }
+            return Optional.of( secondaryRecordingCreator );
         }
         else
         {
             return Optional.empty();
         }
-    }
-
-    public boolean isSupportedRecordingType( RecordingType recordingType )
-    {
-        return (null != primaryRecording && primaryRecording.equals( recordingType )) || secondaryRecordings.contains( recordingType );
     }
 
     public void assertEnvironmentVariablesPresent( boolean errorOnMissingSecondaryEnvironmentVariables )
@@ -158,6 +138,16 @@ public enum ProfilerType
                                                 secondaryRecordingCreator.requiredEnvironmentVariables(),
                                                 missingEnvironmentVariables,
                                                 missingSecondaryEnvironmentVariables ) );
+        }
+        else if ( !missingSecondaryEnvironmentVariables.isEmpty() )
+        {
+            String sorryMessage = "-----------------------------------------------------------------------------------------------------------\n" +
+                                  "-----------------------------------  NO SECONDARY RECORDINGS FOR YOU  -------------------------------------\n" +
+                                  "-----------------------------------------------------------------------------------------------------------\n" +
+                                  "Sorry, I ('" + name() + "' profiler) am unable to generate " + secondaryRecordings + " from my profiler recordings\n" +
+                                  "You are missing some environment variables that I need: " + missingSecondaryEnvironmentVariables + "\n" +
+                                  "-----------------------------------------------------------------------------------------------------------\n";
+            System.out.println( sorryMessage );
         }
     }
 
@@ -203,14 +193,70 @@ public enum ProfilerType
         return InternalProfiler.class.isAssignableFrom( profiler );
     }
 
+    public static ProfilerType typeOf( Profiler profiler )
+    {
+        List<ProfilerType> matchedProfilerTypes = Arrays.stream( ProfilerType.values() )
+                                                        .filter( profilerType -> profilerType.profiler.equals( profiler.getClass() ) )
+                                                        .collect( toList() );
+        if ( matchedProfilerTypes.size() != 1 )
+        {
+            throw new RuntimeException( "Expected exactly one profiler type to match profiler: " + profiler.getClass().getName() + "\n" +
+                                        "Found: " + matchedProfilerTypes );
+        }
+        else
+        {
+            return matchedProfilerTypes.get( 0 );
+        }
+    }
+
+    public static void assertInternal( List<ProfilerType> profilerTypes )
+    {
+        List<ProfilerType> nonInternalProfilerTypes = profilerTypes.stream()
+                                                                   .filter( profilerType -> !profilerType.isInternal() )
+                                                                   .collect( toList() );
+
+        if ( !nonInternalProfilerTypes.isEmpty() )
+        {
+            throw new RuntimeException( "Expected internal profilers only, but received non-internal profilers : " + nonInternalProfilerTypes + "\n" +
+                                        "Complete list of valid internal profilers         : " + ProfilerType.internalProfilers() + "\n" +
+                                        "Complete list of valid external profilers         : " + ProfilerType.externalProfilers() );
+        }
+    }
+
+    public static List<ExternalProfiler> createExternalProfilers( List<ProfilerType> profilerTypes )
+    {
+        return externalProfilers( profilerTypes ).stream()
+                                                 .map( ProfilerType::create )
+                                                 .map( profiler -> (ExternalProfiler) profiler )
+                                                 .collect( toList() );
+    }
+
+    public static List<InternalProfiler> createInternalProfilers( List<ProfilerType> profilerTypes )
+    {
+        return internalProfilers( profilerTypes ).stream()
+                                                 .map( ProfilerType::create )
+                                                 .map( profiler -> (InternalProfiler) profiler )
+                                                 .collect( toList() );
+    }
+
     public static List<ProfilerType> internalProfilers()
     {
-        return Arrays.stream( ProfilerType.values() ).filter( ProfilerType::isInternal ).collect( toList() );
+        return internalProfilers( Arrays.asList( ProfilerType.values() ) );
+    }
+
+    public static List<ProfilerType> internalProfilers( List<ProfilerType> profilerTypes )
+    {
+        return profilerTypes.stream().filter( ProfilerType::isInternal ).collect( toList() );
     }
 
     public static List<ProfilerType> externalProfilers()
     {
-        return Arrays.stream( ProfilerType.values() ).filter( ProfilerType::isExternal ).collect( toList() );
+        return externalProfilers( Arrays.asList( ProfilerType.values() ) );
+    }
+
+    public static List<ProfilerType> externalProfilers( List<ProfilerType> profilerTypes )
+    {
+        return profilerTypes.stream().filter( ProfilerType::isExternal ).collect( toList() );
     }
 
     public static String serializeProfilers( List<ProfilerType> profilerTypes )

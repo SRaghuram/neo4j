@@ -6,7 +6,6 @@
 package org.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +23,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;

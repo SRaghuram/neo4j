@@ -5,23 +5,26 @@
  */
 package org.neo4j.multidatabase.stresstest.commands;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.kernel.database.DatabaseId;
 
 public abstract class DatabaseManagerCommand
 {
-    private final DatabaseManager manager;
-    private final String databaseName;
+    private final DatabaseManager<?> manager;
+    private final DatabaseId databaseId;
 
-    DatabaseManagerCommand( DatabaseManager manager, String databaseName )
+    DatabaseManagerCommand( DatabaseManager<?> manager, DatabaseId databaseId )
     {
         this.manager = manager;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
-    public final void execute()
+    public final void execute() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        execute( manager, databaseName );
+        execute( manager, databaseId );
     }
 
-    abstract void execute( DatabaseManager manager, String databaseName );
+    abstract void execute( DatabaseManager<?> manager, DatabaseId databaseId ) throws DatabaseExistsException, DatabaseNotFoundException;
 }

@@ -5,20 +5,19 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.LeaderCanWrite;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.state.machines.id.IdGenerationException;
 import com.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.Topology;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
@@ -30,7 +29,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,6 +49,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
@@ -61,6 +60,8 @@ import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -91,7 +92,6 @@ public class Cluster
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final String listenAddress;
     private final String advertisedAddress;
-    private final Set<String> dbNames;
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
@@ -103,16 +103,6 @@ public class Cluster
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard )
-    {
-        this( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
-                instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, Collections.singleton( CausalClusteringSettings.database.getDefaultValue() ) );
-    }
-
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
-            Map<String,String> coreParams,
-            Map<String,IntFunction<String>> instanceCoreParams,
-            Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard, Set<String> dbNames )
     {
         this.discoveryServiceFactory = discoveryServiceFactory;
         this.parentDir = parentDir;
@@ -126,7 +116,6 @@ public class Cluster
         List<AdvertisedSocketAddress> initialHosts = initialHosts( noOfCoreMembers );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
-        this.dbNames = dbNames;
     }
 
     private List<AdvertisedSocketAddress> initialHosts( int noOfCoreMembers )
@@ -354,15 +343,7 @@ public class Cluster
         return firstOrNull( readReplicas.values() );
     }
 
-    private void ensureDBName( String dbName ) throws IllegalArgumentException
-    {
-        if ( !dbNames.contains( dbName ) )
-        {
-            throw new IllegalArgumentException( "Database name " + dbName + " does not exist in this cluster." );
-        }
-    }
-
-    public CoreClusterMember getMemberWithRole( Role role )
+    private CoreClusterMember getMemberWithRole( Role role )
     {
         return getMemberWithAnyRole( role );
     }
@@ -372,31 +353,30 @@ public class Cluster
         return getAllMembersWithAnyRole( role );
     }
 
-    private CoreClusterMember getMemberWithRole( String dbName, Role role )
+    private CoreClusterMember getMemberWithRole( DatabaseId databaseId, Role role )
     {
-        return getMemberWithAnyRole( dbName, role );
+        return getMemberWithAnyRole( databaseId, role );
     }
 
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        String dbName = CausalClusteringSettings.database.getDefaultValue();
-        return getMemberWithAnyRole( dbName, roles );
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        return getMemberWithAnyRole( databaseId, roles );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
     {
-        String dbName = CausalClusteringSettings.database.getDefaultValue();
-        return getAllMembersWithAnyRole( dbName, roles );
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        return getAllMembersWithAnyRole( databaseId, roles );
     }
 
-    public CoreClusterMember getMemberWithAnyRole( String dbName, Role... roles )
+    public CoreClusterMember getMemberWithAnyRole( DatabaseId databaseId, Role... roles )
     {
-        return getAllMembersWithAnyRole( dbName, roles ).stream().findFirst().orElse( null );
+        return getAllMembersWithAnyRole( databaseId, roles ).stream().findFirst().orElse( null );
     }
 
-    private List<CoreClusterMember> getAllMembersWithAnyRole( String dbName, Role... roles )
+    private List<CoreClusterMember> getAllMembersWithAnyRole( DatabaseId databaseId, Role... roles )
     {
-        ensureDBName( dbName );
         Set<Role> roleSet = Arrays.stream( roles ).collect( toSet() );
 
         List<CoreClusterMember> list = new ArrayList<>();
@@ -408,9 +388,9 @@ public class Cluster
                 continue;
             }
 
-            if ( m.dbName().equals( dbName ) )
+            if ( m.databaseId().equals( databaseId ) )
             {
-                if ( roleSet.contains( database.getRole() ) )
+                if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
                 {
                     list.add( m );
                 }
@@ -419,24 +399,34 @@ public class Cluster
         return list;
     }
 
+    private static Role getCurrentDatabaseRole( CoreGraphDatabase database )
+    {
+        return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+    }
+
     public CoreClusterMember awaitLeader() throws TimeoutException
     {
         return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 
-    public CoreClusterMember awaitLeader( String dbName ) throws TimeoutException
+    public CoreClusterMember awaitLeader( DatabaseId databaseId ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( dbName, Role.LEADER, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return awaitCoreMemberWithRole( databaseId, Role.LEADER, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 
-    public CoreClusterMember awaitLeader( String dbName, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    public CoreClusterMember awaitLeader( DatabaseId databaseId, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( dbName, Role.LEADER, timeout, timeUnit );
+        return awaitCoreMemberWithRole( databaseId, Role.LEADER, timeout, timeUnit );
     }
 
     public CoreClusterMember awaitLeader( long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
         return awaitCoreMemberWithRole( Role.LEADER, timeout, timeUnit );
+    }
+
+    public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException
+    {
+        return awaitCoreMemberWithRole( role, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 
     public CoreClusterMember awaitCoreMemberWithRole( Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -445,19 +435,21 @@ public class Cluster
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember awaitCoreMemberWithRole( String dbName, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    private CoreClusterMember awaitCoreMemberWithRole( DatabaseId databaseId, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        return await( () -> getMemberWithRole( dbName, role ), notNull(), timeout, timeUnit );
+        return await( () -> getMemberWithRole( databaseId, role ), notNull(), timeout, timeUnit );
     }
 
-    public int numberOfCoreMembersReportedByTopology()
+    public int numberOfCoreMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( TopologyService::localCoreServers );
+        DatabaseId databaseId = new DatabaseId( databaseName );
+        return numberOfMembersReportedByCoreTopology( service -> service.coreTopologyForDatabase( databaseId ) );
     }
 
-    public int numberOfReadReplicaMembersReportedByTopology()
+    public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopology( TopologyService::localReadReplicas );
+        DatabaseId databaseId = new DatabaseId( databaseName );
+        return numberOfMembersReportedByCoreTopology( service -> service.readReplicaTopologyForDatabase( databaseId ) );
     }
 
     private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology> topologySelector )
@@ -482,29 +474,28 @@ public class Cluster
      */
     public CoreClusterMember coreTx( BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
     {
-        String dbName = CausalClusteringSettings.database.getDefaultValue();
-        return coreTx( dbName, op );
+        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        return coreTx( databaseId, op );
     }
 
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( String dbName, BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
+    public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
     {
-        ensureDBName( dbName );
-        return leaderTx( dbName, op, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
 
     /**
      * Perform a transaction against the leader of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember leaderTx( String dbName, BiConsumer<CoreGraphDatabase,Transaction> op, int timeout, TimeUnit timeUnit )
+    private CoreClusterMember leaderTx( DatabaseId databaseId, BiConsumer<CoreGraphDatabase,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
         {
-            CoreClusterMember member = awaitLeader( dbName, timeout, timeUnit );
+            CoreClusterMember member = awaitLeader( databaseId, timeout, timeUnit );
             CoreGraphDatabase db = member.database();
             if ( db == null )
             {
@@ -784,5 +775,10 @@ public class Cluster
         }
         int ordinal = ThreadLocalRandom.current().nextInt( list.size() );
         return Optional.of( list.get( ordinal ) );
+    }
+
+    public Stream<ClusterMember<? extends GraphDatabaseFacade>> allMembers()
+    {
+        return Stream.concat( coreMembers.values().stream(), readReplicas.values().stream() );
     }
 }

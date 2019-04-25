@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.apache.shiro.authc.AuthenticationToken;
 
 import java.nio.ByteBuffer;

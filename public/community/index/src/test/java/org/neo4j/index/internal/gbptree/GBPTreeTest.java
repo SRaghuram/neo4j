@@ -19,6 +19,7 @@
  */
 package org.neo4j.index.internal.gbptree;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hamcrest.CoreMatchers;
@@ -55,7 +56,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.Exceptions;
@@ -83,7 +83,6 @@ import org.neo4j.test.extension.pagecache.PageCacheSupportExtension;
 import org.neo4j.test.rule.PageCacheConfig;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.util.FeatureToggles;
 
 import static java.lang.Long.MAX_VALUE;
 import static java.time.Duration.ofSeconds;
@@ -330,14 +329,13 @@ class GBPTreeTest
         {
             MutableLong fromInclusive = new MutableLong( 0L );
             MutableLong toExclusive = new MutableLong( 200L );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( fromInclusive, toExclusive ) )
+            try ( Seeker<MutableLong,MutableLong> seek = index.seek( fromInclusive, toExclusive ) )
             {
                 int i = 0;
                 while ( seek.next() )
                 {
-                    Hit<MutableLong,MutableLong> hit = seek.get();
-                    assertEquals( hit.key().getValue(), expectedData.get( i ) );
-                    assertEquals( hit.value().getValue(), expectedData.get( i ) );
+                    assertEquals( seek.key().getValue(), expectedData.get( i ) );
+                    assertEquals( seek.value().getValue(), expectedData.get( i ) );
                     i++;
                 }
             }
@@ -370,14 +368,26 @@ class GBPTreeTest
         // GIVEN
         try ( GBPTree<MutableLong,MutableLong> index = index().build() )
         {
-
             // WHEN
-            RawCursor<Hit<MutableLong,MutableLong>,IOException> result =
-                    index.seek( new MutableLong( 0 ), new MutableLong( 10 ) );
+            Seeker<MutableLong,MutableLong> result = index.seek( new MutableLong( 0 ), new MutableLong( 10 ) );
 
             // THEN
             assertFalse( result.next() );
         }
+    }
+
+    @Test
+    void shouldPickUpOpenOptions() throws IOException
+    {
+        // given
+        try ( GBPTree<MutableLong,MutableLong> index = index().with( StandardOpenOption.DELETE_ON_CLOSE ).build() )
+        {
+            // when just closing it with the deletion flag
+            assertTrue( fileSystem.fileExists( indexFile ) );
+        }
+
+        // then
+        assertFalse( fileSystem.fileExists( indexFile ) );
     }
 
     /* Lifecycle tests */
@@ -930,29 +940,6 @@ class GBPTreeTest
         } );
     }
 
-    private PageCache pageCacheWithBarrierInClose( final AtomicBoolean enabled, final Barrier.Control barrier )
-    {
-        return new DelegatingPageCache( createPageCache( 1024 ) )
-        {
-            @Override
-            public PagedFile map( File file, int pageSize, OpenOption... openOptions ) throws IOException
-            {
-                return new DelegatingPagedFile( super.map( file, pageSize, openOptions ) )
-                {
-                    @Override
-                    public void close()
-                    {
-                        if ( enabled.get() )
-                        {
-                            barrier.reached();
-                        }
-                        super.close();
-                    }
-                };
-            }
-        };
-    }
-
     @Test
     void writerShouldLockOutClose()
     {
@@ -1203,34 +1190,6 @@ class GBPTreeTest
         }
     }
 
-    private Callable<List<CleanupJob>> startAndReturnStartedJobs(
-            ControlledRecoveryCleanupWorkCollector collector )
-    {
-        return () ->
-        {
-            try
-            {
-                collector.start();
-            }
-            catch ( Throwable throwable )
-            {
-                throw new RuntimeException( throwable );
-            }
-            return collector.allStartedJobs();
-        };
-    }
-
-    private void assertFailedDueToUnmappedFile( Future<List<CleanupJob>> cleanJob )
-            throws InterruptedException, ExecutionException
-    {
-        for ( CleanupJob job : cleanJob.get() )
-        {
-            assertTrue( job.hasFailed() );
-            assertThat( job.getCause().getMessage(),
-                    allOf( containsString( "File" ), containsString( "unmapped" ) ) );
-        }
-    }
-
     @Test
     void checkpointMustRecognizeFailedCleaning() throws Exception
     {
@@ -1240,10 +1199,10 @@ class GBPTreeTest
         CleanJobControlledMonitor cleanupMonitor = new CleanJobControlledMonitor()
         {
             @Override
-            public void cleanupFinished( long numberOfPagesVisited, long numberOfCleanedCrashPointers,
+            public void cleanupFinished( long numberOfPagesVisited, long numberOfTreeNodes, long numberOfCleanedCrashPointers,
                     long durationMillis )
             {
-                super.cleanupFinished( numberOfPagesVisited, numberOfCleanedCrashPointers, durationMillis );
+                super.cleanupFinished( numberOfPagesVisited, numberOfTreeNodes, numberOfCleanedCrashPointers, durationMillis );
                 throw cleanupException;
             }
         };
@@ -1351,7 +1310,7 @@ class GBPTreeTest
         {
             MutableLong from = new MutableLong( Long.MIN_VALUE );
             MutableLong to = new MutableLong( MAX_VALUE );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( from, to ) )
+            try ( Seeker<MutableLong,MutableLong> seek = index.seek( from, to ) )
             {
                 assertFalse( seek.next() );
             }
@@ -1377,11 +1336,11 @@ class GBPTreeTest
         {
             MutableLong from = new MutableLong( Long.MIN_VALUE );
             MutableLong to = new MutableLong( MAX_VALUE );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( from, to ) )
+            try ( Seeker<MutableLong,MutableLong> seek = index.seek( from, to ) )
             {
                 assertTrue( seek.next() );
-                assertEquals( key, seek.get().key().longValue() );
-                assertEquals( value, seek.get().value().longValue() );
+                assertEquals( key, seek.key().longValue() );
+                assertEquals( value, seek.value().longValue() );
             }
         }
     }
@@ -1615,7 +1574,7 @@ class GBPTreeTest
                 }
             }
 
-            RawCursor<Hit<MutableLong,MutableLong>,IOException> seek =
+            Seeker<MutableLong,MutableLong> seek =
                     tree.seek( new MutableLong( 0 ), new MutableLong( MAX_VALUE ) );
             assertTrue( seek.next() );
             assertTrue( seek.next() );
@@ -1661,7 +1620,9 @@ class GBPTreeTest
         // with an exception.
 
         List<Long> trace = new ArrayList<>();
-        PageCache pageCache = pageCacheWithTrace( trace );
+        MutableBoolean onOffSwitch = new MutableBoolean( true );
+        PageCursorTracer pageCursorTracer = trackingPageCursorTracer( trace, onOffSwitch );
+        PageCache pageCache = pageCacheWithTrace( pageCursorTracer );
 
         // Build a tree with root and two children.
         try ( GBPTree<MutableLong,MutableLong> tree = index( pageCache ).build() )
@@ -1669,6 +1630,9 @@ class GBPTreeTest
             // Insert data until we have a split in root
             treeWithRootSplit( trace, tree );
             long corruptChild = trace.get( 1 );
+
+            // We are not interested in further trace tracking
+            onOffSwitch.setFalse();
 
             // Corrupt the child
             corruptTheChild( pageCache, corruptChild );
@@ -1678,7 +1642,7 @@ class GBPTreeTest
                 TreeInconsistencyException e = assertThrows( TreeInconsistencyException.class, () ->
                 {
                     // when seek end up in this corrupt child we should eventually fail with a tree inconsistency exception
-                    try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
+                    try ( Seeker<MutableLong,MutableLong> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
                     {
                         seek.next();
                     }
@@ -1693,62 +1657,75 @@ class GBPTreeTest
     @Test
     void mustThrowIfStuckInInfiniteRootCatchupMultipleConcurrentSeekers() throws IOException, InterruptedException
     {
-        FeatureToggles.set( TripCountingRootCatchup.class, TripCountingRootCatchup.MAX_TRIP_COUNT_NAME, 10000 );
-        try
-        {
-            List<Long> trace = new ArrayList<>();
-            PageCache pageCache = pageCacheWithTrace( trace );
+        List<Long> trace = new ArrayList<>();
+        MutableBoolean onOffSwitch = new MutableBoolean( true );
+        PageCursorTracer pageCursorTracer = trackingPageCursorTracer( trace, onOffSwitch );
+        PageCache pageCache = pageCacheWithTrace( pageCursorTracer );
 
-            // Build a tree with root and two children.
-            try ( GBPTree<MutableLong,MutableLong> tree = index( pageCache ).build() )
+        // Build a tree with root and two children.
+        try ( GBPTree<MutableLong,MutableLong> tree = index( pageCache ).build() )
+        {
+            // Insert data until we have a split in root
+            treeWithRootSplit( trace, tree );
+            long leftChild = trace.get( 1 );
+            long rightChild = trace.get( 2 );
+
+            // Stop trace tracking because we will soon start pinning pages from different threads
+            onOffSwitch.setFalse();
+
+            // Corrupt the child
+            corruptTheChild( pageCache, leftChild );
+            corruptTheChild( pageCache, rightChild );
+
+            assertTimeout( Duration.ofSeconds( 5 ), () ->
             {
-                // Insert data until we have a split in root
-                treeWithRootSplit( trace, tree );
-                long leftChild = trace.get( 1 );
-                long rightChild = trace.get( 2 );
-
-                // Corrupt the child
-                corruptTheChild( pageCache, leftChild );
-                corruptTheChild( pageCache, rightChild );
-
-                assertTimeout( Duration.ofSeconds( 5 ), () ->
+                // When seek end up in this corrupt child we should eventually fail with a tree inconsistency exception
+                // even if we have multiple seeker that traverse different part of the tree and both get stuck in start from root loop.
+                ExecutorService executor = Executors.newFixedThreadPool( 2 );
+                CountDownLatch go = new CountDownLatch( 2 );
+                Future<Object> execute1 = executor.submit( () ->
                 {
-                    // When seek end up in this corrupt child we should eventually fail with a tree inconsistency exception
-                    // even if we have multiple seeker that traverse different part of the tree and both get stuck in start from root loop.
-                    ExecutorService executor = Executors.newFixedThreadPool( 2 );
-                    CountDownLatch go = new CountDownLatch( 2 );
-                    Future<Object> execute1 = executor.submit( () ->
+                    go.countDown();
+                    go.await();
+                    try ( Seeker<MutableLong,MutableLong> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
                     {
-                        go.countDown();
-                        go.await();
-                        try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
-                        {
-                            seek.next();
-                        }
-                        return null;
-                    } );
-
-                    Future<Object> execute2 = executor.submit( () ->
-                    {
-                        go.countDown();
-                        go.await();
-                        try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = tree
-                                .seek( new MutableLong( MAX_VALUE ), new MutableLong( MAX_VALUE ) ) )
-                        {
-                            seek.next();
-                        }
-                        return null;
-                    } );
-
-                    assertFutureFailsWithTreeInconsistencyException( execute1 );
-                    assertFutureFailsWithTreeInconsistencyException( execute2 );
+                        seek.next();
+                    }
+                    return null;
                 } );
-            }
+
+                Future<Object> execute2 = executor.submit( () ->
+                {
+                    go.countDown();
+                    go.await();
+                    try ( Seeker<MutableLong,MutableLong> seek = tree
+                            .seek( new MutableLong( MAX_VALUE ), new MutableLong( MAX_VALUE ) ) )
+                    {
+                        seek.next();
+                    }
+                    return null;
+                } );
+
+                assertFutureFailsWithTreeInconsistencyException( execute1 );
+                assertFutureFailsWithTreeInconsistencyException( execute2 );
+            } );
         }
-        finally
+    }
+
+    private DefaultPageCursorTracer trackingPageCursorTracer( List<Long> trace, MutableBoolean onOffSwitch )
+    {
+        return new DefaultPageCursorTracer()
         {
-            FeatureToggles.clear( TripCountingRootCatchup.class, TripCountingRootCatchup.MAX_TRIP_COUNT_NAME );
-        }
+            @Override
+            public PinEvent beginPin( boolean writeLock, long filePageId, PageSwapper swapper )
+            {
+                if ( onOffSwitch.isTrue() )
+                {
+                    trace.add( filePageId );
+                }
+                return super.beginPin( writeLock, filePageId, swapper );
+            }
+        };
     }
 
     private void assertFutureFailsWithTreeInconsistencyException( Future<Object> future )
@@ -1791,7 +1768,7 @@ class GBPTreeTest
                 count++;
             }
             trace.clear();
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
+            try ( Seeker<MutableLong,MutableLong> seek = tree.seek( new MutableLong( 0 ), new MutableLong( 0 ) ) )
             {
                 seek.next();
             }
@@ -1799,7 +1776,7 @@ class GBPTreeTest
         while ( trace.size() <= 1 );
 
         trace.clear();
-        try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = tree.seek( new MutableLong( 0 ), new MutableLong( MAX_VALUE ) ) )
+        try ( Seeker<MutableLong,MutableLong> seek = tree.seek( new MutableLong( 0 ), new MutableLong( MAX_VALUE ) ) )
         {
             //noinspection StatementWithEmptyBody
             while ( seek.next() )
@@ -1808,18 +1785,9 @@ class GBPTreeTest
         }
     }
 
-    private PageCache pageCacheWithTrace( List<Long> trace )
+    private PageCache pageCacheWithTrace( PageCursorTracer pageCursorTracer  )
     {
         // A page cache tracer that we can use to see when tree has seen enough updates and to figure out on which page the child sits.Trace( trace );
-        PageCursorTracer pageCursorTracer = new DefaultPageCursorTracer()
-        {
-            @Override
-            public PinEvent beginPin( boolean writeLock, long filePageId, PageSwapper swapper )
-            {
-                trace.add( filePageId );
-                return super.beginPin( writeLock, filePageId, swapper );
-            }
-        };
         PageCursorTracerSupplier pageCursorTracerSupplier = () -> pageCursorTracer;
         return createPageCache( DEFAULT_PAGE_SIZE, pageCursorTracerSupplier );
     }
@@ -1977,7 +1945,7 @@ class GBPTreeTest
         private final Barrier.Control barrier = new Barrier.Control();
 
         @Override
-        public void cleanupFinished( long numberOfPagesVisited, long numberOfCleanedCrashPointers, long durationMillis )
+        public void cleanupFinished( long numberOfPagesVisited, long numberOfTreeNodes, long numberOfCleanedCrashPointers, long durationMillis )
         {
             barrier.reached();
         }
@@ -1997,6 +1965,57 @@ class GBPTreeTest
     private GBPTreeBuilder<MutableLong,MutableLong> index( PageCache pageCache )
     {
         return new GBPTreeBuilder<>( pageCache, indexFile, layout );
+    }
+
+    private PageCache pageCacheWithBarrierInClose( final AtomicBoolean enabled, final Barrier.Control barrier )
+    {
+        return new DelegatingPageCache( createPageCache( 1024 ) )
+        {
+            @Override
+            public PagedFile map( File file, int pageSize, OpenOption... openOptions ) throws IOException
+            {
+                return new DelegatingPagedFile( super.map( file, pageSize, openOptions ) )
+                {
+                    @Override
+                    public void close()
+                    {
+                        if ( enabled.get() )
+                        {
+                            barrier.reached();
+                        }
+                        super.close();
+                    }
+                };
+            }
+        };
+    }
+
+    private Callable<List<CleanupJob>> startAndReturnStartedJobs(
+            ControlledRecoveryCleanupWorkCollector collector )
+    {
+        return () ->
+        {
+            try
+            {
+                collector.start();
+            }
+            catch ( Throwable throwable )
+            {
+                throw new RuntimeException( throwable );
+            }
+            return collector.allStartedJobs();
+        };
+    }
+
+    private void assertFailedDueToUnmappedFile( Future<List<CleanupJob>> cleanJob )
+            throws InterruptedException, ExecutionException
+    {
+        for ( CleanupJob job : cleanJob.get() )
+        {
+            assertTrue( job.hasFailed() );
+            assertThat( job.getCause().getMessage(),
+                    allOf( containsString( "File" ), containsString( "unmapped" ) ) );
+        }
     }
 
     private static class CheckpointControlledMonitor extends Monitor.Adaptor
@@ -2066,7 +2085,7 @@ class GBPTreeTest
         private boolean cleanupCalled;
 
         @Override
-        public void cleanupFinished( long numberOfPagesVisited, long numberOfCleanedCrashPointers, long durationMillis )
+        public void cleanupFinished( long numberOfPagesVisited, long numberOfTreeNodes, long numberOfCleanedCrashPointers, long durationMillis )
         {
             cleanupCalled = true;
         }

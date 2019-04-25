@@ -22,14 +22,13 @@ package org.neo4j.kernel.impl.index.schema;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.values.storable.Value;
 
 public class NativeHitIndexProgressor<KEY extends NativeIndexKey<KEY>, VALUE extends NativeIndexValue> extends NativeIndexProgressor<KEY,VALUE>
 {
-    NativeHitIndexProgressor( RawCursor<Hit<KEY,VALUE>,IOException> seeker, IndexProgressor.EntityValueClient client )
+    NativeHitIndexProgressor( Seeker<KEY,VALUE> seeker, IndexProgressor.EntityValueClient client )
     {
         super( seeker, client );
     }
@@ -41,7 +40,7 @@ public class NativeHitIndexProgressor<KEY extends NativeIndexKey<KEY>, VALUE ext
         {
             while ( seeker.next() )
             {
-                KEY key = seeker.get().key();
+                KEY key = seeker.key();
                 Value[] values = extractValues( key );
                 if ( acceptValue( values ) && client.acceptEntity( key.getEntityId(), Float.NaN, values ) )
                 {

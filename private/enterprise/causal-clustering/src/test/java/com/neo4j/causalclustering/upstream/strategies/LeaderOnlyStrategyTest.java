@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,15 +16,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class LeaderOnlyStrategyTest
+class LeaderOnlyStrategyTest
 {
     @Test
-    public void ignoresSelf() throws UpstreamDatabaseSelectionException
+    void ignoresSelf() throws UpstreamDatabaseSelectionException
     {
         // given
         MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
@@ -46,7 +48,7 @@ public class LeaderOnlyStrategyTest
         leaderOnlyStrategy.inject( topologyServiceNoRetriesStrategy, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamDatabase();
+        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( new DatabaseId( DEFAULT_DATABASE_NAME ) );
 
         // then
         assertTrue( resolved.isPresent() );

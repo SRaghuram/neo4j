@@ -5,7 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.util.TestSupport;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
@@ -15,28 +17,27 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.stream.IntStream;
 
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.micro.data.DataGeneratorTestUtil.assertGraphStatsAreConsistentWithBuilderConfiguration;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
+import static org.neo4j.graphdb.Label.label;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class DataGeneratorDataCharacteristicsIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class DataGeneratorDataCharacteristicsIT
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfig.empty();
 
@@ -47,18 +48,17 @@ public class DataGeneratorDataCharacteristicsIT
     private DataGeneratorConfigBuilder builder;
 
     @BeforeEach
-    public void createBuilder()
+    void createBuilder()
     {
         builder = new DataGeneratorConfigBuilder()
                 .withRngSeed( RNG_SEED );
     }
 
     @Test
-    public void shouldCreateEmptyGraph() throws IOException
+    void shouldCreateEmptyGraph() throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withNeo4jConfig( NEO4J_CONFIG )
@@ -66,17 +66,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateJustNodesBatch() throws IOException
+    void shouldCreateJustNodesBatch() throws IOException
     {
         shouldCreateJustNodes( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateJustNodesTransactional() throws IOException
+    void shouldCreateJustNodesTransactional() throws IOException
     {
         shouldCreateJustNodes( GraphWriter.TRANSACTIONAL );
     }
@@ -84,8 +84,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateJustNodes( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -94,17 +93,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldNotCrashWhenConfiguredToCreateJustRelationshipsBatch() throws IOException
+    void shouldNotCrashWhenConfiguredToCreateJustRelationshipsBatch() throws IOException
     {
         shouldNotCrashWhenConfiguredToCreateJustRelationships( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldNotCrashWhenConfiguredToCreateJustRelationshipsTransactional() throws IOException
+    void shouldNotCrashWhenConfiguredToCreateJustRelationshipsTransactional() throws IOException
     {
         shouldNotCrashWhenConfiguredToCreateJustRelationships( GraphWriter.TRANSACTIONAL );
     }
@@ -112,8 +111,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldNotCrashWhenConfiguredToCreateJustRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -126,17 +124,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateShuffledNodePropertyChainBatch() throws IOException
+    void shouldCreateShuffledNodePropertyChainBatch() throws IOException
     {
         shouldCreateShuffledNodePropertyChain( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateShuffledNodePropertyChainTransactional() throws IOException
+    void shouldCreateShuffledNodePropertyChainTransactional() throws IOException
     {
         shouldCreateShuffledNodePropertyChain( GraphWriter.TRANSACTIONAL );
     }
@@ -144,37 +142,36 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateShuffledNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label" ) )
+                        label( "Label" ) )
                 .withMandatoryNodeConstraints(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ),
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withSchemaIndexes(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ),
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withNodeProperties(
                         new PropertyDefinition( "a", randPropertyFor( INT ).value() ),
                         new PropertyDefinition( "b", randPropertyFor( INT ).value() ),
@@ -191,17 +188,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldOrderedNodePropertyChainBatch() throws IOException
+    void shouldOrderedNodePropertyChainBatch() throws IOException
     {
         shouldOrderedNodePropertyChain( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldOrderedNodePropertyChainTransactional() throws IOException
+    void shouldOrderedNodePropertyChainTransactional() throws IOException
     {
         shouldOrderedNodePropertyChain( GraphWriter.TRANSACTIONAL );
     }
@@ -209,37 +206,36 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldOrderedNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label" ) )
+                        label( "Label" ) )
                 .withMandatoryNodeConstraints(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ),
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withSchemaIndexes(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ),
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withNodeProperties(
                         new PropertyDefinition( "a", randPropertyFor( INT ).value() ),
                         new PropertyDefinition( "b", randPropertyFor( INT ).value() ),
@@ -256,17 +252,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateUniqueConstrainedAndIndexedNodePropertiesBatch() throws IOException
+    void shouldCreateUniqueConstrainedAndIndexedNodePropertiesBatch() throws IOException
     {
         shouldCreateUniqueConstrainedAndIndexedNodeProperties( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateUniqueConstrainedAndIndexedNodePropertiesTransactional() throws IOException
+    void shouldCreateUniqueConstrainedAndIndexedNodePropertiesTransactional() throws IOException
     {
         shouldCreateUniqueConstrainedAndIndexedNodeProperties( GraphWriter.TRANSACTIONAL );
     }
@@ -274,38 +270,37 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateUniqueConstrainedAndIndexedNodeProperties( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label" ) )
+                        label( "Label" ) )
                 .withMandatoryNodeConstraints(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ),
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withUniqueConstraints(
-                        new LabelKeyDefinition( Label.label( "Label" ), "a" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "b" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "c" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "d" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "e" ) )
+                        new LabelKeyDefinition( label( "Label" ), "a" ),
+                        new LabelKeyDefinition( label( "Label" ), "b" ),
+                        new LabelKeyDefinition( label( "Label" ), "c" ),
+                        new LabelKeyDefinition( label( "Label" ), "d" ),
+                        new LabelKeyDefinition( label( "Label" ), "e" ) )
                 .withSchemaIndexes(
-                        new LabelKeyDefinition( Label.label( "Label" ), "f" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "g" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "h" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "i" ),
-                        new LabelKeyDefinition( Label.label( "Label" ), "j" ) )
+                        new LabelKeyDefinition( label( "Label" ), "f" ),
+                        new LabelKeyDefinition( label( "Label" ), "g" ),
+                        new LabelKeyDefinition( label( "Label" ), "h" ),
+                        new LabelKeyDefinition( label( "Label" ), "i" ),
+                        new LabelKeyDefinition( label( "Label" ), "j" ) )
                 .withNodeProperties(
                         new PropertyDefinition( "a", ascPropertyFor( INT ).value() ),
                         new PropertyDefinition( "b", ascPropertyFor( INT ).value() ),
@@ -322,17 +317,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateShuffledRelationshipPropertyChainBatch() throws IOException
+    void shouldCreateShuffledRelationshipPropertyChainBatch() throws IOException
     {
         shouldCreateShuffledRelationshipPropertyChain( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateShuffledRelationshipPropertyChainTransactional() throws IOException
+    void shouldCreateShuffledRelationshipPropertyChainTransactional() throws IOException
     {
         shouldCreateShuffledRelationshipPropertyChain( GraphWriter.TRANSACTIONAL );
     }
@@ -341,7 +336,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -364,17 +359,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateOrderedRelationshipPropertyChainBatch() throws IOException
+    void shouldCreateOrderedRelationshipPropertyChainBatch() throws IOException
     {
         shouldCreateOrderedRelationshipPropertyChain( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateOrderedRelationshipPropertyChainTransactional() throws IOException
+    void shouldCreateOrderedRelationshipPropertyChainTransactional() throws IOException
     {
         shouldCreateOrderedRelationshipPropertyChain( GraphWriter.TRANSACTIONAL );
     }
@@ -382,8 +377,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateOrderedRelationshipPropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -406,17 +400,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateRelationshipsCollocatedByStartNodeBatch() throws IOException
+    void shouldCreateRelationshipsCollocatedByStartNodeBatch() throws IOException
     {
         shouldCreateRelationshipsCollocatedByStartNode( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateRelationshipsCollocatedByStartNodeTransactional() throws IOException
+    void shouldCreateRelationshipsCollocatedByStartNodeTransactional() throws IOException
     {
         shouldCreateRelationshipsCollocatedByStartNode( GraphWriter.TRANSACTIONAL );
     }
@@ -424,8 +418,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsCollocatedByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -436,17 +429,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateRelationshipsScatteredByStartNodeBatch() throws IOException
+    void shouldCreateRelationshipsScatteredByStartNodeBatch() throws IOException
     {
         shouldCreateRelationshipsScatteredByStartNode( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateRelationshipsScatteredByStartNodeTransactional() throws IOException
+    void shouldCreateRelationshipsScatteredByStartNodeTransactional() throws IOException
     {
         shouldCreateRelationshipsScatteredByStartNode( GraphWriter.TRANSACTIONAL );
     }
@@ -454,8 +447,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsScatteredByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -466,17 +458,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateScatteredShuffledLabelsBatch() throws IOException
+    void shouldCreateScatteredShuffledLabelsBatch() throws IOException
     {
         shouldCreateScatteredShuffledLabels( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateScatteredShuffledLabelsTransactional() throws IOException
+    void shouldCreateScatteredShuffledLabelsTransactional() throws IOException
     {
         shouldCreateScatteredShuffledLabels( GraphWriter.TRANSACTIONAL );
     }
@@ -484,40 +476,39 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label1" ),
-                        Label.label( "Label2" ),
-                        Label.label( "Label3" ),
-                        Label.label( "Label4" ),
-                        Label.label( "Label5" ),
-                        Label.label( "Label6" ),
-                        Label.label( "Label7" ),
-                        Label.label( "Label8" ),
-                        Label.label( "Label9" ),
-                        Label.label( "Label10" ) )
+                        label( "Label1" ),
+                        label( "Label2" ),
+                        label( "Label3" ),
+                        label( "Label4" ),
+                        label( "Label5" ),
+                        label( "Label6" ),
+                        label( "Label7" ),
+                        label( "Label8" ),
+                        label( "Label9" ),
+                        label( "Label10" ) )
                 .withLabelOrder( Order.SHUFFLED )
                 .withLabelLocality( LabelLocality.SCATTERED_BY_NODE );
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateScatteredOrderedLabelsBatch() throws IOException
+    void shouldCreateScatteredOrderedLabelsBatch() throws IOException
     {
         shouldCreateScatteredOrderedLabels( GraphWriter.TRANSACTIONAL );
     }
 
     @Test
-    public void shouldCreateScatteredOrderedLabelsTransactional() throws IOException
+    void shouldCreateScatteredOrderedLabelsTransactional() throws IOException
     {
         shouldCreateScatteredOrderedLabels( GraphWriter.TRANSACTIONAL );
     }
@@ -525,40 +516,39 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label1" ),
-                        Label.label( "Label2" ),
-                        Label.label( "Label3" ),
-                        Label.label( "Label4" ),
-                        Label.label( "Label5" ),
-                        Label.label( "Label6" ),
-                        Label.label( "Label7" ),
-                        Label.label( "Label8" ),
-                        Label.label( "Label9" ),
-                        Label.label( "Label10" ) )
+                        label( "Label1" ),
+                        label( "Label2" ),
+                        label( "Label3" ),
+                        label( "Label4" ),
+                        label( "Label5" ),
+                        label( "Label6" ),
+                        label( "Label7" ),
+                        label( "Label8" ),
+                        label( "Label9" ),
+                        label( "Label10" ) )
                 .withLabelOrder( Order.ORDERED )
                 .withLabelLocality( LabelLocality.SCATTERED_BY_NODE );
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateCollocatedOrderedLabelsBatch() throws IOException
+    void shouldCreateCollocatedOrderedLabelsBatch() throws IOException
     {
         shouldCreateCollocatedOrderedLabels( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateCollocatedOrderedLabelsTransactional() throws IOException
+    void shouldCreateCollocatedOrderedLabelsTransactional() throws IOException
     {
         shouldCreateCollocatedOrderedLabels( GraphWriter.TRANSACTIONAL );
     }
@@ -566,40 +556,39 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label1" ),
-                        Label.label( "Label2" ),
-                        Label.label( "Label3" ),
-                        Label.label( "Label4" ),
-                        Label.label( "Label5" ),
-                        Label.label( "Label6" ),
-                        Label.label( "Label7" ),
-                        Label.label( "Label8" ),
-                        Label.label( "Label9" ),
-                        Label.label( "Label10" ) )
+                        label( "Label1" ),
+                        label( "Label2" ),
+                        label( "Label3" ),
+                        label( "Label4" ),
+                        label( "Label5" ),
+                        label( "Label6" ),
+                        label( "Label7" ),
+                        label( "Label8" ),
+                        label( "Label9" ),
+                        label( "Label10" ) )
                 .withLabelOrder( Order.ORDERED )
                 .withLabelLocality( LabelLocality.CO_LOCATED_BY_NODE );
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateCollocatedShuffledLabelsBatch() throws IOException
+    void shouldCreateCollocatedShuffledLabelsBatch() throws IOException
     {
         shouldCreateCollocatedShuffledLabels( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateCollocatedShuffledLabelsTransactional() throws IOException
+    void shouldCreateCollocatedShuffledLabelsTransactional() throws IOException
     {
         shouldCreateCollocatedShuffledLabels( GraphWriter.TRANSACTIONAL );
     }
@@ -607,40 +596,39 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
                 .withNeo4jConfig( NEO4J_CONFIG )
                 .withNodeCount( NODE_COUNT )
                 .withLabels(
-                        Label.label( "Label1" ),
-                        Label.label( "Label2" ),
-                        Label.label( "Label3" ),
-                        Label.label( "Label4" ),
-                        Label.label( "Label5" ),
-                        Label.label( "Label6" ),
-                        Label.label( "Label7" ),
-                        Label.label( "Label8" ),
-                        Label.label( "Label9" ),
-                        Label.label( "Label10" ) )
+                        label( "Label1" ),
+                        label( "Label2" ),
+                        label( "Label3" ),
+                        label( "Label4" ),
+                        label( "Label5" ),
+                        label( "Label6" ),
+                        label( "Label7" ),
+                        label( "Label8" ),
+                        label( "Label9" ),
+                        label( "Label10" ) )
                 .withLabelOrder( Order.SHUFFLED )
                 .withLabelLocality( LabelLocality.CO_LOCATED_BY_NODE );
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateScatteredShuffledRelationshipsBatch() throws IOException
+    void shouldCreateScatteredShuffledRelationshipsBatch() throws IOException
     {
         shouldCreateScatteredShuffledRelationships( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateScatteredShuffledRelationshipsTransactional() throws IOException
+    void shouldCreateScatteredShuffledRelationshipsTransactional() throws IOException
     {
         shouldCreateScatteredShuffledRelationships( GraphWriter.TRANSACTIONAL );
     }
@@ -649,7 +637,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -666,17 +654,17 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
-    public void shouldCreateScatteredOrderedRelationshipsBatch() throws IOException
+    void shouldCreateScatteredOrderedRelationshipsBatch() throws IOException
     {
         shouldCreateScatteredOrderedRelationships( GraphWriter.BATCH );
     }
 
     @Test
-    public void shouldCreateScatteredOrderedRelationshipsTransactional() throws IOException
+    void shouldCreateScatteredOrderedRelationshipsTransactional() throws IOException
     {
         shouldCreateScatteredOrderedRelationships( GraphWriter.TRANSACTIONAL );
     }
@@ -684,8 +672,7 @@ public class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -702,6 +689,6 @@ public class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( storeDir, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 }

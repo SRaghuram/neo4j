@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -53,9 +52,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
             throw new DatabaseShutdownException( "Abort store-copied store recovery due to database shutdown" );
         }
 
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( config, pageCache, fs, NullLogService.getInstance(), databaseLayout );
-        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( dependencies );
+        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance() );
         Optional<String> storeVersion = storeVersionCheck.storeVersion();
         if ( storeVersion.isPresent() )
         {

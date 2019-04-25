@@ -13,28 +13,30 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Sent from discovery service to this Neo4J instance
  */
 public class ClusterIdDirectoryMessage
 {
     public static final ClusterIdDirectoryMessage EMPTY = new ClusterIdDirectoryMessage( Collections.emptyMap() );
-    private final Map<String,ClusterId> data;
+    private final Map<DatabaseId,ClusterId> data;
 
-    public ClusterIdDirectoryMessage( LWWMap<String,ClusterId> data )
+    public ClusterIdDirectoryMessage( LWWMap<DatabaseId,ClusterId> data )
     {
         this.data = data.getEntries();
     }
 
-    public ClusterIdDirectoryMessage( Map<String,ClusterId> data )
+    public ClusterIdDirectoryMessage( Map<DatabaseId,ClusterId> data )
     {
         this.data = Collections.unmodifiableMap( data );
     }
 
     @Nullable
-    public ClusterId get( String database )
+    public ClusterId get( DatabaseId databaseId )
     {
-        return data.get( database );
+        return data.get( databaseId );
     }
 
     @Override

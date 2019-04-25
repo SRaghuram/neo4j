@@ -23,28 +23,32 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PropertyTransactionStateTest
 {
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp()
     {
-        db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
     public void shutDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test

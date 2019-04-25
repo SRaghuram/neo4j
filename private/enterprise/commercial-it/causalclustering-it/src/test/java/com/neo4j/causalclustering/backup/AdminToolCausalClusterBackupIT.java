@@ -23,6 +23,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -72,7 +73,7 @@ class AdminToolCausalClusterBackupIT
         File backupDir = testDirectory.directory( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
-        cluster.coreTx( this::createSomeData );
+        cluster.coreTx( AdminToolCausalClusterBackupIT::createSomeData );
 
         int exitCode = runBackupToolFromSameJvm( testDir,
                 "--from=" + backupAddress,
@@ -82,11 +83,11 @@ class AdminToolCausalClusterBackupIT
         assertEquals( 0, exitCode );
 
         DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.database() );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupDir, DEFAULT_DATABASE_NAME ), tempDbConfig() );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupDir, DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 
-    private void createSomeData( GraphDatabaseService db, Transaction tx )
+    private static void createSomeData( GraphDatabaseService db, Transaction tx )
     {
         Node node1 = db.createNode( label( "Person" ) );
         node1.setProperty( "id", 1 );
@@ -111,7 +112,7 @@ class AdminToolCausalClusterBackupIT
         if ( SystemUtils.IS_OS_WINDOWS )
         {
             // ':' is an illegal file name character on Windows, so turn it into '_'
-            name = name.replaceAll( ":", "_" );
+            name = name.replace( ':', '_' );
         }
         return name;
     }

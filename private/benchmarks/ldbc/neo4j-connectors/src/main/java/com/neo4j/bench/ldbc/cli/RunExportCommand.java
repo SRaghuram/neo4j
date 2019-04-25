@@ -34,6 +34,7 @@ import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Metrics;
 import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
@@ -524,7 +525,7 @@ public class RunExportCommand implements Runnable
             System.out.println( "Merged Neo4j config:\n" + neo4jConfig.toString() );
 
             Path mergedNeo4jConfigPath = new File( resultsDir, "merged-neo4j.conf" ).toPath();
-            neo4jConfig.writeAsProperties( mergedNeo4jConfigPath );
+            neo4jConfig.writeToFile( mergedNeo4jConfigPath );
             System.out.println( "Merged Neo4j config file written into: " + mergedNeo4jConfigPath.toString() );
 
             Map<String,String> benchmarkParams = new HashMap<>();
@@ -832,7 +833,7 @@ public class RunExportCommand implements Runnable
 
         for ( ExternalProfiler profiler : profilers )
         {
-            List<String> profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark );
+            List<String> profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
             profilerJvmArgs.stream()
                            .filter( arg -> !jvmArgs.contains( arg ) )
                            .forEach( jvmArgs::add );
@@ -842,7 +843,7 @@ public class RunExportCommand implements Runnable
         List<String> jvmInvokeArgs = new ArrayList<>();
         for ( ExternalProfiler profiler : profilers )
         {
-            List<String> profilerJvmInvokeArgs = profiler.jvmInvokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark );
+            List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
             jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
         }
 

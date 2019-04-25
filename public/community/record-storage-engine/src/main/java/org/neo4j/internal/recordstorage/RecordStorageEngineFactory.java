@@ -22,13 +22,11 @@ package org.neo4j.internal.recordstorage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.common.DependencyResolver;
-import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
-import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -43,6 +41,7 @@ import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.storemigration.IndexProviderMigrator;
 import org.neo4j.kernel.impl.storemigration.RecordStorageMigrator;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersion;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
@@ -72,14 +71,10 @@ import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForS
 public class RecordStorageEngineFactory implements StorageEngineFactory
 {
     @Override
-    public StoreVersionCheck versionCheck( DependencyResolver dependencyResolver )
+    public StoreVersionCheck versionCheck( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache,
+            LogService logService )
     {
-        return new RecordStoreVersionCheck(
-                dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( DatabaseLayout.class ),
-                resolveLogProvider( dependencyResolver ),
-                dependencyResolver.resolveDependency( Config.class ) );
+        return new RecordStoreVersionCheck( fs, pageCache, databaseLayout, logService.getInternalLogProvider(), config );
     }
 
     @Override
@@ -89,53 +84,32 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
     }
 
     @Override
-    public StoreMigrationParticipant migrationParticipant( DependencyResolver dependencyResolver )
+    public List<StoreMigrationParticipant> migrationParticipants( FileSystemAbstraction fs, Config config, PageCache pageCache,
+            JobScheduler jobScheduler, LogService logService )
     {
-        return new RecordStorageMigrator(
-                dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( Config.class ),
-                dependencyResolver.resolveDependency( LogService.class ),
-                dependencyResolver.resolveDependency( JobScheduler.class ) );
+        RecordStorageMigrator recordStorageMigrator = new RecordStorageMigrator( fs, pageCache, config, logService, jobScheduler );
+        IndexProviderMigrator indexProviderMigrator = new IndexProviderMigrator( fs, config, pageCache, logService );
+        // Make sure that we migrate the store before we update the schema store with index providers.
+        return Arrays.asList( recordStorageMigrator, indexProviderMigrator );
     }
 
     @Override
-    public StorageEngine instantiate( DependencyResolver dependencyResolver, DependencySatisfier dependencySatisfier )
+    public StorageEngine instantiate( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, TokenHolders tokenHolders,
+            SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, LockService lockService, IdGeneratorFactory idGeneratorFactory,
+            IdController idController, DatabaseHealth databaseHealth, VersionContextSupplier versionContextSupplier, LogProvider logProvider )
     {
-        RecordStorageEngine storageEngine = new RecordStorageEngine(
-                dependencyResolver.resolveDependency( DatabaseLayout.class ),
-                dependencyResolver.resolveDependency( Config.class ),
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
-                resolveLogProvider( dependencyResolver ),
-                dependencyResolver.resolveDependency( TokenHolders.class ),
-                dependencyResolver.resolveDependency( SchemaState.class ),
-                dependencyResolver.resolveDependency( ConstraintRuleAccessor.class ),
-                dependencyResolver.resolveDependency( LockService.class ),
-                dependencyResolver.resolveDependency( DatabaseHealth.class ),
-                dependencyResolver.resolveDependency( IdGeneratorFactory.class ),
-                dependencyResolver.resolveDependency( IdController.class ),
-                dependencyResolver.resolveDependency( VersionContextSupplier.class ) );
-
-        // We pretend that the storage engine abstract hides all details within it. Whereas that's mostly
-        // true it's not entirely true for the time being. As long as we need this call below, which
-        // makes available one or more internal things to the outside world, there are leaks to plug.
-        storageEngine.satisfyDependencies( dependencySatisfier );
-
-        return storageEngine;
+        return new RecordStorageEngine( databaseLayout, config, pageCache, fs, logProvider,
+                tokenHolders, schemaState, constraintSemantics, lockService, databaseHealth, idGeneratorFactory, idController, versionContextSupplier );
     }
 
     @Override
-    public ReadableStorageEngine instantiateReadable( DependencyResolver dependencyResolver )
+    public ReadableStorageEngine instantiateReadable( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache,
+            LogProvider logProvider )
     {
-        return new ReadableRecordStorageEngine(
-                dependencyResolver.resolveDependency( DatabaseLayout.class ),
-                dependencyResolver.resolveDependency( Config.class ),
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
-                dependencyResolver.resolveDependency( LogService.class ).getInternalLogProvider() );
+        return new ReadableRecordStorageEngine( databaseLayout, config, pageCache, fs, logProvider );
     }
 
+    @Override
     public List<File> listStorageFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
         if ( !fileSystem.fileExists( databaseLayout.file( META_DATA.getDatabaseFile() ).findFirst().get() ) )
@@ -152,61 +126,35 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
     }
 
     @Override
-    public boolean storageExists( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout )
+    public boolean storageExists( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache )
     {
         return NeoStores.isStorePresent( pageCache, databaseLayout );
     }
 
     @Override
-    public TransactionIdStore readOnlyTransactionIdStore( DependencyResolver dependencyResolver ) throws IOException
+    public TransactionIdStore readOnlyTransactionIdStore( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        return new ReadOnlyTransactionIdStore(
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( DatabaseLayout.class ) );
+        return new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
     }
 
     @Override
-    public LogVersionRepository readOnlyLogVersionRepository( DependencyResolver dependencyResolver ) throws IOException
+    public LogVersionRepository readOnlyLogVersionRepository( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        return new ReadOnlyLogVersionRepository(
-                dependencyResolver.resolveDependency( PageCache.class ),
-                dependencyResolver.resolveDependency( DatabaseLayout.class ) );
+        return new ReadOnlyLogVersionRepository( pageCache, databaseLayout );
     }
 
     @Override
-    public TransactionMetaDataStore transactionMetaDataStore( DependencyResolver dependencyResolver )
+    public TransactionMetaDataStore transactionMetaDataStore( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache )
     {
-        DatabaseLayout databaseLayout = dependencyResolver.resolveDependency( DatabaseLayout.class );
-        FileSystemAbstraction fs = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        PageCache pageCache = dependencyResolver.resolveDependency( PageCache.class );
-        Config config = dependencyResolver.resolveDependency( Config.class );
-        NullLogProvider logProvider = NullLogProvider.getInstance();
-
-        RecordFormats recordFormats = selectForStoreOrConfig( Config.defaults(), databaseLayout, fs, pageCache, logProvider );
-        return new StoreFactory( databaseLayout, config, new DefaultIdGeneratorFactory( fs ), pageCache, fs, recordFormats, logProvider )
+        RecordFormats recordFormats = selectForStoreOrConfig( Config.defaults(), databaseLayout, fs, pageCache, NullLogProvider.getInstance() );
+        return new StoreFactory( databaseLayout, config, new DefaultIdGeneratorFactory( fs ), pageCache, fs, recordFormats, NullLogProvider.getInstance() )
                 .openNeoStores( META_DATA ).getMetaDataStore();
     }
 
     @Override
-    public StoreId storeId( DependencyResolver dependencyResolver ) throws IOException
+    public StoreId storeId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        DatabaseLayout databaseLayout = dependencyResolver.resolveDependency( DatabaseLayout.class );
-        PageCache pageCache = dependencyResolver.resolveDependency( PageCache.class );
-        FileSystemAbstraction fs = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-
         File neoStoreFile = databaseLayout.metadataStore();
         return MetaDataStore.getStoreId( pageCache, neoStoreFile );
-    }
-
-    private LogProvider resolveLogProvider( DependencyResolver dependencyResolver )
-    {
-        try
-        {
-            return dependencyResolver.resolveDependency( LogService.class ).getInternalLogProvider();
-        }
-        catch ( UnsatisfiedDependencyException e )
-        {
-            return dependencyResolver.resolveDependency( LogProvider.class );
-        }
     }
 }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.transaction.stats;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,9 +15,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -27,6 +30,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialGlobalTransactionStatsIT
@@ -35,26 +39,28 @@ class CommercialGlobalTransactionStatsIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
-    void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException
+    void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException, DatabaseExistsException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         String secondDb = "second";
-        DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).getDatabaseFacade();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
+        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( new DatabaseId( secondDb ) ).databaseFacade();
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
         assertEquals( 0, globalTransactionStats.getNumberOfActiveTransactions() );
@@ -82,7 +88,7 @@ class CommercialGlobalTransactionStatsIT
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

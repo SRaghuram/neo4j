@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -41,6 +42,7 @@ import org.neo4j.kernel.api.index.IndexProvider;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.impl.index.schema.AbstractIndexProviderFactory;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
@@ -48,17 +50,18 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryExtension;
 import org.neo4j.storageengine.api.StorageIndexReference;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterators.asUniqueSet;
+import static org.neo4j.kernel.api.impl.schema.LuceneIndexProvider.DESCRIPTOR;
 import static org.neo4j.kernel.api.impl.schema.LuceneIndexProvider.defaultDirectoryStructure;
-import static org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
 class LuceneIndexRecoveryIT
@@ -70,6 +73,7 @@ class LuceneIndexRecoveryIT
     private EphemeralFileSystemAbstraction fs;
     private GraphDatabaseAPI db;
     private DirectoryFactory directoryFactory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void before()
@@ -82,7 +86,7 @@ class LuceneIndexRecoveryIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         directoryFactory.close();
     }
@@ -96,12 +100,12 @@ class LuceneIndexRecoveryIT
         IndexDefinition index = createIndex( myLabel );
         waitForIndex( index );
 
-        long nodeId = createNode( myLabel, 12 );
+        long nodeId = createNode( myLabel, "12" );
         try ( Transaction ignored = db.beginTx() )
         {
             assertNotNull( db.getNodeById( nodeId ) );
         }
-        assertEquals( 1, doIndexLookup( myLabel, 12 ).size() );
+        assertEquals( 1, doIndexLookup( myLabel, "12" ).size() );
 
         // And Given
         killDb();
@@ -114,7 +118,7 @@ class LuceneIndexRecoveryIT
         {
             assertNotNull( db.getNodeById( nodeId ) );
         }
-        assertEquals( 1, doIndexLookup( myLabel, 12 ).size() );
+        assertEquals( 1, doIndexLookup( myLabel, "12" ).size() );
     }
 
     @Test
@@ -126,10 +130,10 @@ class LuceneIndexRecoveryIT
         IndexDefinition indexDefinition = createIndex( myLabel );
         waitForIndex( indexDefinition );
 
-        long node = createNode( myLabel, 12 );
+        long node = createNode( myLabel, "12" );
         rotateLogsAndCheckPoint();
 
-        updateNode( node, 13 );
+        updateNode( node, "13" );
 
         // And Given
         killDb();
@@ -138,8 +142,8 @@ class LuceneIndexRecoveryIT
         startDb( createLuceneIndexFactory() );
 
         // Then
-        assertEquals( 0, doIndexLookup( myLabel, 12 ).size() );
-        assertEquals( 1, doIndexLookup( myLabel, 13 ).size() );
+        assertEquals( 0, doIndexLookup( myLabel, "12" ).size() );
+        assertEquals( 1, doIndexLookup( myLabel, "13" ).size() );
     }
 
     @Test
@@ -151,7 +155,7 @@ class LuceneIndexRecoveryIT
         IndexDefinition indexDefinition = createIndex( myLabel );
         waitForIndex( indexDefinition );
 
-        long node = createNode( myLabel, 12 );
+        long node = createNode( myLabel, "12" );
         rotateLogsAndCheckPoint();
 
         deleteNode( node );
@@ -163,7 +167,7 @@ class LuceneIndexRecoveryIT
         startDb( createLuceneIndexFactory() );
 
         // Then
-        assertEquals( 0, doIndexLookup( myLabel, 12 ).size() );
+        assertEquals( 0, doIndexLookup( myLabel, "12" ).size() );
     }
 
     @Test
@@ -175,8 +179,8 @@ class LuceneIndexRecoveryIT
         IndexDefinition indexDefinition = createIndex( myLabel );
         waitForIndex( indexDefinition );
 
-        long nodeId = createNode( myLabel, 12 );
-        assertEquals( 1, doIndexLookup( myLabel, 12 ).size() );
+        long nodeId = createNode( myLabel, "12" );
+        assertEquals( 1, doIndexLookup( myLabel, "12" ).size() );
 
         // And Given
         killDb();
@@ -190,8 +194,8 @@ class LuceneIndexRecoveryIT
             waitForIndex( index );
 
             // Then
-            assertEquals( 12, db.getNodeById( nodeId ).getProperty( NUM_BANANAS_KEY ) );
-            assertEquals( 1, doIndexLookup( myLabel, 12 ).size() );
+            assertEquals( "12", db.getNodeById( nodeId ).getProperty( NUM_BANANAS_KEY ) );
+            assertEquals( 1, doIndexLookup( myLabel, "12" ).size() );
         }
     }
 
@@ -204,8 +208,8 @@ class LuceneIndexRecoveryIT
         IndexDefinition indexDefinition = createIndex( myLabel );
         waitForIndex( indexDefinition );
 
-        long nodeId = createNode( myLabel, 12 );
-        updateNode( nodeId, 14 );
+        long nodeId = createNode( myLabel, "12" );
+        updateNode( nodeId, "14" );
 
         // And Given
         killDb();
@@ -214,22 +218,23 @@ class LuceneIndexRecoveryIT
         startDb( createLuceneIndexFactory() );
 
         // Then
-        assertEquals( 0, doIndexLookup( myLabel, 12 ).size() );
-        assertEquals( 1, doIndexLookup( myLabel, 14 ).size() );
+        assertEquals( 0, doIndexLookup( myLabel, "12" ).size() );
+        assertEquals( 1, doIndexLookup( myLabel, "14" ).size() );
     }
 
     private void startDb( ExtensionFactory<?> indexProviderFactory )
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
-        TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
         factory.setFileSystem( fs );
         factory.setExtensions( Collections.singletonList( indexProviderFactory ) );
-        db = (GraphDatabaseAPI) factory.newImpermanentDatabaseBuilder()
-                .setConfig( default_schema_provider, PROVIDER_DESCRIPTOR.name() ).newGraphDatabase();
+        managementService = factory.newImpermanentDatabaseBuilder()
+                .setConfig( default_schema_provider, DESCRIPTOR.name() ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void killDb()
@@ -237,7 +242,7 @@ class LuceneIndexRecoveryIT
         if ( db != null )
         {
             fs = fs.snapshot();
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -267,7 +272,7 @@ class LuceneIndexRecoveryIT
         }
     }
 
-    private Set<Node> doIndexLookup( Label myLabel, Object value )
+    private Set<Node> doIndexLookup( Label myLabel, String value )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -278,7 +283,7 @@ class LuceneIndexRecoveryIT
         }
     }
 
-    private long createNode( Label label, int number )
+    private long createNode( Label label, String number )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -289,7 +294,7 @@ class LuceneIndexRecoveryIT
         }
     }
 
-    private void updateNode( long nodeId, int value )
+    private void updateNode( long nodeId, String value )
     {
 
         try ( Transaction tx = db.beginTx() )
@@ -310,28 +315,28 @@ class LuceneIndexRecoveryIT
         }
     }
 
-    private ExtensionFactory<LuceneIndexProviderFactory.Dependencies> createAlwaysInitiallyPopulatingLuceneIndexFactory()
+    private ExtensionFactory<AbstractIndexProviderFactory.Dependencies> createAlwaysInitiallyPopulatingLuceneIndexFactory()
     {
         return new PopulatingTestLuceneIndexExtension();
     }
 
     // Creates a lucene index factory with the shared in-memory directory
-    private ExtensionFactory<LuceneIndexProviderFactory.Dependencies> createLuceneIndexFactory()
+    private ExtensionFactory<AbstractIndexProviderFactory.Dependencies> createLuceneIndexFactory()
     {
         return new TestLuceneIndexExtension();
     }
 
     @RecoveryExtension
-    private class TestLuceneIndexExtension extends ExtensionFactory<LuceneIndexProviderFactory.Dependencies>
+    private class TestLuceneIndexExtension extends ExtensionFactory<AbstractIndexProviderFactory.Dependencies>
     {
 
         TestLuceneIndexExtension()
         {
-            super( ExtensionType.DATABASE, LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR.getKey() );
+            super( ExtensionType.DATABASE, DESCRIPTOR.getKey() );
         }
 
         @Override
-        public Lifecycle newInstance( ExtensionContext context, LuceneIndexProviderFactory.Dependencies dependencies )
+        public Lifecycle newInstance( ExtensionContext context, AbstractIndexProviderFactory.Dependencies dependencies )
         {
             return new LuceneIndexProvider( fs, directoryFactory, defaultDirectoryStructure( context.directory() ), IndexProvider.Monitor.EMPTY,
                     dependencies.getConfig(), context.databaseInfo().operationalMode );
@@ -339,15 +344,15 @@ class LuceneIndexRecoveryIT
     }
 
     @RecoveryExtension
-    private class PopulatingTestLuceneIndexExtension extends ExtensionFactory<LuceneIndexProviderFactory.Dependencies>
+    private class PopulatingTestLuceneIndexExtension extends ExtensionFactory<AbstractIndexProviderFactory.Dependencies>
     {
         PopulatingTestLuceneIndexExtension()
         {
-            super( ExtensionType.DATABASE, LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR.getKey() );
+            super( ExtensionType.DATABASE, DESCRIPTOR.getKey() );
         }
 
         @Override
-        public Lifecycle newInstance( ExtensionContext context, LuceneIndexProviderFactory.Dependencies dependencies )
+        public Lifecycle newInstance( ExtensionContext context, AbstractIndexProviderFactory.Dependencies dependencies )
         {
             return new LuceneIndexProvider( fs, directoryFactory, defaultDirectoryStructure( context.directory() ),
                     IndexProvider.Monitor.EMPTY, dependencies.getConfig(), context.databaseInfo().operationalMode )

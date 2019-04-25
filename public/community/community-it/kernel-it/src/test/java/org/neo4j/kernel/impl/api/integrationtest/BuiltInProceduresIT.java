@@ -211,7 +211,7 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                         "statistics.",
                         "READ" ),
                 proc( "db.stats.retrieve", "(section :: STRING?, config = {} :: MAP?) :: (section :: STRING?, data :: MAP?)",
-                      "Retrieve statistical data about the current database. Valid sections are 'GRAPH COUNTS', 'TOKENS', 'QUERIES'", "READ" ),
+                      "Retrieve statistical data about the current database. Valid sections are 'GRAPH COUNTS', 'TOKENS', 'QUERIES', 'META'", "READ" ),
                 proc( "db.stats.retrieveAllAnonymized", "(graphToken :: STRING?, config = {} :: MAP?) :: (section :: STRING?, data :: MAP?)",
                       "Retrieve all available statistical data about the current database, in an anonymized form.", "READ" ),
                 proc( "db.stats.status", "() :: (section :: STRING?, status :: STRING?, data :: MAP?)",
@@ -222,9 +222,9 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                       "Stop data collection of a given data section. Valid sections are 'QUERIES'", "READ" ),
                 proc( "db.stats.clear", "(section :: STRING?) :: (section :: STRING?, success :: BOOLEAN?, message :: STRING?)",
                         "Clear collected data of a given data section. Valid sections are 'QUERIES'", "READ" ),
-                proc( "dbms.routing.getRoutingTable", "(context :: MAP?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
+                proc( "dbms.routing.getRoutingTable", "(context :: MAP?, database = null :: STRING?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
                         "Returns endpoints of this instance.", "DBMS" ),
-                proc( "dbms.cluster.routing.getRoutingTable", "(context :: MAP?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
+                proc( "dbms.cluster.routing.getRoutingTable", "(context :: MAP?, database = null :: STRING?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
                         "Returns endpoints of this instance.", "DBMS" )
         ) );
         commit();
@@ -421,7 +421,7 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
         return equalTo( new AnyValue[]{stringValue( procName ), stringValue( procName + procSignature ), stringValue( description ), stringValue( mode )} );
     }
 
-    @SuppressWarnings( {"unchecked", "TypeParameterExplicitlyExtendsObject"} )
+    @SuppressWarnings( {"unchecked", "SameParameterValue"} )
     private Matcher<AnyValue[]> proc( String procName, String procSignature, Matcher<String> description, String mode )
     {
         Matcher<AnyValue> desc = new TypeSafeMatcher<AnyValue>()

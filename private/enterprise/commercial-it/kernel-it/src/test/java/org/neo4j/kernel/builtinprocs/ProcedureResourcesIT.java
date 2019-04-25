@@ -259,7 +259,7 @@ public class ProcedureResourcesIT
             break;
         case "db.createIndex":
             proc.withParam( "':Person(name)'" );
-            proc.withParam( "'lucene+native-2.0'" );
+            proc.withParam( "'lucene+native-3.0'" );
             break;
         case "db.createNodeKey":
             // Grabs schema lock an so can not execute concurrently with node creation
@@ -306,6 +306,12 @@ public class ProcedureResourcesIT
             break;
         case "db.stats.clear":
             proc.withParam( "'QUERIES'" );
+            break;
+        case "dbms.cluster.routing.getRoutingTable":
+            proc.withParam( "{}" );
+            break;
+        case "dbms.routing.getRoutingTable":
+            proc.withParam( "{}" );
             break;
         default:
         }

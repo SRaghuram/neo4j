@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -43,12 +44,13 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.api.index.IndexPopulationJob;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.RandomValues;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class IndexPopulationIT
@@ -60,14 +62,16 @@ public class IndexPopulationIT
     private static GraphDatabaseService database;
     private static ExecutorService executorService;
     private static AssertableLogProvider logProvider;
+    private static DatabaseManagementService managementService;
 
     @BeforeClass
     public static void setUp()
     {
-        TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
         logProvider = new AssertableLogProvider( true );
         factory.setInternalLogProvider( logProvider );
-        database = factory.newEmbeddedDatabase( directory.storeDir() );
+        managementService = factory.newDatabaseManagementService( directory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
         executorService = Executors.newCachedThreadPool();
     }
 
@@ -75,7 +79,7 @@ public class IndexPopulationIT
     public static void tearDown()
     {
         executorService.shutdown();
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test( timeout = TEST_TIMEOUT )
@@ -149,8 +153,9 @@ public class IndexPopulationIT
         File storeDir = directory.directory( "shutdownDbTest" );
         Label testLabel = Label.label( "testLabel" );
         String propertyName = "testProperty";
-        GraphDatabaseService shutDownDb = new TestGraphDatabaseFactory().setInternalLogProvider( assertableLogProvider )
-                                                                      .newEmbeddedDatabase( storeDir );
+        DatabaseManagementService managementService =
+                new TestDatabaseManagementServiceBuilder().setInternalLogProvider( assertableLogProvider ).newDatabaseManagementService( storeDir );
+        GraphDatabaseService shutDownDb = managementService.database( DEFAULT_DATABASE_NAME );
         prePopulateDatabase( shutDownDb, testLabel, propertyName );
 
         try ( Transaction transaction = shutDownDb.beginTx() )
@@ -158,7 +163,7 @@ public class IndexPopulationIT
             shutDownDb.schema().indexFor( testLabel ).on( propertyName ).create();
             transaction.success();
         }
-        shutDownDb.shutdown();
+        managementService.shutdown();
         assertableLogProvider.assertNone( AssertableLogProvider.inLog( IndexPopulationJob.class ).anyError() );
     }
 

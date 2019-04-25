@@ -5,7 +5,7 @@
  */
 package org.neo4j.procedure;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -48,7 +48,7 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -65,8 +65,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -84,6 +86,7 @@ public class ProcedureIT
     private static List<Exception> exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
     private GraphDatabaseService db;
     static boolean[] onCloseCalled;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws IOException
@@ -91,8 +94,10 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        db = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
-                GraphDatabaseSettings.record_id_batch_size, "1" ).newGraphDatabase();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder()
+                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
+                record_id_batch_size, "1" ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }
 
@@ -101,7 +106,7 @@ public class ProcedureIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 
@@ -227,6 +232,22 @@ public class ProcedureIT
     }
 
     @Test
+    void shouldGiveNiceErrorMessageWhenMissingArgumentWhenDefaultArguments()
+    {
+        //Expect
+        // When
+        try ( Transaction ignore = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL db.awaitIndex()" ) );
+            assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
+                    "Procedure call does not provide the required number of arguments: got 0 expected 2 (where 1 is optional).%n%n" +
+                    "Procedure db.awaitIndex has signature: " +
+                    "db.awaitIndex(index :: STRING?, timeOutSeconds  =  300 :: INTEGER?) :: VOID%n" +
+                    "meaning that it expects 2 arguments of type STRING?, INTEGER?" ) ) );
+        }
+    }
+
+    @Test
     void shouldGiveNiceErrorWhenMissingArgumentsToVoidFunction()
     {
         try ( Transaction ignore = db.beginTx() )
@@ -234,7 +255,7 @@ public class ProcedureIT
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.sideEffectWithDefault()" ) );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
-                    "Procedure call does not provide the required number of arguments: got 1 expected 3.%n%n" +
+                    "Procedure call does not provide the required number of arguments: got 0 expected 3 (where 1 is optional).%n%n" +
                             "Procedure org.neo4j.procedure.sideEffectWithDefault has signature: org.neo4j.procedure" +
                             ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
                             "meaning that it expects 3 arguments of type STRING?, STRING?, STRING? (line 1, column 1 (offset: 0))" ) ) );
@@ -566,9 +587,12 @@ public class ProcedureIT
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        db.shutdown();
-        db = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder().setConfig(
-                plugin_dir, plugins.directory().getAbsolutePath() ).setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newGraphDatabase();
+        managementService.shutdown();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
+                .setUserLogProvider( logProvider ).newImpermanentDatabaseBuilder()
+                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
+                .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
         try ( Transaction ignore = db.beginTx() )
@@ -904,17 +928,6 @@ public class ProcedureIT
             Node node = Iterators.single( db.execute( "CALL org.neo4j.procedure.node", map( "id", nodeId ) ).columnAs( "node" ) );
             node.setProperty( "name", "Stefan" );
             tx.success();
-        }
-    }
-
-    @Test
-    void shouldFailToShutdown()
-    {
-        try ( Transaction ignore = db.beginTx() )
-        {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.shutdown()" ) );
-            assertThat( exception.getMessage(),
-                    equalTo( "Failed to invoke procedure `org.neo4j.procedure.shutdown`: Caused by: java.lang.UnsupportedOperationException" ) );
         }
     }
 
@@ -1739,12 +1752,6 @@ public class ProcedureIT
                 @Name( value = "value", defaultValue = "Zhang Wei" ) String value )
         {
             db.createNode( Label.label( label ) ).setProperty( propertyKey, value );
-        }
-
-        @Procedure
-        public void shutdown()
-        {
-            db.shutdown();
         }
 
         @Procedure( mode = WRITE )

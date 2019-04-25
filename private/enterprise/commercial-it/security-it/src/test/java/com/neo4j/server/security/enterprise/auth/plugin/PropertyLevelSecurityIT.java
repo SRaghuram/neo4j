@@ -9,7 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -36,7 +37,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -45,6 +46,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
@@ -60,17 +62,18 @@ class PropertyLevelSecurityIT
     private LoginContext smith;
     private LoginContext morpheus;
     private LoginContext jones;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestGraphDatabaseFactory s = new TestCommercialGraphDatabaseFactory();
-        db = (GraphDatabaseFacade) s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
+        TestDatabaseManagementServiceBuilder s = new TestCommercialDatabaseManagementServiceBuilder();
+        managementService = s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
                 .setConfig( SecuritySettings.procedure_roles, "test.*:procRole" )
-                .setConfig( GraphDatabaseSettings.auth_enabled, "true" )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.auth_enabled, "true" ).newDatabaseManagementService();
+        db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         CommercialAuthAndUserManager authManager = (CommercialAuthAndUserManager) db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( TestProcedure.class );
@@ -96,7 +99,7 @@ class PropertyLevelSecurityIT
     @AfterEach
     void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test

@@ -73,7 +73,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
             if (taskResult.task.canContinue)
               newInFlightTasks += SimpleScheduler.this.schedule(taskResult.task, Some(taskResult.workUnitEvent), queryTracer)
           } catch {
-            case e: TimeoutException =>
+            case _: TimeoutException =>
               // got tired of waiting for future to complete, put it back into the queue
               newInFlightTasks += future
             case e: ExecutionException =>

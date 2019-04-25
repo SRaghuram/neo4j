@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,7 +59,7 @@ class Resources
         config.populateCoreParams( coreParams );
         config.populateReadReplicaParams( readReplicaParams );
 
-        HazelcastDiscoveryServiceFactory discoveryServiceFactory = new HazelcastDiscoveryServiceFactory();
+        DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
         cluster = new Cluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }

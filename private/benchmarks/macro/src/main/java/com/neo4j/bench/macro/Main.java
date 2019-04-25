@@ -8,9 +8,12 @@ package com.neo4j.bench.macro;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.macro.cli.RunSingleCommand;
+import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
+import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
 import com.neo4j.bench.macro.cli.UpgradeStoreCommand;
 import com.neo4j.bench.macro.execution.Options;
@@ -21,6 +24,9 @@ import io.airlift.airline.Cli;
 import io.airlift.airline.Cli.CliBuilder;
 import io.airlift.airline.Help;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class Main
 {
     public static void main( String[] args )
@@ -29,7 +35,8 @@ public class Main
                 .withDefaultCommand( Help.class )
                 .withCommands(
                         RunWorkloadCommand.class,
-                        RunSingleCommand.class,
+                        RunSingleEmbeddedCommand.class,
+                        RunSingleServerCommand.class,
                         UpgradeStoreCommand.class,
                         Help.class );
 
@@ -38,32 +45,41 @@ public class Main
                .run();
     }
 
-    public static void runInteractive( Options options ) throws ForkFailureException
+    static void runInteractive( Options options ) throws ForkFailureException
     {
-        // TODO maybe this should go via run workload command
-        BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
-        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( options.outputDir(), options.query().benchmarkGroup() );
-        BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor(
-                benchmarkGroupDir,
-                options.query(),
-                Store.createFrom( options.storeDir() ),
-                options.edition(),
-                options.neo4jConfig(),
-                options.profilers(),
-                options.jvm(),
-                options.forks(),
-                options.warmupCount(),
-                options.measurementCount(),
-                options.unit(),
-                verboseMetricsPrinter,
-                options.jvmArgs() );
+        Path workDir = Paths.get( System.getProperty( "user.dir" ) );
+        try ( Resources resources = new Resources( workDir ) )
+        {
+            BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
+            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( options.outputDir(), options.query().benchmarkGroup() );
 
-        BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
-        queryResults.add( options.query().benchmarkGroup(),
-                          options.query().benchmark(),
-                          Results.loadFrom( benchmarkDir ).metrics(),
-                          options.neo4jConfig() );
+            BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor(
+                    options.neo4jDeployment().launcherFor( Edition.ENTERPRISE,
+                                                           options.warmupCount(),
+                                                           options.measurementCount(),
+                                                           options.minDuration(),
+                                                           options.maxDuration(),
+                                                           options.jvm() ),
+                    benchmarkGroupDir,
+                    options.query(),
+                    Store.createFrom( options.storeDir() ),
+                    options.edition(),
+                    options.neo4jConfig(),
+                    options.profilers(),
+                    options.jvm(),
+                    options.forks(),
+                    options.unit(),
+                    verboseMetricsPrinter,
+                    options.jvmArgs(),
+                    resources );
 
-        System.out.println( verboseMetricsPrinter.toPrettyString( queryResults ) );
+            BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
+            queryResults.add( options.query().benchmarkGroup(),
+                              options.query().benchmark(),
+                              Results.loadFrom( benchmarkDir ).metrics(),
+                              options.neo4jConfig() );
+
+            System.out.println( verboseMetricsPrinter.toPrettyString( queryResults ) );
+        }
     }
 }

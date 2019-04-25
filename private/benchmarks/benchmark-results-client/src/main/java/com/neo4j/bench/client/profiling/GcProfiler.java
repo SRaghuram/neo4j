@@ -8,6 +8,7 @@ package com.neo4j.bench.client.profiling;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.JvmVersion;
@@ -21,45 +22,70 @@ import java.util.List;
 import static com.neo4j.bench.client.profiling.ProfilerType.GC;
 import static com.neo4j.bench.client.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.client.util.BenchmarkUtil.appendFile;
-
 import static java.lang.String.format;
 
 public class GcProfiler implements ExternalProfiler
 {
-    private static final String GC_PROFILER_LOG = "gc-profiler.log";
+    // profiler log -- used by this class only
+    private static String gcProfilerLogName( Parameters parameters )
+    {
+        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
+        return "gc-profiler" + additionalParametersString + ".log";
+    }
 
     @Override
-    public List<String> jvmInvokeArgs( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> invokeArgs( ForkDirectory forkDirectory,
+                                    BenchmarkGroup benchmarkGroup,
+                                    Benchmark benchmark,
+                                    Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> jvmArgs( JvmVersion jvmVersion,
+                                 ForkDirectory forkDirectory,
+                                 BenchmarkGroup benchmarkGroup,
+                                 Benchmark benchmark,
+                                 Parameters additionalParameters )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, GC );
+        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                              benchmark,
+                                                                                              MEASUREMENT,
+                                                                                              GC,
+                                                                                              additionalParameters );
         Path gcLog = forkDirectory.pathFor( recordingDescriptor );
         List<String> gcLogJvmArgs = jvmLogArgs( jvmVersion, gcLog.toAbsolutePath().toString() );
 
         // profiler log -- used by this class only
-        Path profilerLog = forkDirectory.create( GC_PROFILER_LOG );
+        Path profilerLog = forkDirectory.create( gcProfilerLogName( additionalParameters ) );
         appendFile( profilerLog, Instant.now(), "Added GC specific JVM args: " + gcLogJvmArgs );
         return gcLogJvmArgs;
     }
 
     @Override
-    public void beforeProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void beforeProcess( ForkDirectory forkDirectory,
+                               BenchmarkGroup benchmarkGroup,
+                               Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }
 
     @Override
-    public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void afterProcess( ForkDirectory forkDirectory,
+                              BenchmarkGroup benchmarkGroup,
+                              Benchmark benchmark,
+                              Parameters additionalParameters )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, GC );
+        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                              benchmark,
+                                                                                              MEASUREMENT,
+                                                                                              GC,
+                                                                                              additionalParameters );
 
         // profiler log -- used by this class only
-        Path profilerLog = forkDirectory.findOrCreate( GC_PROFILER_LOG );
+        Path profilerLog = forkDirectory.findOrCreate( gcProfilerLogName( additionalParameters ) );
 
         Path gcLogFile = forkDirectory.pathFor( recordingDescriptor );
 
@@ -71,8 +97,8 @@ public class GcProfiler implements ExternalProfiler
 
             GcLog gcLog = GcLog.parse( gcLogFile );
 
-            Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.filename( RecordingType.GC_SUMMARY ) );
-            Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.filename( RecordingType.GC_CSV ) );
+            Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_SUMMARY ) );
+            Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_CSV ) );
 
             appendFile( profilerLog,
                         Instant.now(),
@@ -116,8 +142,8 @@ public class GcProfiler implements ExternalProfiler
         else
         {
             return Lists.newArrayList( format(
-                    "-Xlog:gc,"    + // Print basic GC info
-                    "safepoint,"   + // Print safepoints (application stopped time)
+                    "-Xlog:gc," + // Print basic GC info
+                    "safepoint," + // Print safepoints (application stopped time)
                     "gc+age=trace" + // Print tenuring distribution
                     ":file=%s:tags,time,uptime,level", // Print logs level, timestamp and VM uptime decorations
                     sanitizedGcLogFilename ) );

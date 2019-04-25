@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 /**
  * Address provider for catchup client.
@@ -23,19 +24,14 @@ public interface CatchupAddressProvider
      * leader address.
      * @throws CatchupAddressResolutionException if the provider was unable to find an address to this location.
      */
-    AdvertisedSocketAddress primary() throws CatchupAddressResolutionException;
+    AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
 
     /**
      * @return The address to a secondary location that are not required to be up to date. If there are multiple secondary locations it is recommended to
      * do some simple load balancing for returned addresses. This is to avoid re-sending failed requests to the same instance immediately.
      * @throws CatchupAddressResolutionException if the provider was unable to find an address to this location.
      */
-    AdvertisedSocketAddress secondary() throws CatchupAddressResolutionException;
-
-    static CatchupAddressProvider fromSingleAddress( AdvertisedSocketAddress advertisedSocketAddress )
-    {
-        return new SingleAddressProvider( advertisedSocketAddress );
-    }
+    AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
 
     class SingleAddressProvider implements CatchupAddressProvider
     {
@@ -47,13 +43,13 @@ public interface CatchupAddressProvider
         }
 
         @Override
-        public AdvertisedSocketAddress primary()
+        public AdvertisedSocketAddress primary( DatabaseId databaseId )
         {
             return socketAddress;
         }
 
         @Override
-        public AdvertisedSocketAddress secondary()
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId )
         {
             return socketAddress;
         }
@@ -61,23 +57,23 @@ public interface CatchupAddressProvider
 
     class UpstreamStrategyBasedAddressProvider implements CatchupAddressProvider
     {
-        private final UpstreamStrategyAddressSupplier upstreamAddressSupplier;
+        private final UpstreamAddressLookup upstreamAddressLookup;
 
         public UpstreamStrategyBasedAddressProvider( TopologyService topologyService, UpstreamDatabaseStrategySelector strategySelector )
         {
-            upstreamAddressSupplier = new UpstreamStrategyAddressSupplier( strategySelector, topologyService );
+            upstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
         }
 
         @Override
-        public AdvertisedSocketAddress primary() throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
-            return upstreamAddressSupplier.get();
+            return upstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }
 
         @Override
-        public AdvertisedSocketAddress secondary() throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
-            return upstreamAddressSupplier.get();
+            return upstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }
     }
 
@@ -88,18 +84,18 @@ public interface CatchupAddressProvider
     {
         private final LeaderLocator leaderLocator;
         private final TopologyService topologyService;
-        private UpstreamStrategyAddressSupplier secondaryUpstreamStrategyAddressSupplier;
+        private final UpstreamAddressLookup secondaryUpstreamAddressLookup;
 
         public LeaderOrUpstreamStrategyBasedAddressProvider( LeaderLocator leaderLocator, TopologyService topologyService,
                 UpstreamDatabaseStrategySelector strategySelector )
         {
             this.leaderLocator = leaderLocator;
             this.topologyService = topologyService;
-            this.secondaryUpstreamStrategyAddressSupplier = new UpstreamStrategyAddressSupplier( strategySelector, topologyService );
+            this.secondaryUpstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
         }
 
         @Override
-        public AdvertisedSocketAddress primary() throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
             try
             {
@@ -113,9 +109,9 @@ public interface CatchupAddressProvider
         }
 
         @Override
-        public AdvertisedSocketAddress secondary() throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
-            return secondaryUpstreamStrategyAddressSupplier.get();
+            return secondaryUpstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }
     }
 }

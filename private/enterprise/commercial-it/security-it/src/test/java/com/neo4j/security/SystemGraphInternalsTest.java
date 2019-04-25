@@ -5,41 +5,42 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.server.security.enterprise.systemgraph.TestSystemGraphRealm;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 
 import java.io.File;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static org.neo4j.test.assertion.Assert.assertException;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphInternalsTest
@@ -47,50 +48,28 @@ class SystemGraphInternalsTest
     private GraphDatabaseService database;
     private ContextSwitchingSystemGraphQueryExecutor systemGraphExecutor;
     private SystemGraphRealm realm;
+    private String activeDbName;
 
     @Inject
     private TestDirectory testDirectory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp() throws Throwable
     {
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        File storeDir = testDirectory.databaseDir();
-        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
+        File storeDir = testDirectory.storeDir();
+        final DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
-        database = builder.newGraphDatabase();
-        String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
-        DatabaseManager databaseManager = getDatabaseManager();
+        managementService = builder.newDatabaseManagementService();
+        database = managementService.database( DEFAULT_DATABASE_NAME );
+        activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
-        setupSystemGraphRealm();
-
-        // Neo4j default user should have a DbRole node connected it to admin role already
-        assertEquals( 1, nbrOfDbRoleNodes() );
-    }
-
-    private void setupSystemGraphRealm() throws Throwable
-    {
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        SystemGraphImportOptions importOptions =
-                new SystemGraphImportOptions( false, false, false, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
-                        InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
-
-        SecureHasher secureHasher = new SecureHasher();
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( systemGraphExecutor, secureHasher );
-        realm = new SystemGraphRealm(
-                systemGraphOperations,
-                new SystemGraphInitializer( systemGraphExecutor, systemGraphOperations, importOptions, secureHasher, securityLog ),
-                true,
-                new SecureHasher(),
-                new BasicPasswordPolicy(),
-                Mockito.mock( AuthenticationStrategy.class ),
-                true,
-                true
-        );
-        realm.initialize();
-        realm.start(); // creates default user and roles
+        realm = TestSystemGraphRealm.testRealm( securityLog, systemGraphExecutor );
     }
 
     @AfterEach
@@ -98,55 +77,71 @@ class SystemGraphInternalsTest
     {
         if ( database != null )
         {
-            database.shutdown();
+            managementService.shutdown();
             database = null;
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 
     @Test
-    void shouldNotShareDbRoleNodeBetweenUsersWithSameRole() throws Exception
+    void defaultNodes()
     {
+        // should have system, default and "*" db
+        assertEquals( 3, nbrOfDbNodes() );
+
+        // should have default neo4j user
+        assertEquals( 1, nbrOfUserNodes() );
+
+        // should have default roles
+        assertEquals( 5, nbrOfRoleNodes() );
+
+        // default privileges
+        assertEquals( 5 + 4 + 3 + 2 + 1, nbrOfPrivilegeNodes() );
+
+        // graph, token, schema, system
+        assertEquals( 4, nbrOfResourceNodes() );
+    }
+
+    @Test
+    void shouldShareRoleNodeBetweenUsersWithSameRole() throws Exception
+    {
+        long roleNodeCount = nbrOfRoleNodes();
+        long userNodeCount = nbrOfUserNodes();
         setupTwoReaders();
-        assertEquals( 3, nbrOfDbRoleNodes() );
+        assertEquals( roleNodeCount, nbrOfRoleNodes() );
+        assertEquals( userNodeCount + 2, nbrOfUserNodes() );
     }
 
     @Test
-    void shouldRemoveDbRoleNodeWhenUserIsDeleted() throws Exception
+    void shouldFailShowPrivilegeForUnknownUser()
     {
-        setupTwoReaders();
-
-        realm.deleteUser( "Neo" );
-        assertEquals( 2, nbrOfDbRoleNodes() );
-
-        realm.deleteUser( "Trinity" );
-        assertEquals( 1,    nbrOfDbRoleNodes() );
+        assertException( () -> realm.showPrivilegesForUser( "TomRiddle" ), InvalidArgumentsException.class, "User 'TomRiddle' does not exist." );
+        assertException( () -> realm.showPrivilegesForUser( "" ), InvalidArgumentsException.class, "User '' does not exist." );
+        assertException( () -> realm.showPrivilegesForUser( "Neo," ), InvalidArgumentsException.class, "User 'Neo,' does not exist." );
     }
 
     @Test
-    void shouldRemoveDbRoleNodeWhenUserIsUnassigned() throws Exception
+    void shouldSilentlyIgnoreAlreadyGrantedPrivilege() throws Exception
     {
-       setupTwoReaders();
+        // Given
+        realm.newUser( "Neo", password( "abc" ), false );
+        realm.newRole( "custom", "Neo" );
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
+        long privilegeNodes = nbrOfPrivilegeNodes();
+        long resourceNodes = nbrOfResourceNodes();
 
-       realm.removeRoleFromUser( READER, "Neo" );
-       assertEquals( 2, nbrOfDbRoleNodes() );
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
 
-       realm.removeRoleFromUser( READER, "Trinity" );
-       assertEquals( 1, nbrOfDbRoleNodes() );
-    }
-
-    @Test
-    void shouldRemoveDbRoleNodeWhenDeletingRole() throws Exception
-    {
-        realm.newRole( "tmpRole", "neo4j" );
-        assertEquals( 2, nbrOfDbRoleNodes() );
-
-        realm.deleteRole( "tmpRole" );
-        assertEquals( 1, nbrOfDbRoleNodes() );
+        // Then
+        assertThat( privilegeNodes, equalTo( nbrOfPrivilegeNodes() ) );
+        assertThat( resourceNodes, equalTo( nbrOfResourceNodes() ) );
     }
 
     private void setupTwoReaders() throws InvalidArgumentsException
@@ -157,9 +152,34 @@ class SystemGraphInternalsTest
         realm.addRoleToUser( READER, "Trinity" );
     }
 
-    private long nbrOfDbRoleNodes()
+    private long nbrOfPrivilegeNodes()
     {
-        String query = "MATCH (dbr:DbRole) RETURN count(dbr)";
+        String query = "MATCH (p:Privilege) RETURN count(p)";
+        return systemGraphExecutor.executeQueryLong( query );
+
+    }
+
+    private long nbrOfResourceNodes()
+    {
+        String query = "MATCH (res:Resource) RETURN count(res)";
+        return systemGraphExecutor.executeQueryLong( query );
+    }
+
+    private long nbrOfDbNodes()
+    {
+        String query = "MATCH (db:Database) RETURN count(db)";
+        return systemGraphExecutor.executeQueryLong( query );
+    }
+
+    private long nbrOfRoleNodes()
+    {
+        String query = "MATCH (role:Role) RETURN count(role)";
+        return systemGraphExecutor.executeQueryLong( query );
+    }
+
+    private long nbrOfUserNodes()
+    {
+        String query = "MATCH (u:User) RETURN count(u)";
         return systemGraphExecutor.executeQueryLong( query );
     }
 }

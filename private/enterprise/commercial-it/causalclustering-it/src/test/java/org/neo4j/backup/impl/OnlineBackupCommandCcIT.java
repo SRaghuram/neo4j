@@ -6,9 +6,9 @@
 package org.neo4j.backup.impl;
 
 import com.neo4j.backup.BackupTestUtil;
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestWithRecordFormats;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -211,8 +211,6 @@ class OnlineBackupCommandCcIT
 
         assertThat( output, containsString( "Start receiving transactions from" ) );
         assertThat( output, containsString( "Finish receiving transactions at" ) );
-        assertThat( output, containsString( "Start receiving index snapshots" ) );
-        assertThat( output, containsString( "Finished receiving index snapshots" ) );
     }
 
     @TestWithRecordFormats
@@ -450,7 +448,7 @@ class OnlineBackupCommandCcIT
     {
         Config config = Config.defaults();
         config.augment( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ).databaseDirectory(), config );
+        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ), config );
     }
 
     private int runBackupToolAndGetExitCode( String address, String databaseName )

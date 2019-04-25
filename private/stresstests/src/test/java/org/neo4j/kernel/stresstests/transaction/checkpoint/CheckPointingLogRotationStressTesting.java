@@ -10,11 +10,16 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -25,21 +30,19 @@ import org.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
-import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.System.getProperty;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
+import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
+import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
+import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.kernel.stresstests.transaction.checkpoint.mutation.RandomMutationFactory.defaultRandomMutation;
-import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
 
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
@@ -71,18 +74,19 @@ public class CheckPointingLogRotationStressTesting
             Config dbConfig = Config.defaults();
             new ParallelBatchImporter( DatabaseLayout.of( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.defaultVisible( jobScheduler ), EMPTY, dbConfig,
-                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY )
+                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
+                    TransactionLogsInitializer.INSTANCE )
                     .doImport( new NodeCountInputs( nodeCount ) );
         }
 
         System.out.println( "2/6\tStarting database..." );
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
-        GraphDatabaseService db = builder
+        DatabaseManagementServiceInternalBuilder builder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )
                 .setConfig( GraphDatabaseSettings.check_point_interval_time, CHECK_POINT_INTERVAL_MINUTES + "m" )
-                .setConfig( GraphDatabaseSettings.tracer, "timer" )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.tracer, "timer" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         System.out.println("3/6\tWarm up db...");
         try ( Workload workload = new Workload( db, defaultRandomMutation( nodeCount, db ), threads ) )
@@ -100,7 +104,7 @@ public class CheckPointingLogRotationStressTesting
         }
 
         System.out.println( "5/6\tShutting down..." );
-        db.shutdown();
+        managementService.shutdown();
 
         try
         {

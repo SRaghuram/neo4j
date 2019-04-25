@@ -197,10 +197,10 @@ object LogicalPlanConverter {
                 actions))
 
           //collection used in composite index search, pass entire collection to index seek
-          case plans.CompositeQueryExpression(e: ast.ListLiteral) =>
+          case plans.CompositeQueryExpression(_: ast.ListLiteral) =>
             throw new CantCompileQueryException(s"To be done")
 
-          case e: plans.RangeQueryExpression[_] =>
+          case _: plans.RangeQueryExpression[_] =>
             throw new CantCompileQueryException(s"To be done")
 
           case e => throw new CantCompileQueryException(s"$e is not a valid QueryExpression")

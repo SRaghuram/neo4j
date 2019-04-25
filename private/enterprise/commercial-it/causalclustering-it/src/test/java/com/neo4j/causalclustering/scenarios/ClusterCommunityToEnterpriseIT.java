@@ -15,18 +15,24 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ClusterCommunityToEnterpriseIT
 {
@@ -61,22 +67,31 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.storeDir() )
+        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDir.storeDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() )
-                .newGraphDatabase();
-        database.shutdown();
-        Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).newDatabaseManagementService();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = ((GraphDatabaseAPI) database).databaseLayout();
+        managementService.shutdown();
+        Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).withSetting(
+                GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() ).build();
         DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
 
         // when
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 0 ).databaseDirectory() );
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 1 ).databaseDirectory() );
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 2 ).databaseDirectory() );
+        copyStoreToCore( databaseLayout, 0 );
+        copyStoreToCore( databaseLayout, 1 );
+        copyStoreToCore( databaseLayout, 2 );
         cluster.start();
 
         // then
         dataMatchesEventually( before, cluster.coreMembers() );
+    }
+
+    private void copyStoreToCore( DatabaseLayout databaseLayout, int i ) throws IOException
+    {
+        DatabaseLayout coreLayout = cluster.getCoreMemberById( i ).databaseLayout();
+        fsa.copyRecursively( databaseLayout.databaseDirectory(), coreLayout.databaseDirectory() );
+        fsa.copyRecursively( databaseLayout.getTransactionLogsDirectory(), coreLayout.getTransactionLogsDirectory() );
     }
 }

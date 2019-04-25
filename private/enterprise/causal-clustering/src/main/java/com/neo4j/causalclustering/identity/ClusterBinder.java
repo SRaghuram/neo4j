@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.hazelcast.core.OperationTimeoutException;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.CoreBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
@@ -24,6 +22,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.function.ThrowingAction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
@@ -36,37 +35,35 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         void waitingForBootstrap();
 
-        void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId );
+        void bootstrapped( Map<DatabaseId,CoreSnapshot> snapshots, ClusterId clusterId );
 
         void boundToCluster( ClusterId clusterId );
     }
 
+    private final DatabaseId databaseId;
     private final SimpleStorage<ClusterId> clusterIdStorage;
-    private final SimpleStorage<DatabaseName> dbNameStorage;
     private final CoreTopologyService topologyService;
     private final CoreBootstrapper coreBootstrapper;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
-    private final String dbName;
     private final int minCoreHosts;
 
     private ClusterId clusterId;
 
-    public ClusterBinder( SimpleStorage<ClusterId> clusterIdStorage, SimpleStorage<DatabaseName> dbNameStorage,
+    public ClusterBinder( DatabaseId databaseId, SimpleStorage<ClusterId> clusterIdStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, CoreBootstrapper coreBootstrapper, String dbName, int minCoreHosts, Monitors monitors )
+            Duration timeout, CoreBootstrapper coreBootstrapper, int minCoreHosts, Monitors monitors )
     {
+        this.databaseId = databaseId;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.clusterIdStorage = clusterIdStorage;
-        this.dbNameStorage = dbNameStorage;
         this.topologyService = topologyService;
         this.coreBootstrapper = coreBootstrapper;
         this.clock = clock;
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
-        this.dbName = dbName;
         this.minCoreHosts = minCoreHosts;
     }
 
@@ -109,36 +106,21 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
      */
     public BoundState bindToCluster() throws Exception
     {
-        DatabaseName newName = new DatabaseName( dbName );
-
-        dbNameStorage.writeOrVerify( newName, existing -> {
-            if ( !newName.equals( existing ) )
-            {
-                throw new IllegalStateException( format( "Your configured database name has changed. Found %s but expected %s in %s.",
-                        dbName, existing.name(), CausalClusteringSettings.database.name() ) );
-            }
-        } );
-
-        long endTime = clock.millis() + timeout.toMillis();
-        boolean shouldRetryPublish = false;
-
         if ( clusterIdStorage.exists() )
         {
             clusterId = clusterIdStorage.readState();
-            do
-            {
-                shouldRetryPublish = publishClusterId( clusterId );
-            } while ( shouldRetryPublish && clock.millis() < endTime );
+            publishClusterId( clusterId );
             monitor.boundToCluster( clusterId );
             return new BoundState( clusterId );
         }
 
-        Map<String,CoreSnapshot> snapshots = Collections.emptyMap();
+        Map<DatabaseId,CoreSnapshot> snapshots = Collections.emptyMap();
         CoreTopology topology;
+        long endTime = clock.millis() + timeout.toMillis();
 
         do
         {
-            topology = topologyService.localCoreServers();
+            topology = topologyService.coreTopologyForDatabase( databaseId );
 
             if ( topology.clusterId() != null )
             {
@@ -150,14 +132,15 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
                 clusterId = new ClusterId( UUID.randomUUID() );
                 snapshots = coreBootstrapper.bootstrap( topology.members().keySet() );
                 monitor.bootstrapped( snapshots, clusterId );
-                shouldRetryPublish = publishClusterId( clusterId );
+                publishClusterId( clusterId );
             }
 
             retryWaiter.apply();
 
-        } while ( ( clusterId == null || shouldRetryPublish ) && clock.millis() < endTime );
+        }
+        while ( clusterId == null && clock.millis() < endTime );
 
-        if ( clusterId == null || shouldRetryPublish )
+        if ( clusterId == null )
         {
             throw new TimeoutException( format(
                     "Failed to join a cluster with members %s. Another member should have published " +
@@ -174,23 +157,12 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         return Optional.ofNullable( clusterId );
     }
 
-    private boolean publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
+    private void publishClusterId( ClusterId localClusterId ) throws BindingException, InterruptedException
     {
-        boolean shouldRetry = false;
-        try
+        boolean success = topologyService.setClusterId( localClusterId, databaseId );
+        if ( !success )
         {
-            boolean success = topologyService.setClusterId( localClusterId, dbName );
-
-            if ( !success )
-            {
-                throw new BindingException( "Failed to publish: " + localClusterId );
-            }
+            throw new BindingException( "Failed to publish: " + localClusterId );
         }
-        catch ( OperationTimeoutException e )
-        {
-            shouldRetry = true;
-        }
-
-        return shouldRetry;
     }
 }

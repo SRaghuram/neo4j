@@ -58,7 +58,7 @@ public class SingleFilePageSwapperFactory implements PageSwapperFactory
         {
             if ( createIfNotExist )
             {
-                fs.create( file ).close();
+                fs.write( file ).close();
             }
             else
             {
@@ -66,12 +66,6 @@ public class SingleFilePageSwapperFactory implements PageSwapperFactory
             }
         }
         return new SingleFilePageSwapper( file, fs, filePageSize, onEviction, noChannelStriping );
-    }
-
-    @Override
-    public void syncDevice()
-    {
-        // Nothing do to, since we `fsync` files individually in `force()`.
     }
 
     @Override

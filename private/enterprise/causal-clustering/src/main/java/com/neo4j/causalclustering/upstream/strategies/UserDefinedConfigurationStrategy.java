@@ -6,7 +6,9 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
+import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.kernel.database.DatabaseId;
 
 @ServiceProvider
 public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionStrategy
@@ -58,21 +61,25 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     }
 
     @Override
-    public Optional<MemberId> upstreamDatabase()
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
     {
         return filters.flatMap( filters ->
         {
-            Set<ServerInfo> possibleServers = possibleServers();
+            Set<ServerInfo> possibleServers = possibleServers( databaseId );
 
             return filters.apply( possibleServers ).stream().map( ServerInfo::memberId ).filter( memberId -> !Objects.equals( myself, memberId ) ).findFirst();
         } );
     }
 
-    private Set<ServerInfo> possibleServers()
+    private Set<ServerInfo> possibleServers( DatabaseId databaseId )
     {
-        Stream<Map.Entry<MemberId,? extends DiscoveryServerInfo>> infoMap =
-                Stream.of( topologyService.localReadReplicas(), topologyService.localCoreServers() ).map( Topology::members ).map( Map::entrySet ).flatMap(
-                        Set::stream );
+        CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+        ReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( databaseId );
+
+        var infoMap = Stream.of( coreTopology, readReplicaTopology )
+                .map( Topology::members )
+                .map( Map::entrySet )
+                .flatMap( Set::stream );
 
         return infoMap.map( this::toServerInfo ).collect( Collectors.toSet() );
     }

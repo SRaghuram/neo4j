@@ -8,7 +8,7 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -38,6 +38,7 @@ import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -48,6 +49,8 @@ import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
@@ -73,6 +76,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -80,7 +84,7 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 @ExtendWith( {SuppressOutputExtension.class, RandomExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class BackupRetriesIT
 {
-    private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private static final DatabaseId DB_ID = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
     @Inject
     private static RandomRule random;
@@ -94,6 +98,7 @@ class BackupRetriesIT
     private Path backupsDir;
     private GraphDatabaseAPI db;
     private StorageEngineFactory storageEngineFactory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
@@ -107,7 +112,7 @@ class BackupRetriesIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -126,7 +131,7 @@ class BackupRetriesIT
         executor.executeBackup( context );
 
         // backup produced a correct store
-        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( backupsDir.resolve( DB_NAME ).toFile() ) );
+        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.of( backupsDir.resolve( DB_ID.name() ).toFile() ) ) );
 
         // all used channels should be closed after backup is done
         assertAll( "All channels should be closed after backup " + channels,
@@ -138,11 +143,11 @@ class BackupRetriesIT
 
     private GraphDatabaseAPI startDb()
     {
-        File databaseDirectory = testDirectory.databaseDir();
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider )
+        File databaseDirectory = testDirectory.storeDir();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( logProvider )
                 .newEmbeddedDatabaseBuilder( databaseDirectory )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         return db;
     }
@@ -253,7 +258,7 @@ class BackupRetriesIT
 
         return OnlineBackupContext.builder()
                 .withAddress( backupAddress( db ) )
-                .withDatabaseName( DB_NAME )
+                .withDatabaseId( DB_ID )
                 .withBackupDirectory( backupsDir )
                 .withConfig( config )
                 .build();

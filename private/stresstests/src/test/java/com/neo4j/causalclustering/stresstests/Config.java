@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -44,8 +43,6 @@ public class Config
     private String txPrune;
     private String checkpointPolicy;
 
-    private String discoveryImplementation;
-
     private Collection<Preparations> preparations;
     private Collection<Workloads> workloads;
     private Collection<Validations> validations;
@@ -69,8 +66,6 @@ public class Config
 
         txPrune = envOrDefault( "TX_PRUNE", "50 files" );
         checkpointPolicy = envOrDefault( "CHECKPOINT_POLICY", GraphDatabaseSettings.check_point_policy.getDefaultValue() );
-
-        discoveryImplementation = envOrDefault( "DISCOVERY_IMPLEMENTATION", CausalClusteringSettings.discovery_implementation.getDefaultValue() );
 
         preparations = envOrDefault( Preparations.class, "PREPARATIONS" );
         workloads = envOrDefault( Workloads.class, "WORKLOADS" );
@@ -167,11 +162,6 @@ public class Config
         return workDurationMinutes;
     }
 
-    public void discoveryImplementation( DiscoveryImplementation discoveryImplementation )
-    {
-        this.discoveryImplementation = discoveryImplementation.name();
-    }
-
     public int shutdownDurationMinutes()
     {
         return shutdownDurationMinutes;
@@ -227,16 +217,14 @@ public class Config
         params.put( GraphDatabaseSettings.keep_logical_logs.name(), txPrune );
         params.put( GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M" );
         params.put( GraphDatabaseSettings.check_point_policy.name(), checkpointPolicy );
-        params.put( CausalClusteringSettings.discovery_implementation.name(), discoveryImplementation );
     }
 
     public void populateCoreParams( Map<String,String> params )
     {
         populateCommonParams( params );
 
-        params.put( CausalClusteringSettings.raft_log_rotation_size.name(), "1K" );
-        params.put( CausalClusteringSettings.raft_log_pruning_frequency.name(), "250ms" );
-        params.put( CausalClusteringSettings.raft_log_pruning_strategy.name(), "keep_none" );
+        params.put( CausalClusteringSettings.raft_log_rotation_size.name(), "10M" );
+        params.put( CausalClusteringSettings.raft_log_pruning_frequency.name(), "1m" );
         // the following will override the test-default in CoreClusterMember
         params.put( CausalClusteringSettings.raft_messages_log_enable.name(), Boolean.toString( raftMessagesLog ) );
     }
@@ -249,10 +237,10 @@ public class Config
     @Override
     public String toString()
     {
-        return "Config{" + "discoveryImplementation='" + discoveryImplementation + '\'' + ", workingDir='" + workingDir + '\'' + ", numberOfCores=" +
-                numberOfCores + ", numberOfEdges=" + numberOfEdges + ", raftMessagesLog=" + raftMessagesLog + ", workDurationMinutes=" + workDurationMinutes +
-                ", shutdownDurationMinutes=" + shutdownDurationMinutes + ", txPrune='" + txPrune + '\'' + ", checkpointPolicy='" + checkpointPolicy + '\'' +
-                ", preparations=" + preparations + ", workloads=" + workloads + ", validations=" + validations + ", enableIndexes=" + enableIndexes +
-                ", reelectIntervalSeconds=" + reelectIntervalSeconds + '}';
+        return "Config{workingDir='" + workingDir + '\'' + ", numberOfCores=" +
+               numberOfCores + ", numberOfEdges=" + numberOfEdges + ", raftMessagesLog=" + raftMessagesLog + ", workDurationMinutes=" + workDurationMinutes +
+               ", shutdownDurationMinutes=" + shutdownDurationMinutes + ", txPrune='" + txPrune + '\'' + ", checkpointPolicy='" + checkpointPolicy + '\'' +
+               ", preparations=" + preparations + ", workloads=" + workloads + ", validations=" + validations + ", enableIndexes=" + enableIndexes +
+               ", reelectIntervalSeconds=" + reelectIntervalSeconds + '}';
     }
 }

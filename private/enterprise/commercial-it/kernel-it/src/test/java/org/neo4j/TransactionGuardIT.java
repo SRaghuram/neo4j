@@ -32,6 +32,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
@@ -39,9 +40,9 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -63,7 +64,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.SimpleGraphFactory;
 import org.neo4j.server.web.HttpHeaderUtils;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -76,6 +77,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_timeout;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionNotFound;
@@ -99,10 +101,19 @@ public class TransactionGuardIT
     private static final KernelTransactionTimeoutMonitorSupplier monitorSupplier = new
             KernelTransactionTimeoutMonitorSupplier();
     private static final IdInjectionFunctionAction getIdInjectionFunction = new IdInjectionFunctionAction( monitorSupplier );
+    private DatabaseManagementService customManagementService;
 
     @After
     public void tearDown()
     {
+        databaseWithTimeout = null;
+        databaseWithoutTimeout = null;
+        if ( neoServer != null )
+        {
+            neoServer.stop();
+            neoServer = null;
+        }
+        customManagementService.shutdown();
         monitorSupplier.clear();
     }
 
@@ -416,7 +427,7 @@ public class TransactionGuardIT
         return databaseWithTimeout;
     }
 
-    private int getBoltConnectorPort( GraphDatabaseAPI databaseAPI )
+    private static int getBoltConnectorPort( GraphDatabaseAPI databaseAPI )
     {
         ConnectorPortRegister connectorPortRegister = databaseAPI.getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class );
@@ -434,7 +445,7 @@ public class TransactionGuardIT
         return databaseWithoutTimeout;
     }
 
-    private org.neo4j.driver.v1.Config getDriverConfig()
+    private static org.neo4j.driver.v1.Config getDriverConfig()
     {
         return org.neo4j.driver.v1.Config.build()
                 .withEncryptionLevel( org.neo4j.driver.v1.Config.EncryptionLevel.NONE )
@@ -460,7 +471,7 @@ public class TransactionGuardIT
         return neoServer;
     }
 
-    private Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
+    private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
     {
         BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
         return MapUtil.genericMap(
@@ -473,17 +484,17 @@ public class TransactionGuardIT
                 GraphDatabaseSettings.auth_enabled, Settings.FALSE );
     }
 
-    private Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
+    private static Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
     {
         return MapUtil.genericMap();
     }
 
-    private String transactionUri( CommercialNeoServer neoServer )
+    private static String transactionUri( CommercialNeoServer neoServer )
     {
         return neoServer.baseUri().toString() + "db/data/transaction";
     }
 
-    private URL prepareTestImportFile( int lines ) throws IOException
+    private static URL prepareTestImportFile( int lines ) throws IOException
     {
         File tempFile = File.createTempFile( "testImport", ".csv" );
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( tempFile, StandardCharsets.UTF_8 ) )
@@ -496,7 +507,7 @@ public class TransactionGuardIT
         return tempFile.toURI().toURL();
     }
 
-    private void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )
+    private static void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )
     {
         try ( Transaction ignored = database.beginTx() )
         {
@@ -506,15 +517,14 @@ public class TransactionGuardIT
 
     private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,String> configMap )
     {
-        CustomClockCommercialFacadeFactory customClockCommercialFacadeFactory = new CustomClockCommercialFacadeFactory();
-        GraphDatabaseBuilder databaseBuilder = new CustomGuardTestGraphDatabaseFactory( customClockCommercialFacadeFactory )
+        CustomClockCommercialManagementServiceFactory customClockCommercialFacadeFactory = new CustomClockCommercialManagementServiceFactory();
+        DatabaseManagementServiceInternalBuilder databaseBuilder = new CustomGuardTestDatabaseManagementServiceBuilder( customClockCommercialFacadeFactory )
                 .newImpermanentDatabaseBuilder( storeDir );
         configMap.forEach( databaseBuilder::setConfig );
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
 
-        GraphDatabaseAPI database = (GraphDatabaseAPI) databaseBuilder.newGraphDatabase();
-        cleanupRule.add( database );
-        return database;
+        customManagementService = databaseBuilder.newDatabaseManagementService();
+        return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static class KernelTransactionTimeoutMonitorSupplier implements Supplier<KernelTransactionMonitor>
@@ -579,23 +589,23 @@ public class TransactionGuardIT
         {
             GuardTestServer( Config config, ExternalDependencies dependencies )
             {
-                super( config, new SimpleGraphFactory( graphDatabaseFacade ), dependencies );
+                super( config, new SimpleGraphFactory( customManagementService ), dependencies );
             }
         }
     }
 
-    private class CustomGuardTestGraphDatabaseFactory extends TestGraphDatabaseFactory
+    private class CustomGuardTestDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
     {
 
-        private GraphDatabaseFacadeFactory customFacadeFactory;
+        private final DatabaseManagementServiceFactory customFacadeFactory;
 
-        CustomGuardTestGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
+        CustomGuardTestDatabaseManagementServiceBuilder( DatabaseManagementServiceFactory customFacadeFactory )
         {
             this.customFacadeFactory = customFacadeFactory;
         }
 
         @Override
-        protected GraphDatabaseBuilder.DatabaseCreator createImpermanentDatabaseCreator( File storeDir,
+        protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createImpermanentDatabaseCreator( File storeDir,
                 TestGraphDatabaseFactoryState state )
         {
             return config -> customFacadeFactory.newFacade( storeDir, config,
@@ -621,10 +631,10 @@ public class TransactionGuardIT
         }
     }
 
-    private class CustomClockCommercialFacadeFactory extends GraphDatabaseFacadeFactory
+    private class CustomClockCommercialManagementServiceFactory extends DatabaseManagementServiceFactory
     {
 
-        CustomClockCommercialFacadeFactory()
+        CustomClockCommercialManagementServiceFactory()
         {
             // XXX: This has to be a Function, JVM crashes with ClassFormatError if you pass a lambda here
             super( DatabaseInfo.COMMERCIAL, new Function<GlobalModule,AbstractEditionModule>() // Don't make a lambda
@@ -652,7 +662,7 @@ public class TransactionGuardIT
 
     private class TerminationIdGeneratorFactory implements IdGeneratorFactory
     {
-        private IdGeneratorFactory delegate;
+        private final IdGeneratorFactory delegate;
 
         TerminationIdGeneratorFactory( IdGeneratorFactory delegate )
         {
@@ -687,7 +697,7 @@ public class TransactionGuardIT
     private final class TerminationIdGenerator implements IdGenerator
     {
 
-        private IdGenerator delegate;
+        private final IdGenerator delegate;
 
         TerminationIdGenerator( IdGenerator delegate )
         {

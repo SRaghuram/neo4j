@@ -6,51 +6,39 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static org.neo4j.helpers.SocketAddressParser.socketAddress;
-
 class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements TopologyService
 {
     private final SharedDiscoveryService sharedDiscoveryService;
-    private final ReadReplicaInfo addresses;
-    private final MemberId memberId;
+    private final Config config;
+    private final DiscoveryMember myself;
     private final Log log;
-    private final String dbName;
 
-    SharedDiscoveryReadReplicaClient( SharedDiscoveryService sharedDiscoveryService, Config config, MemberId memberId,
+    SharedDiscoveryReadReplicaClient( SharedDiscoveryService sharedDiscoveryService, Config config, DiscoveryMember myself,
             LogProvider logProvider )
     {
         this.sharedDiscoveryService = sharedDiscoveryService;
-        this.dbName = config.get( CausalClusteringSettings.database );
-        this.addresses = new ReadReplicaInfo( ClientConnectorAddresses.extractFromConfig( config ),
-                socketAddress( config.get( CausalClusteringSettings.transaction_advertised_address ).toString(),
-                        AdvertisedSocketAddress::new ), dbName );
-        this.memberId = memberId;
+        this.config = config;
+        this.myself = myself;
         this.log = logProvider.getLog( getClass() );
-    }
-
-    @Override
-    public void init0()
-    {
-        // nothing to do
     }
 
     @Override
     public void start0()
     {
         sharedDiscoveryService.registerReadReplica( this );
-        log.info( "Registered read replica member id: %s at %s", memberId, addresses );
+        log.info( "Registered read replica member id: %s", myself() );
     }
 
     @Override
@@ -60,52 +48,33 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public void shutdown0()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        // nothing to do
+        return sharedDiscoveryService.allCoreServers();
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return sharedDiscoveryService.getCoreTopology( dbName, false );
+        return sharedDiscoveryService.getCoreTopology( databaseId, false );
     }
 
     @Override
-    public CoreTopology localCoreServers()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return allCoreServers().filterTopologyByDb( dbName );
+        return sharedDiscoveryService.allReadReplicas();
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return sharedDiscoveryService.getReadReplicaTopology();
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return allReadReplicas().filterTopologyByDb( dbName );
+        return sharedDiscoveryService.getReadReplicaTopology( databaseId );
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        Optional<AdvertisedSocketAddress> coreAdvertisedAddress =
-                sharedDiscoveryService.getCoreTopology( dbName, false ).find( upstream ).map( CoreServerInfo::getCatchupServer );
-        if ( coreAdvertisedAddress.isPresent() )
-        {
-            return coreAdvertisedAddress.get();
-        }
-        return sharedDiscoveryService.getReadReplicaTopology()
-                        .find( upstream ).map( ReadReplicaInfo::getCatchupServer ).orElseThrow( () -> new CatchupAddressResolutionException( upstream ) );
-    }
-
-    @Override
-    public String localDBName()
-    {
-        return dbName;
+        return sharedDiscoveryService.findCatchupAddress( upstream );
     }
 
     @Override
@@ -117,16 +86,24 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     @Override
     public MemberId myself()
     {
-        return memberId;
+        return myself.id();
     }
 
-    public MemberId getMemberId()
+    Set<DatabaseId> getDatabaseIds()
     {
-        return memberId;
+        return myself.hostedDatabases();
     }
 
-    public ReadReplicaInfo getReadReplicainfo()
+    ReadReplicaInfo getReadReplicaInfo()
     {
-        return addresses;
+        return new ReadReplicaInfo( config, getDatabaseIds() );
+    }
+
+    @Override
+    public String toString()
+    {
+        return "SharedDiscoveryReadReplicaClient{" +
+               "myself=" + myself +
+               '}';
     }
 }

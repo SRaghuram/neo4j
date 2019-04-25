@@ -9,12 +9,14 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.storageengine.api.StoreId;
 
 /**
  * This class defines a client which "speaks" the various versions of the Catchup protocol. Basically wraps a builder for {@link CatchupProtocolMessage}s.
@@ -22,40 +24,28 @@ import java.util.function.Function;
 public interface VersionedCatchupClients extends AutoCloseable
 {
     /**
-     * Creates a {@link CatchupRequestBuilder}, though returns as a {@link NeedsV2Handler} to allow the compiler to enforce build steps.
+     * Creates a {@link CatchupRequestBuilder}, though returns as a {@link NeedsResponseHandler} to allow the compiler to enforce build steps.
      * Short circuits the builder to the second step (avoiding some kind of explicit `getBuilder()` call).
      *
-     * @param v1Request the operation to be invoked against a CatchupClient in the event that V1 of the protocol is agreed during handshake
-     * @param <RESULT> the type of result expected when executing he operation in `v1Request`
+     * @param v3Request the operation to be invoked against a CatchupClient in the event that V3 of the protocol is agreed during handshake
+     * @param <RESULT> the type of result expected when executing he operation in {@code v1Request}
      * @return the second stage of the {@link CatchupRequestBuilder} step builder.
      */
-    <RESULT> NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request );
+    <RESULT> NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
 
     /** Step builder interface for Catchup requests (instances of {@link CatchupProtocolMessage}) against multiple versions of the protocol */
     interface CatchupRequestBuilder<RESULT>
-            extends NeedsV1Handler<RESULT>, NeedsV2Handler<RESULT>, NeedsV3Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
+            extends NeedsV3Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
     {
     }
 
     /** {@link CatchupRequestBuilder} Step 1 */
-    interface NeedsV1Handler<RESULT>
-    {
-        NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request );
-    }
-
-    /** {@link CatchupRequestBuilder} Step 2 */
-    interface NeedsV2Handler<RESULT>
-    {
-        NeedsV3Handler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request );
-    }
-
-    /** {@link CatchupRequestBuilder} Step 3 */
     interface NeedsV3Handler<RESULT>
     {
         NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
     }
 
-    /** {@link CatchupRequestBuilder} Step 4 */
+    /** {@link CatchupRequestBuilder} Step 2 */
     interface NeedsResponseHandler<RESULT>
     {
         IsPrepared<RESULT> withResponseHandler( CatchupResponseCallback<RESULT> responseHandler );
@@ -72,49 +62,17 @@ public interface VersionedCatchupClients extends AutoCloseable
      * CatchupRequestBuilder. Instances of this type should only really be used within lambda's passed to
      * methods of said builder. See CatchupClient for a reference implementation. */
 
-    interface CatchupClientV1
-    {
-        PreparedRequest<CoreSnapshot> getCoreSnapshot();
-
-        PreparedRequest<StoreId> getStoreId();
-
-        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId );
-
-        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId );
-
-        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId );
-
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId );
-    }
-
-    interface CatchupClientV2
-    {
-        PreparedRequest<CoreSnapshot> getCoreSnapshot();
-
-        PreparedRequest<StoreId> getStoreId( String databaseName );
-
-        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
-
-        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
-
-        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
-
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
-    }
-
     interface CatchupClientV3
     {
-        PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName );
+        PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId );
 
-        PreparedRequest<StoreId> getStoreId( String databaseName );
+        PreparedRequest<StoreId> getStoreId( DatabaseId databaseId );
 
-        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId );
 
-        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId );
 
-        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
-
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId );
     }
 
     @FunctionalInterface

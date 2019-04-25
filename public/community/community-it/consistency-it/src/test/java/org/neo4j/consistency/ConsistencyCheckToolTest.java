@@ -41,6 +41,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckTool.ToolFailureException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -51,7 +52,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.LogTimeZone;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -68,7 +69,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -91,7 +92,7 @@ class ConsistencyCheckToolTest
         runConsistencyCheckToolWith( service, args );
 
         // then
-        verify( service ).runFullConsistencyCheck( eq( databaseLayout ), any( Config.class ),
+        verify( service ).runFullConsistencyCheck( any( DatabaseLayout.class ), any( Config.class ),
                 any( ProgressMonitorFactory.class ), any( LogProvider.class ), any( FileSystemAbstraction.class ),
                 anyBoolean(), any( ConsistencyFlags.class ) );
     }
@@ -141,7 +142,7 @@ class ConsistencyCheckToolTest
 
         // then
         ArgumentCaptor<Config> config = ArgumentCaptor.forClass( Config.class );
-        verify( service ).runFullConsistencyCheck( eq( databaseLayout ), config.capture(),
+        verify( service ).runFullConsistencyCheck( any( DatabaseLayout.class ), config.capture(),
                 any( ProgressMonitorFactory.class ), any( LogProvider.class ), any( FileSystemAbstraction.class ),
                 anyBoolean(), any( ConsistencyFlags.class ) );
         assertFalse( config.getValue().get( ConsistencyCheckSettings.consistency_check_property_owners ) );
@@ -212,8 +213,7 @@ class ConsistencyCheckToolTest
         assertThrows( ToolFailureException.class, () ->
         {
             File customConfigFile = testDirectory.file( "customConfig" );
-            File otherLocation = testDirectory.directory( "otherLocation" );
-            Config customConfig = Config.defaults( transaction_logs_root_path, otherLocation.getAbsolutePath() );
+            Config customConfig = Config.defaults();
             createGraphDbAndKillIt( customConfig );
             MapUtil.store( customConfig.getRaw(), fs.openAsOutputStream( customConfigFile, false ) );
             String[] args = {testDirectory.databaseDir().getPath(), "-config", customConfigFile.getPath()};
@@ -242,11 +242,11 @@ class ConsistencyCheckToolTest
 
     private void createGraphDbAndKillIt( Config config ) throws IOException
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
                 .setFileSystem( fs )
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( config.getRaw()  )
-                .newGraphDatabase();
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+                .setConfig( config.getRaw()  ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -261,7 +261,7 @@ class ConsistencyCheckToolTest
 
         createStoreCopy( logFilesDirectory, tempLogsDirectory, tempStoreDirectory );
 
-        db.shutdown();
+        managementService.shutdown();
 
         restoreStoreCopy( logFilesDirectory, tempLogsDirectory, tempStoreDirectory );
     }

@@ -8,8 +8,10 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.LinkedHashSet;
-import java.util.NoSuchElementException;
+import java.util.Set;
 
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -18,8 +20,8 @@ import static org.neo4j.helpers.collection.Iterables.empty;
 
 public class UpstreamDatabaseStrategySelector
 {
-    private LinkedHashSet<UpstreamDatabaseSelectionStrategy> strategies = new LinkedHashSet<>();
-    private Log log;
+    private final Set<UpstreamDatabaseSelectionStrategy> strategies = new LinkedHashSet<>();
+    private final Log log;
 
     public UpstreamDatabaseStrategySelector( UpstreamDatabaseSelectionStrategy defaultStrategy )
     {
@@ -29,44 +31,25 @@ public class UpstreamDatabaseStrategySelector
     public UpstreamDatabaseStrategySelector( UpstreamDatabaseSelectionStrategy defaultStrategy, Iterable<UpstreamDatabaseSelectionStrategy> otherStrategies,
             LogProvider logProvider )
     {
-        this.log = logProvider.getLog( getClass() );
-
-        if ( otherStrategies != null )
-        {
-            for ( UpstreamDatabaseSelectionStrategy otherStrategy : otherStrategies )
-            {
-                strategies.add( otherStrategy );
-            }
-        }
+        log = logProvider.getLog( getClass() );
+        Iterables.addAll( strategies, otherStrategies );
         strategies.add( defaultStrategy );
     }
 
-    public MemberId bestUpstreamDatabase() throws UpstreamDatabaseSelectionException
+    public MemberId bestUpstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        MemberId result = null;
-        for ( UpstreamDatabaseSelectionStrategy strategy : strategies )
+        for ( var strategy : strategies )
         {
-            log.debug( "Trying selection strategy [%s]", strategy.toString() );
-            try
+            log.debug( "Trying selection strategy [%s]", strategy );
+
+            var upstreamMember = strategy.upstreamMemberForDatabase( databaseId );
+            if ( upstreamMember.isPresent() )
             {
-                if ( strategy.upstreamDatabase().isPresent() )
-                {
-                    result = strategy.upstreamDatabase().get();
-                    break;
-                }
-            }
-            catch ( NoSuchElementException ex )
-            {
-                // Do nothing, this strategy failed
+                var memberId = upstreamMember.get();
+                log.debug( "Selected upstream database [%s]", memberId );
+                return memberId;
             }
         }
-
-        if ( result == null )
-        {
-            throw new UpstreamDatabaseSelectionException( "Could not find an upstream database with which to connect." );
-        }
-
-        log.debug( "Selected upstream database [%s]", result );
-        return result;
+        throw new UpstreamDatabaseSelectionException( "Could not find an upstream member for database " + databaseId.name() + " with which to connect" );
     }
 }

@@ -21,17 +21,19 @@ package org.neo4j.kernel.impl.core;
 
 import org.junit.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.helpers.collection.Iterables.count;
 
@@ -58,9 +60,9 @@ public class TestConcurrentRelationshipChainLoadingIssue
 
     private void tryToTriggerRelationshipLoadingStoppingMidWay( int denseNodeThreshold ) throws Throwable
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
-                .setConfig( dense_node_threshold, "" + denseNodeThreshold )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder()
+                .setConfig( dense_node_threshold, "" + denseNodeThreshold ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         Node node = createNodeWithRelationships( db );
 
         checkStateToHelpDiagnoseFlakyTest( db, node );
@@ -73,7 +75,7 @@ public class TestConcurrentRelationshipChainLoadingIssue
             iterations++;
         }
 
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private void checkStateToHelpDiagnoseFlakyTest( GraphDatabaseAPI db, Node node )

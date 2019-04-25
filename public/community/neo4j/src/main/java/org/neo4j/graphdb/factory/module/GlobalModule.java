@@ -21,7 +21,6 @@ package org.neo4j.graphdb.factory.module;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,9 +29,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -67,7 +65,6 @@ import org.neo4j.kernel.impl.util.watcher.DefaultFileSystemWatcherService;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.info.JvmChecker;
 import org.neo4j.kernel.info.JvmMetadataRepository;
-import org.neo4j.kernel.internal.Version;
 import org.neo4j.kernel.internal.locker.GlobalStoreLocker;
 import org.neo4j.kernel.internal.locker.StoreLocker;
 import org.neo4j.kernel.internal.locker.StoreLockerLifecycleAdapter;
@@ -78,17 +75,19 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.StoreLogService;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
+import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.DeferredExecutor;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
-import org.neo4j.udc.UsageData;
-import org.neo4j.udc.UsageDataKeys;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_block_cache_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_max_cacheable_block_size;
@@ -96,7 +95,7 @@ import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 
 /**
- * Global module for {@link GraphDatabaseFacadeFactory}. This creates all global services and components from DBMS.
+ * Global module for {@link DatabaseManagementServiceFactory}. This creates all global services and components from DBMS.
  */
 public class GlobalModule
 {
@@ -114,15 +113,15 @@ public class GlobalModule
     private final GlobalExtensions globalExtensions;
     private final Iterable<ExtensionFactory<?>> extensionFactories;
     private final Iterable<QueryEngineProvider> queryEngineProviders;
-    private final URLAccessRule urlAccessRule;
     private final JobScheduler jobScheduler;
     private final SystemNanoClock globalClock;
     private final VersionContextSupplier versionContextSupplier;
     private final CollectionsFactorySupplier collectionsFactorySupplier;
-    private final UsageData usageData;
     private final ConnectorPortRegister connectorPortRegister;
     private final CompositeDatabaseAvailabilityGuard globalAvailabilityGuard;
+    private final CompositeDatabaseHealth globalHealthService;
     private final FileSystemWatcherService fileSystemWatcher;
+    private final DatabaseEventListeners databaseEventListeners;
     // In the future this may not be a global decision, but for now this is a good central place to make the decision about which storage engine to use
     private final StorageEngineFactory storageEngineFactory;
 
@@ -139,7 +138,9 @@ public class GlobalModule
         globalClock = globalDependencies.satisfyDependency( createClock() );
         globalLife = createLife();
 
-        this.storeLayout = StoreLayout.of( providedStoreDir, of( globalConfig ) );
+        File storeDirectory = globalConfig.isConfigured( databases_root_path ) ? globalConfig.get( databases_root_path )
+                                                                               : providedStoreDir;
+        this.storeLayout = StoreLayout.of( storeDirectory, of( globalConfig ) );
 
         globalConfig.augmentDefaults( GraphDatabaseSettings.neo4j_home, storeLayout.storeDirectory().getPath() );
         this.globalConfig = globalDependencies.satisfyDependency( globalConfig );
@@ -153,10 +154,6 @@ public class GlobalModule
 
         jobScheduler = globalLife.add( globalDependencies.satisfyDependency( createJobScheduler() ) );
         startDeferredExecutors( jobScheduler, externalDependencies.deferredExecutors() );
-
-        // Database system information, used by UDC
-        usageData = new UsageData( jobScheduler );
-        globalDependencies.satisfyDependency( globalLife.add( usageData ) );
 
         // If no logging was passed in from the outside then create logging and register
         // with this life
@@ -175,6 +172,8 @@ public class GlobalModule
         globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( globalClock, logService );
         globalDependencies.satisfyDependency( globalAvailabilityGuard );
         globalLife.setLast( globalAvailabilityGuard );
+
+        globalHealthService = new CompositeDatabaseHealth();
 
         String desiredImplementationName = globalConfig.get( GraphDatabaseSettings.tracer );
         tracers = globalDependencies.satisfyDependency( new Tracers( desiredImplementationName,
@@ -206,31 +205,28 @@ public class GlobalModule
                 new GlobalExtensions( new GlobalExtensionContext( storeLayout, databaseInfo, globalDependencies ), extensionFactories, globalDependencies,
                         ExtensionFailureStrategies.fail() ) );
 
-        urlAccessRule = globalDependencies.satisfyDependency( URLAccessRules.combined( externalDependencies.urlAccessRules() ) );
+        globalDependencies.satisfyDependency( URLAccessRules.combined( externalDependencies.urlAccessRules() ) );
+
+        databaseEventListeners = new DatabaseEventListeners( logService.getInternalLog( DatabaseEventListeners.class ) );
 
         connectorPortRegister = new ConnectorPortRegister();
         globalDependencies.satisfyDependency( connectorPortRegister );
 
         // There's no way of actually configuring storage engine right now and this is on purpose since
         // we have neither figured out the surface, use cases nor other storage engines.
-        storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
+        storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         globalDependencies.satisfyDependency( storageEngineFactory );
 
         checkLegacyDefaultDatabase();
-
-        publishPlatformInfo( globalDependencies.resolveDependency( UsageData.class ) );
     }
 
     private void checkLegacyDefaultDatabase()
     {
-        //TODO: because our factories atm still starting on a particular database directory and set default_database and root during setup
-        // we can't simply check if setting was configured and for now we will use default value and a signal to do a check for old database
-        // as soon as database factories will be updated this should be updated to check if setting was configured instead.
-        if ( GraphDatabaseSettings.DEFAULT_DATABASE_NAME.equals( globalConfig.get( GraphDatabaseSettings.default_database ) ) )
+        if ( !globalConfig.isConfigured( GraphDatabaseSettings.default_database ) )
         {
             String legacyDatabaseName = "graph.db";
             DatabaseLayout legacyDatabaseLayout = storeLayout.databaseLayout( legacyDatabaseName );
-            if ( storageEngineFactory.storageExists( fileSystem, pageCache, legacyDatabaseLayout ) )
+            if ( storageEngineFactory.storageExists( fileSystem, legacyDatabaseLayout, pageCache ) )
             {
                 Log internalLog = logService.getInternalLog( getClass() );
                 globalConfig.augment( GraphDatabaseSettings.default_database, legacyDatabaseName );
@@ -241,7 +237,7 @@ public class GlobalModule
         }
     }
 
-    private void startDeferredExecutors( JobScheduler jobScheduler, Iterable<Pair<DeferredExecutor,Group>> deferredExecutors )
+    private static void startDeferredExecutors( JobScheduler jobScheduler, Iterable<Pair<DeferredExecutor,Group>> deferredExecutors )
     {
         for ( Pair<DeferredExecutor,Group> executorGroupPair : deferredExecutors )
         {
@@ -259,19 +255,12 @@ public class GlobalModule
 
     protected StoreLocker createStoreLocker()
     {
-        boolean ignoreLock = globalConfig.get( GraphDatabaseSettings.ignore_store_lock );
-        return new GlobalStoreLocker( fileSystem, storeLayout, ignoreLock );
+        return new GlobalStoreLocker( fileSystem, storeLayout );
     }
 
     protected SystemNanoClock createClock()
     {
         return Clocks.nanoClock();
-    }
-
-    private static void publishPlatformInfo( UsageData sysInfo )
-    {
-        sysInfo.set( UsageDataKeys.version, Version.getNeo4jVersion() );
-        sysInfo.set( UsageDataKeys.revision, Version.getKernelVersion() );
     }
 
     public LifeSupport createLife()
@@ -350,9 +339,9 @@ public class GlobalModule
         return globalLife.add( logService );
     }
 
-    private Map<String,Level> asDebugLogLevels( List<String> strings )
+    private static Map<String,Level> asDebugLogLevels( List<String> strings )
     {
-        return strings.stream().collect( HashMap::new, ( map, string ) -> map.put( string, Level.DEBUG ), HashMap::putAll );
+        return strings.stream().collect( toMap( identity(), s -> Level.DEBUG ) );
     }
 
     protected JobScheduler createJobScheduler()
@@ -414,11 +403,6 @@ public class GlobalModule
         return connectorPortRegister;
     }
 
-    public UsageData getUsageData()
-    {
-        return usageData;
-    }
-
     CollectionsFactorySupplier getCollectionsFactorySupplier()
     {
         return collectionsFactorySupplier;
@@ -457,11 +441,6 @@ public class GlobalModule
     public Config getGlobalConfig()
     {
         return globalConfig;
-    }
-
-    public URLAccessRule getUrlAccessRule()
-    {
-        return urlAccessRule;
     }
 
     public FileSystemAbstraction getFileSystem()
@@ -512,6 +491,16 @@ public class GlobalModule
     public CompositeDatabaseAvailabilityGuard getGlobalAvailabilityGuard()
     {
         return globalAvailabilityGuard;
+    }
+
+    public CompositeDatabaseHealth getGlobalHealthService()
+    {
+        return globalHealthService;
+    }
+
+    public DatabaseEventListeners getDatabaseEventListeners()
+    {
+        return databaseEventListeners;
     }
 
     public StorageEngineFactory getStorageEngineFactory()

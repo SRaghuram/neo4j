@@ -88,7 +88,7 @@ public class DatabaseIndexAccessorTest
     private final long nodeId = 1;
     private final long nodeId2 = 2;
     private final Object value = "value";
-    private final Object value2 = 40;
+    private final Object value2 = "40";
     private DirectoryFactory.InMemoryDirectoryFactory dirFactory;
     private static final IndexDescriptor GENERAL_INDEX = TestIndexDescriptorFactory.forLabel( 0, PROP_ID );
     private static final IndexDescriptor UNIQUE_INDEX = TestIndexDescriptorFactory.uniqueForLabel( 1, PROP_ID );
@@ -197,29 +197,21 @@ public class DatabaseIndexAccessorTest
     }
 
     @Test
-    public void indexNumberRangeQuery() throws Exception
+    public void indexNumberRangeQueryMustThrow() throws Exception
     {
-        updateAndCommit( asList( add( 1, 1 ), add( 2, 2 ), add( 3, 3 ), add( 4, 4 ), add( 5, Double.NaN ) ) );
+        updateAndCommit( asList( add( 1, "1" ), add( 2, "2" ), add( 3, "3" ), add( 4, "4" ), add( 5, "Double.NaN" ) ) );
 
         IndexReader reader = accessor.newReader();
 
-        long[] rangeTwoThree = resultsArray( reader, range( PROP_ID, 2, true, 3, true ) );
-        assertThat( rangeTwoThree, LongArrayMatcher.of( 2, 3 ) );
-
-        long[] infiniteMaxRange = resultsArray( reader, range( PROP_ID, 2, true, Long.MAX_VALUE, true ) );
-        assertThat( infiniteMaxRange, LongArrayMatcher.of( 2, 3, 4 ) );
-
-        long[] infiniteMinRange = resultsArray( reader, range( PROP_ID, Long.MIN_VALUE, true, 3, true ) );
-        assertThat( infiniteMinRange, LongArrayMatcher.of( PROP_ID, 2, 3 ) );
-
-        long[] maxNanInterval = resultsArray( reader, range( PROP_ID, 3, true, Double.NaN, true ) );
-        assertThat( maxNanInterval, LongArrayMatcher.of( 3, 4, 5 ) );
-
-        long[] minNanInterval = resultsArray( reader, range( PROP_ID, Double.NaN, true, 5, true ) );
-        assertThat( minNanInterval, LongArrayMatcher.emptyArrayMatcher() );
-
-        long[] nanInterval = resultsArray( reader, range( PROP_ID, Double.NaN, true, Double.NaN, true ) );
-        assertThat( nanInterval, LongArrayMatcher.of( 5 ) );
+        try
+        {
+            long[] rangeTwoThree = resultsArray( reader, range( PROP_ID, 2, true, 3, true ) );
+            fail( "Expected to throw" );
+        }
+        catch ( UnsupportedOperationException e )
+        {
+            assertEquals( "Range scans of value group NUMBER are not supported", e.getMessage() );
+        }
     }
 
     @Test
@@ -315,9 +307,10 @@ public class DatabaseIndexAccessorTest
             return nothing;
         }, null, waitingWhileIn( TaskCoordinator.class, "awaitCompletion" ), 3, SECONDS );
 
-        try ( IndexReader reader = indexReader /* do not inline! */ )
+        try ( IndexReader reader = indexReader /* do not inline! */;
+              IndexSampler sampler = indexSampler /* do not inline! */ )
         {
-            indexSampler.sampleIndex();
+            sampler.sampleIndex();
             fail( "expected exception" );
         }
         catch ( IndexNotFoundKernelException e )

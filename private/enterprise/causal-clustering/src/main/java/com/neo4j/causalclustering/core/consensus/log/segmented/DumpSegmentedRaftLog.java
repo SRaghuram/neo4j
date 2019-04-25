@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -22,8 +22,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class DumpSegmentedRaftLog
 {
@@ -88,7 +86,7 @@ class DumpSegmentedRaftLog
 
                 try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
                 {
-                    new DumpSegmentedRaftLog( fileSystem, CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME ) )
+                    new DumpSegmentedRaftLog( fileSystem, new CoreReplicatedContentMarshalV2() )
                             .dump( fileAsString, printer.getFor( fileAsString ) );
                 }
                 catch ( IOException | DisposedException | DamagedLogStorageException e )

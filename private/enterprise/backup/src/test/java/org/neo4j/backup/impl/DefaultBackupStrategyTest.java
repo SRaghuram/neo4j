@@ -5,19 +5,18 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import com.neo4j.causalclustering.catchup.CatchupResult;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -37,7 +36,7 @@ class DefaultBackupStrategyTest
     private DatabaseLayout desiredBackupLayout = mock( DatabaseLayout.class );
     private AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
     private StoreFiles storeFiles = mock( StoreFiles.class );
-    private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44 );
+    private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
     private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
 
     @BeforeEach
@@ -198,7 +197,7 @@ class DefaultBackupStrategyTest
     void exceptionWhenStoreMismatch() throws Exception
     {
         // given
-        when( storeFiles.readStoreId( any() ) ).thenReturn( new StoreId( 5, 4, 3, 2 ) );
+        when( storeFiles.readStoreId( any() ) ).thenReturn( new StoreId( 5, 4, 3, 2, 1 ) );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,

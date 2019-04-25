@@ -19,18 +19,6 @@ public interface StoreCopyClientMonitor
 
     void finishReceivingTransactions( long endTxId );
 
-    void startRecoveringStore();
-
-    void finishRecoveringStore();
-
-    void startReceivingIndexSnapshots();
-
-    void startReceivingIndexSnapshot( long indexId );
-
-    void finishReceivingIndexSnapshot( long indexId );
-
-    void finishReceivingIndexSnapshots();
-
     class Adapter implements StoreCopyClientMonitor
     {
         @Override
@@ -63,34 +51,5 @@ public interface StoreCopyClientMonitor
         {   // empty
         }
 
-        @Override
-        public void startRecoveringStore()
-        {   // empty
-        }
-
-        @Override
-        public void finishRecoveringStore()
-        {   // empty
-        }
-
-        @Override
-        public void startReceivingIndexSnapshots()
-        {   // empty
-        }
-
-        @Override
-        public void startReceivingIndexSnapshot( long indexId )
-        {   // empty
-        }
-
-        @Override
-        public void finishReceivingIndexSnapshot( long indexId )
-        {   // empty
-        }
-
-        @Override
-        public void finishReceivingIndexSnapshots()
-        {   // empty
-        }
     }
 }

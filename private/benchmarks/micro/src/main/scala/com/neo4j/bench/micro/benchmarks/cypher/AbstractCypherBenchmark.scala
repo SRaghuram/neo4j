@@ -13,17 +13,17 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.{PlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.runtime.{NoInput, QueryContext}
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.devNullLogger
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{Cardinality, LabelId, RelTypeId, Selectivity}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFactory, ExecutionPlan, LogicalQuery}
@@ -35,6 +35,7 @@ import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead, Transac
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
@@ -91,7 +92,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     logicalPlan.rhs.foreach(solve)
   }
 
-  def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = false): ExecutablePlan = {
+  def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = true): ExecutablePlan = {
     def cypherRuntimeOption(cypherRuntime: CypherRuntime): CypherRuntimeOption =
       cypherRuntime match {
         case Interpreted => CypherRuntimeOption.interpreted
@@ -187,7 +188,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       threadToStatementContextBridge,
       tx,
       initialStatement,
-      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
+      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ), "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
       new DefaultValueMapper(proxySpi)) {
       override def close(success: Boolean): Unit = ()
     }

@@ -21,23 +21,26 @@ package org.neo4j.kernel.impl.index.schema.tracking;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20;
 import org.neo4j.kernel.api.index.IndexProvider;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.impl.index.schema.AbstractIndexProviderFactory;
 
 public class TrackingIndexExtensionFactory extends ExtensionFactory<TrackingIndexExtensionFactory.Dependencies>
 {
     private final ConcurrentHashMap<String,TrackingReadersIndexProvider> indexProvider = new ConcurrentHashMap<>();
+    private final AbstractIndexProviderFactory delegate;
 
-    public TrackingIndexExtensionFactory()
+    public TrackingIndexExtensionFactory( AbstractIndexProviderFactory delegate )
     {
         super( ExtensionType.DATABASE, "trackingIndex" );
+        this.delegate = delegate;
     }
 
-    public interface Dependencies extends NativeLuceneFusionIndexProviderFactory20.Dependencies
+    public interface Dependencies extends AbstractIndexProviderFactory.Dependencies
     {
         Database database();
     }
@@ -45,10 +48,10 @@ public class TrackingIndexExtensionFactory extends ExtensionFactory<TrackingInde
     @Override
     public synchronized IndexProvider newInstance( ExtensionContext context, Dependencies dependencies )
     {
-        String databaseName = dependencies.database().getDatabaseName();
-        return indexProvider.computeIfAbsent( databaseName, s ->
+        DatabaseId databaseId = dependencies.database().getDatabaseId();
+        return indexProvider.computeIfAbsent( databaseId.name(), s ->
         {
-            IndexProvider indexProvider = new NativeLuceneFusionIndexProviderFactory20().newInstance( context, dependencies );
+            IndexProvider indexProvider = delegate.newInstance( context, dependencies );
             return new TrackingReadersIndexProvider( indexProvider );
         } );
     }

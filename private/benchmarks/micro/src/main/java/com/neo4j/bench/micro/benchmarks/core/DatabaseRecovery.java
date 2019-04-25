@@ -10,6 +10,7 @@ import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.StringGenerator;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -29,7 +30,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
@@ -108,7 +108,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @Setup( Level.Iteration )
     public void truncateCheckpointFromLogs() throws IOException
     {
-        managedStore.db().shutdown();
+        ManagedStore.getManagementService().shutdown();
         removeLastCheckpointRecordFromLastLogFile();
     }
 
@@ -134,8 +134,8 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     private void removeLastCheckpointRecordFromLastLogFile() throws IOException
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        File storeDir = managedStore.store().toFile();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDir, fileSystem ).build();
+        File graphDb = managedStore.store().graphDbDirectory().toFile();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( graphDb, fileSystem ).build();
         LogPosition checkpointPosition = null;
 
         LogFile logFile = logFiles.getLogFile();
@@ -161,7 +161,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         if ( checkpointPosition != null )
         {
             File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
-            try ( StoreChannel storeChannel = fileSystem.open( highestLogFile, OpenMode.READ_WRITE ) )
+            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
             {
                 storeChannel.truncate( checkpointPosition.getByteOffset() );
             }

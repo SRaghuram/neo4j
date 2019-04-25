@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.database.DatabaseId;
 
 @RunWith( Parameterized.class )
 public class CoreTopologyMarshalTest extends BaseMarshalTest<CoreTopology>
@@ -34,9 +35,9 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<CoreTopology>
     public static Collection<CoreTopology> data()
     {
         return Arrays.asList(
-                new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 0 ) ),
-                new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
-                new CoreTopology( null, false, CoreTopologyMarshalTest.coreServerInfos( 4 ) )
+                new CoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 0 ) ),
+                new CoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
+                new CoreTopology( new DatabaseId( "cars" ), null, false, CoreTopologyMarshalTest.coreServerInfos( 4 ) )
         );
     }
 

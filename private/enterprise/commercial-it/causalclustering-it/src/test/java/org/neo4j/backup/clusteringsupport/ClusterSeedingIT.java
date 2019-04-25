@@ -7,10 +7,9 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.backup.stores.BackupStore;
 import com.neo4j.backup.stores.BackupStoreWithSomeData;
-import com.neo4j.backup.stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataAndNoIdFiles;
 import com.neo4j.backup.stores.DefaultDatabasesBackup;
 import com.neo4j.backup.stores.EmptyBackupStore;
-import com.neo4j.backup.stores.EmptyBackupStoreWithoutTransactionLogs;
 import com.neo4j.backup.stores.NoStore;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -29,6 +28,8 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
@@ -67,9 +68,8 @@ public class ClusterSeedingIT
         return new Object[][]{
                 {new NoStore(), true},
                 {new EmptyBackupStore(), false},
-                {new EmptyBackupStoreWithoutTransactionLogs(), false},
                 {new BackupStoreWithSomeData(), false},
-                {new BackupStoreWithSomeDataButNoTransactionLogs(), false}
+                {new BackupStoreWithSomeDataAndNoIdFiles(), false},
         };
     }
 
@@ -111,11 +111,11 @@ public class ClusterSeedingIT
 
         if ( backupsOpt.isPresent() )
         {
-            for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
+            for ( CoreClusterMember member : cluster.coreMembers() )
             {
                 DefaultDatabasesBackup backups = backupsOpt.get();
-                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), member, new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
+                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), member, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
             }
         }
 
@@ -130,7 +130,7 @@ public class ClusterSeedingIT
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
             Config config = Config.defaults( GraphDatabaseSettings.default_database, backups.defaultDb().getName() );
-            dataMatchesEventually( DbRepresentation.of( backups.defaultDb(), config ), cluster.coreMembers() );
+            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), cluster.coreMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
     }

@@ -24,6 +24,7 @@ import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -38,6 +39,7 @@ import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.newapi.TxStateIndexChanges.AddedAndRemoved;
 import org.neo4j.kernel.impl.newapi.TxStateIndexChanges.AddedWithValuesAndRemoved;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueTuple;
 
 import static java.util.Arrays.stream;
 import static org.neo4j.collection.PrimitiveLongCollections.mergeToSet;
@@ -94,40 +96,69 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
 
         if ( !indexIncludesTransactionState && read.hasTxStateWithChanges() && query.length > 0 )
         {
-            IndexQuery firstPredicate = query[0];
-            switch ( firstPredicate.type() )
+           // Extract out the equality queries
+            ArrayList<Value> exactQueryValues = new ArrayList<>( query.length );
+            int i = 0;
+            while ( i < query.length && query[i] instanceof IndexQuery.ExactPredicate )
             {
-            case exact:
+                exactQueryValues.add( ((IndexQuery.ExactPredicate) query[i]).value() );
+                i++;
+            }
+            Value[] exactValues = exactQueryValues.toArray( new Value[0] );
+
+            if ( i == query.length )
+            {
+                // Only exact queries
                 // No need to order, all values are the same
                 this.indexOrder = IndexOrder.NONE;
-                seekQuery( descriptor, query );
-                break;
+                seekQuery( descriptor, exactValues );
+            }
+            else
+            {
+                IndexQuery nextQuery = query[i];
+                switch ( nextQuery.type() )
+                {
+                case exists:
+                    // If composite index all following will be exists as well so no need to consider those
+                    if ( exactQueryValues.isEmpty() )
+                    {
+                        // First query is exists, use scan
+                        setNeedsValuesIfRequiresOrder();
+                        scanQuery( descriptor );
+                    }
+                    else
+                    {
+                        setNeedsValuesIfRequiresOrder();
+                        rangeQuery( descriptor, exactValues, null );
+                    }
+                    break;
 
-            case exists:
-                setNeedsValuesIfRequiresOrder();
-                scanQuery( descriptor );
-                break;
+                case range:
+                    // This case covers first query to be range or exact followed by range
+                    // If composite index all following will be exists as well so no need to consider those
+                    setNeedsValuesIfRequiresOrder();
+                    rangeQuery( descriptor, exactValues, (IndexQuery.RangePredicate) nextQuery );
+                    break;
 
-            case range:
-                assert query.length == 1;
-                setNeedsValuesIfRequiresOrder();
-                rangeQuery( descriptor, (IndexQuery.RangePredicate) firstPredicate );
-                break;
+                case stringPrefix:
+                    // This case covers first query to be prefix or exact followed by prefix
+                    // If composite index all following will be exists as well so no need to consider those
+                    setNeedsValuesIfRequiresOrder();
+                    prefixQuery( descriptor, exactValues, (IndexQuery.StringPrefixPredicate) nextQuery );
+                    break;
 
-            case stringPrefix:
-                assert query.length == 1;
-                setNeedsValuesIfRequiresOrder();
-                prefixQuery( descriptor, (IndexQuery.StringPrefixPredicate) firstPredicate );
-                break;
+                case stringSuffix:
+                case stringContains:
+                    // This case covers first query to be suffix/contains or exact followed by suffix/contains
+                    // TODO Can't handle this case for composite indexes yet but
+                    // if composite index all following should be exists as well so no need to consider those
+                    assert query.length == 1;
+                    suffixOrContainsQuery( descriptor, nextQuery );
+                    break;
 
-            case stringSuffix:
-            case stringContains:
-                assert query.length == 1;
-                suffixOrContainsQuery( descriptor, firstPredicate );
-                break;
-
-            default:
-                throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( query ) );
+                default:
+                    throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( query ) );
+                }
             }
         }
     }
@@ -321,37 +352,38 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         }
     }
 
-    private void prefixQuery( IndexDescriptor descriptor, IndexQuery.StringPrefixPredicate predicate )
+    private void prefixQuery( IndexDescriptor descriptor, Value[] equalityPrefix, IndexQuery.StringPrefixPredicate predicate )
     {
         TransactionState txState = read.txState();
 
         if ( needsValues )
         {
-            AddedWithValuesAndRemoved changes = indexUpdatesWithValuesForRangeSeekByPrefix( txState, descriptor, predicate.prefix(), indexOrder );
+            AddedWithValuesAndRemoved changes =
+                    indexUpdatesWithValuesForRangeSeekByPrefix( txState, descriptor, equalityPrefix, predicate.prefix(), indexOrder );
             addedWithValues = changes.getAdded().iterator();
             removed = removed( txState, changes.getRemoved() );
         }
         else
         {
-            AddedAndRemoved changes = indexUpdatesForRangeSeekByPrefix( txState, descriptor, predicate.prefix(), indexOrder );
+            AddedAndRemoved changes = indexUpdatesForRangeSeekByPrefix( txState, descriptor, equalityPrefix, predicate.prefix(), indexOrder );
             added = changes.getAdded().longIterator();
             removed = removed( txState, changes.getRemoved() );
         }
     }
 
-    private void rangeQuery( IndexDescriptor descriptor, IndexQuery.RangePredicate<?> predicate )
+    private void rangeQuery( IndexDescriptor descriptor, Value[] equalityPrefix, IndexQuery.RangePredicate<?> predicate )
     {
         TransactionState txState = read.txState();
 
         if ( needsValues )
         {
-            AddedWithValuesAndRemoved changes = indexUpdatesWithValuesForRangeSeek( txState, descriptor, predicate, indexOrder );
+            AddedWithValuesAndRemoved changes = indexUpdatesWithValuesForRangeSeek( txState, descriptor, equalityPrefix, predicate, indexOrder );
             addedWithValues = changes.getAdded().iterator();
             removed = removed( txState, changes.getRemoved() );
         }
         else
         {
-            AddedAndRemoved changes = indexUpdatesForRangeSeek( txState, descriptor, predicate, indexOrder );
+            AddedAndRemoved changes = indexUpdatesForRangeSeek( txState, descriptor, equalityPrefix, predicate, indexOrder );
             added = changes.getAdded().longIterator();
             removed = removed( txState, changes.getRemoved() );
         }
@@ -393,12 +425,11 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         }
     }
 
-    private void seekQuery( IndexDescriptor descriptor, IndexQuery[] query )
+    private void seekQuery( IndexDescriptor descriptor, Value[] values )
     {
-        IndexQuery.ExactPredicate[] exactPreds = assertOnlyExactPredicates( query );
         TransactionState txState = read.txState();
 
-        AddedAndRemoved changes = indexUpdatesForSeek( txState, descriptor, IndexQuery.asValueTuple( exactPreds ) );
+        AddedAndRemoved changes = indexUpdatesForSeek( txState, descriptor, ValueTuple.of( values ) );
         added = changes.getAdded().longIterator();
         removed = removed( txState, changes.getRemoved() );
     }
@@ -406,32 +437,6 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private LongSet removed( TransactionState txState, LongSet removedFromIndex )
     {
         return mergeToSet( txState.addedAndRemovedNodes().getRemoved(), removedFromIndex );
-    }
-
-    private static IndexQuery.ExactPredicate[] assertOnlyExactPredicates( IndexQuery[] predicates )
-    {
-        IndexQuery.ExactPredicate[] exactPredicates;
-        if ( predicates.getClass() == IndexQuery.ExactPredicate[].class )
-        {
-            exactPredicates = (IndexQuery.ExactPredicate[]) predicates;
-        }
-        else
-        {
-            exactPredicates = new IndexQuery.ExactPredicate[predicates.length];
-            for ( int i = 0; i < predicates.length; i++ )
-            {
-                if ( predicates[i] instanceof IndexQuery.ExactPredicate )
-                {
-                    exactPredicates[i] = (IndexQuery.ExactPredicate) predicates[i];
-                }
-                else
-                {
-                    // TODO: what to throw?
-                    throw new IllegalArgumentException( "Query not supported: " + Arrays.toString( predicates ) );
-                }
-            }
-        }
-        return exactPredicates;
     }
 
     public void release()

@@ -22,15 +22,13 @@ package org.neo4j.graphdb;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.graphdb.event.DatabaseEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 
 /**
- * The main access point to a running Neo4j instance. The most common way to instantiate a {@link GraphDatabaseService}
- * is as follows:
+ * The most common way to instantiate a {@link GraphDatabaseService} is as follows:
  * <pre>
  * <code>GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( new File("var/graphDb") );
  * // ... use Neo4j
@@ -340,13 +338,6 @@ public interface GraphDatabaseService
     boolean isAvailable( long timeout );
 
     /**
-     * Shuts down Neo4j. After this method has been invoked, it's invalid to
-     * invoke any methods in the Neo4j API and all references to this instance
-     * of GraphDatabaseService should be discarded.
-     */
-    void shutdown();
-
-    /**
      * Starts a new {@link Transaction transaction} and associates it with the current thread.
      * <p>
      * <em>All database operations must be wrapped in a transaction.</em>
@@ -460,35 +451,6 @@ public interface GraphDatabaseService
      *                               to calling this method.
      */
     <T> TransactionEventHandler<T> unregisterTransactionEventHandler( TransactionEventHandler<T> handler );
-
-    /**
-     * Registers {@code handler} as a handler for kernel events which
-     * are generated from different places in the lifecycle of the kernel.
-     * To guarantee proper behavior the handler should be registered right
-     * after the graph database has been started. If the specified handler
-     * instance has already been registered this method will do nothing.
-     *
-     * @param handler the handler to receive events about different states
-     *                in the kernel lifecycle.
-     * @return the handler passed in as the argument.
-     */
-    DatabaseEventHandler registerDatabaseEventHandler( DatabaseEventHandler handler );
-
-    /**
-     * Unregisters {@code handler} from the list of kernel event handlers.
-     * If {@code handler} hasn't been registered with
-     * {@link #registerDatabaseEventHandler(DatabaseEventHandler)} prior to calling
-     * this method an {@link IllegalStateException} will be thrown.
-     * After a successful call to this method the {@code handler} will no
-     * longer receive any kernel events.
-     *
-     * @param handler the handler to receive events about different states
-     *                in the kernel lifecycle.
-     * @return the handler passed in as the argument.
-     * @throws IllegalStateException if {@code handler} wasn't registered prior
-     *                               to calling this method.
-     */
-    DatabaseEventHandler unregisterDatabaseEventHandler( DatabaseEventHandler handler );
 
     /**
      * Returns the {@link Schema schema manager} where all things related to schema,

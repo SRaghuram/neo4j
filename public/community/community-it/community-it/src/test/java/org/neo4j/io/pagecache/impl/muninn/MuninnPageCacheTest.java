@@ -25,8 +25,10 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.function.IntSupplier;
@@ -36,7 +38,6 @@ import org.neo4j.graphdb.mockfs.DelegatingFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.DelegatingStoreChannel;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCacheTest;
@@ -562,9 +563,9 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
             FileSystemAbstraction fs = new DelegatingFileSystemAbstraction( this.fs )
             {
                 @Override
-                public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
+                public StoreChannel write( File fileName ) throws IOException
                 {
-                    return new DelegatingStoreChannel( super.open( fileName, openMode ) )
+                    return new DelegatingStoreChannel( super.write( fileName ) )
                     {
                         @Override
                         public void writeAll( ByteBuffer src, long position ) throws IOException
@@ -615,9 +616,9 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
             FileSystemAbstraction fs = new DelegatingFileSystemAbstraction( this.fs )
             {
                 @Override
-                public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
+                public StoreChannel open( File fileName, Set<OpenOption> options ) throws IOException
                 {
-                    return new DelegatingStoreChannel( super.open( fileName, openMode ) )
+                    return new DelegatingStoreChannel( super.open( fileName, options ) )
                     {
                         @Override
                         public void writeAll( ByteBuffer src, long position ) throws IOException
@@ -778,7 +779,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
 
     private void writeInitialDataTo( File file ) throws IOException
     {
-        try ( StoreChannel channel = fs.create( file ) )
+        try ( StoreChannel channel = fs.write( file ) )
         {
             ByteBuffer buf = ByteBuffer.allocate( 16 );
             buf.putLong( x );
@@ -791,7 +792,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
     private ByteBuffer readIntoBuffer( String fileName ) throws IOException
     {
         ByteBuffer buffer = ByteBuffer.allocate( 16 );
-        try ( StoreChannel channel = fs.open( file( fileName ), OpenMode.READ ) )
+        try ( StoreChannel channel = fs.read( file( fileName ) ) )
         {
             channel.readAll( buffer );
         }

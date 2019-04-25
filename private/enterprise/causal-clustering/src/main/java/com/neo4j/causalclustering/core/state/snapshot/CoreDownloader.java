@@ -8,12 +8,13 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 
 import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -57,17 +58,18 @@ public class CoreDownloader
      * @throws IOException An issue with I/O.
      * @throws DatabaseShutdownException The database is shutting down.
      */
-    Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider ) throws IOException, DatabaseShutdownException
+    Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
+            throws IOException, DatabaseShutdownException
     {
-        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( addressProvider );
-        if ( !primaryOpt.isPresent() )
+        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( db.databaseId(), addressProvider );
+        if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
         }
         AdvertisedSocketAddress primaryAddress = primaryOpt.get();
 
-        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseName(), primaryAddress );
-        if ( !coreSnapshot.isPresent() )
+        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseId(), primaryAddress );
+        if ( coreSnapshot.isEmpty() )
         {
             return Optional.empty();
         }
@@ -80,11 +82,11 @@ public class CoreDownloader
         return coreSnapshot;
     }
 
-    private Optional<AdvertisedSocketAddress> lookupPrimary( CatchupAddressProvider addressProvider )
+    private Optional<AdvertisedSocketAddress> lookupPrimary( DatabaseId databaseId, CatchupAddressProvider addressProvider )
     {
         try
         {
-            return Optional.of( addressProvider.primary() );
+            return Optional.of( addressProvider.primary( databaseId ) );
         }
         catch ( CatchupAddressResolutionException e )
         {

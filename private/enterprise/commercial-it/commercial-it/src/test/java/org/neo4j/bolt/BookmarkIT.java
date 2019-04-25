@@ -16,12 +16,14 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -57,6 +59,7 @@ public class BookmarkIT
 
     private Driver driver;
     private GraphDatabaseAPI db;
+    private DatabaseManagementService managementService;
 
     @After
     public void tearDown() throws Exception
@@ -64,7 +67,7 @@ public class BookmarkIT
         IOUtils.closeAllSilently( driver );
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -83,9 +86,7 @@ public class BookmarkIT
         CompletableFuture<String> secondBookmarkFuture = CompletableFuture.supplyAsync( () -> createNode( driver ) );
         assertEventually( "Transaction did not block as expected", commitBlocker::hasBlockedTransaction, is( true ), 1, MINUTES );
 
-        Set<String> otherBookmarks = Stream.generate( () -> createNode( driver ) )
-                .limit( 10 )
-                .collect( toSet() );
+        Set<String> otherBookmarks = Stream.generate( () -> createNode( driver ) ).limit( 10 ).collect( toSet() );
 
         commitBlocker.unblock();
         String lastBookmark = secondBookmarkFuture.get();
@@ -107,8 +108,10 @@ public class BookmarkIT
     private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
         GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
-        GraphDatabaseFacadeFactory facadeFactory = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        return facadeFactory.newFacade( directory.databaseDir(), configWithBoltEnabled(), state.databaseDependencies() );
+        DatabaseManagementServiceFactory facadeFactory = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
+        managementService = facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), state.databaseDependencies() );
+        return (GraphDatabaseAPI) managementService.database(
+                GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     private static String createNode( Driver driver )

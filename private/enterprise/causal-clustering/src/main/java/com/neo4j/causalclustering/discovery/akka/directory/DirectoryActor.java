@@ -19,11 +19,12 @@ import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
-public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,ReplicatedLeaderInfo>>
+public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,ReplicatedLeaderInfo>>
 {
-    public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
+    public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoveryUpdateSink,
             ActorRef rrTopologyActor, LogProvider logProvider )
     {
         return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, logProvider ) );
@@ -32,10 +33,10 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     static final String PER_DB_LEADER_KEY = "per-db-leader-name";
     public static final String NAME = "cc-directory-actor";
 
-    private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink;
+    private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoveryUpdateSink;
     private final ActorRef rrTopologyActor;
 
-    protected DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
+    protected DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoveryUpdateSink,
             ActorRef rrTopologyActor, LogProvider logProvider )
     {
         super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create, logProvider );
@@ -63,10 +64,10 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     }
 
     @Override
-    protected void handleIncomingData( ORMap<String,ReplicatedLeaderInfo> newData )
+    protected void handleIncomingData( ORMap<DatabaseId,ReplicatedLeaderInfo> newData )
     {
         data = data.merge( newData );
-        Map<String,LeaderInfo> leaderInfos = data.getEntries().entrySet().stream()
+        Map<DatabaseId,LeaderInfo> leaderInfos = data.getEntries().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().leaderInfo() ) );
         discoveryUpdateSink.offer( leaderInfos );
         rrTopologyActor.tell( new LeaderInfoDirectoryMessage( leaderInfos ), getSelf() );

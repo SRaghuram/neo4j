@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
@@ -13,9 +12,9 @@ import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext,
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, QueryManager, SchedulingPolicy}
 
+import scala.concurrent.duration.Duration
+
 /**
-  * Developers note: Migrated from Alex's scheduler PR
-  *
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
   * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
   * task to perform on that query.
@@ -27,18 +26,19 @@ import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, Query
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
-             resources: QueryResources) extends Runnable {
-  private val sleeper = new Sleeper
+             resources: QueryResources,
+             sleeper: Sleeper = new Sleeper) extends Runnable {
 
   override def run(): Unit = {
     while (!Thread.interrupted()) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {
-          sleeper.reset()
           val worked = workOnQuery(executingQuery)
           if (!worked) {
             sleeper.reportIdle()
+          } else {
+            sleeper.reset()
           }
         } else {
           sleeper.reportIdle()
@@ -52,29 +52,37 @@ class Worker(val workerId: Int,
     }
   }
 
+  /**
+    * Try to obtain a task for a given query and work on it.
+    *
+    * @param executingQuery the query
+    * @return if some work was performed
+    */
   def workOnQuery(executingQuery: ExecutingQuery): Boolean = {
     try {
       val task = schedulingPolicy.nextTask(executingQuery, resources)
       if (task != null) {
-        val pipeline = task.pipeline
-        val state = executingQuery.executionState
+        val state = task.pipelineState
         val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-        val output = allocateMorsel(pipeline, executingQuery.queryState.morselSize, workUnitEvent)
+        val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
         task.executeWorkUnit(resources, output)
         workUnitEvent.stop()
 
-        if (pipeline.output != null) {
-          state.produceMorsel(pipeline.output.id, output)
-        }
+        state.produce(output)
 
         if (task.canContinue) {
-          state.addContinuation(task)
+          // Put the continuation before unlocking (closeWorkUnit)
+          // so that in serial pipelines we can guarantee that the continuation
+          // is the next thing which is picked up
+          state.putContinuation(task)
+          state.closeWorkUnit()
         } else {
-          state.closeTask(task)
+          task.close()
         }
         true
-      } else
+      } else {
         false
+      }
     } catch {
       case error: Throwable =>
         error.printStackTrace()
@@ -83,7 +91,7 @@ class Worker(val workerId: Int,
   }
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
-    val upstreamWorkUnitEvent = task.start.inputMorsel.producingWorkUnitEvent
+    val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
     if (upstreamWorkUnitEvent != null) Seq(upstreamWorkUnitEvent) else Seq.empty
   }
 
@@ -102,7 +110,7 @@ class Worker(val workerId: Int,
 }
 
 class Sleeper(private val idleThreshold: Int = 10000,
-              private val sleepDuration: Duration = Duration(1, TimeUnit.MILLISECONDS)) {
+              private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
   private val sleepNs = sleepDuration.toNanos
   private var idleCounter = 0
 

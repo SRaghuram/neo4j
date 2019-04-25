@@ -26,16 +26,32 @@ import org.neo4j.io.pagecache.PageCursor;
 
 public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
 {
+    private static final int DEFAULT_LARGE_ENTRY_SIZE = Long.BYTES;
+    private static final long NO_LARGE_ENTRIES_MODULO = 0;
     private final boolean useFirstLongAsSeed;
+    private final int largeEntriesSize;
+    private final long largeEntryModulo;
 
     SimpleByteArrayLayout()
     {
-        this( true );
+        this( true, DEFAULT_LARGE_ENTRY_SIZE, NO_LARGE_ENTRIES_MODULO );
     }
 
     SimpleByteArrayLayout( boolean useFirstLongAsSeed )
     {
+        this( useFirstLongAsSeed, DEFAULT_LARGE_ENTRY_SIZE, NO_LARGE_ENTRIES_MODULO );
+    }
+
+    SimpleByteArrayLayout( int largeEntriesSize, long largeEntryModulo )
+    {
+        this( true, largeEntriesSize, largeEntryModulo );
+    }
+
+    private SimpleByteArrayLayout( boolean useFirstLongAsSeed, int largeEntriesSize, long largeEntryModulo )
+    {
         this.useFirstLongAsSeed = useFirstLongAsSeed;
+        this.largeEntriesSize = largeEntriesSize;
+        this.largeEntryModulo = largeEntryModulo;
     }
 
     @Override
@@ -119,7 +135,7 @@ public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
     {
         long leftSeed = keySeed( left );
         long rightSeed = keySeed( right );
-        if ( leftSeed != rightSeed )
+        if ( useFirstLongAsSeed && leftSeed != rightSeed )
         {
             // Minimal splitter is first 8B (seed)
             copyKey( right, into, Long.BYTES );
@@ -128,16 +144,16 @@ public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
         {
             // They had the same seed. Need to look at entire array
             int maxLength = Math.min( left.bytes.length, right.bytes.length );
-            int targetLength = 0;
-            for ( ; targetLength < maxLength; targetLength++ )
+            int firstIndexToDiffer = 0;
+            for ( ; firstIndexToDiffer < maxLength; firstIndexToDiffer++ )
             {
-                if ( left.bytes[targetLength] != right.bytes[targetLength] )
+                if ( left.bytes[firstIndexToDiffer] != right.bytes[firstIndexToDiffer] )
                 {
-                    // Convert to length from array index
-                    targetLength++;
                     break;
                 }
             }
+            // Convert from index to length
+            int targetLength = firstIndexToDiffer + 1;
             copyKey( right, into, targetLength );
         }
     }
@@ -257,6 +273,10 @@ public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
     private byte[] fromSeed( long seed )
     {
         int tail = (int) Math.abs( seed % Long.BYTES );
+        if ( largeEntryModulo != NO_LARGE_ENTRIES_MODULO && (seed % largeEntryModulo) == 0 )
+        {
+            tail = largeEntriesSize - Long.BYTES;
+        }
         ByteBuffer buffer = ByteBuffer.allocate( Long.BYTES + tail );
         buffer.putLong( seed );
         buffer.put( new byte[tail] );

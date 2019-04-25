@@ -78,14 +78,14 @@ import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.util.monitoring.LogProgressReporter;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.lock.LockService;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.monitoring.DatabaseEventHandlers;
+import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Monitors;
@@ -104,6 +104,8 @@ import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.helpers.collection.Iterables.stream;
 import static org.neo4j.kernel.impl.constraints.ConstraintSemantics.getConstraintSemantics;
+import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
@@ -121,7 +123,7 @@ public final class Recovery
     }
 
     /**
-     * Return helper that can be used to check if some database described by {@link DatabaseLayout} requires recovery.
+     * Provide recovery helper that can perform recovery of some database described by {@link DatabaseLayout}.
      *
      * @param fs database filesystem
      * @param pageCache page cache used to perform database recovery.
@@ -129,10 +131,10 @@ public final class Recovery
      * @param storageEngineFactory {@link StorageEngineFactory} for the storage to recover.
      * @return helper recovery checker
      */
-    public static RecoveryRequiredChecker recoveryRequiredChecker( FileSystemAbstraction fs, PageCache pageCache, Config config,
+    public static RecoveryFacade recoveryFacade( FileSystemAbstraction fs, PageCache pageCache, Config config,
             StorageEngineFactory storageEngineFactory )
     {
-        return new RecoveryRequiredChecker( fs, pageCache, config, storageEngineFactory );
+        return new RecoveryFacade( fs, pageCache, config, storageEngineFactory );
     }
 
     /**
@@ -270,7 +272,8 @@ public final class Recovery
         DatabaseSchemaState schemaState = new DatabaseSchemaState( logProvider );
         JobScheduler scheduler = JobSchedulerFactory.createInitialisedScheduler();
 
-        DatabasePanicEventGenerator panicEventGenerator = new DatabasePanicEventGenerator( new DatabaseEventHandlers( recoveryLog ) );
+        DatabasePanicEventGenerator panicEventGenerator =
+                new DatabasePanicEventGenerator( new DatabaseEventListeners( recoveryLog ), databaseLayout.getDatabaseName() );
         DatabaseHealth databaseHealth = new DatabaseHealth( panicEventGenerator, recoveryLog );
 
         TokenHolders tokenHolders = new TokenHolders( new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TYPE_PROPERTY_KEY ),
@@ -283,37 +286,39 @@ public final class Recovery
                 recoveryCleanupCollector, DatabaseInfo.TOOL, monitors, tokenHolders, recoveryCleanupCollector, extensionFactories );
         DefaultIndexProviderMap indexProviderMap = new DefaultIndexProviderMap( extensions, config );
 
-        Dependencies storageEngineDependencies = new Dependencies();
-        storageEngineDependencies.satisfyDependencies( databaseLayout, config, pageCache, fs, logProvider, tokenHolders, schemaState, getConstraintSemantics(),
-                LockService.NO_LOCK_SERVICE, databaseHealth, new DefaultIdGeneratorFactory( fs ), new DefaultIdController(),
-                EmptyVersionContextSupplier.EMPTY, logService );
-
-        StorageEngine storageEngine = storageEngineFactory.instantiate( storageEngineDependencies, storageEngineDependencies );
+        StorageEngine storageEngine = storageEngineFactory.instantiate( fs, databaseLayout, config, pageCache, tokenHolders, schemaState,
+                getConstraintSemantics(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs ), new DefaultIdController(), databaseHealth,
+                EmptyVersionContextSupplier.EMPTY, logService.getInternalLogProvider() );
 
         // Label index
-        NeoStoreIndexStoreView neoStoreIndexStoreView = new NeoStoreIndexStoreView( LockService.NO_LOCK_SERVICE, storageEngine::newReader );
+        NeoStoreIndexStoreView neoStoreIndexStoreView = new NeoStoreIndexStoreView( NO_LOCK_SERVICE, storageEngine::newReader );
         LabelScanStore labelScanStore = Database.buildLabelIndex( recoveryCleanupCollector, storageEngine, neoStoreIndexStoreView, monitors,
                 logProvider, pageCache, databaseLayout, fs, false );
 
         // Schema indexes
         DynamicIndexStoreView indexStoreView =
-                new DynamicIndexStoreView( neoStoreIndexStoreView, labelScanStore, LockService.NO_LOCK_SERVICE, storageEngine::newReader, logProvider );
+                new DynamicIndexStoreView( neoStoreIndexStoreView, labelScanStore, NO_LOCK_SERVICE, storageEngine::newReader, logProvider );
         IndexStatisticsStore indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, recoveryCleanupCollector );
         IndexingService indexingService = Database.buildIndexingService( storageEngine, schemaState, indexStoreView, indexStatisticsStore,
                 config, scheduler, indexProviderMap, tokenNameLookup, logProvider, logProvider, monitors.newMonitor( IndexingService.Monitor.class ) );
 
         TransactionIdStore transactionIdStore = storageEngine.transactionIdStore();
         LogVersionRepository logVersionRepository = storageEngine.logVersionRepository();
-        storageEngineDependencies.satisfyDependencies( transactionIdStore, logVersionRepository );
+
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( databaseLayout, config, pageCache, fs, logProvider, tokenHolders, schemaState, getConstraintSemantics(),
+                NO_LOCK_SERVICE, databaseHealth, new DefaultIdGeneratorFactory( fs ), new DefaultIdController(),
+                EmptyVersionContextSupplier.EMPTY, logService, transactionIdStore, logVersionRepository );
 
         LogFiles logFiles = LogFilesBuilder.builder( databaseLayout, fs )
                 .withLogEntryReader( logEntryReader )
                 .withConfig( config )
-                .withDependencies( storageEngineDependencies )
+                .withDependencies( dependencies )
                 .build();
 
         Boolean failOnCorruptedLogFiles = config.get( GraphDatabaseSettings.fail_on_corrupted_log_files );
         LogTailScanner logTailScanner = providedLogScanner.orElseGet( () -> new LogTailScanner( logFiles, logEntryReader, monitors, failOnCorruptedLogFiles ) );
+
         TransactionMetadataCache metadataCache = new TransactionMetadataCache();
         PhysicalLogicalTransactionStore transactionStore = new PhysicalLogicalTransactionStore( logFiles, metadataCache, logEntryReader, monitors,
                 failOnCorruptedLogFiles );
@@ -340,18 +345,41 @@ public final class Recovery
         recoveryLife.add( extensions );
         recoveryLife.add( indexProviderMap );
         recoveryLife.add( storageEngine );
+        recoveryLife.add( new MissingTransactionLogsCheck( config, logTailScanner, recoveryLog ) );
         recoveryLife.add( labelScanStore );
         recoveryLife.add( logFiles );
         recoveryLife.add( transactionLogsRecovery );
         recoveryLife.add( transactionAppender );
         recoveryLife.add( checkPointer );
-        recoveryLife.start();
-
-        if ( databaseHealth.isHealthy() )
+        try
         {
-            checkPointer.forceCheckPoint( new SimpleTriggerInfo( "Recovery completed." ) );
+            recoveryLife.start();
+
+            if ( databaseHealth.isHealthy() )
+            {
+                checkPointer.forceCheckPoint( new SimpleTriggerInfo( "Recovery completed." ) );
+            }
         }
-        recoveryLife.shutdown();
+        finally
+        {
+            recoveryLife.shutdown();
+        }
+    }
+
+    private static void checkForMissingLogFiles( Config config, LogTailScanner logTailScanner, Log recoveryLog )
+    {
+        if ( logTailScanner.getTailInformation().logsMissing() )
+        {
+            if ( config.get( GraphDatabaseSettings.fail_on_missing_files ) )
+            {
+                throw new RuntimeException(
+                        "Transaction logs are missing and recovery is not possible. To force the database to start anyway, you can specify '" +
+                                GraphDatabaseSettings.fail_on_missing_files.name() + "=false'. This will create new transaction log and " +
+                                "will update database metadata accordingly. Doing this means your database " +
+                                "integrity might be compromised, please consider restoring from a consistent backup instead." );
+            }
+            recoveryLog.warn( "No transaction logs were detected, but recovery was forced by user." );
+        }
     }
 
     private static TransactionLogsRecovery transactionLogRecovery( FileSystemAbstraction fileSystemAbstraction, TransactionIdStore transactionIdStore,
@@ -359,8 +387,8 @@ public final class Recovery
             StorageEngine storageEngine, LogicalTransactionStore logicalTransactionStore, LogVersionRepository logVersionRepository,
             Lifecycle schemaLife, DatabaseLayout databaseLayout, boolean failOnCorruptedLogFiles, Log log )
     {
-        RecoveryService recoveryService =
-                new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore, logicalTransactionStore, logVersionRepository, positionMonitor );
+        RecoveryService recoveryService = new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore, logicalTransactionStore,
+                logVersionRepository, positionMonitor, log );
         CorruptedLogsTruncator logsTruncator = new CorruptedLogsTruncator( databaseLayout.databaseDirectory(), logFiles, fileSystemAbstraction );
         ProgressReporter progressReporter = new LogProgressReporter( log );
         return new TransactionLogsRecovery( recoveryService, logsTruncator, schemaLife, recoveryMonitor, progressReporter, failOnCorruptedLogFiles );
@@ -391,7 +419,7 @@ public final class Recovery
     private static boolean isRecoveryRequired( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout,
             StorageEngineFactory storageEngineFactory, Config config, Optional<LogTailScanner> logTailScanner ) throws IOException
     {
-        RecoveryRequiredChecker requiredChecker = recoveryRequiredChecker( fs, pageCache, config, storageEngineFactory );
+        RecoveryRequiredChecker requiredChecker = new RecoveryRequiredChecker( fs, pageCache, config, storageEngineFactory );
         return logTailScanner.isPresent() ? requiredChecker.isRecoveryRequiredAt( databaseLayout, logTailScanner.get() )
                                           : requiredChecker.isRecoveryRequiredAt( databaseLayout );
     }
@@ -429,8 +457,23 @@ public final class Recovery
         }
     }
 
-    private static StorageEngineFactory selectStorageEngine()
+    private static class MissingTransactionLogsCheck extends LifecycleAdapter
     {
-        return StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
+        private final Config config;
+        private final LogTailScanner logTailScanner;
+        private final Log recoveryLog;
+
+        MissingTransactionLogsCheck( Config config, LogTailScanner logTailScanner, Log recoveryLog )
+        {
+            this.config = config;
+            this.logTailScanner = logTailScanner;
+            this.recoveryLog = recoveryLog;
+        }
+
+        @Override
+        public void init()
+        {
+            checkForMissingLogFiles( config, logTailScanner, recoveryLog );
+        }
     }
 }

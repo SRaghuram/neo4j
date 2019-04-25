@@ -54,9 +54,12 @@ class Follower implements RaftMessageHandler
             return;
         }
 
-        if ( ctx.entryLog().appendIndex() <= -1 || compactionInfo.prevIndex() > ctx.entryLog().appendIndex() )
+        long localAppendIndex = ctx.entryLog().appendIndex();
+        long leaderPrevIndex = compactionInfo.prevIndex();
+
+        if ( localAppendIndex <= -1 || leaderPrevIndex > localAppendIndex )
         {
-            outcome.markNeedForFreshSnapshot();
+            outcome.markNeedForFreshSnapshot( leaderPrevIndex, localAppendIndex );
         }
     }
 

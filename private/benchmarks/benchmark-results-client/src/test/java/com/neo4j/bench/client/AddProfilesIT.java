@@ -17,6 +17,7 @@ import com.neo4j.bench.client.model.Environment;
 import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Metrics;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.model.Plan;
 import com.neo4j.bench.client.model.ProfilerRecordings;
 import com.neo4j.bench.client.model.Project;
@@ -24,6 +25,7 @@ import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunError;
 import com.neo4j.bench.client.model.TestRunReport;
+import com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
@@ -46,14 +48,25 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
+import static com.neo4j.bench.client.model.Parameters.CLIENT;
+import static com.neo4j.bench.client.model.Parameters.NONE;
+import static com.neo4j.bench.client.model.Parameters.SERVER;
+import static com.neo4j.bench.client.profiling.RecordingType.ASYNC;
+import static com.neo4j.bench.client.profiling.RecordingType.ASYNC_FLAMEGRAPH;
+import static com.neo4j.bench.client.profiling.RecordingType.GC_CSV;
+import static com.neo4j.bench.client.profiling.RecordingType.GC_LOG;
+import static com.neo4j.bench.client.profiling.RecordingType.GC_SUMMARY;
+import static com.neo4j.bench.client.profiling.RecordingType.JFR;
+import static com.neo4j.bench.client.profiling.RecordingType.JFR_FLAMEGRAPH;
+import static com.neo4j.bench.client.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @ExtendWith( TestDirectoryExtension.class )
 public class AddProfilesIT
@@ -71,68 +84,81 @@ public class AddProfilesIT
     private static final Benchmark BENCHMARK_1_B = Benchmark.benchmarkFor( "desc1b", "name1b", LATENCY, PARAMS );
     private static final Benchmark BENCHMARK_2_A = Benchmark.benchmarkFor( "desc2a", "name2a", LATENCY, PARAMS );
 
-    private File createJfrAndAsyncAndGcProfilesForBenchmark1a() throws IOException
+    private static String filename( BenchmarkGroup benchmarkGroup,
+                                    Benchmark benchmark,
+                                    Parameters additionalParams,
+                                    RecordingType recordingType )
+    {
+        return new ProfilerRecordingDescriptor( benchmarkGroup,
+                                                benchmark,
+                                                MEASUREMENT,
+                                                recordingType,
+                                                emptyList(),
+                                                additionalParams ).filename();
+    }
+
+    private File createJfrAndAsyncAndGcProfilesForBenchmark1a( Parameters parameters ) throws IOException
     {
         Path absolutePath = temporaryFolder.absolutePath().toPath();
-        Path topLevelDir = absolutePath.resolve(  "benchmark1a" );
+        Path topLevelDir = absolutePath.resolve( "benchmark1a" );
         Files.createDirectory( topLevelDir );
 
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".jfr" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.json" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, JFR ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, JFR_FLAMEGRAPH ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, ASYNC ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, ASYNC_FLAMEGRAPH ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, GC_LOG ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, GC_SUMMARY ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + filename( GROUP_1, BENCHMARK_1_A, parameters, GC_CSV ) ) );
 
         // these should be ignored by profile loader
         Files.createFile( absolutePath.resolve( "benchmark1a/archive.tar.gz" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + "INVALID" + "-jfr.svg" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + "INVALID" + JFR_FLAMEGRAPH.extension() ) );
         Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".invalid_suffix" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + "WRONG" + "-gc-json" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1a/" + GROUP_1.name() + "." + "WRONG" + GC_SUMMARY.extension() ) );
         return topLevelDir.toFile();
     }
 
-    private File createAsyncProfilesForBenchmark1b() throws IOException
+    private File createAsyncProfilesForBenchmark1b( Parameters parameters ) throws IOException
     {
         Path absolutePath = temporaryFolder.absolutePath().toPath();
         Path topLevelDir = absolutePath.resolve( "benchmark1b" );
         Files.createDirectories( topLevelDir );
-        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".async" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + "-async.svg" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1b/" + filename( GROUP_1, BENCHMARK_1_B, parameters, ASYNC ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark1b/" + filename( GROUP_1, BENCHMARK_1_B, parameters, ASYNC_FLAMEGRAPH ) ) );
 
         // these should be ignored by profile loader
         Files.createFile( absolutePath.resolve( "benchmark1b/archive.tar.gz" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "INVALID" + "-async.svg" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "INVALID" + ASYNC_FLAMEGRAPH.extension() ) );
         Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".invalid_suffix" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + ".gc" ) );
-        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + "-gc.csv" ) );
+        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + GC_LOG.extension() ) );
+        Files.createFile( absolutePath.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + GC_CSV.extension() ) );
         return topLevelDir.toFile();
     }
 
-    private File createJfrProfilesBenchmark2a() throws IOException
+    private File createJfrProfilesBenchmark2a( Parameters parameters ) throws IOException
     {
         Path absolutePath = temporaryFolder.absolutePath().toPath();
         Path topLevelDir = absolutePath.resolve( "benchmark2a" );
         Files.createDirectories( topLevelDir );
-        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".jfr" ) );
-        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + "-jfr.svg" ) );
+        Files.createFile( absolutePath.resolve( "benchmark2a/" + filename( GROUP_2, BENCHMARK_2_A, parameters, JFR ) ) );
+        Files.createFile( absolutePath.resolve( "benchmark2a/" + filename( GROUP_2, BENCHMARK_2_A, parameters, JFR_FLAMEGRAPH ) ) );
 
         // these should be ignored by profile loader
         Files.createFile( absolutePath.resolve( "benchmark2a/archive.tar.gz" ) );
-        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + "-jfr.svg" ) );
+        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + JFR_FLAMEGRAPH.extension() ) );
         Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".invalid_suffix" ) );
-        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + ".gc" ) );
+        Files.createFile( absolutePath.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + GC_LOG.extension() ) );
         return topLevelDir.toFile();
     }
 
     @Test
-    public void shouldAddProfiles() throws Exception
+    void shouldAddProfiles() throws Exception
     {
         List<File> profileDirs = Lists.newArrayList(
-                createJfrAndAsyncAndGcProfilesForBenchmark1a(),
-                createAsyncProfilesForBenchmark1b(),
-                createJfrProfilesBenchmark2a() );
+                createJfrAndAsyncAndGcProfilesForBenchmark1a( NONE ),
+                createAsyncProfilesForBenchmark1b( CLIENT ),
+                createJfrProfilesBenchmark2a( SERVER ) );
 
         Consumer<TestRunReport> afterAsserts = testRunReportAfter ->
         {
@@ -141,13 +167,12 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_1, BENCHMARK_1_A )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1A = new ProfilerRecordings()
-                    .with( RecordingType.JFR, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".jfr" )
-                    .with( RecordingType.JFR_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" )
-                    .with( RecordingType.ASYNC, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" )
-                    .with( RecordingType.ASYNC_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" )
-                    .with( RecordingType.GC_LOG, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" )
-                    .with( RecordingType.GC_SUMMARY, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.json" )
-                    .with( RecordingType.GC_CSV, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" );
+                    .with( JFR, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR ) )
+                    .with( ASYNC, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC ) )
+                    .with( ASYNC_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC_FLAMEGRAPH ) )
+                    .with( GC_LOG, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_LOG ) )
+                    .with( GC_SUMMARY, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_SUMMARY ) )
+                    .with( GC_CSV, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_CSV ) );
             assertThat( actualProfilerRecordings1A, equalTo( expectedProfilerRecordings1A ) );
 
             ProfilerRecordings actualProfilerRecordings1B = testRunReportAfter
@@ -155,8 +180,8 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_1, BENCHMARK_1_B )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1B = new ProfilerRecordings()
-                    .with( RecordingType.ASYNC, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".async" )
-                    .with( RecordingType.ASYNC_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + "-async.svg" );
+                    .with( ASYNC, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_B, CLIENT, ASYNC ) )
+                    .with( ASYNC_FLAMEGRAPH, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_B, CLIENT, ASYNC_FLAMEGRAPH ) );
             assertThat( actualProfilerRecordings1B, equalTo( expectedProfilerRecordings1B ) );
 
             ProfilerRecordings actualProfilerRecordings2A = testRunReportAfter
@@ -164,8 +189,7 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_2, BENCHMARK_2_A )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings2A = new ProfilerRecordings()
-                    .with( RecordingType.JFR, "some-s3-bucket/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".jfr" )
-                    .with( RecordingType.JFR_FLAMEGRAPH, "some-s3-bucket/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + "-jfr.svg" );
+                    .with( JFR, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR ) );
             assertThat( actualProfilerRecordings2A, equalTo( expectedProfilerRecordings2A ) );
 
             // there should be exactly two profiles
@@ -182,11 +206,11 @@ public class AddProfilesIT
     }
 
     @Test
-    public void shouldAddRequestedProfilerRecordings() throws Exception
+    void shouldAddRequestedProfilerRecordings() throws Exception
     {
         List<File> profileDirs = Lists.newArrayList(
-                createJfrAndAsyncAndGcProfilesForBenchmark1a(),
-                createAsyncProfilesForBenchmark1b() );
+                createJfrAndAsyncAndGcProfilesForBenchmark1a( NONE ),
+                createAsyncProfilesForBenchmark1b( CLIENT ) );
 
         Consumer<TestRunReport> afterAsserts = testRunReportAfter ->
         {
@@ -195,13 +219,12 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_1, BENCHMARK_1_A )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1A = new ProfilerRecordings()
-                    .with( RecordingType.JFR, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".jfr" )
-                    .with( RecordingType.JFR_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" )
-                    .with( RecordingType.ASYNC, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" )
-                    .with( RecordingType.ASYNC_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" )
-                    .with( RecordingType.GC_LOG, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" )
-                    .with( RecordingType.GC_SUMMARY, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.json" )
-                    .with( RecordingType.GC_CSV, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" );
+                    .with( JFR, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, JFR ) )
+                    .with( ASYNC, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC ) )
+                    .with( ASYNC_FLAMEGRAPH, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, ASYNC_FLAMEGRAPH ) )
+                    .with( GC_LOG, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_LOG ) )
+                    .with( GC_SUMMARY, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_SUMMARY ) )
+                    .with( GC_CSV, NONE, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, NONE, GC_CSV ) );
             assertThat( actualProfilerRecordings1A, equalTo( expectedProfilerRecordings1A ) );
 
             ProfilerRecordings actualProfilerRecordings1B = testRunReportAfter
@@ -209,8 +232,8 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_1, BENCHMARK_1_B )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1B = new ProfilerRecordings()
-                    .with( RecordingType.ASYNC, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".async" )
-                    .with( RecordingType.ASYNC_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + "-async.svg" );
+                    .with( ASYNC, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_B, CLIENT, ASYNC ) )
+                    .with( ASYNC_FLAMEGRAPH, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_B, CLIENT, ASYNC_FLAMEGRAPH ) );
             assertThat( actualProfilerRecordings1B, equalTo( expectedProfilerRecordings1B ) );
 
             // there should be exactly two profiles
@@ -227,10 +250,10 @@ public class AddProfilesIT
     }
 
     @Test
-    public void shouldNotAddProfilesFilesThatAreNoRequests() throws Exception
+    void shouldNotAddProfilesFilesThatAreNoRequests() throws Exception
     {
         List<File> profileDirs = Lists.newArrayList(
-                createJfrAndAsyncAndGcProfilesForBenchmark1a() );
+                createJfrAndAsyncAndGcProfilesForBenchmark1a( CLIENT ) );
 
         Consumer<TestRunReport> afterAsserts = testRunReportAfter ->
         {
@@ -240,11 +263,11 @@ public class AddProfilesIT
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings1A = new ProfilerRecordings()
                     // no .jfr files will be found due to edited mapping file
-                    .with( RecordingType.JFR_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" )
-                    .with( RecordingType.ASYNC, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" )
-                    .with( RecordingType.ASYNC_FLAMEGRAPH, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" )
-                    .with( RecordingType.GC_LOG, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" )
-                    .with( RecordingType.GC_CSV, "some-s3-bucket/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" );
+                    .with( JFR_FLAMEGRAPH, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, CLIENT, JFR_FLAMEGRAPH ) )
+                    .with( ASYNC, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, CLIENT, ASYNC ) )
+                    .with( ASYNC_FLAMEGRAPH, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, CLIENT, ASYNC_FLAMEGRAPH ) )
+                    .with( GC_LOG, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, CLIENT, GC_LOG ) )
+                    .with( GC_CSV, CLIENT, "some-s3-bucket/" + filename( GROUP_1, BENCHMARK_1_A, CLIENT, GC_CSV ) );
             assertThat( actualProfilerRecordings1A, equalTo( expectedProfilerRecordings1A ) );
 
             // there should be exactly two profiles
@@ -311,16 +334,11 @@ public class AddProfilesIT
 
         for ( File profilesDir : profilesDirs )
         {
-            List<String> args = Lists.newArrayList(
-                    "add-profiles",
-                    AddProfilesCommand.CMD_DIR, profilesDir.getAbsolutePath(),
-                    AddProfilesCommand.CMD_TEST_RUN_RESULTS, testRunReportJson.getAbsolutePath(),
-                    AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket",
-                    AddProfilesCommand.CMD_ARCHIVE, "other-s3-bucket/archive.tar.gz" );
-            if ( ignoreUnrecognizedFiles )
-            {
-                args.add( AddProfilesCommand.CMD_IGNORE_UNRECOGNIZED_FILES );
-            }
+            List<String> args = AddProfilesCommand.argsFor( profilesDir.toPath(),
+                                                            testRunReportJson.toPath(),
+                                                            "some-s3-bucket",
+                                                            "other-s3-bucket/archive.tar.gz",
+                                                            ignoreUnrecognizedFiles );
             Main.main( args.stream().toArray( String[]::new ) );
         }
 

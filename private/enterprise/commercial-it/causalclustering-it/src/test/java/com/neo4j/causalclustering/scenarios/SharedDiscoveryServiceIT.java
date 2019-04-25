@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +31,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -94,7 +97,7 @@ public class SharedDiscoveryServiceIT
         InitialDiscoveryMembersResolver remoteMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
-        CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, member,
+        CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, new TestDiscoveryMember( member ),
                 jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new NoRetriesStrategy(),
                 sslPolicyLoader, new Monitors(), Clocks.systemClock() );
         return sharedClientStarter( topologyService, expectedTargetSet );
@@ -118,7 +121,7 @@ public class SharedDiscoveryServiceIT
                 RaftMachine raftMock = mock( RaftMachine.class );
                 RaftMembershipManager membershipMock = mock( RaftMembershipManager.class );
                 RaftCoreTopologyConnector tc = new RaftCoreTopologyConnector( topologyService,
-                        raftMock, CausalClusteringSettings.database.getDefaultValue() );
+                        raftMock, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
                 topologyService.init();
                 topologyService.start();
                 tc.start();

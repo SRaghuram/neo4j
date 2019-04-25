@@ -13,9 +13,7 @@ public enum DiscoveryServiceType
 {
     AKKA( AkkaDiscoveryServiceFactory::new ),
     AKKA_UNCLEAN_SHUTDOWN( AkkaUncleanShutdownDiscoveryServiceFactory::new ),
-    HAZELCAST_SSL( SslHazelcastDiscoveryServiceFactory::new ),
-    SHARED( SharedDiscoveryServiceFactory::new ),
-    HAZELCAST( HazelcastDiscoveryServiceFactory::new );
+    SHARED( SharedDiscoveryServiceFactory::new );
 
     private final Supplier<DiscoveryServiceFactory> supplier;
 

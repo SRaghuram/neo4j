@@ -11,6 +11,7 @@ import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
+import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
@@ -24,24 +25,30 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import org.neo4j.batchinsert.BatchInserter;
+import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
+import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Neo4jDb extends Db
 {
@@ -120,7 +127,7 @@ public class Neo4jDb extends Db
                     SnbInteractiveCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
                             getCypherRuntimeOrFail( cypherRuntimeString )
-                                                          ),
+                    ),
                     doWarmup
             );
             break;
@@ -197,7 +204,7 @@ public class Neo4jDb extends Db
                         SnbInteractiveCypherQueries.createWith(
                                 getCypherPlannerOrFail( cypherPlannerString ),
                                 getCypherRuntimeOrFail( cypherRuntimeString )
-                                                              ),
+                        ),
                         null,
                         null
                 );
@@ -214,7 +221,7 @@ public class Neo4jDb extends Db
                         SnbInteractiveCypherQueries.createWith(
                                 getCypherPlannerOrFail( cypherPlannerString ),
                                 getCypherRuntimeOrFail( cypherRuntimeString )
-                                                              ),
+                        ),
                         dbDir,
                         configFile
                 );
@@ -248,7 +255,7 @@ public class Neo4jDb extends Db
                     SnbBiCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
                             getCypherRuntimeOrFail( cypherRuntimeString )
-                                                 ),
+                    ),
                     doWarmup
             );
             break;
@@ -415,14 +422,37 @@ public class Neo4jDb extends Db
     // ==========================================  UTILS  =============================================================
     // ================================================================================================================
 
-    public static GraphDatabaseService newDb( File dbDir, File configFile )
+    public static DatabaseLayout layoutWithTxLogLocation( File storeDir )
     {
-        return newDbBuilder( dbDir, configFile ).newGraphDatabase();
+        File txLogsDir = new File( storeDir, "data/tx-logs/" );
+        return DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
     }
 
-    private static GraphDatabaseBuilder newDbBuilder( File dbDir, File configFile )
+    public static BatchInserter newInserter( File storeDir, File importerPropertiesFile )
     {
-        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbDir );
+        try
+        {
+            Map<String,String> importerConfig = MapUtils.loadPropertiesToMap( importerPropertiesFile );
+            File txLogsDir = new File( storeDir, "data/tx-logs/" );
+            DatabaseLayout layout = DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+            return BatchInserters.inserter( layout, importerConfig );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "Error creating batch inserter\n" +
+                                            "Store directory: " + storeDir.getAbsolutePath(), e );
+        }
+    }
+
+    public static DatabaseManagementService newDb( File dbDir, File configFile )
+    {
+        return newDbBuilder( dbDir, configFile ).newDatabaseManagementService();
+    }
+
+    private static DatabaseManagementServiceInternalBuilder newDbBuilder( File dbDir, File configFile )
+    {
+        File storeDir = dbDir.getParentFile();
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );
@@ -430,13 +460,11 @@ public class Neo4jDb extends Db
         return builder;
     }
 
-    public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
+    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
-        String withoutProtocol = uri.toString().substring(
-                uri.toString().indexOf( "://" ) + 3,
-                uri.toString().length() );
+        String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ":" );
-        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1, withoutProtocol.length() ) );
+        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1 ) );
         return newDbBuilderForBolt(
                 dbDir,
                 configFile,
@@ -444,7 +472,7 @@ public class Neo4jDb extends Db
                 port );
     }
 
-    public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
+    public static DatabaseManagementServiceInternalBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
                 .setConfig( Neo4jDb.boltConnector().enabled, "true" )
@@ -563,7 +591,7 @@ public class Neo4jDb extends Db
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 

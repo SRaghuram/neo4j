@@ -11,12 +11,11 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -57,7 +56,7 @@ public abstract class BaseCoreTopologyServiceIT
 
         service = discoveryServiceType
                 .createFactory()
-                .coreTopologyService( config, new MemberId( UUID.randomUUID() ), jobScheduler, logProvider, logProvider,
+                .coreTopologyService( config, new TestDiscoveryMember(), jobScheduler, logProvider, logProvider,
                         initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, new Monitors(), Clocks.systemClock() );
     }
 

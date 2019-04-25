@@ -19,47 +19,48 @@
  */
 package org.neo4j.internal.id;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
+import java.util.Set;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreFileChannel;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.test.rule.fs.FileSystemRule;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class IdContainerTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+class IdContainerTest
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public final FileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
     private FileSystemAbstraction fs;
     private File file;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
-        fs = fileSystemRule.get();
         file = testDirectory.file( "ids" );
     }
 
     @Test
-    public void shouldDeleteIfOpen()
+    void shouldDeleteIfOpen()
     {
         // GIVEN
         createEmptyFile();
@@ -76,7 +77,7 @@ public class IdContainerTest
     }
 
     @Test
-    public void shouldDeleteIfClosed()
+    void shouldDeleteIfClosed()
     {
         // GIVEN
         createEmptyFile();
@@ -92,7 +93,7 @@ public class IdContainerTest
     }
 
     @Test
-    public void shouldForceStickyMark() throws Exception
+    void shouldForceStickyMark() throws Exception
     {
         // GIVEN
         createEmptyFile();
@@ -101,24 +102,12 @@ public class IdContainerTest
         IdContainer idContainer = new IdContainer( fs, file, 100, false );
         idContainer.init();
 
-        // THEN
-        try
-        {
-            IdContainer.readHighId( fs, file );
-            fail( "Should have thrown, saying something with sticky generator" );
-        }
-        catch ( InvalidIdGeneratorException e )
-        {
-            // THEN Good
-        }
-        finally
-        {
-            idContainer.close( 0 );
-        }
+        assertThrows( InvalidIdGeneratorException.class, () -> IdContainer.readHighId( fs, file ) );
+        idContainer.close( 0 );
     }
 
     @Test
-    public void shouldTruncateTheFileIfOverwriting() throws Exception
+    void shouldTruncateTheFileIfOverwriting() throws Exception
     {
         // GIVEN
         IdContainer.createEmptyIdFile( fs, file, 30, false );
@@ -145,7 +134,7 @@ public class IdContainerTest
     }
 
     @Test
-    public void shouldReturnFalseOnInitIfTheFileWasCreated()
+    void shouldReturnFalseOnInitIfTheFileWasCreated()
     {
         // When
         // An IdContainer is created with no underlying file
@@ -158,7 +147,7 @@ public class IdContainerTest
     }
 
     @Test
-    public void shouldReturnTrueOnInitIfAProperFileWasThere()
+    void shouldReturnTrueOnInitIfAProperFileWasThere()
     {
         // Given
         // A properly created and closed id file
@@ -177,7 +166,7 @@ public class IdContainerTest
     }
 
     @Test
-    public void idContainerReadWriteBySingleByte() throws IOException
+    void idContainerReadWriteBySingleByte() throws IOException
     {
         SingleByteFileSystemAbstraction fileSystem = new SingleByteFileSystemAbstraction();
         IdContainer idContainer = new IdContainer( fileSystem, file, 100, false );
@@ -199,9 +188,9 @@ public class IdContainerTest
     private static class SingleByteFileSystemAbstraction extends DefaultFileSystemAbstraction
     {
         @Override
-        public StoreFileChannel open( File fileName, OpenMode mode ) throws IOException
+        public StoreFileChannel open( File fileName, Set<OpenOption> options ) throws IOException
         {
-            return new SingleByteBufferChannel( super.open( fileName, mode ) );
+            return new SingleByteBufferChannel( super.open( fileName, options ) );
         }
     }
 

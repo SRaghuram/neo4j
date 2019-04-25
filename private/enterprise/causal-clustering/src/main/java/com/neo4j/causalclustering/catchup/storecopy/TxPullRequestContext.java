@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.identity.StoreId;
-
 import java.util.OptionalLong;
+
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;

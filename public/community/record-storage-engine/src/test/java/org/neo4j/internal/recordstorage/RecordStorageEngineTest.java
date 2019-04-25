@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -49,12 +50,12 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.lock.Lock;
 import org.neo4j.lock.LockGroup;
 import org.neo4j.lock.LockService;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.RecordStorageEngineRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -80,7 +81,7 @@ public class RecordStorageEngineTest
     private final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory( fsRule );
-    private final DatabaseHealth databaseHealth = mock( DatabaseHealth.class );
+    private final Health databaseHealth = mock( DatabaseHealth.class );
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( fsRule )

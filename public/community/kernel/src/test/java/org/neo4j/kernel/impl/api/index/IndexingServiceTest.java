@@ -24,6 +24,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -54,6 +55,7 @@ import org.neo4j.common.TokenNameLookup;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.helpers.collection.Visitor;
@@ -95,7 +97,6 @@ import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.storageengine.api.StorageIndexReference;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
@@ -136,9 +137,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.LUCENE10;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE10;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE20;
+import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.helpers.collection.Iterators.asCollection;
@@ -170,9 +169,7 @@ public class IndexingServiceTest
     public VerboseTimeout timeoutThreadDumpRule = VerboseTimeout.builder().build();
 
     private static final LogMatcherBuilder logMatch = inLog( IndexingService.class );
-    private static final IndexProviderDescriptor lucene10Descriptor = new IndexProviderDescriptor( LUCENE10.providerKey(), LUCENE10.providerVersion() );
-    private static final IndexProviderDescriptor native10Descriptor = new IndexProviderDescriptor( NATIVE10.providerKey(), NATIVE10.providerVersion() );
-    private static final IndexProviderDescriptor native20Descriptor = new IndexProviderDescriptor( NATIVE20.providerKey(), NATIVE20.providerVersion() );
+    private static final IndexProviderDescriptor native30Descriptor = new IndexProviderDescriptor( NATIVE30.providerKey(), NATIVE30.providerVersion() );
     private static final IndexProviderDescriptor nativeBtree10Descriptor =
             new IndexProviderDescriptor( NATIVE_BTREE10.providerKey(), NATIVE_BTREE10.providerVersion() );
     private static final IndexProviderDescriptor fulltextDescriptor = new IndexProviderDescriptor( "fulltext", "1.0" );
@@ -487,9 +484,7 @@ public class IndexingServiceTest
         StoreIndexDescriptor nativeBtree10Index  = storeIndex( 5, 1, 5, nativeBtree10Descriptor );
         StoreIndexDescriptor fulltextIndex  = storeIndex( 6, 1, 6, fulltextDescriptor );
 
-        IndexProvider lucene10Provider = mockIndexProviderWithAccessor( lucene10Descriptor );
-        IndexProvider native10Provider = mockIndexProviderWithAccessor( native10Descriptor );
-        IndexProvider native20Provider = mockIndexProviderWithAccessor( native20Descriptor );
+        IndexProvider native30Provider = mockIndexProviderWithAccessor( native30Descriptor );
         IndexProvider nativeBtree10Provider = mockIndexProviderWithAccessor( nativeBtree10Descriptor );
         IndexProvider fulltextProvider = mockIndexProviderWithAccessor( fulltextDescriptor );
 
@@ -497,7 +492,8 @@ public class IndexingServiceTest
         when( fulltextProvider.getInitialState( fulltextIndex ) ).thenReturn( ONLINE );
 
         Config config = Config.defaults( default_schema_provider, nativeBtree10Descriptor.name() );
-        DependencyResolver dependencies = buildIndexDependencies( lucene10Provider, native10Provider, native20Provider, nativeBtree10Provider );
+        DependencyResolver dependencies =
+                buildIndexDependencies( native30Provider, nativeBtree10Provider );
         DefaultIndexProviderMap providerMap = new DefaultIndexProviderMap( dependencies, config );
         providerMap.init();
         TokenNameLookup mockLookup = mock( TokenNameLookup.class );
@@ -523,9 +519,7 @@ public class IndexingServiceTest
         StoreIndexDescriptor nativeBtree10Index  = storeIndex( 5, 1, 5, nativeBtree10Descriptor );
         StoreIndexDescriptor fulltextIndex  = storeIndex( 6, 1, 6, fulltextDescriptor );
 
-        IndexProvider lucene10Provider = mockIndexProviderWithAccessor( lucene10Descriptor );
-        IndexProvider native10Provider = mockIndexProviderWithAccessor( native10Descriptor );
-        IndexProvider native20Provider = mockIndexProviderWithAccessor( native20Descriptor );
+        IndexProvider native30Provider = mockIndexProviderWithAccessor( native30Descriptor );
         IndexProvider nativeBtree10Provider = mockIndexProviderWithAccessor( nativeBtree10Descriptor );
         IndexProvider fulltextProvider = mockIndexProviderWithAccessor( fulltextDescriptor );
 
@@ -534,7 +528,7 @@ public class IndexingServiceTest
 
         Config config = Config.defaults( default_schema_provider, nativeBtree10Descriptor.name() );
         DependencyResolver dependencies =
-                buildIndexDependencies( lucene10Provider, native10Provider, native20Provider, nativeBtree10Provider, fulltextProvider );
+                buildIndexDependencies( native30Provider, nativeBtree10Provider, fulltextProvider );
         DefaultIndexProviderMap providerMap = new DefaultIndexProviderMap( dependencies, config );
         providerMap.init();
         TokenNameLookup mockLookup = mock( TokenNameLookup.class );
@@ -553,61 +547,6 @@ public class IndexingServiceTest
         onBothLogProviders( logProvider -> internalLogProvider.assertNoMessagesContaining( "IndexingService.start: Deprecated index providers in use:" ) );
         onBothLogProviders( logProvider -> internalLogProvider.assertNoMessagesContaining( nativeBtree10Descriptor.name() ) );
         onBothLogProviders( logProvider -> internalLogProvider.assertNoMessagesContaining( fulltextDescriptor.name() ) );
-    }
-
-    @Test
-    public void shouldLogDeprecatedIndexesOnStart() throws Throwable
-    {
-        // given
-        StoreIndexDescriptor lucene10Index       = storeIndex( 1, 1, 1, lucene10Descriptor );
-        StoreIndexDescriptor native10Index       = storeIndex( 2, 1, 2, native10Descriptor );
-        StoreIndexDescriptor native20Index1      = storeIndex( 3, 1, 3, native20Descriptor );
-        StoreIndexDescriptor native20Index2      = storeIndex( 4, 1, 4, native20Descriptor );
-        StoreIndexDescriptor nativeBtree10Index  = storeIndex( 5, 1, 5, nativeBtree10Descriptor );
-        StoreIndexDescriptor fulltextIndex  = storeIndex( 6, 1, 6, fulltextDescriptor );
-
-        IndexProvider lucene10Provider = mockIndexProviderWithAccessor( lucene10Descriptor );
-        IndexProvider native10Provider = mockIndexProviderWithAccessor( native10Descriptor );
-        IndexProvider native20Provider = mockIndexProviderWithAccessor( native20Descriptor );
-        IndexProvider nativeBtree10Provider = mockIndexProviderWithAccessor( nativeBtree10Descriptor );
-        IndexProvider fulltextProvider = mockIndexProviderWithAccessor( fulltextDescriptor );
-
-        when( lucene10Provider.getInitialState( lucene10Index ) ).thenReturn( ONLINE );
-        when( native10Provider.getInitialState( native10Index ) ).thenReturn( ONLINE );
-        when( native20Provider.getInitialState( native20Index1 ) ).thenReturn( ONLINE );
-        when( native20Provider.getInitialState( native20Index2 ) ).thenReturn( ONLINE );
-        when( nativeBtree10Provider.getInitialState( nativeBtree10Index ) ).thenReturn( ONLINE );
-        when( fulltextProvider.getInitialState( fulltextIndex ) ).thenReturn( ONLINE );
-
-        Config config = Config.defaults( default_schema_provider, nativeBtree10Descriptor.name() );
-        DependencyResolver dependencies = buildIndexDependencies( lucene10Provider, native10Provider, native20Provider, nativeBtree10Provider );
-        DefaultIndexProviderMap providerMap = new DefaultIndexProviderMap( dependencies, config );
-        providerMap.init();
-        TokenNameLookup mockLookup = mock( TokenNameLookup.class );
-
-        IndexingService indexingService = IndexingServiceFactory.createIndexingService( config,
-                mock( JobScheduler.class ), providerMap, storeView, mockLookup,
-                asList( lucene10Index, native10Index, native20Index1, native20Index2, nativeBtree10Index ), internalLogProvider, userLogProvider,
-                IndexingService.NO_MONITOR, schemaState, indexStatisticsStore );
-
-        // when
-        indexingService.init();
-        userLogProvider.clear();
-        indexingService.start();
-
-        // then
-        userLogProvider.assertContainsExactlyOneMessageMatching(
-                Matchers.allOf(
-                        Matchers.containsString( "Deprecated index providers in use:" ),
-                        Matchers.containsString( lucene10Descriptor.name() + " (1 index)" ),
-                        Matchers.containsString( native10Descriptor.name() + " (1 index)" ),
-                        Matchers.containsString( native20Descriptor.name() + " (2 indexes)" ),
-                        Matchers.containsString( "Use procedure 'db.indexes()' to see what indexes use which index provider." )
-                )
-        );
-        onBothLogProviders( logProvider -> internalLogProvider.assertNoMessagesContaining( nativeBtree10Descriptor.name() ) );
-        onBothLogProviders( logProvider -> internalLogProvider.assertNoMessagesContaining( fulltextDescriptor.name() ) );
-        userLogProvider.print( System.out );
     }
 
     @Test
@@ -1329,7 +1268,7 @@ public class IndexingServiceTest
 
     private static Matcher<? extends Throwable> causedBy( final Throwable exception )
     {
-        return new TypeSafeMatcher<Throwable>()
+        return new TypeSafeMatcher<>()
         {
             @Override
             protected boolean matchesSafely( Throwable item )
@@ -1403,7 +1342,7 @@ public class IndexingServiceTest
 
     private EntityUpdates addNodeUpdate( long nodeId, Object propertyValue, int labelId )
     {
-        return EntityUpdates.forEntity( nodeId ).withTokens( labelId )
+        return EntityUpdates.forEntity( nodeId, false ).withTokens( labelId )
                 .added( index.schema().getPropertyId(), Values.of( propertyValue ) ).build();
     }
 
@@ -1493,7 +1432,7 @@ public class IndexingServiceTest
         {
             final Visitor<EntityUpdates,IndexPopulationFailedKernelException> visitor =
                     visitor( invocation.getArgument( 2 ) );
-            return new StoreScan<IndexPopulationFailedKernelException>()
+            return new StoreScan<>()
             {
                 private volatile boolean stop;
 
@@ -1517,9 +1456,7 @@ public class IndexingServiceTest
                 }
 
                 @Override
-                public void acceptUpdate( MultipleIndexPopulator.MultipleIndexUpdater updater,
-                        IndexEntryUpdate<?> update,
-                        long currentlyIndexedNodeId )
+                public void acceptUpdate( MultipleIndexPopulator.MultipleIndexUpdater updater, IndexEntryUpdate<?> update, long currentlyIndexedNodeId )
                 {
                     // no-op
                 }

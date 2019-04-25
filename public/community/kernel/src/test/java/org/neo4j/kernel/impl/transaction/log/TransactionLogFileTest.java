@@ -28,7 +28,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.ReadableClosableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
@@ -88,7 +87,7 @@ class TransactionLogFileTest
 
         // simulate new file without header presence
         logVersionRepository.incrementAndGetVersion();
-        fileSystem.create( logFiles.getLogFileForVersion( logVersionRepository.getCurrentLogVersion() ) ).close();
+        fileSystem.write( logFiles.getLogFileForVersion( logVersionRepository.getCurrentLogVersion() ) ).close();
         transactionIdStore.transactionCommitted( 5L, 5L, 5L );
 
         PhysicalLogicalTransactionStore.LogVersionLocator versionLocator = new PhysicalLogicalTransactionStore.LogVersionLocator( 4L );
@@ -115,7 +114,7 @@ class TransactionLogFileTest
         life.shutdown();
 
         // THEN
-        File file =  LogFilesBuilder.logFilesBasedOnlyBuilder( directory.databaseDir(), fileSystem )
+        File file =  LogFilesBuilder.logFilesBasedOnlyBuilder( directory.databaseLayout().getTransactionLogsDirectory(), fileSystem )
                 .withLogEntryReader( logEntryReader() )
                 .build().getLogFileForVersion( 1L );
         LogHeader header = readLogHeader( fileSystem, file );
@@ -252,7 +251,7 @@ class TransactionLogFileTest
         StoreChannel channel = mock( StoreChannel.class );
         when( channel.read( any( ByteBuffer.class ) ) ).thenReturn( LogHeader.LOG_HEADER_SIZE / 2 );
         when( fs.fileExists( logFile ) ).thenReturn( true );
-        when( fs.open( eq( logFile ), any( OpenMode.class ) ) ).thenReturn( channel );
+        when( fs.read( eq( logFile ) ) ).thenReturn( channel );
 
         // WHEN
         assertThrows( IncompleteLogHeaderException.class, () -> logFiles.openForVersion( logVersion ) );
@@ -274,7 +273,7 @@ class TransactionLogFileTest
         StoreChannel channel = mock( StoreChannel.class );
         when( channel.read( any( ByteBuffer.class ) ) ).thenReturn( LogHeader.LOG_HEADER_SIZE / 2 );
         when( fs.fileExists( logFile ) ).thenReturn( true );
-        when( fs.open( eq( logFile ), any( OpenMode.class ) ) ).thenReturn( channel );
+        when( fs.read( eq( logFile ) ) ).thenReturn( channel );
         doThrow( IOException.class ).when( channel ).close();
 
         // WHEN

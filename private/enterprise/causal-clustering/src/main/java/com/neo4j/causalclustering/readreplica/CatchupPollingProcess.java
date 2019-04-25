@@ -15,11 +15,10 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -27,11 +26,13 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
@@ -53,10 +54,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         CANCELLED
     }
 
-    private final String databaseName;
-    private final LocalDatabase localDatabase;
-    //TODO: It makes no sense to take both localDatabase and databaseService here. When localDatabase objects can stop and start it won't be needed
-    private final DatabaseService databaseService;
+    private final DatabaseId databaseId;
+    private final ClusteredDatabaseContext clusteredDatabaseContext;
+    //TODO: It makes no sense to take both clusteredDatabaseContext and clusteredDatabaseManager here.
+    // When clusteredDatabaseContext objects can stop and start it won't be needed
+    private final ClusteredDatabaseManager clusteredDatabaseManager;
     private final CatchupAddressProvider catchupAddressProvider;
     private final Log log;
     private final Suspendable enableDisableOnStoreCopy;
@@ -71,15 +73,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    public CatchupPollingProcess( Executor executor, String databaseName, DatabaseService databaseService, Suspendable enableDisableOnSoreCopy,
-            CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors, StoreCopyProcess storeCopyProcess, LogProvider logProvider,
-            Panicker panicker, CatchupAddressProvider catchupAddressProvider )
+    public CatchupPollingProcess( Executor executor, DatabaseId databaseId, ClusteredDatabaseManager clusteredDatabaseManager,
+            Suspendable enableDisableOnSoreCopy, CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
+            StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
-        this.databaseName = databaseName;
-        this.databaseService = databaseService;
+        this.databaseId = databaseId;
+        this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.catchupAddressProvider = catchupAddressProvider;
-        this.localDatabase = databaseService.get( databaseName ).orElseThrow( IllegalStateException::new );
+        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new );
         this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
         this.applier = applier;
@@ -166,7 +168,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         AdvertisedSocketAddress address;
         try
         {
-            address = catchupAddressProvider.primary();
+            address = catchupAddressProvider.primary( databaseId );
         }
         catch ( CatchupAddressResolutionException e )
         {
@@ -174,7 +176,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             return;
         }
 
-        StoreId localStoreId = localDatabase.storeId();
+        StoreId localStoreId = clusteredDatabaseContext.storeId();
 
         boolean moreToPull = true;
         int batchCount = 1;
@@ -245,9 +247,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             result = catchUpClient.getClient( address, log )
-                    .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
-                    .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
-                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
+                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }
@@ -280,7 +280,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            databaseService.stopForStoreCopy();
+            clusteredDatabaseManager.stopForStoreCopy();
             enableDisableOnStoreCopy.disable();
         }
         catch ( Throwable throwable )
@@ -295,7 +295,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            databaseService.start();
+            clusteredDatabaseManager.start();
             enableDisableOnStoreCopy.enable();
         }
         catch ( Throwable throwable )
@@ -313,7 +313,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, localDatabase.storeId() );
+            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, clusteredDatabaseContext.storeId() );
             transitionToTxPulling();
         }
         catch ( IOException | StoreCopyFailedException e )
@@ -330,11 +330,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
         {
-            return format( "%s is %s (%d of %d)", databaseName, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+            return format( "%s is %s (%d of %d)", databaseId, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
         }
         else
         {
-            return String.format( "%s is %s", databaseName, state.name() );
+            return String.format( "%s is %s", databaseId, state.name() );
         }
     }
 }

@@ -106,7 +106,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |RETURN a.name, b.name""".stripMargin
 
     val expectSucceed = Configs.InterpretedAndSlotted
-    val result = executeWith(expectSucceed, query,
+    executeWith(expectSucceed, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeRightOuterHashJoin")))
   }
 
@@ -139,5 +139,19 @@ test("larger optional match join should not crash") {
         |WHERE a.prop = e.prop
         |RETURN b, d""".stripMargin
     graph.execute(query) // should not crash
+  }
+
+  test("should not crash on any() on rhs of NodeHashJoin") {
+    graph.execute("CREATE (a: A {prop: 1})-[:X]->(b {prop: 2})-[:X]->(c {prop: 1, list: [1,3,4]})")
+
+    val query =
+      """MATCH (a: A)-[:X]->(b)-[:X]->(c)
+        |USING JOIN ON b
+        |WHERE any(x IN c.list WHERE x % 2 = 1)
+        |RETURN b.prop""".stripMargin
+
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("NodeHashJoin").withRHS(includeSomewhere.aPlan("Filter"))
+    result.toList should be(List(Map("b.prop" -> 2)))
   }
 }

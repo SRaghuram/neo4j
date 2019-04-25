@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler
 import java.io.IOException;
 import java.util.Set;
 
-public class MemberIdSet implements RaftGroup<MemberId>
+public class MemberIdSet implements RaftMembers<MemberId>
 {
     private final Set<MemberId> members;
 

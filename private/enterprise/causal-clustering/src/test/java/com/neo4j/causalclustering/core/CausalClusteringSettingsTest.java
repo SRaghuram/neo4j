@@ -18,7 +18,7 @@ import org.neo4j.graphdb.config.BaseSetting;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 

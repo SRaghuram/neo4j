@@ -15,8 +15,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.neo4j.collection.Streams;
-
 public class HandshakeServer implements ServerMessageHandler
 {
     private final Channel channel;
@@ -132,7 +130,7 @@ public class HandshakeServer implements ServerMessageHandler
         List<Protocol.ModifierProtocol> switchOverModifiers = switchOverRequest.modifierProtocols()
                 .stream()
                 .map( pair -> modifierProtocolRepository.select( pair.first(), pair.other() ) )
-                .flatMap( Streams::ofOptional )
+                .flatMap( Optional::stream )
                 .collect( Collectors.toList() );
 
         if ( !switchOverProtocol.isPresent() )

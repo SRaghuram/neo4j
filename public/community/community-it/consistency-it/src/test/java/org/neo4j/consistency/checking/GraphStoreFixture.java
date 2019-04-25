@@ -39,9 +39,10 @@ import org.neo4j.consistency.statistics.DefaultCounts;
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.statistics.VerboseStatistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
@@ -94,7 +95,7 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.ConfigurablePageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.token.DelegatingTokenHolder;
@@ -105,6 +106,7 @@ import org.neo4j.token.api.NamedToken;
 import org.neo4j.token.api.TokenHolder;
 
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.consistency.ConsistencyCheckService.defaultConsistencyCheckThreadsNumber;
 import static org.neo4j.consistency.internal.SchemaIndexExtensionLoader.instantiateExtensions;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
@@ -269,7 +271,7 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
                 return null;
             }
             nodeCursor.properties( propertyCursor );
-            EntityUpdates.Builder update = EntityUpdates.forEntity( nodeId ).withTokens( labels );
+            EntityUpdates.Builder update = EntityUpdates.forEntity( nodeId, true ).withTokens( labels );
             while ( propertyCursor.next() )
             {
                 update.added( propertyCursor.propertyKey(), propertyCursor.propertyValue() );
@@ -623,13 +625,14 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
         private final TransactionRepresentationCommitProcess commitProcess;
         private final TransactionIdStore transactionIdStore;
         private final NeoStores neoStores;
+        private final DatabaseManagementService managementService;
 
         Applier()
         {
-            database = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                    .setConfig( "dbms.backup.enabled", "false" )
-                    .newGraphDatabase();
+            managementService = new TestDatabaseManagementServiceBuilder()
+                        .newEmbeddedDatabaseBuilder( directory.storeDir() )
+                        .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+            database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             DependencyResolver dependencyResolver = database.getDependencyResolver();
 
             commitProcess = new TransactionRepresentationCommitProcess(
@@ -653,7 +656,7 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
         @Override
         public void close()
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -676,15 +679,18 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
 
     private void generateInitialData()
     {
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( directory.databaseDir() );
-        GraphDatabaseAPI graphDb = (GraphDatabaseAPI) builder
+        DatabaseManagementServiceInternalBuilder builder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( directory.storeDir() );
+        DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.record_format, formatName )
                 // Some tests using this fixture were written when the label_block_size was 60 and so hardcoded
                 // tests and records around that. Those tests could change, but the simpler option is to just
                 // keep the block size to 60 and let them be.
                 .setConfig( GraphDatabaseSettings.label_block_size, "60" )
-                .setConfig( "dbms.backup.enabled", "false" )
-                .newGraphDatabase();
+                .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+        // Some tests using this fixture were written when the label_block_size was 60 and so hardcoded
+        // tests and records around that. Those tests could change, but the simpler option is to just
+        // keep the block size to 60 and let them be.
+        GraphDatabaseAPI graphDb = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             generateInitialData( graphDb );
@@ -704,7 +710,7 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
         }
         finally
         {
-            graphDb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -721,7 +727,7 @@ public abstract class GraphStoreFixture extends ConfigurablePageCacheRule implem
                 try
                 {
                     generateInitialData();
-                    start( GraphStoreFixture.this.directory.databaseDir() );
+                    start( GraphStoreFixture.this.directory.storeDir() );
                     try
                     {
                         base.evaluate();

@@ -1108,7 +1108,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("prop" -> 1), "Label")
     createLabeledNode(Map("prop" -> 5), "Label")
     createLabeledNode(Map("prop" -> 10), "Label")
-    for (i <- 1 to 300) createLabeledNode("Label")
+    for (_ <- 1 to 300) createLabeledNode("Label")
 
     val query = "MATCH (n:Label) WHERE n.prop < 10 CREATE () RETURN n.prop"
 
@@ -1157,7 +1157,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     // When
     val query = "MATCH (a)-->(b:Label) WHERE b.prop <= a.prop RETURN count(a) as c"
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-                             planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan shouldNot includeSomewhere.aPlan(IndexSeekByRange.name)
                              }))
@@ -1218,13 +1218,13 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("should use the index of inequality range scans") {
     graph.inTx {
-      (1 to 60).foreach { i =>
+      (1 to 60).foreach { _ =>
         createLabeledNode(Map("gender" -> "male"), "Person")
       }
-      (1 to 30).foreach { i =>
+      (1 to 30).foreach { _ =>
         createLabeledNode(Map("gender" -> "female"), "Person")
       }
-      (1 to 2).foreach { i =>
+      (1 to 2).foreach { _ =>
         createLabeledNode("Person")
       }
     }

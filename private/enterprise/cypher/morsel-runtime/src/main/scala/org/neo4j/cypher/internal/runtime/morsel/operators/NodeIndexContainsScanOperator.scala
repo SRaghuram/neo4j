@@ -23,7 +23,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                     indexOrder: IndexOrder,
                                     valueExpr: Expression,
                                     argumentSize: SlotConfiguration.Size)
-  extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
+  extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, Array(property)) {
 
   override def init(context: QueryContext,
                     state: QueryState,

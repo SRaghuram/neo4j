@@ -14,6 +14,7 @@ import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
@@ -107,7 +108,9 @@ public class ChannelPoolService implements Lifecycle
                 poolMap.close();
                 poolMap = null;
             }
-            eventLoopGroup.shutdownGracefully().syncUninterruptibly();
+            // A quiet period of exactly zero cannot be used because that won't finish all queued tasks,
+            // which is the guarantee we want, because we don't care about a quiet period per se.
+            eventLoopGroup.shutdownGracefully( 100, 5000, TimeUnit.MILLISECONDS ).syncUninterruptibly();
         }
         finally
         {

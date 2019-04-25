@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.File
 import java.time.ZoneOffset
 
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.io.fs.FileUtils
@@ -38,12 +39,13 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     config.foreach {
       case (setting, settingValue) => builder.setConfig(setting, settingValue)
     }
-    graphOps = builder.newGraphDatabase()
+    managementService = builder.newDatabaseManagementService()
+    graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }
 
   private def restartGraphDatabase(config: Map[Setting[_], String] = databaseConfig()): Unit = {
-    graph.shutdown()
+    managementService.shutdown()
     startGraphDatabaseWithConfig(dbDir, config)
   }
 
@@ -52,7 +54,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
       super.stopTest()
     }
     finally {
-      if (graph != null) graph.shutdown()
+      if (graph != null) managementService.shutdown()
       FileUtils.deleteRecursively(dbDir)
     }
   }

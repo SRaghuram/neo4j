@@ -6,7 +6,7 @@
 package org.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -25,7 +26,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.IOUtils;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.rule.TestDirectory;
@@ -35,6 +36,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
@@ -51,13 +53,14 @@ public class BoltFailuresIT
 
     private GraphDatabaseService db;
     private Driver driver;
+    private DatabaseManagementService managementService;
 
     @After
     public void shutdownDb()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         IOUtils.closeAllSilently( driver );
     }
@@ -69,7 +72,7 @@ public class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new GraphDatabaseFactory().setMonitors( monitors ) );
+        db = startDbWithBolt( new DatabaseManagementServiceBuilder().setMonitors( monitors ) );
         try
         {
             // attempt to create a driver when server is unavailable
@@ -183,20 +186,20 @@ public class BoltFailuresIT
         return startDbWithBolt( newDbFactory().setMonitors( monitors ) );
     }
 
-    private GraphDatabaseService startDbWithBolt( GraphDatabaseFactory dbFactory )
+    private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )
     {
-        return dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
+        managementService = dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
                 .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static TestCommercialGraphDatabaseFactory newDbFactory()
+    private static TestCommercialDatabaseManagementServiceBuilder newDbFactory()
     {
-        return new TestCommercialGraphDatabaseFactory();
+        return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
     private static Driver createDriver( int port )

@@ -23,12 +23,13 @@ import java.util
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, NoInput, QueryStatistics}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.{CypherRuntime, LogicalQuery, RuntimeContext}
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
+import org.neo4j.cypher.internal.{CypherRuntime, ExecutionPlan, LogicalQuery, RuntimeContext}
 import org.neo4j.cypher.result.{QueryResult, RuntimeResult}
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb._
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -40,6 +41,7 @@ import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{BeforeAndAfterEach, Tag}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 object RuntimeTestSuite {
   val ANY_VALUE_ORDERING: Ordering[AnyValue] = Ordering.comparatorToOrdering(AnyValues.COMPARATOR)
@@ -60,18 +62,20 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
   with BeforeAndAfterEach
   with TokenResolver {
 
+  var managementService: DatabaseManagementService = _
   var graphDb: GraphDatabaseService = _
   var runtimeTestSupport: RuntimeTestSupport[CONTEXT] = _
   val ANY_VALUE_ORDERING: Ordering[AnyValue] = Ordering.comparatorToOrdering(AnyValues.COMPARATOR)
 
   final override def beforeEach(): Unit = {
-    graphDb = edition.newGraphDb()
-    runtimeTestSupport = new RuntimeTestSupport[CONTEXT](graphDb, edition)
+    managementService = edition.newGraphManagementService()
+    graphDb = managementService.database(DEFAULT_DATABASE_NAME)
+    runtimeTestSupport = new RuntimeTestSupport[CONTEXT](managementService, graphDb, edition)
     super.beforeEach()
   }
 
   final override def afterEach(): Unit = {
-    graphDb.shutdown()
+    managementService.shutdown()
     afterShutdown()
   }
 
@@ -99,6 +103,17 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     } finally tx.close()
   }
 
+  def select[X](things: Seq[X],
+                selectivity: Double = 1.0,
+                duplicateProbability: Double = 0.0,
+                nullProbability: Double = 0.0): Seq[X] = {
+    val rng = new Random(42)
+    for {thing <- things if rng.nextDouble() < selectivity
+         dup <- if (rng.nextDouble() < duplicateProbability) Seq(thing, thing) else Seq(thing)
+         nullifiedDup = if (rng.nextDouble() < nullProbability) null.asInstanceOf[X] else dup
+    } yield nullifiedDup
+  }
+
   // EXECUTE
 
   def execute(logicalQuery: LogicalQuery,
@@ -108,9 +123,22 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     runtimeTestSupport.run(logicalQuery, runtime, input.stream(), (_, result) => result)
 
   def execute(logicalQuery: LogicalQuery,
+              runtime: CypherRuntime[CONTEXT],
+              inputStream: InputDataStream
+             ): RuntimeResult =
+    runtimeTestSupport.run(logicalQuery, runtime, inputStream, (_, result) => result)
+
+  def execute(logicalQuery: LogicalQuery,
               runtime: CypherRuntime[CONTEXT]
              ): RuntimeResult =
     runtimeTestSupport.run(logicalQuery, runtime, NoInput, (_, result) => result)
+
+  def execute(executablePlan: ExecutionPlan): RuntimeResult =
+    runtimeTestSupport.run(executablePlan, NoInput, (_, result) => result)
+
+  def buildPlan(logicalQuery: LogicalQuery,
+                runtime: CypherRuntime[CONTEXT]): ExecutionPlan =
+    runtimeTestSupport.compile(logicalQuery, runtime)
 
   def executeAndContext(logicalQuery: LogicalQuery,
                         runtime: CypherRuntime[CONTEXT],
@@ -124,9 +152,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     val nAttempts = 100
     for (_ <- 0 until nAttempts) {
       val (result, context) = executeAndContext(logicalQuery, runtime, input)
-      result.accept(new QueryResultVisitor[Exception] {
-        override def visit(row: QueryResult.Record): Boolean = true
-      })
+      result.accept((_: QueryResult.Record) => true)
       if (condition.test(context))
         return
     }
@@ -140,14 +166,18 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
   def inputValues(rows: Array[Any]*): InputValues =
     new InputValues().and(rows: _*)
 
-  def inputSingleColumn(nBatches: Int, batchSize: Int, valueFunction: Int => Any): InputValues = {
+  def batchedInputValues(batchSize: Int, rows: Array[Any]*): InputValues = {
+    val input = new InputValues()
+    rows.grouped(batchSize).foreach(batch => input.and(batch: _*))
+    input
+  }
+
+  //noinspection ScalaUnnecessaryParentheses
+  def inputColumns(nBatches: Int, batchSize: Int, valueFunctions: (Int => Any)*): InputValues = {
     val input = new InputValues()
     for (batch <- 0 until nBatches) {
-      val rows =
-        for (row <- 0 until batchSize)
-          yield Array(valueFunction(batch * batchSize + row))
+      val rows = for (row <- 0 until batchSize) yield valueFunctions.map(_(batch * batchSize + row)).toArray
       input.and(rows: _*)
-
     }
     input
   }
@@ -163,7 +193,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     def flatten: IndexedSeq[Array[Any]] =
       batches.flatten
 
-    def stream(): InputDataStream = new BufferInputStream(batches.map(_.map(row => row.map(ValueUtils.of))))
+    def stream(): BufferInputStream = new BufferInputStream(batches.map(_.map(row => row.map(ValueUtils.of))))
   }
 
   class BufferInputStream(data: ArrayBuffer[IndexedSeq[Array[AnyValue]]]) extends InputDataStream {
@@ -176,6 +206,8 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
       else
         null
     }
+
+    def hasMore: Boolean = batchIndex.get() < data.size
   }
 
   class BufferInputCursor(data: IndexedSeq[Array[AnyValue]]) extends InputCursor {
@@ -194,7 +226,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
 
   // GRAPHS
 
-  def bipartiteGraph(nNodes: Int, aLabel: String, bLabel: String, relType: String): Unit = {
+  def bipartiteGraph(nNodes: Int, aLabel: String, bLabel: String, relType: String): (Seq[Node], Seq[Node]) = {
     val aNodes = nodeGraph(nNodes, aLabel)
     val bNodes = nodeGraph(nNodes, bLabel)
     inTx {
@@ -203,6 +235,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
         a.createRelationshipTo(b, relationshipType)
       }
     }
+    (aNodes, bNodes)
   }
 
   def nodeGraph(nNodes: Int, labels: String*): Seq[Node] = {
@@ -215,7 +248,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
 
   def circleGraph(nNodes: Int, labels: String*): (Seq[Node], Seq[Relationship]) = {
     val nodes = inTx {
-      for (i <- 0 until nNodes) yield {
+      for (_ <- 0 until nNodes) yield {
         graphDb.createNode(labels.map(Label.label): _*)
       }
     }
@@ -391,54 +424,15 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     CustomRowsMatcher(matchPattern(func))
   }
 
-  private def pretty(diff: IndexedSeq[DiffItem]): String = {
-    val sb = new StringBuilder
-    for (diffItem <- diff)
-      sb ++= diffItem.missingRow.asArray().map(value => value.toString).mkString(if (diffItem.fromA) "- " else "+ ", ", ", "\n")
-    sb.result()
-  }
+  def groupedBy(columns: String*): RowOrderMatcher = new GroupBy(None, None, columns: _*)
 
-  def groupedBy(columns: String*): RowOrderMatcher = new GroupBy(columns: _*)
+  def groupedBy(nGroups: Int, groupSize: Int, columns: String*): RowOrderMatcher = new GroupBy(Some(nGroups), Some(groupSize), columns: _*)
 
   def sortedAsc(column: String): RowOrderMatcher = new Ascending(column)
 
   def sortedDesc(column: String): RowOrderMatcher = new Descending(column)
 
   case class DiffItem(missingRow: ListValue, fromA: Boolean)
-
-  private def diffOf(sortedA: IndexedSeq[ListValue], sortedB: IndexedSeq[ListValue]): IndexedSeq[DiffItem] = {
-    var aIndex = 0
-    var bIndex = 0
-    var diff = new ArrayBuffer[DiffItem]()
-    while (aIndex < sortedA.size && bIndex < sortedB.size) {
-      val rowA = sortedA(aIndex)
-      val rowB = sortedB(bIndex)
-
-      ANY_VALUE_ORDERING.compare(rowA, rowB) match {
-        case i if i > 0 =>
-          diff += DiffItem(rowB, fromA = false)
-          bIndex += 1
-        case i if i < 0 =>
-          diff += DiffItem(rowA, fromA = true)
-          aIndex += 1
-        case 0 =>
-          aIndex += 1
-          bIndex += 1
-      }
-    }
-    while (aIndex < sortedA.size) {
-      val rowA = sortedA(aIndex)
-      diff += DiffItem(rowA, fromA = true)
-      aIndex += 1
-    }
-    while (bIndex < sortedB.size) {
-      val rowB = sortedB(bIndex)
-      diff += DiffItem(rowB, fromA = false)
-      bIndex += 1
-    }
-
-    diff
-  }
 
 }
 

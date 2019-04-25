@@ -7,7 +7,7 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.backup.stores.BackupStore;
 import com.neo4j.backup.stores.BackupStoreWithSomeData;
-import com.neo4j.backup.stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataAndNoIdFiles;
 import com.neo4j.backup.stores.DefaultDatabasesBackup;
 import com.neo4j.backup.stores.EmptyBackupStore;
 import com.neo4j.causalclustering.common.Cluster;
@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -87,7 +88,7 @@ public class NewMemberSeedingIT
 
     private static Iterable<BackupStore> stores()
     {
-        return Arrays.asList( new EmptyBackupStore(), new BackupStoreWithSomeData(), new BackupStoreWithSomeDataButNoTransactionLogs() );
+        return Arrays.asList( new EmptyBackupStore(), new BackupStoreWithSomeData(), new BackupStoreWithSomeDataAndNoIdFiles() );
     }
 
     @Before
@@ -126,8 +127,8 @@ public class NewMemberSeedingIT
         if ( backupsOpt.isPresent() )
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
-            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
+            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         }
 
         // we want the new instance to seed from backup and not delete and re-download the store

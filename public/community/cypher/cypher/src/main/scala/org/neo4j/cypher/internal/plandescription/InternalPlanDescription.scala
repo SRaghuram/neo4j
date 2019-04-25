@@ -125,7 +125,7 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
 object InternalPlanDescription {
 
   def error(msg: String): InternalPlanDescription =
-    new PlanDescriptionImpl(Id.INVALID_ID, msg, NoChildren, Nil, Set.empty)
+    PlanDescriptionImpl(Id.INVALID_ID, msg, NoChildren, Nil, Set.empty)
 }
 
 sealed trait Children {
@@ -288,7 +288,7 @@ final case class ArgumentPlanDescription(id: Id,
 
   def addArgument(arg: Argument): InternalPlanDescription = copy(arguments = arguments :+ arg)
 
-  def map(f: (InternalPlanDescription) => InternalPlanDescription): InternalPlanDescription = f(this)
+  def map(f: InternalPlanDescription => InternalPlanDescription): InternalPlanDescription = f(this)
 
   def toIndexedSeq: Seq[InternalPlanDescription] = Seq(this)
 }

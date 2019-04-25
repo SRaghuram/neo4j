@@ -22,14 +22,14 @@ package org.neo4j.test.rule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 
 /**
- * JUnit @Rule for configuring, creating and managing an EmbeddedGraphDatabase instance.
+ * JUnit @Rule for configuring, creating and managing an embedded database instance.
  * <p>
  * The database instance is created lazily, so configurations can be injected prior to calling
  * {@link #getGraphDatabaseAPI()}.
@@ -61,15 +61,15 @@ public class EmbeddedDbmsRule extends DbmsRule
     }
 
     @Override
-    protected GraphDatabaseFactory newFactory()
+    protected DatabaseManagementServiceBuilder newFactory()
     {
-        return new TestGraphDatabaseFactory();
+        return new TestDatabaseManagementServiceBuilder();
     }
 
     @Override
-    protected GraphDatabaseBuilder newBuilder( GraphDatabaseFactory factory )
+    protected DatabaseManagementServiceInternalBuilder newBuilder( DatabaseManagementServiceBuilder factory )
     {
-        return factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        return factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
     }
 
     @Override

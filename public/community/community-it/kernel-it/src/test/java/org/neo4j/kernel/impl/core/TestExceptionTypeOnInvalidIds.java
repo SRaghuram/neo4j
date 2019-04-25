@@ -26,18 +26,18 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.io.File;
-
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.TRUE;
 
 public class TestExceptionTypeOnInvalidIds
@@ -56,24 +56,30 @@ public class TestExceptionTypeOnInvalidIds
 
     @ClassRule
     public static final TestDirectory testDirectory = TestDirectory.testDirectory();
+    private static DatabaseManagementService readOnlyService;
+    private static DatabaseManagementService managementService;
 
     @BeforeClass
     public static void createDatabase()
     {
-        graphdb = new TestGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
-        File databaseDirectory = testDirectory.databaseLayout( "read_only" ).databaseDirectory();
-        new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory ).shutdown();
-        graphDbReadOnly = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory ).
-            setConfig( GraphDatabaseSettings.read_only, TRUE ).
-            newGraphDatabase();
+        var writableLayout = testDirectory.databaseLayout( testDirectory.storeDir( "writable" ) );
+        var readOnlyLayout = testDirectory.databaseLayout( testDirectory.storeDir( "readOnly" ) );
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( writableLayout.databaseDirectory() );
+        graphdb = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManagementService managementService1 =
+                new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( readOnlyLayout.databaseDirectory() );
+        managementService1.shutdown();
+        readOnlyService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( readOnlyLayout.databaseDirectory() ).
+                setConfig( GraphDatabaseSettings.read_only, TRUE ).newDatabaseManagementService();
+        graphDbReadOnly = readOnlyService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterClass
     public static void destroyDatabase()
     {
-        graphDbReadOnly.shutdown();
+        readOnlyService.shutdown();
         graphDbReadOnly = null;
-        graphdb.shutdown();
+        managementService.shutdown();
         graphdb = null;
     }
 

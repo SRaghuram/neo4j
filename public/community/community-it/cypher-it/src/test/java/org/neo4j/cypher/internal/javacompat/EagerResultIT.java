@@ -36,6 +36,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -45,10 +46,10 @@ import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
@@ -59,7 +60,7 @@ import org.neo4j.kernel.impl.context.TransactionVersionContextSupplier;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -68,6 +69,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class EagerResultIT
 {
@@ -77,6 +79,7 @@ public class EagerResultIT
     private TestTransactionVersionContextSupplier testContextSupplier;
     private File storeDir;
     private TestVersionContext testCursorContext;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp()
@@ -95,7 +98,7 @@ public class EagerResultIT
     {
         if ( database != null )
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -247,10 +250,10 @@ public class EagerResultIT
 
     private GraphDatabaseService startRestartableDatabase()
     {
-        return new CustomGraphDatabaseFactory( new CustomFacadeFactory() )
+        managementService = new CustomDatabaseManagementServiceBuilder( new CustomManagementServiceFactory() )
                 .newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.snapshot_query, Settings.TRUE )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.snapshot_query, Settings.TRUE ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private TransactionIdStore getTransactionIdStore()
@@ -259,18 +262,18 @@ public class EagerResultIT
         return dependencyResolver.resolveDependency( TransactionIdStore.class );
     }
 
-    private class CustomGraphDatabaseFactory extends TestGraphDatabaseFactory
+    private class CustomDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
     {
 
-        private GraphDatabaseFacadeFactory customFacadeFactory;
+        private final DatabaseManagementServiceFactory customFacadeFactory;
 
-        CustomGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
+        CustomDatabaseManagementServiceBuilder( DatabaseManagementServiceFactory customFacadeFactory )
         {
             this.customFacadeFactory = customFacadeFactory;
         }
 
         @Override
-        protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
+        protected DatabaseManagementServiceInternalBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
                 GraphDatabaseFactoryState state )
         {
             return config -> customFacadeFactory.newFacade( storeDir, config,
@@ -278,10 +281,10 @@ public class EagerResultIT
         }
     }
 
-    private class CustomFacadeFactory extends GraphDatabaseFacadeFactory
+    private class CustomManagementServiceFactory extends DatabaseManagementServiceFactory
     {
 
-        CustomFacadeFactory()
+        CustomManagementServiceFactory()
         {
             super( DatabaseInfo.COMMUNITY, CommunityEditionModule::new );
         }

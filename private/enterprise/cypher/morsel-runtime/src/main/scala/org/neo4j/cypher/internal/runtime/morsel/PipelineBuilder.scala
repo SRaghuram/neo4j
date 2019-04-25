@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.QueryIndexes
@@ -17,8 +19,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api
 import org.neo4j.internal.kernel.api.{IndexOrder => KernelIndexOrder}
@@ -59,13 +59,13 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           LazyLabel(label)(SemanticTable()),
           argumentSize)
 
-      case plans.NodeIndexScan(column, labelToken, property, _, indexOrder) =>
+      case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         new NodeIndexScanOperator(
           WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
-          SlottedIndexedProperty(column, property, slots),
-          queryIndexes.registerQueryIndex(labelToken, property),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          queryIndexes.registerQueryIndex(labelToken, properties),
           asKernelIndexOrder(indexOrder),
           argumentSize)
 
@@ -109,10 +109,10 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case plans.Argument(_) =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan), argumentSize)
 
-      case plans.Input(nodes, variables) =>
+      case plans.Input(nodes, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan), nodes.map(v => slots.getLongOffsetFor(v)), variables.map(v => slots.getReferenceOffsetFor(v)))
 
-      case p: plans.LazyLogicalPlan =>
+      case _: plans.LazyLogicalPlan =>
         val pipe = fallbackPipeMapper.onLeaf(plan)
         new LazySlottedPipeLeafOperator(WorkIdentity.fromPlan(plan), pipe, argumentSize)
 
@@ -140,7 +140,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           new ProduceResultOperator(WorkIdentity.fromPlan(plan), slots, runtimeColumns)
 
         case plans.Selection(predicate, _) =>
-          new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandPredicate(id, predicate))
+          new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate))
 
         case plans.Expand(lhs, fromName, dir, types, to, relName, ExpandAll) =>
           val fromOffset = slots.getLongOffsetFor(fromName)
@@ -226,7 +226,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           }.toArray
 
           //add mapper to source
-          val groupings = converters.toGroupingExpression(id, groupingExpressions)
+          val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
           source.addOperator(new AggregationMapperOperator(WorkIdentity.fromPlan(plan), aggregations, groupings))
           new AggregationReduceOperator(WorkIdentity.fromPlan(plan), aggregations, groupings)
 
@@ -248,6 +248,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.PartialTop | // same as above
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
              _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
+             _: plans.OrderedDistinct | // same as above
              _: plans.LoadCSV | // Not verified to be thread safe
              _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
                                        // transaction via Core API reads, which is not thread safe because of the transaction
@@ -255,7 +256,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
 
         // Fallback to use a lazy slotted pipe
-        case p =>
+        case _ =>
           source match {
             case s: StreamingComposablePipeline[_] if s.start.isInstanceOf[LazySlottedPipeStreamingOperator] && !s.hasAdditionalOperators =>
               val pipeConstructor: Pipe => Pipe =
@@ -312,7 +313,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
         val operator = new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
         new StreamingMergePipeline(operator, slots, lhs, rhs)
 
-      case p =>
+      case _ =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
   }

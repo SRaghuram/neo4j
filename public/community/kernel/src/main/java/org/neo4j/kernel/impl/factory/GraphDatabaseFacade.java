@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.factory;
 
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -46,10 +45,8 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.StringSearchMode;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.graphdb.event.DatabaseEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.helpers.collection.Iterators;
@@ -149,8 +146,6 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
         /** Eg. Neo4j Enterprise HA, Neo4j Community Standalone.. */
         String name();
 
-        void shutdown();
-
         /**
          * Begin a new kernel transaction with specified timeout in milliseconds.
          *
@@ -162,15 +157,9 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
         /** Execute a cypher statement */
         Result executeQuery( String query, MapValue parameters, TransactionalContext context );
 
-        void registerDatabaseEventHandler( DatabaseEventHandler handler );
-
-        void unregisterDatabaseEventHandler( DatabaseEventHandler handler );
-
         <T> void registerTransactionEventHandler( TransactionEventHandler<T> handler );
 
         <T> void unregisterTransactionEventHandler( TransactionEventHandler<T> handler );
-
-        URL validateURLAccess( URL url ) throws URLAccessValidationError;
 
         GraphDatabaseQueryService queryService();
     }
@@ -294,12 +283,6 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
     public boolean isAvailable( long timeoutMillis )
     {
         return spi.databaseIsAvailable( timeoutMillis );
-    }
-
-    @Override
-    public void shutdown()
-    {
-        spi.shutdown();
     }
 
     @Override
@@ -499,23 +482,9 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
     }
 
     @Override
-    public DatabaseEventHandler registerDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        spi.registerDatabaseEventHandler( handler );
-        return handler;
-    }
-
-    @Override
     public <T> TransactionEventHandler<T> registerTransactionEventHandler( TransactionEventHandler<T> handler )
     {
         spi.registerTransactionEventHandler( handler );
-        return handler;
-    }
-
-    @Override
-    public DatabaseEventHandler unregisterDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        spi.unregisterDatabaseEventHandler( handler );
         return handler;
     }
 
@@ -863,12 +832,6 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
     public StoreId storeId()
     {
         return spi.storeId();
-    }
-
-    @Override
-    public URL validateURLAccess( URL url ) throws URLAccessValidationError
-    {
-        return spi.validateURLAccess( url );
     }
 
     @Override

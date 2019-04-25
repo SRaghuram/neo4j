@@ -20,7 +20,6 @@ import java.util.function.Function;
 
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
@@ -163,7 +162,7 @@ class RecoveryProtocol
             FileSystemAbstraction fileSystem,
             File file ) throws IOException, EndOfStreamException
     {
-        try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ ) )
+        try ( StoreChannel channel = fileSystem.read( file ) )
         {
             return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, SegmentHeader.CURRENT_RECORD_OFFSET ) );
         }
@@ -174,7 +173,7 @@ class RecoveryProtocol
             File file,
             SegmentHeader header ) throws IOException
     {
-        try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE ) )
+        try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
             PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, SegmentHeader.CURRENT_RECORD_OFFSET );

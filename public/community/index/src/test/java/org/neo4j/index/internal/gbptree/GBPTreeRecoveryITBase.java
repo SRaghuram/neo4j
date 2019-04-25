@@ -36,7 +36,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.RandomRule;
@@ -81,7 +80,7 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
     @Before
     public void setUp()
     {
-        this.layout = getLayout( random );
+        this.layout = getLayout( random, PAGE_SIZE );
         loadCountTransactions = random.intBetween( 300, 1_000 );
         minInsertCountPerBatch = 30;
         maxInsertCountPerBatch = 200;
@@ -89,7 +88,7 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
         maxRemoveCountPerBatch = 20;
     }
 
-    protected abstract TestLayout<KEY,VALUE> getLayout( RandomRule random );
+    protected abstract TestLayout<KEY,VALUE> getLayout( RandomRule random, int pageSize );
 
     @Test
     public void shouldRecoverFromCrashBeforeFirstCheckpoint() throws Exception
@@ -124,13 +123,11 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
             index.consistencyCheck();
 
             // ... containing all the stuff load says
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor =
-                          index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
+            try ( Seeker<KEY,VALUE> cursor = index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
             {
                 assertTrue( cursor.next() );
-                Hit<KEY,VALUE> hit = cursor.get();
-                assertEqualsKey( key, hit.key() );
-                assertEqualsValue( value, hit.value() );
+                assertEqualsKey( key, cursor.key() );
+                assertEqualsValue( value, cursor.value() );
             }
         }
     }
@@ -245,15 +242,13 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
             // we should end up with a consistent index containing all the stuff load says
             index.consistencyCheck();
             long[/*key,value,key,value...*/] aggregate = expectedSortedAggregatedDataFromGeneratedLoad( load );
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor =
-                    index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
+            try ( Seeker<KEY,VALUE> cursor = index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
             {
                 for ( int i = 0; i < aggregate.length; )
                 {
                     assertTrue( cursor.next() );
-                    Hit<KEY,VALUE> hit = cursor.get();
-                    assertEqualsKey( key( aggregate[i++] ), hit.key() );
-                    assertEqualsValue( value( aggregate[i++] ), hit.value() );
+                    assertEqualsKey( key( aggregate[i++] ), cursor.key() );
+                    assertEqualsValue( value( aggregate[i++] ), cursor.value() );
                 }
                 assertFalse( cursor.next() );
             }

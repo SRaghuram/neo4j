@@ -14,19 +14,21 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class ReplicatedTokenRequest implements CoreReplicatedContent
 {
     private final TokenType type;
     private final String tokenName;
     private final byte[] commandBytes;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public ReplicatedTokenRequest( String databaseName, TokenType type, String tokenName, byte[] commandBytes )
+    public ReplicatedTokenRequest( DatabaseId databaseId, TokenType type, String tokenName, byte[] commandBytes )
     {
         this.type = type;
         this.tokenName = tokenName;
         this.commandBytes = commandBytes;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     public TokenType type()
@@ -98,8 +100,8 @@ public class ReplicatedTokenRequest implements CoreReplicatedContent
         contentHandler.handle( this );
     }
 
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 }

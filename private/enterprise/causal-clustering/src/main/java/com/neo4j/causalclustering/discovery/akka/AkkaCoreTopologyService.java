@@ -14,7 +14,10 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -39,6 +42,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
@@ -52,12 +56,11 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
     private final RetryStrategy retryStrategy;
-    private final TopologyState topologyState;
+    private final GlobalTopologyState globalTopologyState;
     private final ExecutorService executor;
     private final Clock clock;
-    private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
-    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+    public AkkaCoreTopologyService( Config config, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, ExecutorService executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
@@ -66,7 +69,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         this.retryStrategy = topologyServiceRetryStrategy;
         this.executor = executor;
         this.clock = clock;
-        this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
+        this.globalTopologyState = new GlobalTopologyState( logProvider, listenerService::notifyListeners );
     }
 
     @Override
@@ -75,8 +78,8 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         actorSystemLifecycle.createClusterActorSystem();
 
         SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
-        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
@@ -105,7 +108,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
-    private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink,
+    private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
         Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, logProvider );
@@ -129,7 +132,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
     private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
     {
-        this.topologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
+        this.globalTopologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
         actorSystemLifecycle.addSeenAddresses( coreTopologyMessage.akkaMembers() );
     }
 
@@ -143,24 +146,18 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName )
+    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
     {
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), noSender() );
+            actor.tell( new ClusterIdSettingMessage( clusterId, databaseId ), noSender() );
             return true;
         }
         else
         {
             return false;
         }
-    }
-
-    @Override
-    public LeaderInfo getLeader()
-    {
-        return leaderInfo;
     }
 
     @VisibleForTesting
@@ -188,49 +185,42 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo )
+    public void setLeader0( LeaderInfo leaderInfo, DatabaseId databaseId )
     {
-        this.leaderInfo = leaderInfo;
         if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
         {
-            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), noSender() ) );
+            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, databaseId ), noSender() ) );
         }
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
-        setLeader0( steppingDown );
+        setLeader0( steppingDown, databaseId );
     }
 
     @Override
-    public String localDBName()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return topologyState.localDBName();
+        return globalTopologyState.allCoreServers();
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return topologyState.coreTopology();
+        return globalTopologyState.coreTopologyForDatabase( databaseId );
     }
 
     @Override
-    public CoreTopology localCoreServers()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return topologyState.localCoreTopology();
+        return globalTopologyState.allReadReplicas();
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return topologyState.readReplicaTopology();
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return topologyState.localReadReplicaTopology();
+        return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
     }
 
     @Override
@@ -238,7 +228,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         try
         {
-            return retryStrategy.apply( () -> topologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
+            return retryStrategy.apply( () -> globalTopologyState.retrieveCatchupServerAddress( upstream ), Objects::nonNull );
         }
         catch ( TimeoutException e )
         {
@@ -249,12 +239,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     @Override
     public Map<MemberId,RoleInfo> allCoreRoles()
     {
-        return topologyState.allCoreRoles();
+        return globalTopologyState.allCoreRoles();
     }
 
     @VisibleForTesting
-    TopologyState topologyState()
+    GlobalTopologyState topologyState()
     {
-        return topologyState;
+        return globalTopologyState;
     }
 }

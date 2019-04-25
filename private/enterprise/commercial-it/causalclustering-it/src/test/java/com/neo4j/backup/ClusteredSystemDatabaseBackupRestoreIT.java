@@ -7,6 +7,7 @@ package com.neo4j.backup;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreDatabaseManager;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -27,15 +28,15 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.DbRepresentation;
@@ -50,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
+@ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ClusteredSystemDatabaseBackupRestoreIT
 {
     @Inject
@@ -89,7 +90,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String leaderAddress = leader.settingValue( backupAddress );
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupLocation, databaseName ) );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupLocation, databaseName ) ) );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
         cluster.coreTx( ( db, tx ) ->
@@ -172,8 +173,9 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         Config restoreCommandConfig = Config.defaults();
         restoreCommandConfig.augment( memberConfig );
-        new RestoreDatabaseCommand( fs, new File( backupLocation, GraphDatabaseSettings.SYSTEM_DATABASE_NAME ), restoreCommandConfig,
-                GraphDatabaseSettings.SYSTEM_DATABASE_NAME, true ).execute();
+        var databaseId = new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        new RestoreDatabaseCommand( fs, new File( backupLocation, databaseId.name() ), restoreCommandConfig,
+                databaseId, true ).execute();
     }
 
     private static boolean runBackupSameJvm( File neo4jHome, String host, String databaseName )
@@ -188,12 +190,13 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception
     {
-        DatabaseManager databaseManager = cluster.awaitLeader().database()
+        var databaseManager = cluster.awaitLeader()
+                .database()
                 .getDependencyResolver()
-                .resolveDependency( DatabaseManager.class, DependencyResolver.SelectionStrategy.FIRST );
+                .resolveDependency( CoreDatabaseManager.class );
 
-        return databaseManager.getDatabaseContext( GraphDatabaseSettings.SYSTEM_DATABASE_NAME )
-                .map( DatabaseContext::getDatabaseFacade ).orElseThrow( IllegalStateException::new );
+        return databaseManager.getDatabaseContext( new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
+                .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 
     private static Map<String,String> getConfigMap()

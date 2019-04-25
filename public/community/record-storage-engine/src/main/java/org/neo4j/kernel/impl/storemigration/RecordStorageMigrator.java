@@ -38,6 +38,24 @@ import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.batchimport.AdditionalInitialIds;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.BatchImporterFactory;
+import org.neo4j.internal.batchimport.Configuration;
+import org.neo4j.internal.batchimport.EmptyLogFilesInitializer;
+import org.neo4j.internal.batchimport.InputIterable;
+import org.neo4j.internal.batchimport.InputIterator;
+import org.neo4j.internal.batchimport.input.BadCollector;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.Collectors;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.Input.Estimates;
+import org.neo4j.internal.batchimport.input.InputChunk;
+import org.neo4j.internal.batchimport.input.InputEntityVisitor;
+import org.neo4j.internal.batchimport.input.ReadableGroups;
+import org.neo4j.internal.batchimport.staging.CoarseBoundedProgressExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.ReadOnlyIdGeneratorFactory;
@@ -79,6 +97,7 @@ import org.neo4j.kernel.impl.storemigration.legacy.SchemaStore35;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.files.RangeLogVersionVisitor;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -91,25 +110,10 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
-import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
-import org.neo4j.unsafe.impl.batchimport.Configuration;
-import org.neo4j.unsafe.impl.batchimport.InputIterable;
-import org.neo4j.unsafe.impl.batchimport.InputIterator;
-import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Collectors;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.Input.Estimates;
-import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
-import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
-import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
-import org.neo4j.unsafe.impl.batchimport.staging.CoarseBoundedProgressExecutionMonitor;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static java.util.Arrays.asList;
+import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.staging.ExecutionSupervisors.withDynamicProcessorAssignment;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForVersion;
 import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
 import static org.neo4j.kernel.impl.storemigration.FileOperation.COPY;
@@ -122,8 +126,6 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 import static org.neo4j.storageengine.api.TransactionIdStore.UNKNOWN_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.UNKNOWN_TX_COMMIT_TIMESTAMP;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
-import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionSupervisors.withDynamicProcessorAssignment;
 
 /**
  * Migrates a {@link RecordStorageEngine} store from one version to another.
@@ -389,7 +391,8 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
             BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate( migrationDirectoryStructure,
                     fileSystem, pageCache, importConfig, logService,
                     withDynamicProcessorAssignment( migrationBatchImporterMonitor( legacyStore, progressReporter,
-                            importConfig ), importConfig ), additionalInitialIds, config, newFormat, NO_MONITOR, jobScheduler, badCollector );
+                            importConfig ), importConfig ), additionalInitialIds, config, newFormat, NO_MONITOR, jobScheduler, badCollector,
+                    EmptyLogFilesInitializer.INSTANCE );
             InputIterable nodes = () -> legacyNodesAsInput( legacyStore, requiresPropertyMigration );
             InputIterable relationships = () -> legacyRelationshipsAsInput( legacyStore, requiresPropertyMigration );
             long propertyStoreSize = storeSize( legacyStore.getPropertyStore() ) / 2 +
@@ -506,17 +509,23 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
 
     private StoreFactory createStoreFactory( DatabaseLayout databaseLayout, RecordFormats formats, boolean readOnlyIds )
     {
+        NullLogProvider logProvider = NullLogProvider.getInstance();
+        return createStoreFactory( databaseLayout, formats, readOnlyIds, config, pageCache, fileSystem, logProvider );
+    }
+
+    static StoreFactory createStoreFactory( DatabaseLayout databaseLayout, RecordFormats formats, boolean readOnlyIds, Config config,
+            PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider )
+    {
         IdGeneratorFactory idGeneratorFactory;
         if ( readOnlyIds )
         {
-            idGeneratorFactory = new ReadOnlyIdGeneratorFactory( fileSystem );
+            idGeneratorFactory = new ReadOnlyIdGeneratorFactory( fs );
         }
         else
         {
-            idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem );
+            idGeneratorFactory = new DefaultIdGeneratorFactory( fs );
         }
-        NullLogProvider logProvider = NullLogProvider.getInstance();
-        return new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fileSystem, formats, logProvider );
+        return new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs, formats, logProvider );
     }
 
     private static AdditionalInitialIds readAdditionalIds( final long lastTxId, final long lastTxChecksum, final long lastTxLogVersion,
@@ -559,7 +568,7 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
 
     private static InputIterator legacyRelationshipsAsInput( NeoStores legacyStore, boolean requiresPropertyMigration )
     {
-        return new StoreScanAsInputIterator<RelationshipRecord>( legacyStore.getRelationshipStore() )
+        return new StoreScanAsInputIterator<>( legacyStore.getRelationshipStore() )
         {
             @Override
             public InputChunk newChunk()
@@ -571,7 +580,7 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
 
     private static InputIterator legacyNodesAsInput( NeoStores legacyStore, boolean requiresPropertyMigration )
     {
-        return new StoreScanAsInputIterator<NodeRecord>( legacyStore.getNodeStore() )
+        return new StoreScanAsInputIterator<>( legacyStore.getNodeStore() )
         {
             @Override
             public InputChunk newChunk()
@@ -676,33 +685,7 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
                 srcSchema.checkAndLoadStorage( true );
                 SchemaStorage35 srcAccess = new SchemaStorage35( srcSchema );
 
-                SchemaStore dstSchema = dstStore.getSchemaStore();
-                TokenCreator propertyKeyTokenCreator = ( name, internal ) ->
-                {
-                    PropertyKeyTokenStore keyTokenStore = dstStore.getPropertyKeyTokenStore();
-                    DynamicStringStore nameStore = keyTokenStore.getNameStore();
-                    byte[] bytes = PropertyStore.encodeString( name );
-                    List<DynamicRecord> nameRecords = new ArrayList<>();
-                    AbstractDynamicStore.allocateRecordsFromBytes( nameRecords, bytes, nameStore );
-                    nameRecords.forEach( nameStore::prepareForCommit );
-                    nameRecords.forEach( nameStore::updateRecord );
-                    nameRecords.forEach( record -> nameStore.setHighestPossibleIdInUse( record.getId() ) );
-                    int nameId = Iterables.first( nameRecords ).getIntId();
-                    PropertyKeyTokenRecord keyTokenRecord = keyTokenStore.newRecord();
-                    long tokenId = keyTokenStore.nextId();
-                    keyTokenRecord.setId( tokenId );
-                    keyTokenRecord.initialize( true, nameId );
-                    keyTokenRecord.setInternal( internal );
-                    keyTokenStore.prepareForCommit( keyTokenRecord );
-                    keyTokenStore.updateRecord( keyTokenRecord );
-                    keyTokenStore.setHighestPossibleIdInUse( keyTokenRecord.getId() );
-                    return Math.toIntExact( tokenId );
-                };
-                TokenHolder propertyKeyTokens = new DelegatingTokenHolder( propertyKeyTokenCreator, TokenHolder.TYPE_PROPERTY_KEY );
-                TokenHolders dstTokenHolders = new TokenHolders( propertyKeyTokens, StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_LABEL ),
-                        StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
-                dstTokenHolders.propertyKeyTokens().setInitialTokens( dstStore.getPropertyKeyTokenStore().getTokens() );
-                SchemaRuleAccess dstAccess = SchemaRuleAccess.getSchemaRuleAccess( dstSchema, dstTokenHolders );
+                SchemaRuleAccess dstAccess = createMigrationTargetSchemaRuleAccess( dstStore );
 
                 Iterable<SchemaRule> rules = srcAccess.getAll();
                 for ( SchemaRule rule : rules )
@@ -713,6 +696,37 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
                 dstStore.flush( IOLimiter.UNLIMITED );
             }
         }
+    }
+
+    static SchemaRuleAccess createMigrationTargetSchemaRuleAccess( NeoStores stores )
+    {
+        SchemaStore dstSchema = stores.getSchemaStore();
+        TokenCreator propertyKeyTokenCreator = ( name, internal ) ->
+        {
+            PropertyKeyTokenStore keyTokenStore = stores.getPropertyKeyTokenStore();
+            DynamicStringStore nameStore = keyTokenStore.getNameStore();
+            byte[] bytes = PropertyStore.encodeString( name );
+            List<DynamicRecord> nameRecords = new ArrayList<>();
+            AbstractDynamicStore.allocateRecordsFromBytes( nameRecords, bytes, nameStore );
+            nameRecords.forEach( nameStore::prepareForCommit );
+            nameRecords.forEach( nameStore::updateRecord );
+            nameRecords.forEach( record -> nameStore.setHighestPossibleIdInUse( record.getId() ) );
+            int nameId = Iterables.first( nameRecords ).getIntId();
+            PropertyKeyTokenRecord keyTokenRecord = keyTokenStore.newRecord();
+            long tokenId = keyTokenStore.nextId();
+            keyTokenRecord.setId( tokenId );
+            keyTokenRecord.initialize( true, nameId );
+            keyTokenRecord.setInternal( internal );
+            keyTokenStore.prepareForCommit( keyTokenRecord );
+            keyTokenStore.updateRecord( keyTokenRecord );
+            keyTokenStore.setHighestPossibleIdInUse( keyTokenRecord.getId() );
+            return Math.toIntExact( tokenId );
+        };
+        TokenHolder propertyKeyTokens = new DelegatingTokenHolder( propertyKeyTokenCreator, TokenHolder.TYPE_PROPERTY_KEY );
+        TokenHolders dstTokenHolders = new TokenHolders( propertyKeyTokens, StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_LABEL ),
+                StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+        dstTokenHolders.propertyKeyTokens().setInitialTokens( stores.getPropertyKeyTokenStore().getTokens() );
+        return SchemaRuleAccess.getSchemaRuleAccess( dstSchema, dstTokenHolders );
     }
 
     @Override
@@ -777,7 +791,7 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
         private final ProgressReporter progressReporter;
 
         BatchImporterProgressMonitor( long highNodeId, long highRelationshipId,
-                org.neo4j.unsafe.impl.batchimport.Configuration configuration,
+                Configuration configuration,
                 ProgressReporter progressReporter )
         {
             super( highNodeId, highRelationshipId, configuration );

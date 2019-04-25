@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
@@ -80,8 +79,9 @@ abstract class GBPTreeITBase<KEY,VALUE>
             throws IOException
     {
         // some random padding
-        layout = getLayout( random );
-        PageCache pageCache = pageCacheExtension.getPageCache( fileSystem, config().withPageSize( 512 ).withAccessChecks( true ) );
+        int pageSize = 512;
+        layout = getLayout( random, pageSize );
+        PageCache pageCache = pageCacheExtension.getPageCache( fileSystem, config().withPageSize( pageSize ).withAccessChecks( true ) );
         return index = new GBPTreeBuilder<>( pageCache, testDirectory.file( "index" ), layout ).build();
     }
 
@@ -90,7 +90,7 @@ abstract class GBPTreeITBase<KEY,VALUE>
         return index.writer( ratioToKeepInLeftOnSplit );
     }
 
-    abstract TestLayout<KEY,VALUE> getLayout( RandomRule random );
+    abstract TestLayout<KEY,VALUE> getLayout( RandomRule random, int pageSize );
 
     abstract Class<KEY> getKeyClass();
 
@@ -138,11 +138,11 @@ abstract class GBPTreeITBase<KEY,VALUE>
                         to = first;
                     }
                     Map<KEY,VALUE> expectedHits = expectedHits( data, from, to, keyComparator );
-                    try ( RawCursor<Hit<KEY,VALUE>,IOException> result = index.seek( from, to ) )
+                    try ( Seeker<KEY,VALUE> result = index.seek( from, to ) )
                     {
                         while ( result.next() )
                         {
-                            KEY key = result.get().key();
+                            KEY key = result.key();
                             if ( expectedHits.remove( key ) == null )
                             {
                                 fail( "Unexpected hit " + key + " when searching for " + from + " - " + to );
@@ -216,7 +216,7 @@ abstract class GBPTreeITBase<KEY,VALUE>
             }
 
             // then
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> seek = index.seek( key( 0 ), key( numberOfNodes ) ) )
+            try ( Seeker<KEY,VALUE> seek = index.seek( key( 0 ), key( numberOfNodes ) ) )
             {
                 assertFalse( seek.next() );
             }
@@ -248,7 +248,7 @@ abstract class GBPTreeITBase<KEY,VALUE>
 
                 KEY from = layout.key( 3 );
                 KEY to = layout.key( 1 );
-                try ( RawCursor<Hit<KEY,VALUE>,IOException> seek = index.seek( from, to ) )
+                try ( Seeker<KEY,VALUE> seek = index.seek( from, to ) )
                 {
                     assertFalse( seek.next() );
                 }

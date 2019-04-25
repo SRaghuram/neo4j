@@ -23,7 +23,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -43,22 +43,24 @@ import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.hasProperty;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
@@ -74,10 +76,10 @@ class TestCrashWithRebuildSlow
     @Test
     void crashAndRebuildSlowWithDynamicStringDeletions() throws Exception
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .setFileSystem( fs ).newImpermanentDatabaseBuilder( testDir.databaseDir() )
-                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .setFileSystem( fs ).newImpermanentDatabaseBuilder( testDir.storeDir() )
+                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" ).newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         List<Long> deletedNodeIds = produceNonCleanDefraggedStringStore( db );
         Map<IdType,Long> highIdsBeforeCrash = getHighIds( db );
 
@@ -91,7 +93,7 @@ class TestCrashWithRebuildSlow
         assertThat( checksumBefore, Matchers.equalTo( checksumBefore2 ) );
 
         EphemeralFileSystemAbstraction snapshot = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
         long snapshotChecksum = snapshot.checksum();
         if ( snapshotChecksum != checksumBefore )
@@ -108,12 +110,12 @@ class TestCrashWithRebuildSlow
         assertThat( snapshotChecksum, equalTo( checksumBefore ) );
 
         // Recover with unsupported.dbms.id_generator_fast_rebuild_enabled=false
-        assertNumberOfFreeIdsEquals( testDir.databaseDir(), snapshot, 0 );
-        GraphDatabaseAPI newDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+        assertNumberOfFreeIdsEquals( testDir.databaseLayout(), snapshot, 0 );
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .setFileSystem( snapshot )
-                .newImpermanentDatabaseBuilder( testDir.databaseDir() )
-                .setConfig( GraphDatabaseSettings.rebuild_idgenerators_fast, FALSE )
-                .newGraphDatabase();
+                .newImpermanentDatabaseBuilder( testDir.storeDir() )
+                .setConfig( GraphDatabaseSettings.rebuild_idgenerators_fast, FALSE ).newDatabaseManagementService();
+        GraphDatabaseAPI newDb = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         Map<IdType,Long> highIdsAfterCrash = getHighIds( newDb );
         assertEquals( highIdsBeforeCrash, highIdsAfterCrash );
 
@@ -143,7 +145,7 @@ class TestCrashWithRebuildSlow
         }
         finally
         {
-            newDb.shutdown();
+            managementService.shutdown();
             snapshot.close();
         }
     }
@@ -211,9 +213,9 @@ class TestCrashWithRebuildSlow
         return highIds;
     }
 
-    private static void assertNumberOfFreeIdsEquals( File databaseDirectory, FileSystemAbstraction fs, long numberOfFreeIds )
+    private static void assertNumberOfFreeIdsEquals( DatabaseLayout databaseLayout, FileSystemAbstraction fs, long numberOfFreeIds )
     {
-        long fileSize = fs.getFileSize( new File( databaseDirectory, "neostore.propertystore.db.strings.id" ) );
+        long fileSize = fs.getFileSize( databaseLayout.idPropertyStringStore() );
         long fileSizeWithoutHeader = fileSize - 9;
         long actualFreeIds = fileSizeWithoutHeader / 8;
 

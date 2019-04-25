@@ -123,27 +123,36 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
     GeneratedQueryStructureResult(query, sourceSaver.sourceCode, sourceSaver.bytecode)
   }
 
-  private def addAccept(methodStructure: (MethodStructure[_]) => Unit,
+  private def addAccept(methodStructure: MethodStructure[_] => Unit,
                         generator: CodeGenerator,
                         clazz: ClassGenerator,
                         fields: Fields,
                         conf: CodeGenConfiguration)(implicit codeGenContext: CodeGenContext) = {
+    val exceptionVar = codeGenContext.namer.newVarName()
     using(clazz.generate(MethodDeclaration.method(typeRef[Unit], "accept",
       Parameter.param(parameterizedType(classOf[QueryResultVisitor[_]],
         typeParameter("E")), "visitor")).
       parameterizedWith("E", extending(typeRef[Exception])).
-      throwsException(typeParameter("E")))) { (codeBlock: CodeBlock) =>
-      val structure = new GeneratedMethodStructure(fields, codeBlock, new AuxGenerator(conf.packageName, generator), onClose =
-        Seq((success: Boolean) => (block: CodeBlock) => {
-          block.expression(invoke(block.self(), methodReference(block.owner(), TypeReference.VOID, "closeCursors")))
-        }))
-      codeBlock.assign(typeRef[ResultRecord], "row",
-                       invoke(newInstance(typeRef[ResultRecord]),
-                              MethodReference.constructorReference(typeRef[ResultRecord], typeRef[Int]),
-                              constant(codeGenContext.numberOfColumns()))
-                      )
-      methodStructure(structure)
-      structure.finalizers.foreach(_ (true)(codeBlock))
+      throwsException(typeParameter("E")))) { b: CodeBlock =>
+      b.tryCatch(
+        (codeBlock: CodeBlock) => {
+          val structure = new GeneratedMethodStructure(fields, codeBlock,
+                                                       new AuxGenerator(conf.packageName, generator))
+          codeBlock.assign(typeRef[ResultRecord], "row",
+                           invoke(newInstance(typeRef[ResultRecord]),
+                                  MethodReference.constructorReference(typeRef[ResultRecord], typeRef[Int]),
+                                  constant(codeGenContext.numberOfColumns()))
+                           )
+          methodStructure(structure)
+          codeBlock.expression(invoke(codeBlock.self(), methodReference(codeBlock.owner(), TypeReference.VOID,
+                                                                        "closeCursors")))
+        },
+        (codeBlock: CodeBlock) => {
+          codeBlock.expression(invoke(codeBlock.self(), methodReference(codeBlock.owner(), TypeReference.VOID,
+                                                                        "closeCursors")))
+          codeBlock.throwException(codeBlock.load(exceptionVar))
+        }, param[Throwable](exceptionVar))
+
     }
   }
 
@@ -181,7 +190,8 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       propertyCursor = clazz.field(typeRef[PropertyCursor], "propertyCursor"),
       dataRead =  clazz.field(typeRef[Read], "dataRead"),
       tokenRead =  clazz.field(typeRef[TokenRead], "tokenRead"),
-      schemaRead =  clazz.field(typeRef[SchemaRead], "schemaRead")
+      schemaRead =  clazz.field(typeRef[SchemaRead], "schemaRead"),
+      closeables = clazz.field(typeRef[java.util.ArrayList[AutoCloseable]], "closeables")
       )
   }
 

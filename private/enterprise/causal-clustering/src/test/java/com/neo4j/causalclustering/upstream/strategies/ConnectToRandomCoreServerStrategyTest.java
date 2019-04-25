@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,20 +20,25 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.core.AnyOf.anyOf;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ConnectToRandomCoreServerStrategyTest
+class ConnectToRandomCoreServerStrategyTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "hello" );
+
     @Test
-    public void shouldConnectToRandomCoreServer() throws Exception
+    void shouldConnectToRandomCoreServer() throws Exception
     {
         // given
         MemberId memberId1 = new MemberId( UUID.randomUUID() );
@@ -41,13 +46,13 @@ public class ConnectToRandomCoreServerStrategyTest
         MemberId memberId3 = new MemberId( UUID.randomUUID() );
 
         TopologyService topologyService = mock( TopologyService.class );
-        when( topologyService.localCoreServers() ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
 
         ConnectToRandomCoreServerStrategy connectionStrategy = new ConnectToRandomCoreServerStrategy();
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
 
         // when
-        Optional<MemberId> memberId = connectionStrategy.upstreamDatabase();
+        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( memberId.isPresent() );
@@ -55,7 +60,7 @@ public class ConnectToRandomCoreServerStrategyTest
     }
 
     @Test
-    public void filtersSelf() throws UpstreamDatabaseSelectionException
+    void filtersSelf() throws UpstreamDatabaseSelectionException
     {
         // given
         MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
@@ -68,7 +73,7 @@ public class ConnectToRandomCoreServerStrategyTest
                 myself );
 
         // when
-        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamDatabase();
+        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( found.isPresent() );
@@ -77,7 +82,7 @@ public class ConnectToRandomCoreServerStrategyTest
 
     static CoreTopology fakeCoreTopology( MemberId... memberIds )
     {
-        assert memberIds.length > 0;
+        assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
 
         ClusterId clusterId = new ClusterId( UUID.randomUUID() );
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
@@ -90,6 +95,6 @@ public class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new CoreTopology( clusterId, false, coreMembers );
+        return new CoreTopology( DATABASE_ID, clusterId, false, coreMembers );
     }
 }

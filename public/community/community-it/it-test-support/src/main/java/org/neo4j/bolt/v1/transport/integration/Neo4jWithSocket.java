@@ -34,15 +34,17 @@ import java.util.function.Supplier;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 
 public class Neo4jWithSocket extends ExternalResource
@@ -52,10 +54,11 @@ public class Neo4jWithSocket extends ExternalResource
     private final Supplier<FileSystemAbstraction> fileSystemProvider;
     private final Consumer<Map<String,String>> configure;
     private final TestDirectory testDirectory;
-    private final TestGraphDatabaseFactory graphDatabaseFactory;
+    private final TestDatabaseManagementServiceBuilder graphDatabaseFactory;
     private GraphDatabaseService gdb;
     private File workingDirectory;
     private ConnectorPortRegister connectorRegister;
+    private DatabaseManagementService managementService;
 
     public Neo4jWithSocket( Class<?> testClass )
     {
@@ -66,16 +69,16 @@ public class Neo4jWithSocket extends ExternalResource
 
     public Neo4jWithSocket( Class<?> testClass, Consumer<Map<String,String>> configure )
     {
-        this( testClass, new TestGraphDatabaseFactory(), configure );
+        this( testClass, new TestDatabaseManagementServiceBuilder(), configure );
     }
 
-    public Neo4jWithSocket( Class<?> testClass, TestGraphDatabaseFactory graphDatabaseFactory,
+    public Neo4jWithSocket( Class<?> testClass, TestDatabaseManagementServiceBuilder graphDatabaseFactory,
             Consumer<Map<String,String>> configure )
     {
         this( testClass, graphDatabaseFactory, EphemeralFileSystemAbstraction::new, configure );
     }
 
-    public Neo4jWithSocket( Class<?> testClass, TestGraphDatabaseFactory graphDatabaseFactory,
+    public Neo4jWithSocket( Class<?> testClass, TestDatabaseManagementServiceBuilder graphDatabaseFactory,
             Supplier<FileSystemAbstraction> fileSystemProvider, Consumer<Map<String,String>> configure )
     {
         this.testDirectory = TestDirectory.testDirectory( testClass, fileSystemProvider.get() );
@@ -95,7 +98,7 @@ public class Neo4jWithSocket extends ExternalResource
         return workingDirectory;
     }
 
-    public DatabaseManager getDatabaseManager()
+    public DatabaseManager<?> getDatabaseManager()
     {
         DependencyResolver resolver = ((GraphDatabaseAPI) gdb).getDependencyResolver();
         return resolver.resolveDependency( DatabaseManager.class );
@@ -145,15 +148,16 @@ public class Neo4jWithSocket extends ExternalResource
     {
         try
         {
-            if ( gdb != null )
+            if ( managementService != null )
             {
-                gdb.shutdown();
+                managementService.shutdown();
             }
         }
         finally
         {
             connectorRegister = null;
             gdb = null;
+            managementService = null;
         }
     }
 
@@ -167,8 +171,9 @@ public class Neo4jWithSocket extends ExternalResource
         Map<String,String> settings = configure( overrideSettingsFunction );
         File storeDir = new File( workingDirectory, "storeDir" );
         graphDatabaseFactory.setFileSystem( fileSystemProvider.get() );
-        gdb = graphDatabaseFactory.newImpermanentDatabaseBuilder( storeDir ).
-                setConfig( settings ).newGraphDatabase();
+        managementService = graphDatabaseFactory.newImpermanentDatabaseBuilder( storeDir ).
+                setConfig( settings ).newDatabaseManagementService();
+        gdb = managementService.database( DEFAULT_DATABASE_NAME );
         connectorRegister =
                 ((GraphDatabaseAPI) gdb).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }

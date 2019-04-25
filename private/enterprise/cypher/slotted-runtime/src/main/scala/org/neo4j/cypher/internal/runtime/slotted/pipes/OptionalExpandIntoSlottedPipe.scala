@@ -43,8 +43,8 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
 
     input.flatMap {
       inputRow: ExecutionContext =>
-        val fromNode = getFromNodeFunction(inputRow)
-        val toNode = getToNodeFunction(inputRow)
+        val fromNode = getFromNodeFunction.applyAsLong(inputRow)
+        val toNode = getToNodeFunction.applyAsLong(inputRow)
 
         if (entityIsNull(fromNode) || entityIsNull(toNode)) {
           Iterator(withNulls(inputRow))
@@ -122,6 +122,8 @@ case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                              slots: SlotConfiguration,
                                              predicate: Expression)(val id: Id)
   extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
+
+  predicate.registerOwningPipe(this)
 
   override def findMatchIterator(inputRow: ExecutionContext,
                                  state: QueryState,

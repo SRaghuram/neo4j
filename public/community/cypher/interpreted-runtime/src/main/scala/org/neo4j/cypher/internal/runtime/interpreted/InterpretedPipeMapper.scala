@@ -20,6 +20,8 @@
 package org.neo4j.cypher.internal.runtime.interpreted
 
 import org.neo4j.cypher.internal.ir.VarPatternLength
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.{Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.KeyTokenResolver
@@ -31,8 +33,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ProcedureCallMode, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals => ASTEquals, Expression => ASTExpression, _}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{Eagerly, InternalException}
 import org.neo4j.values.AnyValue
@@ -92,8 +92,8 @@ case class InterpretedPipeMapper(readOnly: Boolean,
         NodeIndexSeekPipe(ident, label, properties.toArray, queryIndexes.registerQueryIndex(label, properties),
                           valueExpr.map(buildExpression), indexSeekMode, indexOrder)(id = id)
 
-      case NodeIndexScan(ident, label, property, _, indexOrder) =>
-        NodeIndexScanPipe(ident, label, property, queryIndexes.registerQueryIndex(label, property), indexOrder)(id = id)
+      case NodeIndexScan(ident, label, properties, _, indexOrder) =>
+        NodeIndexScanPipe(ident, label, properties, queryIndexes.registerQueryIndex(label, properties), indexOrder)(id = id)
 
       case NodeIndexContainsScan(ident, label, property, valueExpr, _, indexOrder) =>
         NodeIndexContainsScanPipe(ident, label, property, queryIndexes.registerQueryIndex(label, property),
@@ -103,7 +103,7 @@ case class InterpretedPipeMapper(readOnly: Boolean,
         NodeIndexEndsWithScanPipe(ident, label, property, queryIndexes.registerQueryIndex(label, property),
                                   buildExpression(valueExpr), indexOrder)(id = id)
 
-      case Input(nodes, variables) =>
+      case Input(nodes, variables, _) =>
         InputPipe(nodes ++ variables)(id = id)
     }
   }
@@ -225,22 +225,25 @@ case class InterpretedPipeMapper(readOnly: Boolean,
         }
 
       case Aggregation(_, groupingExpressions, aggregatingExpressions) if aggregatingExpressions.isEmpty =>
-        val commandExpressions = Eagerly.immutableMapValues(groupingExpressions, buildExpression)
-        val projection = InterpretedCommandProjection(commandExpressions)
-        source match {
-          case ProjectionPipe(inner, p) if p == projection =>
-            DistinctPipe(inner, commandExpressions)(id = id)
-          case _ =>
-            DistinctPipe(source, commandExpressions)(id = id)
-        }
+        val projection = groupingExpressions.map {
+          case (key, value) => DistinctPipe.GroupingCol(key, buildExpression(value))
+        }.toArray
+        DistinctPipe(source, projection)(id = id)
 
       case Distinct(_, groupingExpressions) =>
-        val commandExpressions = Eagerly.immutableMapValues(groupingExpressions, buildExpression)
-        source match {
-          case ProjectionPipe(inner, es) if es == commandExpressions =>
-            DistinctPipe(inner, commandExpressions)(id = id)
-          case _ =>
-            DistinctPipe(source, commandExpressions)(id = id)
+        val projection = groupingExpressions.map {
+          case (key, value) => DistinctPipe.GroupingCol(key, buildExpression(value))
+        }.toArray
+        DistinctPipe(source, projection)(id = id)
+
+      case OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
+        val projection = groupingExpressions.map {
+          case (key, value) => DistinctPipe.GroupingCol(key, buildExpression(value), orderToLeverage.contains(value))
+        }.toArray
+        if (projection.forall(_.ordered)) {
+          AllOrderedDistinctPipe(source, projection)(id = id)
+        } else {
+          OrderedDistinctPipe(source, projection)(id = id)
         }
 
       case Aggregation(_, groupingExpressions, aggregatingExpressions) =>
@@ -375,24 +378,26 @@ case class InterpretedPipeMapper(readOnly: Boolean,
                                  relationshipPredicate: Option[VariablePredicate]): VarLengthPredicate  = {
 
     //Creates commands out of the predicates
-    def asCommand(maybeVariablePredicate: Option[VariablePredicate]) =
+    def asCommand(maybeVariablePredicate: Option[VariablePredicate]): ((ExecutionContext, QueryState, AnyValue) => Boolean, Option[Predicate]) =
      maybeVariablePredicate match {
-       case None => (_: ExecutionContext, _: QueryState, _: AnyValue) => true
+       case None => ((_: ExecutionContext, _: QueryState, _: AnyValue) => true, None)
        case Some(VariablePredicate(variable, astPredicate)) =>
          val command = buildPredicate(id, astPredicate)
          val ev = ExpressionVariable.cast(variable)
-         (context: ExecutionContext, state: QueryState, entity: AnyValue) => {
+         ((context: ExecutionContext, state: QueryState, entity: AnyValue) => {
            state.expressionVariables(ev.offset) = entity
            command.isTrue(context, state)
-         }
+         }, Some(command))
      }
 
-    val nodeCommand = asCommand(nodePredicate)
-    val relCommand = asCommand(relationshipPredicate)
+    val (nodeCommand, maybeNodeCommandPred) = asCommand(nodePredicate)
+    val (relCommand, maybeRelCommandPred) = asCommand(relationshipPredicate)
 
     new VarLengthPredicate {
       override def filterNode(row: ExecutionContext, state: QueryState)(node: NodeValue): Boolean = nodeCommand(row, state, node)
       override def filterRelationship(row: ExecutionContext, state: QueryState)(rel: RelationshipValue): Boolean = relCommand(row, state, rel)
+
+      override def predicateExpressions: Seq[Predicate] = maybeNodeCommandPred.toSeq ++ maybeRelCommandPred
     }
   }
 

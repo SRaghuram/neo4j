@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -13,6 +12,7 @@ import java.util.Optional;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.NamedService;
@@ -25,7 +25,6 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     protected Log log;
     protected MemberId myself;
     protected String name;
-    protected String dbName;
 
     protected UpstreamDatabaseSelectionStrategy( String name )
     {
@@ -45,7 +44,6 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
         this.config = config;
         this.log = logProvider.getLog( this.getClass() );
         this.myself = myself;
-        this.dbName = config.get( CausalClusteringSettings.database );
         log.info( "Using upstream selection strategy " + name );
         init();
     }
@@ -54,7 +52,7 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     {
     }
 
-    public abstract Optional<MemberId> upstreamDatabase() throws UpstreamDatabaseSelectionException;
+    public abstract Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException;
 
     @Override
     public String toString()

@@ -8,16 +8,14 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 
 public class SnapshotDownloader
 {
@@ -30,7 +28,7 @@ public class SnapshotDownloader
         this.catchupClientFactory = catchupClientFactory;
     }
 
-    Optional<CoreSnapshot> getCoreSnapshot( String databaseName, AdvertisedSocketAddress address )
+    Optional<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId, AdvertisedSocketAddress address )
     {
         log.info( "Downloading snapshot from core server at %s", address );
 
@@ -38,7 +36,7 @@ public class SnapshotDownloader
         try
         {
             VersionedCatchupClients client = catchupClientFactory.getClient( address, log );
-            CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<CoreSnapshot>()
+            CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<>()
             {
                 @Override
                 public void onCoreSnapshot( CompletableFuture<CoreSnapshot> signal, CoreSnapshot response )
@@ -48,9 +46,7 @@ public class SnapshotDownloader
             };
 
             coreSnapshot = client
-                    .v1( CatchupClientV1::getCoreSnapshot )
-                    .v2( CatchupClientV2::getCoreSnapshot )
-                    .v3( c -> c.getCoreSnapshot( databaseName ) )
+                    .v3( c -> c.getCoreSnapshot( databaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

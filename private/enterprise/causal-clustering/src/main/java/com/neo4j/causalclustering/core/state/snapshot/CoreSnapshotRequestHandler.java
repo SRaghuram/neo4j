@@ -27,7 +27,7 @@ public class CoreSnapshotRequestHandler extends SimpleChannelInboundHandler<Core
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, CoreSnapshotRequest msg ) throws Exception
     {
-        sendStates( ctx, snapshotService.snapshot( msg.databaseName() ) );
+        sendStates( ctx, snapshotService.snapshot( msg.databaseId() ) );
         protocol.expect( State.MESSAGE_TYPE );
     }
 

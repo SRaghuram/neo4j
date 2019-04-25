@@ -47,6 +47,7 @@ case class CommunityExpressionConverter(tokenContext: TokenContext) extends Expr
 
   override def toGroupingExpression(id: Id,
                                     groupings: Map[String, Expression],
+                                    orderToLeverage: Seq[Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     throw new IllegalStateException("CommunityExpressionConverter cannot create grouping expressions")
   }
@@ -54,9 +55,9 @@ case class CommunityExpressionConverter(tokenContext: TokenContext) extends Expr
   override def toCommandExpression(id: Id, expression: ast.Expression,
                                    self: ExpressionConverters): Option[CommandExpression] = {
     val result = expression match {
-      case e: ast.Null => commandexpressions.Null()
-      case e: ast.True => predicates.True()
-      case e: ast.False => predicates.Not(predicates.True())
+      case _: ast.Null => commandexpressions.Null()
+      case _: ast.True => predicates.True()
+      case _: ast.False => predicates.Not(predicates.True())
       case e: ast.Literal => commandexpressions.Literal(e.value)
       case e: ast.Variable => variable(e)
       case e: ExpressionVariable => commands.expressions.ExpressionVariable.of(e)
@@ -90,7 +91,7 @@ case class CommunityExpressionConverter(tokenContext: TokenContext) extends Expr
       case e: ast.Modulo => commandexpressions.Modulo(self.toCommandExpression(id, e.lhs), self.toCommandExpression(id, e.rhs))
       case e: ast.Pow => commandexpressions.Pow(self.toCommandExpression(id, e.lhs), self.toCommandExpression(id, e.rhs))
       case e: ast.FunctionInvocation => toCommandExpression(id, e.function, e, self)
-      case e: ast.CountStar => commandexpressions.CountStar()
+      case _: ast.CountStar => commandexpressions.CountStar()
       case e: ast.Property => toCommandProperty(id, e, self)
       case e: CachedNodeProperty => commandexpressions.CachedNodeProperty(e.nodeVariableName, getPropertyKey(e.propertyKey), e)
       case ParameterFromSlot(offset, name, _) => commandexpressions.ParameterFromSlot(offset, name)
@@ -195,7 +196,6 @@ case class CommunityExpressionConverter(tokenContext: TokenContext) extends Expr
       case _: ast.MapProjection => throw new InternalException("should have been rewritten away")
       case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
       case _: ast.Parameter => throw new InternalException("should have been rewritten away")
-
       case CoerceToPredicate(inner) => predicates.CoercedPredicate(self.toCommandExpression(id, inner))
       case _ => null
     }
@@ -256,7 +256,7 @@ case class CommunityExpressionConverter(tokenContext: TokenContext) extends Expr
             self.toCommandPredicate(id, expression)
           case e: ast.ContainerIndex =>
             commandexpressions.ContainerIndex(self.toCommandExpression(id, e.expr), self.toCommandExpression(id, e.idx))
-          case e: NestedPlanExpression =>
+          case _: NestedPlanExpression =>
             throw new InternalException("should have been rewritten away")
         }
       case Exp => commandexpressions.ExpFunction(self.toCommandExpression(id, invocation.arguments.head))

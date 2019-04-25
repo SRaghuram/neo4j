@@ -79,10 +79,13 @@ import com.neo4j.bench.ldbc.operators.Warmup;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommands
 {
@@ -107,9 +110,10 @@ public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommand
     @Override
     public void init() throws DbException
     {
-        GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
-        registerShutdownHook( db );
+        registerShutdownHook( managementService );
 
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         if ( !metadata.timestampResolution().equals( LdbcDateCodec.Resolution.NOT_APPLICABLE ) ||
@@ -119,8 +123,7 @@ public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommand
         }
         loggingService.info( metadata.toString() );
 
-        connection = new Neo4jConnectionState(
-                db,
+        connection = new Neo4jConnectionState( managementService, db,
                 null,
                 null,
                 loggingService,
@@ -183,14 +186,14 @@ public class SnbInteractiveEmbeddedCoreRegularCommands implements Neo4jDbCommand
         db.registerOperationHandler( LdbcUpdate8AddFriendship.class, Update8HandlerEmbeddedCoreRegular.class );
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
+    private static void registerShutdownHook( final DatabaseManagementService managementService )
     {
         Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override
             public void run()
             {
-                graphDb.shutdown();
+                managementService.shutdown();
             }
         } );
     }

@@ -38,7 +38,7 @@ import static org.neo4j.kernel.recovery.RecoveryStartInformationProvider.NO_MONI
 /**
  * Utility that can determine if a given store will need recovery.
  */
-public class RecoveryRequiredChecker
+class RecoveryRequiredChecker
 {
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
@@ -61,13 +61,14 @@ public class RecoveryRequiredChecker
 
     boolean isRecoveryRequiredAt( DatabaseLayout databaseLayout, LogTailScanner tailScanner )
     {
-        if ( !storageEngineFactory.storageExists( fs, pageCache, databaseLayout ) )
+        if ( !storageEngineFactory.storageExists( fs, databaseLayout, pageCache ) )
         {
-            // There was no store
             return false;
         }
-
-        // We need config to determine where the logical log files are
+        if ( !allIdFilesExist( databaseLayout ) )
+        {
+            return true;
+        }
         return new RecoveryStartInformationProvider( tailScanner, NO_MONITOR ).get().isRecoveryRequired();
     }
 
@@ -78,5 +79,10 @@ public class RecoveryRequiredChecker
                 .withConfig( config )
                 .withLogEntryReader( reader ).build();
         return new LogTailScanner( logFiles, reader, new Monitors() );
+    }
+
+    private boolean allIdFilesExist( DatabaseLayout databaseLayout )
+    {
+        return databaseLayout.idFiles().stream().allMatch( fs::fileExists );
     }
 }

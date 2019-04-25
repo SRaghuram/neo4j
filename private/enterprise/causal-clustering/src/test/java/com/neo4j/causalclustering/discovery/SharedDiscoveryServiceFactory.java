@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
@@ -21,7 +19,7 @@ public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
     private final SharedDiscoveryService discoveryService = new SharedDiscoveryService();
 
     @Override
-    public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
+    public CoreTopologyService coreTopologyService( Config config, DiscoveryMember myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
             RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
@@ -29,7 +27,7 @@ public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
     }
 
     @Override
-    public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
+    public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, DiscoveryMember myself,
             RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
     {
         return new SharedDiscoveryReadReplicaClient( discoveryService, config, myself, logProvider );

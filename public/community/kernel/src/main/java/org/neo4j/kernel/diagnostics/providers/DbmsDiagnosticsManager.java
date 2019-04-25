@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.diagnostics.providers;
 
-import java.util.List;
-
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -28,6 +26,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
@@ -68,24 +67,23 @@ public class DbmsDiagnosticsManager
         dumpAllDatabases( log );
     }
 
-    public void dump( String databaseName )
+    public void dump( DatabaseId databaseId )
     {
-        dump( databaseName, log );
+        dump( databaseId, log );
     }
 
-    public void dump( String databaseName, Log log )
+    public void dump( DatabaseId databaseId, Log log )
     {
-        getDatabaseManager().getDatabaseContext( databaseName ).map( DatabaseContext::getDatabase )
+        getDatabaseManager().getDatabaseContext( databaseId ).map( DatabaseContext::database )
                 .ifPresent( database -> dumpDatabaseDiagnostics( database, log ) );
     }
 
     private void dumpAllDatabases( Log log )
     {
-        List<String> databases = getDatabaseManager().listDatabases();
-        for ( String database : databases )
-        {
-            dump( database, log );
-        }
+        getDatabaseManager()
+                .registeredDatabases()
+                .values()
+                .forEach( dbCtx -> dumpDatabaseDiagnostics( dbCtx.database(), log ) );
     }
 
     private void dumpSystemDiagnostics( Log log )
@@ -103,14 +101,14 @@ public class DbmsDiagnosticsManager
         StorageEngineFactory storageEngineFactory = databaseResolver.resolveDependency( StorageEngineFactory.class );
         StorageEngine storageEngine = databaseResolver.resolveDependency( StorageEngine.class );
 
-        diagnosticsManager.section( log, "Database: " + database.getDatabaseName() );
+        diagnosticsManager.section( log, "Database: " + database.getDatabaseId().name() );
         diagnosticsManager.dump( new VersionDiagnostics( databaseInfo, database.getStoreId() ), log );
         diagnosticsManager.dump( new StoreFilesDiagnostics( storageEngineFactory, fs, database.getDatabaseLayout() ), log );
         diagnosticsManager.dump( new TransactionRangeDiagnostics( database ), log );
         storageEngine.dumpDiagnostics( diagnosticsManager, log );
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return dependencies.resolveDependency( DatabaseManager.class );
     }

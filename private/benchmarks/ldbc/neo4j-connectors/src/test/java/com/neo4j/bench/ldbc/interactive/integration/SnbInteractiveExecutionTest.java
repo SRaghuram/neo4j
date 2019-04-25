@@ -14,7 +14,6 @@ import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.util.TestDirectorySupport;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -24,32 +23,27 @@ import com.neo4j.bench.ldbc.importer.Scenario;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -57,21 +51,21 @@ public abstract class SnbInteractiveExecutionTest
 {
     static class DatabaseAndUrl implements AutoCloseable
     {
-        private final GraphDatabaseService db;
+        private final DatabaseManagementService managementService;
         private final String url;
 
-        DatabaseAndUrl( GraphDatabaseService db, String url )
+        DatabaseAndUrl( DatabaseManagementService managementService, String url )
         {
-            this.db = db;
+            this.managementService = managementService;
             this.url = url;
         }
 
         @Override
         public void close() throws Exception
         {
-            if ( null != db )
+            if ( null != managementService )
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
     }
@@ -129,7 +123,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -263,7 +257,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -411,7 +405,7 @@ public abstract class SnbInteractiveExecutionTest
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                storeDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),

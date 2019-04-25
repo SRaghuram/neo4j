@@ -39,13 +39,13 @@ import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
 import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
-import org.neo4j.udc.UsageData;
 import org.neo4j.values.AnyValue;
 
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
@@ -56,14 +56,13 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         Config config = resolver.resolveDependency( Config.class );
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
 
         return new BoltStateMachineFactoryImpl(
                 databaseManager,
-                new UsageData( null ),
                 authentication,
                 Clock.systemUTC(),
                 config,
@@ -200,7 +199,6 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         @Override
         public boolean onPullRecords( BoltResult result, long size ) throws Throwable
         {
-
             return doOnRecords( result, size );
         }
 

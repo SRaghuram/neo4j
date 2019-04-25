@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.graphdb.Resource;
 import org.neo4j.kernel.database.Database;
@@ -51,7 +51,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
                 return;
             }
 
-            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.storeId(), db ) )
+            if ( !Objects.equals( prepareStoreCopyRequest.storeId(), db.getStoreId() ) )
             {
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }
@@ -79,10 +79,9 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 
     private PrepareStoreCopyResponse createSuccessfulResponse( CheckPointer checkPointer, PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
     {
-        LongSet indexIds = prepareStoreCopyFiles.getNonAtomicIndexIds();
         File[] files = prepareStoreCopyFiles.listReplayableFiles();
         long lastCheckPointedTransactionId = checkPointer.lastCheckPointedTransactionId();
-        return PrepareStoreCopyResponse.success( files, indexIds, lastCheckPointedTransactionId );
+        return PrepareStoreCopyResponse.success( files, lastCheckPointedTransactionId );
     }
 
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException
@@ -94,7 +93,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     {
         if ( !db.getDatabaseAvailabilityGuard().isAvailable() )
         {
-            log.warn( "Unable to prepare for store copy because database '" + db.getDatabaseName() + "' is unavailable" );
+            log.warn( "Unable to prepare for store copy because database '" + db.getDatabaseId().name() + "' is unavailable" );
             return false;
         }
         return true;

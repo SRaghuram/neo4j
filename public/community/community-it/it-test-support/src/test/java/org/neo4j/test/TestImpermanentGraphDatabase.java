@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -33,21 +34,24 @@ import org.neo4j.helpers.collection.Iterables;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TestImpermanentGraphDatabase
 {
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void createDb()
     {
-        db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
     void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -62,7 +66,7 @@ class TestImpermanentGraphDatabase
     void dataShouldNotSurviveShutdown()
     {
         createNode();
-        db.shutdown();
+        managementService.shutdown();
 
         createDb();
 
@@ -92,7 +96,7 @@ class TestImpermanentGraphDatabase
         assertThat( nodeCount(), is( 0L ) );
     }
 
-    private void cleanDatabaseContent( GraphDatabaseService db )
+    private static void cleanDatabaseContent( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
         {

@@ -299,6 +299,13 @@ class MethodSourceWriter implements MethodEmitter, ExpressionVisitor
     }
 
     @Override
+    public void arrayLength( Expression array )
+    {
+        array.accept( this );
+        append( ".length" );
+    }
+
+    @Override
     public void getField( Expression target, FieldReference field )
     {
         target.accept( this );
@@ -436,7 +443,9 @@ class MethodSourceWriter implements MethodEmitter, ExpressionVisitor
         for ( Expression expression : expressions )
         {
             append( sep );
+            append("(");
             expression.accept( this );
+            append(")");
             sep = op;
         }
     }
@@ -474,24 +483,18 @@ class MethodSourceWriter implements MethodEmitter, ExpressionVisitor
     @Override
     public void subtract( Expression lhs, Expression rhs )
     {
-        lhs.accept( this );
-        append( " - " );
-        rhs.accept( this );
+        binaryOperation( lhs, rhs, " - " );
     }
 
     @Override
     public void multiply( Expression lhs, Expression rhs )
     {
-        lhs.accept( this );
-        append( " * " );
-        rhs.accept( this );
+        binaryOperation( lhs, rhs, " * " );
     }
 
     private void div( Expression lhs, Expression rhs )
     {
-        lhs.accept( this );
-        append( " / " );
-        rhs.accept( this );
+        binaryOperation( lhs, rhs, " / " );
     }
 
     @Override
@@ -567,8 +570,12 @@ class MethodSourceWriter implements MethodEmitter, ExpressionVisitor
 
     private void binaryOperation( Expression lhs, Expression rhs, String operator )
     {
+        append( "(" );
         lhs.accept( this );
+        append( ")" );
         append( operator );
+        append( "(" );
         rhs.accept( this );
+        append( ")" );
     }
 }

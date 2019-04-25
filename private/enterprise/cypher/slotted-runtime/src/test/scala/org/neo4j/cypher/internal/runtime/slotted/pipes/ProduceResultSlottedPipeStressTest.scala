@@ -35,10 +35,10 @@ class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
     val nThreads = 10
     val executor = Executors.newFixedThreadPool(nThreads)
     val futureResultsAsExpected =
-      for (i <- 1 to nThreads) yield
+      for (_ <- 1 to nThreads) yield
         executor.submit(new Callable[Array[AnyValue]] {
           override def call(): Array[AnyValue] = {
-            (for (j <- 1 to 1000) yield {
+            (for (_ <- 1 to 1000) yield {
               execute(produceResults)
             }).toArray
           }

@@ -8,26 +8,29 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.memberIDs;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isIn;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ConnectRandomlyWithinServerGroupStrategyTest
+class ConnectRandomlyWithinServerGroupStrategyTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "orders" );
+
     @Test
-    public void shouldUseServerGroupsFromConfig()
+    void shouldUseServerGroupsFromConfig()
     {
         // given
         final String myServerGroup = "my_server_group";
@@ -41,14 +44,14 @@ public class ConnectRandomlyWithinServerGroupStrategyTest
         strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> result = strategy.upstreamDatabase();
+        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( result, contains( isIn( myGroupMemberIds ) ) );
     }
 
     @Test
-    public void filtersSelf()
+    void filtersSelf()
     {
         // given
         String groupName = "groupName";
@@ -62,7 +65,7 @@ public class ConnectRandomlyWithinServerGroupStrategyTest
                 myself );
 
         // when
-        Optional<MemberId> result = connectRandomlyWithinServerGroupStrategy.upstreamDatabase();
+        Optional<MemberId> result = connectRandomlyWithinServerGroupStrategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertTrue( result.isPresent() );

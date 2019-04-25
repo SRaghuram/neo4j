@@ -22,6 +22,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -33,10 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -86,8 +87,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
         when( logProvider.getLog( (Class<?>) any() ) ).thenReturn( log );
 
-        backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
-                NullLogProvider.getInstance(), logProvider ) );
+        backupWrapper = spy( new TestBackupStrategyWrapper() );
     }
 
     @Test
@@ -535,11 +535,27 @@ class BackupStrategyWrapperTest
         return OnlineBackupContext.builder()
                 .withAddress( address )
                 .withConfig( config )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( new DatabaseId( DEFAULT_DATABASE_NAME ) )
                 .withBackupDirectory( desiredBackupLayout.databaseDirectory().toPath() )
                 .withFallbackToFullBackup( fallbackToFull )
                 .withConsistencyCheck( true )
                 .withReportsDirectory( reportDir )
                 .build();
+    }
+
+    private class TestBackupStrategyWrapper extends BackupStrategyWrapper
+    {
+        TestBackupStrategyWrapper()
+        {
+            super( BackupStrategyWrapperTest.this.backupStrategyImplementation, BackupStrategyWrapperTest.this.backupCopyService,
+                    BackupStrategyWrapperTest.this.fileSystemAbstraction, BackupStrategyWrapperTest.this.pageCache, NullLogProvider.getInstance(),
+                    BackupStrategyWrapperTest.this.logProvider );
+        }
+
+        @Override
+        void performRecovery( Config config, DatabaseLayout backupLayout )
+        {
+            // empty recovery for mock tests
+        }
     }
 }

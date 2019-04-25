@@ -18,6 +18,7 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSources;
@@ -30,7 +31,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 {
     private FileSystemAbstraction fs;
     private ClusterStateLayout clusterStateLayout;
-    private String defaultDatabaseName;
+    private DatabaseId defaultDatabaseId;
 
     public ClusterDiagnosticsOfflineReportProvider()
     {
@@ -42,7 +43,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     {
         this.fs = fs;
         this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
-        this.defaultDatabaseName = config.get( GraphDatabaseSettings.default_database );
+        this.defaultDatabaseId = new DatabaseId( config.get( GraphDatabaseSettings.default_database ) );
     }
 
     @Override
@@ -63,7 +64,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getRaftLogs( List<DiagnosticsReportSource> sources )
     {
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseId );
         FileNames fileNames = new FileNames( raftLogDirectory );
         SortedMap<Long,File> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
 
@@ -75,7 +76,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
+        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseId, type -> type != RAFT_LOG );
 
         for ( File directory : directories )
         {

@@ -36,7 +36,6 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
@@ -116,7 +115,7 @@ public class LabelScanWriteMonitor implements NativeLabelScanWriter.WriteMonitor
 
     private PhysicalFlushableChannel instantiateChannel() throws IOException
     {
-        return new PhysicalFlushableChannel( fs.open( file, OpenMode.READ_WRITE ) );
+        return new PhysicalFlushableChannel( fs.write( file ) );
     }
 
     @Override
@@ -421,7 +420,7 @@ public class LabelScanWriteMonitor implements NativeLabelScanWriter.WriteMonitor
 
     private static long dumpFile( FileSystemAbstraction fs, File file, Dumper dumper, TxFilter txFilter, long session ) throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.open( file, OpenMode.READ ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
         {
             long range = -1;
             int labelId = -1;

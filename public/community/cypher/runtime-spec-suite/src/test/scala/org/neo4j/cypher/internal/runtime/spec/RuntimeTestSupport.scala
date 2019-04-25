@@ -20,13 +20,14 @@
 package org.neo4j.cypher.internal.runtime.spec
 
 import org.neo4j.common.DependencyResolver
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.{CypherRuntime, LogicalQuery, MasterCompiler, RuntimeContext}
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
@@ -43,7 +44,8 @@ import org.scalatest.BeforeAndAfterAll
   * This class contains various ugliness needed to perform physical compilation
   * and then execute a query.
   */
-class RuntimeTestSupport[CONTEXT <: RuntimeContext](val graphDb: GraphDatabaseService,
+class RuntimeTestSupport[CONTEXT <: RuntimeContext](val managementService: DatabaseManagementService,
+                                                    val graphDb: GraphDatabaseService,
                                                     val edition: Edition[CONTEXT]
                                                    ) extends CypherFunSuite with BeforeAndAfterAll
 {
@@ -57,7 +59,7 @@ class RuntimeTestSupport[CONTEXT <: RuntimeContext](val graphDb: GraphDatabaseSe
   val valueMapper = new DefaultValueMapper(spi)
 
   override def afterAll(): Unit = {
-    graphDb.shutdown()
+    managementService.shutdown()
     super.afterAll()
   }
 
@@ -65,13 +67,26 @@ class RuntimeTestSupport[CONTEXT <: RuntimeContext](val graphDb: GraphDatabaseSe
                   runtime: CypherRuntime[CONTEXT],
                   input: InputDataStream,
                   resultMapper: (CONTEXT, RuntimeResult) => RESULT): RESULT = {
+    run(compile(logicalQuery, runtime), input, resultMapper)
+  }
+
+  def run[RESULT](executableQuery: ExecutionPlan,
+                  input: InputDataStream,
+                  resultMapper: (CONTEXT, RuntimeResult) => RESULT): RESULT = {
     val tx = cypherGraphDb.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
     val queryContext = newQueryContext(tx)
     val runtimeContext = newRuntimeContext(tx)
 
-    val executableQuery = runtime.compileToExecutable(logicalQuery, runtimeContext)
     val result = executableQuery.run(queryContext, doProfile = false, VirtualValues.EMPTY_MAP, prePopulateResults = true, input, NOT_A_SUBSCRIBER)
     resultMapper(runtimeContext, result)
+  }
+
+  def compile(logicalQuery: LogicalQuery,
+              runtime: CypherRuntime[CONTEXT]): ExecutionPlan = {
+    val tx = cypherGraphDb.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val runtimeContext = newRuntimeContext(tx)
+
+    runtime.compileToExecutable(logicalQuery, runtimeContext)
   }
 
   private def newRuntimeContext(tx: InternalTransaction): CONTEXT = {

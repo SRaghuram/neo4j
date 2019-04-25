@@ -7,19 +7,19 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -28,13 +28,15 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.ListValue;
 
 import static java.util.Comparator.comparing;
-import static org.neo4j.helpers.collection.Iterables.asList;
+import static java.util.stream.Collectors.toList;
 import static org.neo4j.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.helpers.collection.Iterators.map;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
@@ -72,30 +74,20 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         Map<MemberId,RoleInfo> roleMap = topologyService.allCoreRoles();
         List<ReadWriteEndPoint> endpoints = new ArrayList<>();
 
-        CoreTopology coreTopology = topologyService.allCoreServers();
-        Set<MemberId> coreMembers = coreTopology.members().keySet();
-
-        for ( MemberId memberId : coreMembers )
+        for ( Map.Entry<MemberId,CoreServerInfo> entry : topologyService.allCoreServers().entrySet() )
         {
-            Optional<CoreServerInfo> coreServerInfo = coreTopology.find( memberId );
-            if ( coreServerInfo.isPresent() )
-            {
-                CoreServerInfo info = coreServerInfo.get();
-                RoleInfo role = roleMap.getOrDefault( memberId, RoleInfo.UNKNOWN );
-                endpoints.add( new ReadWriteEndPoint( info.connectors(), role, memberId.getUuid(),
-                        asList( info.groups() ), info.getDatabaseName() ) );
-            }
-            else
-            {
-                log.debug( "No Address found for " + memberId );
-            }
+            MemberId id = entry.getKey();
+            CoreServerInfo info = entry.getValue();
+
+            RoleInfo role = roleMap.getOrDefault( id, RoleInfo.UNKNOWN );
+            endpoints.add( new ReadWriteEndPoint( info.connectors(), role, id.getUuid(), info.groups(), info.getDatabaseIds() ) );
         }
 
-        for ( Map.Entry<MemberId,ReadReplicaInfo> readReplica : topologyService.allReadReplicas().members().entrySet() )
+        for ( Map.Entry<MemberId,ReadReplicaInfo> readReplica : topologyService.allReadReplicas().entrySet() )
         {
             ReadReplicaInfo readReplicaInfo = readReplica.getValue();
             endpoints.add( new ReadWriteEndPoint( readReplicaInfo.connectors(), RoleInfo.READ_REPLICA,
-                    readReplica.getKey().getUuid(), asList( readReplicaInfo.groups() ), readReplicaInfo.getDatabaseName() ) );
+                    readReplica.getKey().getUuid(), readReplicaInfo.groups(), readReplicaInfo.getDatabaseIds() ) );
         }
 
         endpoints.sort( comparing( o -> o.addresses().toString() ) );
@@ -103,14 +95,22 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         return map( endpoint -> new AnyValue[]
                         {
                                 stringValue( endpoint.memberId().toString() ),
-                                fromList( endpoint.addresses().uriList().stream().map( uri -> stringValue( uri.toString() ) )
-                                        .collect( Collectors.toList() ) ),
+                                asListOfStringsValue( endpoint.addresses().uriList(), URI::toString ),
                                 stringValue( endpoint.role().name() ),
-                                fromList(
-                                        endpoint.groups().stream().map( Values::stringValue ).collect( Collectors.toList() ) ),
-                                stringValue( endpoint.dbName() )
+                                asListOfStringsValue( endpoint.groups(), Function.identity() ),
+                                asListOfStringsValue( endpoint.databaseIds(), DatabaseId::name ),
                         },
                 asRawIterator( endpoints.iterator() ) );
+    }
+
+    private static <T> ListValue asListOfStringsValue( Collection<T> values, Function<T,String> toString )
+    {
+        List<AnyValue> stringValues = values.stream()
+                .map( toString )
+                .map( Values::stringValue )
+                .collect( toList() );
+
+        return fromList( stringValues );
     }
 
     static class ReadWriteEndPoint
@@ -118,8 +118,8 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         private final ClientConnectorAddresses clientConnectorAddresses;
         private final RoleInfo role;
         private final UUID memberId;
-        private final List<String> groups;
-        private final String dbName;
+        private final Set<String> groups;
+        private final Set<DatabaseId> databaseIds;
 
         public ClientConnectorAddresses addresses()
         {
@@ -136,23 +136,23 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
             return memberId;
         }
 
-        List<String> groups()
+        Set<String> groups()
         {
             return groups;
         }
 
-        String dbName()
+        Set<DatabaseId> databaseIds()
         {
-            return dbName;
+            return databaseIds;
         }
 
-        ReadWriteEndPoint( ClientConnectorAddresses clientConnectorAddresses, RoleInfo role, UUID memberId, List<String> groups, String dbName )
+        ReadWriteEndPoint( ClientConnectorAddresses clientConnectorAddresses, RoleInfo role, UUID memberId, Set<String> groups, Set<DatabaseId> databaseIds )
         {
             this.clientConnectorAddresses = clientConnectorAddresses;
             this.role = role;
             this.memberId = memberId;
             this.groups = groups;
-            this.dbName = dbName;
+            this.databaseIds = databaseIds;
         }
     }
 }

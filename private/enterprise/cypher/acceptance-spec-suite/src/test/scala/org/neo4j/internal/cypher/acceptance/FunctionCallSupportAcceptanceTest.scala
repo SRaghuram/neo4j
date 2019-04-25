@@ -52,7 +52,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     val value = new util.ArrayList[Any]()
     value.add("Norris")
     value.add("Strange")
-    val stream = value.stream()
+    value.stream()
 
     registerUserFunction(ValueUtils.of(value))
 

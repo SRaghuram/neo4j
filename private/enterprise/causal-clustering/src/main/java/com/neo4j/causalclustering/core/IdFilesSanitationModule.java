@@ -5,18 +5,15 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 
-import java.util.Optional;
-import java.util.function.Supplier;
-
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.lang.String.format;
 
 /**
  * Removes the ID-files if the instance was unbound. Reason being that an unbound instance likely
@@ -28,16 +25,16 @@ import org.neo4j.logging.LogProvider;
  */
 public class IdFilesSanitationModule extends LifecycleAdapter
 {
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
+    private final ClusteredDatabaseManager databaseManager;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
-    private final CoreStartupState coreStartupState;
+    private final StartupCoreStateCheck startupCoreStateCheck;
 
-    IdFilesSanitationModule( CoreStartupState coreStartupState, Supplier<DatabaseManager> databaseManagerSupplier, FileSystemAbstraction fileSystem,
-            LogProvider logProvider )
+    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, ClusteredDatabaseManager databaseManager,
+            FileSystemAbstraction fileSystem, LogProvider logProvider )
     {
-        this.coreStartupState = coreStartupState;
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.startupCoreStateCheck = startupCoreStateCheck;
+        this.databaseManager = databaseManager;
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
     }
@@ -45,26 +42,17 @@ public class IdFilesSanitationModule extends LifecycleAdapter
     @Override
     public void start() throws Exception
     {
-        if ( !coreStartupState.wasUnboundOnStartup() )
+        if ( !startupCoreStateCheck.wasUnboundOnStartup() )
         {
             return;
         }
 
-        DatabaseManager databaseManager = databaseManagerSupplier.get();
-
-        for ( String databaseName : databaseManager.listDatabases() )
+        for ( var dbEntry : databaseManager.registeredDatabases().entrySet() )
         {
-            Optional<GraphDatabaseFacade> database = databaseManager
-                    .getDatabaseContext( databaseName )
-                    .map( DatabaseContext::getDatabaseFacade );
-
-            database.ifPresent( db ->
+            if ( IdFilesDeleter.deleteIdFiles( dbEntry.getValue().databaseLayout(), fileSystem ) )
             {
-                if ( IdFilesDeleter.deleteIdFiles( db.databaseLayout(), fileSystem ) )
-                {
-                    log.info( String.format( "ID-files deleted for %s", databaseName ) );
-                }
-            } );
+                log.info( format( "ID-files deleted for %s", dbEntry.getKey().name() ) );
+            }
         }
     }
 }

@@ -675,7 +675,7 @@ class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> "false",
     GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10",
-    GraphDatabaseSettings.default_schema_provider -> "lucene-1.0"
+    GraphDatabaseSettings.default_schema_provider -> "lucene+native-3.0"
   )
 
   test("should not warn when using contains on an index with no limitations") {

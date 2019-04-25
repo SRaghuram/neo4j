@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.newapi;
 import java.io.File;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
@@ -29,11 +30,14 @@ import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.GraphDatabaseServiceCleaner;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class WriteTestSupport implements KernelAPIWriteTestSupport
 {
     private GraphDatabaseService db;
+    protected DatabaseManagementService managementService;
 
     @Override
     public void setup( File storeDir )
@@ -43,7 +47,8 @@ public class WriteTestSupport implements KernelAPIWriteTestSupport
 
     protected GraphDatabaseService newDb( File storeDir )
     {
-        return new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder( storeDir ).newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder( storeDir ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @Override
@@ -86,7 +91,7 @@ public class WriteTestSupport implements KernelAPIWriteTestSupport
     @Override
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
         db = null;
     }
 }

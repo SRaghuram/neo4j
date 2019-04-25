@@ -25,13 +25,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
-import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
@@ -45,123 +47,180 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.helpers.Exceptions.rootCause;
 
 @ExtendWith( TestDirectoryExtension.class )
 class RecordFormatMigrationIT
 {
     @Inject
     private TestDirectory testDirectory;
-    private File storeDir;
+    private File databaseDirectory;
 
     @BeforeEach
     void setUp()
     {
-        storeDir = testDirectory.storeDir();
+        databaseDirectory = testDirectory.storeDir();
     }
 
     @Test
     void failToDowngradeFormatWhenUpgradeNotAllowed()
     {
-        GraphDatabaseService database = startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV3_4.NAME );
+        DatabaseManagementService managementService = startManagementService( StandardV3_4.NAME );
+        GraphDatabaseService database = getDefaultDatabase( managementService );
         try ( Transaction transaction = database.beginTx() )
         {
             Node node = database.createNode();
             node.setProperty( "a", "b" );
             transaction.success();
         }
-        database.shutdown();
-        Throwable throwable = assertThrows( Throwable.class, () -> startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV4_0.NAME ) );
-        assertSame( UpgradeNotAllowedException.class, Exceptions.rootCause( throwable ).getClass() );
+        managementService.shutdown();
+        managementService = startManagementService( StandardV4_0.NAME );
+        GraphDatabaseService databaseService = getDefaultDatabase( managementService );
+        try
+        {
+            DatabaseContext databaseContext = assertDefaultDatabaseFailed( databaseService );
+            Throwable throwable = databaseContext.failureCause();
+            assertSame( UpgradeNotAllowedException.class, rootCause( throwable ).getClass() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
     void failToDowngradeFormatWheUpgradeAllowed()
     {
-        GraphDatabaseService database = startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV4_0.NAME );
+        DatabaseManagementService managementService = startManagementService( StandardV4_0.NAME );
+        GraphDatabaseService database = getDefaultDatabase( managementService );
         try ( Transaction transaction = database.beginTx() )
         {
             Node node = database.createNode();
             node.setProperty( "a", "b" );
             transaction.success();
         }
-        database.shutdown();
-        Throwable throwable = assertThrows( Throwable.class,
-                () -> new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                        .setConfig( record_format, StandardV3_4.NAME )
-                        .setConfig( allow_upgrade, Settings.TRUE ).newGraphDatabase() );
-        assertSame( StoreUpgrader.AttemptedDowngradeException.class, Exceptions.rootCause( throwable ).getClass() );
+        managementService.shutdown();
+
+        managementService = startDatabaseServiceWithUpgrade( databaseDirectory, StandardV3_4.NAME );
+        GraphDatabaseService databaseService = getDefaultDatabase( managementService );
+        try
+        {
+            DatabaseContext databaseContext = assertDefaultDatabaseFailed( databaseService );
+            Throwable throwable = databaseContext.failureCause();
+            assertSame( StoreUpgrader.AttemptedDowngradeException.class, rootCause( throwable ).getClass() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
     void skipMigrationIfFormatSpecifiedInConfig()
     {
-        GraphDatabaseService database = startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV3_4.NAME );
+        DatabaseManagementService managementService = startManagementService( StandardV3_4.NAME );
+        GraphDatabaseService database = getDefaultDatabase( managementService );
         try ( Transaction transaction = database.beginTx() )
         {
             Node node = database.createNode();
             node.setProperty( "a", "b" );
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
 
-        GraphDatabaseAPI nonUpgradedStore = (GraphDatabaseAPI) startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV3_4.NAME );
+        managementService = startManagementService( StandardV3_4.NAME );
+        GraphDatabaseAPI nonUpgradedStore = (GraphDatabaseAPI) getDefaultDatabase( managementService );
         RecordStorageEngine storageEngine = nonUpgradedStore.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
         assertEquals( StandardV3_4.NAME, storageEngine.testAccessNeoStores().getRecordFormats().name() );
-        nonUpgradedStore.shutdown();
+        managementService.shutdown();
     }
 
     @Test
     void requestMigrationIfStoreFormatNotSpecifiedButIsAvailableInRuntime()
     {
-        GraphDatabaseService database = startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV3_4.NAME );
+        DatabaseManagementService managementService = startManagementService( StandardV3_4.NAME );
+        GraphDatabaseService database = getDefaultDatabase( managementService );
         try ( Transaction transaction = database.beginTx() )
         {
             Node node = database.createNode();
             node.setProperty( "a", "b" );
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
 
-        assertThrows( RuntimeException.class, () -> new GraphDatabaseFactory().newEmbeddedDatabase( storeDir ) );
+        managementService = new DatabaseManagementServiceBuilder().newDatabaseManagementService( databaseDirectory );
+        GraphDatabaseService databaseService = getDefaultDatabase( managementService );
+        try
+        {
+            assertDefaultDatabaseFailed( databaseService );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
     @Test
     void latestRecordNotMigratedWhenFormatBumped()
     {
-        GraphDatabaseService database = startDatabaseWithFormatUnspecifiedUpgrade( storeDir, StandardV3_4.NAME );
+        DatabaseManagementService managementService = startManagementService( StandardV3_4.NAME );
+        GraphDatabaseService database = getDefaultDatabase( managementService );
         try ( Transaction transaction = database.beginTx() )
         {
             Node node = database.createNode();
             node.setProperty( "a", "b" );
             transaction.success();
         }
-        database.shutdown();
+        managementService.shutdown();
 
-        Throwable exception = assertThrows( Throwable.class, () -> startDatabaseWithFormatUnspecifiedUpgrade( storeDir, Standard.LATEST_NAME ) );
-        assertSame( UpgradeNotAllowedException.class, Exceptions.rootCause( exception ).getClass() );
+        managementService = startManagementService( Standard.LATEST_NAME );
+        GraphDatabaseService databaseService = getDefaultDatabase( managementService );
+        try
+        {
+            DatabaseContext databaseContext = assertDefaultDatabaseFailed( databaseService );
+            Throwable exception = databaseContext.failureCause();
+            assertSame( UpgradeNotAllowedException.class, rootCause( exception ).getClass() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
     }
 
-    private static GraphDatabaseService startDatabaseWithFormatUnspecifiedUpgrade( File storeDir, String formatName )
+    private DatabaseContext assertDefaultDatabaseFailed( GraphDatabaseService databaseService )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( record_format, formatName ).newGraphDatabase();
+        assertThrows( Throwable.class, databaseService::beginTx );
+        DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+        DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( testDirectory.databaseLayout().getDatabaseName() ) ).get();
+        assertTrue( databaseContext.isFailed() );
+        return databaseContext;
     }
 
-    static GraphDatabaseService startNonUpgradableDatabaseWithFormat( File storeDir, String formatName )
+    private static DatabaseManager<?> getDatabaseManager( GraphDatabaseAPI databaseService )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
+    }
+
+    private static GraphDatabaseService getDefaultDatabase( DatabaseManagementService managementService )
+    {
+        return managementService.database( DEFAULT_DATABASE_NAME );
+    }
+
+    private DatabaseManagementService startManagementService( String name )
+    {
+        return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( databaseDirectory ).setConfig( record_format,
+                name ).newDatabaseManagementService();
+    }
+
+    private static DatabaseManagementService startDatabaseServiceWithUpgrade( File storeDir, String formatName )
+    {
+        return new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( record_format, formatName )
-                .setConfig( allow_upgrade, FALSE ).newGraphDatabase();
-    }
-
-    static GraphDatabaseService startDatabaseWithFormat( File storeDir, String formatName )
-    {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( record_format, formatName )
-                .setConfig( allow_upgrade, TRUE ).newGraphDatabase();
+                .setConfig( allow_upgrade, TRUE ).newDatabaseManagementService();
     }
 }

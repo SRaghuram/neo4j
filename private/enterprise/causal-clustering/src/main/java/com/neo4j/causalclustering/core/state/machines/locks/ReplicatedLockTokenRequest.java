@@ -15,27 +15,29 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static java.lang.String.format;
 
 public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockToken
 {
     private final MemberId owner;
     private final int candidateId;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     static final ReplicatedLockTokenRequest INVALID_REPLICATED_LOCK_TOKEN_REQUEST =
             new ReplicatedLockTokenRequest( null, INVALID_LOCK_TOKEN_ID, null );
 
-    public ReplicatedLockTokenRequest( ReplicatedLockTokenState state, String databaseName )
+    public ReplicatedLockTokenRequest( ReplicatedLockTokenState state, DatabaseId databaseId )
     {
-        this( state.owner(), state.candidateId(), databaseName );
+        this( state.owner(), state.candidateId(), databaseId );
     }
 
-    public ReplicatedLockTokenRequest( MemberId owner, int candidateId, String databaseName )
+    public ReplicatedLockTokenRequest( MemberId owner, int candidateId, DatabaseId databaseId )
     {
         this.owner = owner;
         this.candidateId = candidateId;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -89,8 +91,8 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
         contentHandler.handle( this );
     }
 
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 }

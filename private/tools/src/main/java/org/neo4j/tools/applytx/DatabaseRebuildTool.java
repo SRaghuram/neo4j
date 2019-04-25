@@ -10,14 +10,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
@@ -72,19 +75,22 @@ public class DatabaseRebuildTool
         if ( arguments.length == 0 )
         {
             System.err.println( "Tool for rebuilding database from transaction logs onto a new store" );
-            System.err.println( "Example: dbrebuild --from path/to/some.db --to path/to/new.db apply next" );
-            System.err.println( "         dbrebuild --from path/to/some.db --to path/to/new.db -i" );
-            System.err.println( "          --from : which db to use as source for reading transactions" );
-            System.err.println( "            --to : where to build the new db" );
-            System.err.println( "  --overwrite-to : always starts from empty 'to' db" );
+            System.err.println( "Example: dbrebuild --from path/to/somedb --to path/to/newdb apply next" );
+            System.err.println( "         dbrebuild --from path/to/somedb --fromTx path/to/tx-logs/somedb --to path/to/new.db -i" );
+            System.err.println( "          --from : source for database for reading transactions" );
+            System.err.println( "        --fromTx : source for transaction if they located in separate from store directory for reading transactions" );
+            System.err.println( "            --to : where to build the new database" );
+            System.err.println( "  --overwrite-to : always starts from empty 'to' database" );
             System.err.println( "              -i : interactive mode (enter a shell)" );
             return;
         }
 
         Args args = Args.withFlags( "i", "overwrite-to" ).parse( arguments );
-        File fromPath = getFrom( args );
+        DatabaseLayout fromLayout = getFrom( args );
         File toPath = getTo( args );
-        GraphDatabaseBuilder dbBuilder = newDbBuilder( toPath, args );
+        String databaseName = toPath.getName();
+        File storeDir = toPath.getParentFile();
+        DatabaseManagementServiceInternalBuilder dbBuilder = newDbBuilder( storeDir, databaseName, args );
         boolean interactive = args.getBoolean( "i" );
         if ( interactive && !args.orphans().isEmpty() )
         {
@@ -94,7 +100,7 @@ public class DatabaseRebuildTool
         @SuppressWarnings( "resource" )
         InputStream input = interactive ? in : oneCommand( args.orphansAsArray() );
         LifeSupport life = new LifeSupport();
-        ConsoleInput consoleInput = console( fromPath, dbBuilder, input,
+        ConsoleInput consoleInput = console( fromLayout, dbBuilder, databaseName, input,
                 interactive ? staticPrompt( "# " ) : NO_PROMPT, life );
         life.start();
         try
@@ -123,19 +129,24 @@ public class DatabaseRebuildTool
         return toPath;
     }
 
-    private static File getFrom( Args args )
+    private static DatabaseLayout getFrom( Args args )
     {
         String from = args.get( "from" );
         if ( from == null )
         {
             throw new IllegalArgumentException( "Missing --from i.e. from where to read transaction logs" );
         }
-        return new File( from );
+        File sourceDirectory = new File( from );
+        // try to get custom tx log root directory if specified
+        String txRootDirectoryPath = args.get( "fromTx" );
+        File txRootDirectory = txRootDirectoryPath != null ? new File( txRootDirectoryPath ).getParentFile() : sourceDirectory.getParentFile();
+        return DatabaseLayout.of( sourceDirectory, () -> Optional.of( txRootDirectory ) );
     }
 
-    private static GraphDatabaseBuilder newDbBuilder( File path, Args args )
+    private static DatabaseManagementServiceInternalBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        GraphDatabaseBuilder builder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
+        DatabaseManagementServiceInternalBuilder builder = new DatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
+        builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {
             if ( entry.getKey().startsWith( "D" ) )
@@ -153,10 +164,12 @@ public class DatabaseRebuildTool
         private final GraphDatabaseAPI db;
         private final StoreAccess access;
         private final DatabaseLayout databaseLayout;
+        private final DatabaseManagementService managementService;
 
-        Store( GraphDatabaseBuilder dbBuilder )
+        Store( DatabaseManagementServiceInternalBuilder dbBuilder, String databaseName )
         {
-            this.db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+            managementService = dbBuilder.newDatabaseManagementService();
+            this.db = (GraphDatabaseAPI) managementService.database( databaseName );
             this.access = new StoreAccess( db.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
             this.databaseLayout = db.databaseLayout();
@@ -164,23 +177,23 @@ public class DatabaseRebuildTool
 
         public void shutdown()
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
-    private ConsoleInput console( final File fromPath, final GraphDatabaseBuilder dbBuilder,
+    private ConsoleInput console( final DatabaseLayout fromLayout, final DatabaseManagementServiceInternalBuilder dbBuilder, String databaseName,
             InputStream in, Listener<PrintStream> prompt, LifeSupport life )
     {
         // We must have this indirection here since in order to perform CC (one of the commands) we must shut down
         // the database and let CC instantiate its own to run on. After that completes the db
         // should be restored. The commands has references to providers of things to accommodate for this.
         final AtomicReference<Store> store =
-                new AtomicReference<>( new Store( dbBuilder ) );
+                new AtomicReference<>( new Store( dbBuilder, databaseName ) );
         final Supplier<StoreAccess> storeAccess = () -> store.get().access;
         final Supplier<GraphDatabaseAPI> dbAccess = () -> store.get().db;
 
         ConsoleInput consoleInput = life.add( new ConsoleInput( in, out, prompt ) );
-        consoleInput.add( "apply", new ApplyTransactionsCommand( fromPath, dbAccess ) );
+        consoleInput.add( "apply", new ApplyTransactionsCommand( fromLayout, dbAccess ) );
         consoleInput.add( "reapply", new ReapplyTransactionsCommand( dbAccess ) );
         consoleInput.add( DumpRecordsCommand.NAME, new DumpRecordsCommand( storeAccess ) );
         consoleInput.add( "cc", new ArgsCommand()
@@ -199,7 +212,7 @@ public class DatabaseRebuildTool
                 }
                 finally
                 {
-                    store.set( new Store( dbBuilder ) );
+                    store.set( new Store( dbBuilder, databaseName ) );
                 }
             }
 

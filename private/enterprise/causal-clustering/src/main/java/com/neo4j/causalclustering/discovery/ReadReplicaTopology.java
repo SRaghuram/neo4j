@@ -7,46 +7,36 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+
+import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
 public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
-    public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( emptyMap() );
+    public static final ReadReplicaTopology EMPTY = new ReadReplicaTopology( null, emptyMap() );
 
+    private final DatabaseId databaseId;
     private final Map<MemberId,ReadReplicaInfo> readReplicaMembers;
 
-    public ReadReplicaTopology( Map<MemberId,ReadReplicaInfo> readReplicaMembers )
+    public ReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
+        this.databaseId = databaseId;
         this.readReplicaMembers = readReplicaMembers;
     }
 
-    public Collection<ReadReplicaInfo> allMemberInfo()
+    @Override
+    public DatabaseId databaseId()
     {
-        return readReplicaMembers.values();
+        return databaseId;
     }
 
     @Override
     public Map<MemberId, ReadReplicaInfo> members()
     {
         return readReplicaMembers;
-    }
-
-    @Override
-    public String toString()
-    {
-        return String.format( "{readReplicas=%s}", readReplicaMembers );
-    }
-
-    @Override
-    public ReadReplicaTopology filterTopologyByDb( String dbName )
-    {
-        Map<MemberId, ReadReplicaInfo> filteredMembers = filterHostsByDb( members(), dbName );
-
-        return new ReadReplicaTopology( filteredMembers );
     }
 
     @Override
@@ -61,13 +51,22 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
             return false;
         }
         ReadReplicaTopology that = (ReadReplicaTopology) o;
-        return Objects.equals( readReplicaMembers, that.readReplicaMembers );
+        return Objects.equals( databaseId, that.databaseId ) &&
+               Objects.equals( readReplicaMembers, that.readReplicaMembers );
     }
 
     @Override
     public int hashCode()
     {
+        return Objects.hash( databaseId, readReplicaMembers );
+    }
 
-        return Objects.hash( readReplicaMembers );
+    @Override
+    public String toString()
+    {
+        return "ReadReplicaTopology{" +
+               "databaseId='" + databaseId + '\'' +
+               ", readReplicaMembers=" + readReplicaMembers +
+               '}';
     }
 }

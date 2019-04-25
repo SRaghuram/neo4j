@@ -6,34 +6,37 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isIn;
 
-public class ConnectRandomlyToServerGroupStrategyImplTest
+class ConnectRandomlyToServerGroupStrategyImplTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "employees" );
+
     @Test
-    public void shouldStayWithinGivenSingleServerGroup()
+    void shouldStayWithinGivenSingleServerGroup()
     {
         // given
         final List<String> myServerGroup = Collections.singletonList( "my_server_group" );
@@ -44,14 +47,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
     }
 
     @Test
-    public void shouldSelectAnyFromMultipleServerGroups()
+    void shouldSelectAnyFromMultipleServerGroups()
     {
         // given
         final List<String> myServerGroups = Arrays.asList( "a", "b", "c" );
@@ -62,14 +65,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroups, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
     }
 
     @Test
-    public void shouldReturnEmptyIfNoGroupsInConfig()
+    void shouldReturnEmptyIfNoGroupsInConfig()
     {
         // given
         MemberId[] myGroupMemberIds = UserDefinedConfigurationStrategyTest.memberIDs( 10 );
@@ -78,14 +81,14 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( Collections.emptyList(), topologyService, null );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
     }
 
     @Test
-    public void shouldReturnEmptyIfGroupOnlyContainsSelf()
+    void shouldReturnEmptyIfGroupOnlyContainsSelf()
     {
         // given
         final List<String> myServerGroup = Collections.singletonList( "group" );
@@ -96,7 +99,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, myGroupMemberIds[0] );
 
         // when
-        Optional<MemberId> memberId = strategy.upstreamDatabase();
+        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, empty() );
@@ -104,7 +107,7 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
 
     static TopologyService getTopologyService( List<String> myServerGroups, MemberId[] myGroupMemberIds, List<String> unwanted )
     {
-        return UserDefinedConfigurationStrategyTest.fakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
+        return new FakeTopologyService( fakeCoreTopology( new MemberId( UUID.randomUUID() ) ),
                 fakeReadReplicaTopology( myServerGroups, myGroupMemberIds, unwanted, 10 ) );
     }
 
@@ -116,24 +119,24 @@ public class ConnectRandomlyToServerGroupStrategyImplTest
 
         for ( MemberId memberId : memberIds )
         {
-            readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
+            readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( wanted ), "default" ) );
+                    Set.copyOf( wanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;
         }
 
         for ( int i = 0; i < unwantedNumber; i++ )
         {
-            readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( singletonList(
+            readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
                             new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
-                    new HashSet<>( unwanted ), "default" ) );
+                    Set.copyOf( unwanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;
         }
 
-        return new ReadReplicaTopology( readReplicas );
+        return new ReadReplicaTopology( DATABASE_ID, readReplicas );
     }
 }

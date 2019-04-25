@@ -5,7 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import java.util.Set;
+
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface DiscoveryServerInfo extends CatchupServerAddress, ClientConnector, GroupedServer
 {
-    String getDatabaseName();
+    Set<DatabaseId> getDatabaseIds();
 }

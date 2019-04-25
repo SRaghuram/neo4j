@@ -18,6 +18,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;
@@ -30,7 +31,7 @@ class ReadReplicaStatus extends BaseStatus
 
     // Dependency resolved
     private final TopologyService topologyService;
-    private final DatabaseHealth dbHealth;
+    private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
 
     ReadReplicaStatus( OutputFormat output, ReadReplicaGraphDatabase db )
@@ -42,8 +43,7 @@ class ReadReplicaStatus extends BaseStatus
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
-
-        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
+        this.throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
     }
 
     @Override

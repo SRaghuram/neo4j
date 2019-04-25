@@ -12,16 +12,12 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolClientInstallerV1;
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -36,8 +32,11 @@ import java.util.function.Function;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -50,9 +49,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 @ExtendWith( DefaultFileSystemExtension.class )
 abstract class CommercialCatchupTest
 {
-    private static final String DEFAULT_DB = "db-one";
+    private static final DatabaseId DEFAULT_DB_ID = new DatabaseId( "db-one" );
     private final Protocol.ApplicationProtocols applicationProtocols;
-    private DatabaseManager databaseManager;
+    private StubClusteredDatabaseManager databaseManager;
 
     CommercialCatchupTest( Protocol.ApplicationProtocols applicationProtocol )
     {
@@ -72,11 +71,15 @@ abstract class CommercialCatchupTest
     void setUp()
     {
         pipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
-        databaseManager = TestDatabaseManager.newDbManager( DEFAULT_DB );
-        serverResponseHandler = new MultiDatabaseCatchupServerHandler( () -> databaseManager, LOG_PROVIDER, fsa );
+        databaseManager = new StubClusteredDatabaseManager();
+        databaseManager.givenDatabaseWithConfig()
+                .withDatabaseId( DEFAULT_DB_ID )
+                .withStoreId( StoreId.DEFAULT )
+                .register();
+        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fsa );
     }
 
-    void executeTestScenario( Function<DatabaseManager,RequestResponse> responseFunction ) throws Exception
+    void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception
     {
         RequestResponse requestResponse = responseFunction.apply( databaseManager );
 
@@ -97,24 +100,22 @@ abstract class CommercialCatchupTest
         requestResponse.responseHandler.verifyHandled();
     }
 
-    static Function<DatabaseManager,RequestResponse> storeId()
+    static Function<DatabaseManager<?>,RequestResponse> storeId()
     {
-        return new Function<DatabaseManager,RequestResponse>()
+        return new Function<DatabaseManager<?>,RequestResponse>()
         {
             @Override
-            public RequestResponse apply( DatabaseManager databaseManager )
+            public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB_ID ), new ResponseAdaptor()
                 {
                     @Override
                     public void onGetStoreIdResponse( GetStoreIdResponse response )
                     {
                         responseHandled = true;
-                        assertEquals( databaseManager
-                                .getDatabaseContext( DEFAULT_DB )
-                                .map( DatabaseContext::getDatabase )
-                                .map( db -> new StoreId( db.getStoreId().getCreationTime(), db.getStoreId().getRandomId(), db.getStoreId().getUpgradeTime(),
-                                        db.getStoreId().getUpgradeId() ) )
+                        assertEquals( databaseManager.getDatabaseContext( DEFAULT_DB_ID )
+                                .map( DatabaseContext::database )
+                                .map( Database::getStoreId )
                                 .orElseThrow( IllegalStateException::new ), response.storeId() );
                     }
                 } );
@@ -129,14 +130,14 @@ abstract class CommercialCatchupTest
         };
     }
 
-    static Function<DatabaseManager,RequestResponse> wrongDb()
+    static Function<DatabaseManager<?>,RequestResponse> wrongDb()
     {
-        return new Function<DatabaseManager,RequestResponse>()
+        return new Function<DatabaseManager<?>,RequestResponse>()
         {
             @Override
-            public RequestResponse apply( DatabaseManager databaseManager )
+            public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( "WRONG_DB_NAME" ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( new DatabaseId( "WRONG_DB_NAME" ) ), new ResponseAdaptor()
                 {
                     @Override
                     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
@@ -172,17 +173,7 @@ abstract class CommercialCatchupTest
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
             MultiDatabaseCatchupServerHandler responseHandler ) throws Exception
     {
-        if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_1 )
-        {
-            new CatchupProtocolClientInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
-        }
-        else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_2 )
-        {
-            new CatchupProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
-        }
-        else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
+        if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
         {
             new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
             new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );

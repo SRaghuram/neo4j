@@ -10,8 +10,8 @@ import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, IntermediateCodeGeneration, _}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
@@ -36,12 +36,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
     case e => try {
-      val ir = new IntermediateCodeGeneration(physicalPlan.slotConfigurations(id)).compileExpression(e)
-      if (ir.nonEmpty) {
-        log.debug(s"Compiling expression: $e")
-      }
-      ir.map(i => CompileWrappingExpression(CodeGeneration.compileExpression(i),
-                                                         inner.toCommandExpression(id, expression)))
+      log.debug(s"Compiling expression: $expression")
+      defaultGenerator(physicalPlan.slotConfigurations(id))
+        .compileExpression(e)
+        .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
       case t: Throwable =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
@@ -56,17 +54,10 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
-
-      val slots = physicalPlan.slotConfigurations(id)
-      val compiler = new IntermediateCodeGeneration(slots)
-      val compiled = for {(k, v) <- projections
-                          c <- compiler.compileExpression(v)} yield slots.get(k).get.offset -> c
-      if (compiled.size < projections.size) None
-      else {
-        log.debug(s" Compiling projection: $projections")
-        Some(CompileWrappingProjection(CodeGeneration.compileProjection(compiler.compileProjection(compiled)),
-                                       projections.isEmpty))
-      }
+      log.debug(s" Compiling projection: $projections")
+      defaultGenerator(physicalPlan.slotConfigurations(id))
+        .compileProjection(projections)
+        .map(CompileWrappingProjection(_, projections.isEmpty))
     }
     catch {
       case t: Throwable =>
@@ -81,17 +72,17 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 
   override def toGroupingExpression(id: Id,
                                     projections: Map[String, ast.Expression],
+                                    orderToLeverage: Seq[ast.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     try {
-      val slots = physicalPlan.slotConfigurations(id)
-      val compiler = new IntermediateCodeGeneration(slots)
-      val compiled = for {(k, v) <- projections
-                          c <- compiler.compileExpression(v)} yield slots(k) -> c
-      if (compiled.size < projections.size) None
-      else {
-        log.debug(s" Compiling grouping expressions: $projections")
-        Some(CompileWrappingDistinctGroupingExpression(
-          compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
+      if(orderToLeverage.nonEmpty) {
+        // TODO Support compiled ordered GroupingExpression
+        None
+      } else {
+        log.debug(s" Compiling projection: $projections")
+        defaultGenerator(physicalPlan.slotConfigurations(id))
+          .compileGrouping(projections)
+          .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
       }
     }
     catch {
@@ -109,27 +100,29 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 }
 
 object CompiledExpressionConverter {
+
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
     case s: SlottedQueryState => s.params
     case _ => throw new InternalException(s"Expected a slotted query state")
   }
 }
 
-case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
+case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override type KeyType = AnyValue
 
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): AnyValue =
-    projection.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): AnyValue =
+    grouping.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
+  override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue =
+    throw new IllegalStateException("Compiled expressions do not support this yet.")
 
-  override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
+  override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
 
   override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
-    projection.projectGroupingKey(context, groupingKey)
+    grouping.projectGroupingKey(context, groupingKey)
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {

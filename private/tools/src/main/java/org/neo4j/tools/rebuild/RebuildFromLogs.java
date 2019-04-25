@@ -5,7 +5,7 @@
  */
 package org.neo4j.tools.rebuild;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -16,6 +16,7 @@ import java.util.List;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.InconsistentStoreException;
@@ -25,6 +26,7 @@ import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
 import org.neo4j.cursor.IOCursor;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
@@ -69,6 +71,7 @@ class RebuildFromLogs
     private static final String UP_TO_TX_ID = "tx";
 
     private final FileSystemAbstraction fs;
+    private static DatabaseManagementService managementService;
 
     RebuildFromLogs( FileSystemAbstraction fs )
     {
@@ -86,7 +89,7 @@ class RebuildFromLogs
         @SuppressWarnings( "boxing" )
         long txId = params.getNumber( UP_TO_TX_ID, BASE_TX_ID ).longValue();
         List<String> orphans = params.orphans();
-        args = orphans.toArray( new String[orphans.size()] );
+        args = orphans.toArray( new String[0] );
         if ( args.length != 2 )
         {
             printUsage( "Exactly two positional arguments expected: " +
@@ -124,7 +127,7 @@ class RebuildFromLogs
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new RebuildFromLogs( fileSystem ).rebuild( source, target, txId );
+            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.of( source ), DatabaseLayout.of( target ), txId );
         }
     }
 
@@ -133,35 +136,36 @@ class RebuildFromLogs
         return Files.exists( DatabaseLayout.of( path.toFile() ).metadataStore().toPath() );
     }
 
-    public void rebuild( File source, File target, long txId ) throws Exception, InconsistentStoreException
+    public void rebuild( DatabaseLayout sourceDatabaseLayout, DatabaseLayout targetLayout, long txId ) throws Exception, InconsistentStoreException
     {
         try ( PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler() ) )
         {
-            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( source, fs ).build();
+            File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory();
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs ).build();
             long highestVersion = logFiles.getHighestLogVersion();
             if ( highestVersion < 0 )
             {
-                printUsage( "Inconsistent number of log files found in " + source );
+                printUsage( "Inconsistent number of log files found in " + transactionLogsDirectory );
                 return;
             }
 
             long lastTxId;
-            try ( TransactionApplier applier = new TransactionApplier( fs, target, pageCache ) )
+            try ( TransactionApplier applier = new TransactionApplier( fs, targetLayout, pageCache ) )
             {
-                lastTxId = applier.applyTransactionsFrom( source, txId );
+                lastTxId = applier.applyTransactionsFrom( transactionLogsDirectory, txId );
             }
 
             // set last tx id in neostore otherwise the db is not usable
-            MetaDataStore.setRecord( pageCache, DatabaseLayout.of( target ).metadataStore(),
+            MetaDataStore.setRecord( pageCache, targetLayout.metadataStore(),
                     MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId );
 
-            checkConsistency( target, pageCache );
+            checkConsistency( targetLayout, pageCache );
         }
     }
 
-    void checkConsistency( File target, PageCache pageCache ) throws Exception, InconsistentStoreException
+    void checkConsistency( DatabaseLayout layout, PageCache pageCache ) throws Exception, InconsistentStoreException
     {
-        try ( ConsistencyChecker checker = new ConsistencyChecker( target, pageCache ) )
+        try ( ConsistencyChecker checker = new ConsistencyChecker( layout, pageCache ) )
         {
             checker.checkConsistency();
         }
@@ -186,10 +190,10 @@ class RebuildFromLogs
         private final FileSystemAbstraction fs;
         private final TransactionCommitProcess commitProcess;
 
-        TransactionApplier( FileSystemAbstraction fs, File dbDirectory, PageCache pageCache )
+        TransactionApplier( FileSystemAbstraction fs, DatabaseLayout layout, PageCache pageCache )
         {
             this.fs = fs;
-            this.graphdb = startTemporaryDb( dbDirectory.getAbsoluteFile(), pageCache );
+            this.graphdb = startTemporaryDb( layout, pageCache );
             this.commitProcess = graphdb.getDependencyResolver().resolveDependency( TransactionCommitProcess.class );
         }
 
@@ -225,7 +229,7 @@ class RebuildFromLogs
         @Override
         public void close()
         {
-            graphdb.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -236,9 +240,9 @@ class RebuildFromLogs
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
 
-        ConsistencyChecker( File dbDirectory, PageCache pageCache )
+        ConsistencyChecker( DatabaseLayout layout, PageCache pageCache )
         {
-            this.graphdb = startTemporaryDb( dbDirectory.getAbsoluteFile(), pageCache );
+            this.graphdb = startTemporaryDb( layout, pageCache );
             DependencyResolver resolver = graphdb.getDependencyResolver();
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
@@ -264,18 +268,20 @@ class RebuildFromLogs
         @Override
         public void close()
         {
-            graphdb.shutdown();
+            managementService.shutdown();
         }
     }
 
-    private static GraphDatabaseAPI startTemporaryDb( File targetDirectory, PageCache pageCache )
+    private static GraphDatabaseAPI startTemporaryDb( DatabaseLayout databaseLayout, PageCache pageCache )
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
+        managementService = new CommercialDatabaseManagementServiceBuilder()
                 .setExternalDependencies( dependencies )
-                .newEmbeddedDatabaseBuilder( targetDirectory )
+                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
+                .newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }
 }

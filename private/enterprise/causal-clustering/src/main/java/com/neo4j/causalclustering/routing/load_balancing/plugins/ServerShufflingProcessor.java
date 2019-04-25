@@ -29,9 +29,9 @@ public class ServerShufflingProcessor implements LoadBalancingProcessor
     }
 
     @Override
-    public RoutingResult run( MapValue context ) throws ProcedureException
+    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
     {
-        RoutingResult result = delegate.run( context );
+        RoutingResult result = delegate.run( databaseName, context );
 
         Collections.shuffle( result.routeEndpoints() );
         Collections.shuffle( result.writeEndpoints() );

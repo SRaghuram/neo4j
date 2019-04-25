@@ -298,6 +298,7 @@ public class AuthIT extends AuthTestBase
     private final Map<Setting<?>,String> configMap;
     private final boolean confidentialityRequired;
     private final boolean ldapWithAD;
+    private final boolean createUsers;
 
     @SuppressWarnings( "unused" )
     public AuthIT( String suiteName, String password, boolean confidentialityRequired, boolean secureLdap, String host, List<Object> settings )
@@ -306,13 +307,20 @@ public class AuthIT extends AuthTestBase
         this.confidentialityRequired = confidentialityRequired;
         this.configMap = new HashMap<>();
         configMap.put( SecuritySettings.ldap_server, getLdapServerUri( secureLdap, host ) );
+        boolean nativeEnabled = false;
         for ( int i = 0; i < settings.size() - 1; i += 2 )
         {
             Setting setting = (Setting) settings.get( i );
             String value = (String) settings.get( i + 1 );
+            if ( (setting.equals( SecuritySettings.native_authentication_enabled ) || setting.equals( SecuritySettings.native_authorization_enabled )) &&
+                    value.equals( "true" ) )
+            {
+                nativeEnabled = true;
+            }
             configMap.put( setting, value );
         }
 
+        createUsers = nativeEnabled;
         ldapWithAD = suiteName.equals( "Ldap with AD" );
     }
 
@@ -332,7 +340,7 @@ public class AuthIT extends AuthTestBase
 
         CommercialAuthAndUserManager authManager = dbRule.resolveDependency( CommercialAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
-        if ( userManager != null )
+        if ( createUsers )
         {
             userManager.newUser( NONE_USER, password.getBytes(), false );
             userManager.newUser( PROC_USER, password.getBytes(), false );

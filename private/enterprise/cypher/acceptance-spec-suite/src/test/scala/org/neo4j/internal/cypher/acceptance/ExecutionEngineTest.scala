@@ -7,8 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.{File, PrintWriter}
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -25,7 +26,7 @@ import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -418,10 +419,11 @@ order by a.COL1""".format(a, b))
   }
 
   test("createEngineWithSpecifiedParserVersion") {
-    val db: GraphDatabaseService = new TestGraphDatabaseFactory()
-                            .newImpermanentDatabaseBuilder(new File("target/engineWithSpecifiedParser"))
-                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
-                            .newGraphDatabase()
+    val managementService = new TestDatabaseManagementServiceBuilder()
+      .newImpermanentDatabaseBuilder()
+      .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
+      .newDatabaseManagementService()
+    val db: GraphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
     createEngine(db)
 
     try {
@@ -431,7 +433,7 @@ order by a.COL1""".format(a, b))
       case _: SyntaxException =>
       case _: Throwable => fail("expected exception")
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
   }
 
@@ -945,16 +947,17 @@ order by a.COL1""".format(a, b))
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
     FileUtils.deleteRecursively(new File("target/readonly"))
-    val old = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( "target/readonly" ) )
+    val old = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( new File( "target/readonly" ) )
     old.shutdown()
-    val db = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ) )
-      .setConfig( GraphDatabaseSettings.read_only, "true" )
-      .newGraphDatabase()
+    val managementService = new TestCommercialDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( new File( "target/readonly" ))
+      .setConfig(GraphDatabaseSettings.read_only, "true")
+      .newDatabaseManagementService()
+    val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       val engine = createEngine(db)
       run(engine)
     } finally {
-      db.shutdown()
+      managementService.shutdown()
     }
   }
 }

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -101,7 +102,7 @@ public class ReplicatedIdRangeAcquirerTest
     {
         Map<IdType,Integer> allocationSizes =
                 Arrays.stream( IdType.values() ).collect( Collectors.toMap( idType -> idType, idType -> idRangeLength ) );
-        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( DEFAULT_DATABASE_NAME, replicator, idAllocationStateMachine,
+        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( new DatabaseId( DEFAULT_DATABASE_NAME ), replicator, idAllocationStateMachine,
                 allocationSizes, member, NullLogProvider.getInstance() );
 
         return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer, NullLogProvider.getInstance(), 10, true, panicker );

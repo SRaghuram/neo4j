@@ -8,39 +8,43 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
-import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.values.AnyValue
 
 object MorselSorting {
 
   def compareMorselIndexesByColumnOrder(row: MorselExecutionContext)(order: ColumnOrder): Comparator[Integer] = order.slot match {
-    case LongSlot(offset, _, _) =>
-      new Comparator[Integer] {
-        override def compare(idx1: Integer, idx2: Integer): Int = {
-          // TODO this is kind of weird
-          row.moveToRow(idx1)
-          val aVal = row.getLongAt(offset)
-          row.moveToRow(idx2)
-          val bVal = row.getLongAt(offset)
-          order.compareLongs(aVal, bVal)
-        }
+    case LongSlot(offset, true, _) =>
+      (idx1: Integer, idx2: Integer) => {
+        row.moveToRow(idx1)
+        val aVal = row.getLongAt(offset)
+        row.moveToRow(idx2)
+        val bVal = row.getLongAt(offset)
+        order.compareNullableLongs(aVal, bVal)
+      }
+
+    case LongSlot(offset, false, _) =>
+      (idx1: Integer, idx2: Integer) => {
+        row.moveToRow(idx1)
+        val aVal = row.getLongAt(offset)
+        row.moveToRow(idx2)
+        val bVal = row.getLongAt(offset)
+        order.compareLongs(aVal, bVal)
       }
 
     case RefSlot(offset, _, _) =>
-      new Comparator[Integer] {
-        override def compare(idx1: Integer, idx2: Integer): Int = {
-          row.moveToRow(idx1)
-          val aVal = row.getRefAt(offset)
-          row.moveToRow(idx2)
-          val bVal = row.getRefAt(offset)
-          order.compareValues(aVal, bVal)
-        }
+      (idx1: Integer, idx2: Integer) => {
+        row.moveToRow(idx1)
+        val aVal = row.getRefAt(offset)
+        row.moveToRow(idx2)
+        val bVal = row.getRefAt(offset)
+        order.compareValues(aVal, bVal)
       }
   }
 
   def createMorselIndexesArray(row: MorselExecutionContext): Array[Integer] = {
-    val rows = row.numberOfRows
+    val rows = row.getValidRows
     val list = new Array[Integer](rows)
     var idx = 0
     while (idx < rows) {
@@ -59,9 +63,9 @@ object MorselSorting {
   def createSortedMorselData(inputRow: MorselExecutionContext, outputToInputIndexes: Array[Integer]): Unit = {
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
-    val tempMorsel = new Morsel(new Array[Long](inputRow.numberOfRows * inputRow.getLongsPerRow),
-                                new Array[AnyValue](inputRow.numberOfRows * inputRow.getRefsPerRow))
-    val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow, inputRow.numberOfRows)
+    val tempMorsel = new Morsel(new Array[Long](inputRow.getValidRows * inputRow.getLongsPerRow),
+                                new Array[AnyValue](inputRow.getValidRows * inputRow.getRefsPerRow))
+    val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow, inputRow.getValidRows)
 
     while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
@@ -71,26 +75,28 @@ object MorselSorting {
       outputRow.moveToNextRow()
     }
 
-    // Copy from output morsel back to inout morsel
+    // Copy from output morsel back to input morsel
     inputRow.copyAllRowsFrom(outputRow)
   }
 
   def createMorselComparator(order: ColumnOrder): Comparator[MorselExecutionContext] = order.slot match {
-    case LongSlot(offset, _, _) =>
-      new Comparator[MorselExecutionContext] {
-        override def compare(m1: MorselExecutionContext, m2: MorselExecutionContext): Int = {
-          val aVal = m1.getLongAt(offset)
-          val bVal = m2.getLongAt(offset)
-          order.compareLongs(aVal, bVal)
-        }
+    case LongSlot(offset, true, _) =>
+      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+        val aVal = m1.getLongAt(offset)
+        val bVal = m2.getLongAt(offset)
+        order.compareNullableLongs(aVal, bVal)
+      }
+    case LongSlot(offset, false, _) =>
+      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+        val aVal = m1.getLongAt(offset)
+        val bVal = m2.getLongAt(offset)
+        order.compareLongs(aVal, bVal)
       }
     case RefSlot(offset, _, _) =>
-      new Comparator[MorselExecutionContext] {
-        override def compare(m1: MorselExecutionContext, m2: MorselExecutionContext): Int = {
-          val aVal = m1.getRefAt(offset)
-          val bVal = m2.getRefAt(offset)
-          order.compareValues(aVal, bVal)
-        }
+      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+        val aVal = m1.getRefAt(offset)
+        val bVal = m2.getRefAt(offset)
+        order.compareValues(aVal, bVal)
       }
 
   }

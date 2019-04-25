@@ -24,12 +24,12 @@ import java.util.function.Predicate;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dmbs.database.DefaultDatabaseManager;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
+import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.internal.collector.DataCollectorProcedures;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.fs.watcher.FileWatcher;
@@ -40,10 +40,10 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.AccessCapability;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -51,21 +51,19 @@ import org.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.watcher.DefaultFileDeletionListenerFactory;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.BuiltInDbmsProcedures;
 import org.neo4j.procedure.builtin.BuiltInFunctions;
 import org.neo4j.procedure.builtin.BuiltInProcedures;
 import org.neo4j.procedure.builtin.TokenProcedures;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.procedure.impl.ProcedureConfig;
 import org.neo4j.service.Services;
-import org.neo4j.udc.UsageData;
-import org.neo4j.udc.UsageDataKeys;
 
 import static org.neo4j.procedure.impl.temporal.TemporalFunction.registerTemporalFunctions;
 
 /**
- * Edition module for {@link GraphDatabaseFacadeFactory}. Implementations of this class
+ * Edition module for {@link DatabaseManagementServiceFactory}. Implementations of this class
  * need to create all the services that would be specific for a particular edition of the database.
  */
 public abstract class AbstractEditionModule
@@ -80,18 +78,20 @@ public abstract class AbstractEditionModule
     protected IOLimiter ioLimiter;
     protected Function<DatabaseLayout,DatabaseLayoutWatcher> watcherServiceFactory;
     protected SecurityProvider securityProvider;
+    protected GlobalProcedures globalProcedures;
 
-    public abstract EditionDatabaseContext createDatabaseContext( String databaseName );
+    public abstract EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId );
 
     protected DatabaseLayoutWatcher createDatabaseFileSystemWatcher( FileWatcher watcher, DatabaseLayout databaseLayout, LogService logging,
             Predicate<String> fileNameFilter )
     {
         DefaultFileDeletionListenerFactory listenerFactory =
-                new DefaultFileDeletionListenerFactory( databaseLayout.getDatabaseName(), logging, fileNameFilter );
+                new DefaultFileDeletionListenerFactory( new DatabaseId( databaseLayout.getDatabaseName() ), logging, fileNameFilter );
         return new DatabaseLayoutWatcher( watcher, databaseLayout, listenerFactory );
     }
 
-    public void registerProcedures( GlobalProcedures globalProcedures, ProcedureConfig procedureConfig ) throws KernelException
+    public void registerProcedures( GlobalProcedures globalProcedures, ProcedureConfig procedureConfig, GlobalModule globalModule,
+            DatabaseManager<?> databaseManager ) throws KernelException
     {
         globalProcedures.registerProcedure( BuiltInProcedures.class );
         globalProcedures.registerProcedure( TokenProcedures.class );
@@ -102,22 +102,22 @@ public abstract class AbstractEditionModule
         registerTemporalFunctions( globalProcedures, procedureConfig );
 
         registerEditionSpecificProcedures( globalProcedures );
+        BaseRoutingProcedureInstaller routingProcedureInstaller = createRoutingProcedureInstaller( globalModule, databaseManager );
+        routingProcedureInstaller.install( globalProcedures );
+        this.globalProcedures = globalProcedures;
+    }
+
+    public GlobalProcedures getGlobalProcedures()
+    {
+        return globalProcedures;
     }
 
     protected abstract void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException;
 
-    protected void publishEditionInfo( UsageData sysInfo, DatabaseInfo databaseInfo, Config config )
-    {
-        sysInfo.set( UsageDataKeys.edition, databaseInfo.edition );
-        sysInfo.set( UsageDataKeys.operationalMode, databaseInfo.operationalMode );
-        config.augment( GraphDatabaseSettings.editionName, databaseInfo.edition.toString() );
-    }
+    protected abstract BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager );
 
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, AbstractEditionModule edition,
-            GlobalProcedures globalProcedures, Logger msgLog )
-    {
-        return new DefaultDatabaseManager( globalModule, edition, globalProcedures, msgLog, graphDatabaseFacade );
-    }
+    public abstract DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade,
+            GlobalModule globalModule, Log msgLog );
 
     /**
      * Returns {@code false} because {@link DatabaseManager}'s lifecycle is not managed by any component by default.
@@ -130,7 +130,7 @@ public abstract class AbstractEditionModule
         return false;
     }
 
-    public abstract void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures );
+    public abstract void createSecurityModule( GlobalModule globalModule );
 
     protected static SecurityModule setupSecurityModule( GlobalModule globalModule, AbstractEditionModule editionModule, Log log,
             GlobalProcedures globalProcedures, String key )
@@ -151,7 +151,16 @@ public abstract class AbstractEditionModule
         catch ( Exception e )
         {
             String errorMessage = "Failed to load security module.";
-            log.error( errorMessage );
+            String innerErrorMessage = e.getMessage();
+
+            if ( innerErrorMessage != null )
+            {
+                log.error( errorMessage + " Caused by: " + innerErrorMessage, e );
+            }
+            else
+            {
+                log.error( errorMessage, e );
+            }
             throw new RuntimeException( errorMessage, e );
         }
     }
@@ -171,10 +180,10 @@ public abstract class AbstractEditionModule
         return transactionStatistic;
     }
 
-    public void createDatabases( DatabaseManager databaseManager, Config config )
+    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
-        databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
+        databaseManager.createDatabase( new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
+        databaseManager.createDatabase( new DatabaseId( config.get( GraphDatabaseSettings.default_database ) ) );
     }
 
     public long getTransactionStartTimeout()

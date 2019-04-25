@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
@@ -14,9 +14,10 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
+//noinspection TypeAnnotation
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
-    new TestCommercialGraphDatabaseFactory(),
+    new TestCommercialDatabaseManagementServiceBuilder(),
     (runtimeConfig,resolver) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
@@ -35,11 +36,21 @@ object ENTERPRISE {
     GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> "4")
 
-  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1")
+  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
+                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded")
 
-  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0")
+  val SINGLE_THREADED_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
+                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded",
+                                                   GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false")
 
-  val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
+  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
+                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
+
+  val PARALLEL_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
+                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
+
+
+  val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
       context =>
         if (System.getenv().containsKey("RUN_EXPERIMENTAL")) {

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -28,7 +28,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final JobScheduler jobScheduler;
     private final CoreDownloader downloader;
     private final Suspendable suspendOnStoreCopy;
-    private final DatabaseService databases;
+    private final ClusteredDatabaseManager databaseManager;
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
@@ -41,14 +41,15 @@ public class CoreDownloaderService extends LifecycleAdapter
     private Panicker panicker;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, CoreSnapshotService snapshotService, Suspendable suspendOnStoreCopy,
-            DatabaseService databases, CommandApplicationProcess applicationProcess, LogProvider logProvider, TimeoutStrategy backoffStrategy,
+            ClusteredDatabaseManager databaseManager, CommandApplicationProcess applicationProcess,
+            LogProvider logProvider, TimeoutStrategy backoffStrategy,
             Panicker panicker, Monitors monitors )
     {
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;
         this.snapshotService = snapshotService;
         this.suspendOnStoreCopy = suspendOnStoreCopy;
-        this.databases = databases;
+        this.databaseManager = databaseManager;
         this.applicationProcess = applicationProcess;
         this.log = logProvider.getLog( getClass() );
         this.backoffStrategy = backoffStrategy;
@@ -65,8 +66,8 @@ public class CoreDownloaderService extends LifecycleAdapter
 
         if ( currentJob == null || currentJob.hasCompleted() )
         {
-            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, suspendOnStoreCopy, databases, downloader, snapshotService, log,
-                    backoffStrategy, panicker, monitors );
+            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, suspendOnStoreCopy, databaseManager, downloader,
+                    snapshotService, log, backoffStrategy, panicker, monitors );
             jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, currentJob );
             return Optional.of( jobHandle );
         }

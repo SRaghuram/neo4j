@@ -406,13 +406,13 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create index from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createIndex(\":Person(name)\",\"lucene+native-1.0\")")
+    val createResult = executeWith(Configs.All, "CALL db.createIndex(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
         "index" -> ":Person(name)",
-        "providerName" -> "lucene+native-1.0",
+        "providerName" -> "lucene+native-3.0",
         "status" -> "index created"))
     )
 
@@ -433,20 +433,20 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         "type" -> "node_label_property",
         "id" -> 1,
         "provider" -> Map(
-          "version" -> "1.0",
+          "version" -> "3.0",
           "key" -> "lucene+native"),
         "failureMessage" -> "" )))
   }
 
   test("should create unique property constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createUniquePropertyConstraint(\":Person(name)\",\"lucene+native-1.0\")")
+    val createResult = executeWith(Configs.All, "CALL db.createUniquePropertyConstraint(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
         "index" -> ":Person(name)",
-        "providerName" -> "lucene+native-1.0",
+        "providerName" -> "lucene+native-3.0",
         "status" -> "uniqueness constraint online"))
     )
 
@@ -466,20 +466,20 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     mapResult("progress") should equal(100D)
     mapResult("type") should equal("node_unique_property")
     mapResult("provider") should equal(Map(
-               "version" -> "1.0",
+               "version" -> "3.0",
                 "key" -> "lucene+native"))
     mapResult("failureMessage") should equal("")
   }
 
   test("should create node key constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-1.0\")")
+    val createResult = executeWith(Configs.All, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
         "index" -> ":Person(name)",
-        "providerName" -> "lucene+native-1.0",
+        "providerName" -> "lucene+native-3.0",
         "status" -> "node key constraint online"))
     )
 
@@ -499,7 +499,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     mapResult("progress") should equal(100D)
     mapResult("type") should equal("node_unique_property")
     mapResult("provider") should equal(Map(
-      "version" -> "1.0",
+      "version" -> "3.0",
       "key" -> "lucene+native"))
     mapResult("failureMessage") should equal("")
   }

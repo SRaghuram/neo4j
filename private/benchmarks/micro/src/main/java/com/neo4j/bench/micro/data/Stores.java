@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
@@ -15,6 +16,7 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,11 +44,11 @@ import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class Stores
 {
     private static final String NEO4J_CONFIG_FILENAME_SUFFIX = "__neo4j.conf";
-    private static final String DB_DIR_NAME = "graph.db";
     private static final String CONFIG_FILENAME = "data_gen_config.json";
     private static final String TEMP_STORE_COPY_MARKER_FILENAME = "this_is_a_temporary_store.tmp";
     // Used by benchmarks that do not need a database
@@ -72,13 +74,30 @@ public class Stores
 
     private static final String FORK_NAME_PREFIX = "fork-";
 
-    public ForkDirectory newForkDirectoryFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark, List<ProfilerType> profilers )
+    public ForkDirectory findOrCreateForkDirectoryFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark, List<ProfilerType> profilers )
     {
         BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( storesDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        int forkNumber = lastForkNumberFor( benchmarkDir ) + 1;
-        String forkName = numberedForkName( forkNumber );
-        return benchmarkDir.create( forkName, profilers );
+        List<ForkDirectory> existingForkDirectories = benchmarkDir.forks().stream()
+                                                                  .filter( f -> f.profilers().containsAll( profilers ) )
+                                                                  .collect( toList() );
+        if ( existingForkDirectories.isEmpty() )
+        {
+            int forkNumber = lastForkNumberFor( benchmarkDir ) + 1;
+            String forkName = numberedForkName( forkNumber );
+            return benchmarkDir.create( forkName, profilers );
+        }
+        else if ( existingForkDirectories.size() != 1 )
+        {
+            throw new RuntimeException( "Found more than one fork directory for:\n" +
+                                        "Benchmark Group : " + benchmarkGroup.name() + "\n" +
+                                        "Benchmark       : " + benchmark.name() + "\n" +
+                                        "Profilers       : " + profilers );
+        }
+        else
+        {
+            return existingForkDirectories.get( 0 );
+        }
     }
 
     private int lastForkNumberFor( BenchmarkDirectory benchmarkDir )
@@ -187,7 +206,7 @@ public class Stores
         Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
         System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         forceRecreateFile( neo4jConfigFile );
-        neo4jConfig.writeAsProperties( neo4jConfigFile );
+        neo4jConfig.writeToFile( neo4jConfigFile );
         return neo4jConfigFile;
     }
 
@@ -198,9 +217,13 @@ public class Stores
             int threads )
     {
         Path topLevelStoreDir = randomTopLevelStoreDir();
-        Path db = topLevelStoreDir.resolve( DB_DIR_NAME );
-        // will also create top level directory
-        tryMkDir( db );
+        tryMkDir( topLevelStoreDir );
+
+        // will create an empty database directory under top level
+        new CommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( topLevelStoreDir.toFile() )
+                .newDatabaseManagementService()
+                .shutdown();
 
         // store Neo4j config every time, even if DataGeneratorConfig is identical -- they are retrieved later
         Path neo4jConfig = writeNeo4jConfig( config.neo4jConfig(), benchmarkName, topLevelStoreDir );
@@ -209,7 +232,7 @@ public class Stores
         System.out.println( config );
         try
         {
-            new DataGenerator( config ).generate( db, neo4jConfig );
+            new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfig );
         }
         catch ( Exception e )
         {
@@ -244,10 +267,10 @@ public class Stores
         System.out.println( "Reusing copy of store...\n" +
                             "  > Benchmark group: " + benchmarkGroup.name() + "\n" +
                             "  > Benchmark:       " + benchmark.name() + "\n" +
-                            "  > Original store:  " + storeAndConfig.topLevelDir().toAbsolutePath() + "\n" +
+                            "  > Original store:  " + storeAndConfig.store().topLevelDirectory().toAbsolutePath() + "\n" +
                             "  > Config:          " + storeAndConfig.config().toAbsolutePath() );
-        Path newTopLevelDir = getCopyOf( storeAndConfig.topLevelDir() );
-        System.out.println( "Copied: " + bytesToString( BenchmarkUtil.bytes( storeAndConfig.topLevelDir() ) ) + "\n" +
+        Path newTopLevelDir = getCopyOf( storeAndConfig.store().topLevelDirectory() );
+        System.out.println( "Copied: " + bytesToString( storeAndConfig.store().bytes() ) + "\n" +
                             "  > Store copy:      " + newTopLevelDir.toAbsolutePath() );
         return new StoreAndConfig( newTopLevelDir, storeAndConfig.config() );
     }
@@ -441,7 +464,7 @@ public class Stores
 
     public static boolean isTopLevelDir( Path topStoreLevelDir )
     {
-        Path dbDir = topStoreLevelDir.resolve( DB_DIR_NAME );
+        Path dbDir = topStoreLevelDir.resolve( DEFAULT_DATABASE_NAME );
         return
                 (
                         // contains a graph.db directory
@@ -455,23 +478,18 @@ public class Stores
 
     public class StoreAndConfig
     {
-        private final Path topLevelStoreDir;
+        private final Store store;
         private final Path config;
 
         private StoreAndConfig( Path topLevelStoreDir, Path config )
         {
-            this.topLevelStoreDir = topLevelStoreDir;
+            this.store = Store.createFrom( topLevelStoreDir );
             this.config = config;
         }
 
-        Path topLevelDir()
+        public Store store()
         {
-            return topLevelStoreDir;
-        }
-
-        public Path store()
-        {
-            return topLevelStoreDir.resolve( DB_DIR_NAME );
+            return store;
         }
 
         public Path config()

@@ -41,7 +41,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -89,25 +88,18 @@ public class BenchmarkUtil
     {
         return lessWhiteSpace(
                 string.trim()
-                      .replace( ",", " " )
-                      .replace( "(", " " )
-                      .replace( ")", " " )
+                      .replace( ",", "_" )
+                      .replace( "(", "_" )
+                      .replace( ")", "_" )
                       .replace( "-", " " ) )
                 .replace( " ", "_" );
     }
 
-    public static void mapToFile( Map<String,String> properties, Path outputFile )
+    public static void stringToFile( String contents, Path outputFile )
     {
         try
         {
-            if ( !Files.exists( outputFile ) )
-            {
-                Files.createFile( outputFile );
-                assertFileExists( outputFile );
-            }
-            String contents = properties.keySet().stream()
-                                        .map( key -> key + "=" + properties.get( key ) )
-                                        .collect( joining( "\n" ) );
+            BenchmarkUtil.forceRecreateFile( outputFile );
             Files.write( outputFile, contents.getBytes( StandardCharsets.UTF_8 ) );
         }
         catch ( IOException e )
@@ -362,9 +354,14 @@ public class BenchmarkUtil
 
     public static String inputStreamToString( InputStream is ) throws IOException
     {
+        return String.join( "\n", inputStreamToLines( is ) );
+    }
+
+    public static List<String> inputStreamToLines( InputStream is ) throws IOException
+    {
         try ( BufferedReader buffer = new BufferedReader( new InputStreamReader( is ) ) )
         {
-            return buffer.lines().collect( joining( "\n" ) );
+            return buffer.lines().collect( toList() );
         }
     }
 
@@ -430,7 +427,7 @@ public class BenchmarkUtil
         return prettyPrint( map, "" );
     }
 
-    public static <K, V> String prettyPrint( Map<K,V> map, String prefix )
+    private static <K, V> String prettyPrint( Map<K,V> map, String prefix )
     {
         List<Entry<K,V>> mapEntries = sortedEntrySet( map );
         StringBuilder sb = new StringBuilder();
@@ -443,14 +440,9 @@ public class BenchmarkUtil
         return sb.toString();
     }
 
-    public static <K, V> List<Entry<K,V>> sortedEntrySet( Map<K,V> map )
+    private static <K, V> List<Entry<K,V>> sortedEntrySet( Map<K,V> map )
     {
-        return sortedEntries( map.entrySet() );
-    }
-
-    public static <K, V> List<Entry<K,V>> sortedEntries( Iterable<Entry<K,V>> entries )
-    {
-        List<Entry<K,V>> sortedEntries = Lists.newArrayList( entries );
+        List<Entry<K,V>> sortedEntries = Lists.newArrayList( map.entrySet() );
         sortedEntries.sort( new EntriesComparator<>() );
         return sortedEntries;
     }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.id;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.id.IdController;
@@ -20,6 +22,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -30,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseIdGeneratorIT
@@ -41,12 +45,14 @@ class MultiDatabaseIdGeneratorIT
     private GraphDatabaseFacade secondDatabase;
     private IdGeneratorFactory firstIdGeneratorFactory;
     private IdGeneratorFactory secondIdGeneratorFactory;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
-    void setUp()
+    void setUp() throws DatabaseExistsException
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
-        DatabaseManager databaseManager = getDatabaseManager();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );
         secondDatabase = startSecondDatabase( databaseManager );
         firstIdGeneratorFactory = getIdGeneratorFactory( firstDatabase );
@@ -56,7 +62,7 @@ class MultiDatabaseIdGeneratorIT
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -111,16 +117,16 @@ class MultiDatabaseIdGeneratorIT
         return firstDatabase.getDependencyResolver().resolveDependency( IdController.class );
     }
 
-    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager databaseManager )
+    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
     {
-        return databaseManager.createDatabase( "second" ).getDatabaseFacade();
+        return databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
     }
 
-    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager databaseManager )
+    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<?> databaseManager )
     {
-        return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.default_database ) )
+        return databaseManager.getDatabaseContext( new DatabaseId( Config.defaults().get( GraphDatabaseSettings.default_database ) ) )
                 .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
-                .getDatabaseFacade();
+                .databaseFacade();
     }
 
     private static IdGeneratorFactory getIdGeneratorFactory( GraphDatabaseFacade database )
@@ -128,7 +134,7 @@ class MultiDatabaseIdGeneratorIT
         return database.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -24,6 +24,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.TotalHits;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.junit.jupiter.api.AfterEach;
@@ -117,23 +118,23 @@ class LuceneSchemaIndexPopulatorTest
         // WHEN
         addUpdate( indexPopulator, 1, "First" );
         addUpdate( indexPopulator, 2, "Second" );
-        addUpdate( indexPopulator, 3, (byte) 1 );
-        addUpdate( indexPopulator, 4, (short) 2 );
-        addUpdate( indexPopulator, 5, 3 );
-        addUpdate( indexPopulator, 6, 4L );
-        addUpdate( indexPopulator, 7, 5F );
-        addUpdate( indexPopulator, 8, 6D );
+        addUpdate( indexPopulator, 3, "(byte) 1" );
+        addUpdate( indexPopulator, 4, "(short) 2" );
+        addUpdate( indexPopulator, 5, "3" );
+        addUpdate( indexPopulator, 6, "4L" );
+        addUpdate( indexPopulator, 7, "5F" );
+        addUpdate( indexPopulator, 8, "6D" );
 
         // THEN
         assertIndexedValues(
                 hit( "First", 1 ),
                 hit( "Second", 2 ),
-                hit( (byte)1, 3 ),
-                hit( (short)2, 4 ),
-                hit( 3, 5 ),
-                hit( 4L, 6 ),
-                hit( 5F, 7 ),
-                hit( 6D, 8 ) );
+                hit( "(byte) 1", 3 ),
+                hit( "(short) 2", 4 ),
+                hit( "3", 5 ),
+                hit( "4L", 6 ),
+                hit( "5F", 7 ),
+                hit( "6D", 8 ) );
     }
 
     @Test
@@ -285,9 +286,10 @@ class LuceneSchemaIndexPopulatorTest
         for ( Hit hit : expectedHits )
         {
             TopDocs hits = searcher.search( LuceneDocumentStructure.newSeekQuery( hit.value ), 10 );
-            assertEquals( hit.nodeIds.length, hits.totalHits, "Unexpected number of index results from " + hit.value );
+            assertEquals( TotalHits.Relation.EQUAL_TO, hits.totalHits.relation );
+            assertEquals( hit.nodeIds.length, hits.totalHits.value, "Unexpected number of index results from " + hit.value );
             Set<Long> foundNodeIds = new HashSet<>();
-            for ( int i = 0; i < hits.totalHits; i++ )
+            for ( int i = 0; i < hits.totalHits.value; i++ )
             {
                 Document document = searcher.doc( hits.scoreDocs[i].doc );
                 foundNodeIds.add( parseLong( document.get( "id" ) ) );

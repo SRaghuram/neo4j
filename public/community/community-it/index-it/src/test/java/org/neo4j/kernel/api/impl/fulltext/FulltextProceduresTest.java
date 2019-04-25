@@ -55,6 +55,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -65,8 +66,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
@@ -95,6 +96,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.single;
 
 public class FulltextProceduresTest
@@ -126,15 +128,16 @@ public class FulltextProceduresTest
     public final RuleChain rules = RuleChain.outerRule( timeout ).around( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
 
     private GraphDatabaseAPI db;
-    private GraphDatabaseBuilder builder;
+    private DatabaseManagementServiceInternalBuilder builder;
     private static final String PROP = "prop";
     private static final String EVENTUALLY_CONSISTENT = ", {eventually_consistent: 'true'}";
+    private DatabaseManagementService managementService;
 
     @Before
     public void before()
     {
-        GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        DatabaseManagementServiceBuilder factory = new DatabaseManagementServiceBuilder();
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( GraphDatabaseSettings.store_internal_log_level, "DEBUG" );
     }
 
@@ -143,7 +146,7 @@ public class FulltextProceduresTest
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -175,7 +178,7 @@ public class FulltextProceduresTest
             assertNotNull( db.schema().getIndexByName( "test-index" ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         db = createDatabase();
         try ( Transaction tx = db.beginTx() )
         {
@@ -220,7 +223,7 @@ public class FulltextProceduresTest
             assertNotNull( db.schema().getIndexByName( "test-index" ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         db = createDatabase();
         try ( Transaction tx = db.beginTx() )
         {
@@ -1195,7 +1198,7 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) );
-                  Stream<Map<String,Object>> stream = result.stream(); )
+                  Stream<Map<String,Object>> stream = result.stream() )
             {
                 assertThat( stream.count(), is( nodeCount ) );
             }
@@ -1226,7 +1229,7 @@ public class FulltextProceduresTest
         {
             db.createNode( LABEL ).setProperty( PROP, "value" );
             try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) );
-                  Stream<Map<String,Object>> stream = result.stream(); )
+                  Stream<Map<String,Object>> stream = result.stream() )
             {
                 assertThat( stream.count(), is( nodeCount + 1 ) );
             }
@@ -2074,7 +2077,7 @@ public class FulltextProceduresTest
             createSimpleNodesIndex();
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
         db = createDatabase();
         String valueToQueryFor = "value to query for";
         try ( Transaction tx = db.beginTx() )
@@ -2265,7 +2268,9 @@ public class FulltextProceduresTest
 
     private GraphDatabaseAPI createDatabase()
     {
-        return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );
+        managementService = builder.newDatabaseManagementService();
+        cleanup.add( managementService );
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void awaitIndexesOnline()

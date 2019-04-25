@@ -41,6 +41,7 @@ import org.neo4j.bolt.v1.BoltProtocolV1;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.api.security.AuthManager;
@@ -48,8 +49,7 @@ import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.udc.UsageData;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class SessionRule implements TestRule
 {
@@ -63,20 +63,23 @@ public class SessionRule implements TestRule
     {
         return new Statement()
         {
+
+            private DatabaseManagementService managementService;
+
             @Override
             public void evaluate() throws Throwable
             {
                 Map<Setting<?>,String> configMap = new HashMap<>();
                 configMap.put( GraphDatabaseSettings.auth_enabled, Boolean.toString( authEnabled ) );
-                gdb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase( configMap );
+                managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService( configMap );
+                gdb = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
                 DependencyResolver resolver = gdb.getDependencyResolver();
-                DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
+                DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
                 Config config = gdb.getDependencyResolver().resolveDependency( Config.class );
                 Authentication authentication = authentication( resolver.resolveDependency( AuthManager.class ),
                         resolver.resolveDependency( UserManagerSupplier.class ) );
                 boltFactory = new BoltStateMachineFactoryImpl(
                                         databaseManager,
-                                        new UsageData( null ),
                                         authentication,
                                         Clock.systemUTC(),
                                         config,
@@ -100,7 +103,7 @@ public class SessionRule implements TestRule
                         e.printStackTrace();
                     }
 
-                    gdb.shutdown();
+                    managementService.shutdown();
                 }
             }
         };

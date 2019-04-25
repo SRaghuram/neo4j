@@ -40,7 +40,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   //we don't want scala check to shrink patterns here since it will lead to invalid cypher
   //e.g. RETURN {, RETURN [, etc
-  implicit val dontShrink: Shrink[String] = Shrink(s => Stream.empty)
+  implicit val dontShrink: Shrink[String] = Shrink(_ => Stream.empty)
 
   test("literal stress test") {
     forAll(literal) { l =>
@@ -102,7 +102,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   case class Pattern(startNode:NodePattern, tail:Option[(RelPattern, Pattern)]) {
 
-    def identifiers: Set[Identifier] = startNode.name.map(Identifier(_, isSingleEntity = true)).toSet ++ tail.map((kv) => {
+    def identifiers: Set[Identifier] = startNode.name.map(Identifier(_, isSingleEntity = true)).toSet ++ tail.map(kv => {
       val (r, p) = kv
       r.identifier ++ p.identifiers
     }).getOrElse(Set.empty)

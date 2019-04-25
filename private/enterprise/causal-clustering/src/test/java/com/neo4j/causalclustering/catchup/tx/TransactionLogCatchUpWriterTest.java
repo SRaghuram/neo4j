@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,6 +46,7 @@ import org.neo4j.kernel.recovery.LogTailScanner.LogTailInformation;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -121,7 +121,7 @@ public class TransactionLogCatchUpWriterTest
         config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and
-        org.neo4j.storageengine.api.StoreId storeId = simulateStoreCopy();
+        StoreId storeId = simulateStoreCopy();
 
         // and
         long fromTxId = BASE_TX_ID;
@@ -133,7 +133,7 @@ public class TransactionLogCatchUpWriterTest
         // when a bunch of transactions received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
                 .mapToObj( TransactionLogCatchUpWriterTest::tx )
-                .map( tx -> new TxPullResponse( toCasualStoreId( storeId ), tx ) )
+                .map( tx -> new TxPullResponse( storeId, tx ) )
                 .forEach( subject::onTxReceived );
         subject.close();
 
@@ -153,7 +153,7 @@ public class TransactionLogCatchUpWriterTest
         config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and
-        org.neo4j.storageengine.api.StoreId storeId = simulateStoreCopy();
+        StoreId storeId = simulateStoreCopy();
 
         // and
         long fromTxId = BASE_TX_ID;
@@ -165,7 +165,7 @@ public class TransactionLogCatchUpWriterTest
         // when 1M tx received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
                 .mapToObj( TransactionLogCatchUpWriterTest::tx )
-                .map(tx -> new TxPullResponse( toCasualStoreId( storeId ), tx ))
+                .map( tx -> new TxPullResponse( storeId, tx ) )
                 .forEach( subject::onTxReceived );
         subject.close();
 
@@ -177,7 +177,7 @@ public class TransactionLogCatchUpWriterTest
 
     private void createTransactionLogWithCheckpoint( Config config, boolean logsInStoreDir ) throws IOException
     {
-        org.neo4j.storageengine.api.StoreId storeId = simulateStoreCopy();
+        StoreId storeId = simulateStoreCopy();
 
         int fromTxId = 37;
         int endTxId = fromTxId + 5;
@@ -190,7 +190,7 @@ public class TransactionLogCatchUpWriterTest
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )
         {
-            catchUpWriter.onTxReceived( new TxPullResponse( toCasualStoreId( storeId ), tx( i ) ) );
+            catchUpWriter.onTxReceived( new TxPullResponse( storeId, tx( i ) ) );
         }
 
         catchUpWriter.close();
@@ -249,10 +249,10 @@ public class TransactionLogCatchUpWriterTest
         }
     }
 
-    private org.neo4j.storageengine.api.StoreId simulateStoreCopy() throws IOException
+    private StoreId simulateStoreCopy() throws IOException
     {
         // create an empty store
-        org.neo4j.storageengine.api.StoreId storeId;
+        StoreId storeId;
         Database ds = dsRule.getDatabase( databaseLayout, fs, pageCache );
         ds.start();
         storageEngineFactory = ds.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
@@ -262,16 +262,11 @@ public class TransactionLogCatchUpWriterTest
         }
 
         // we don't have log files after a store copy
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fsRule.get() ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fsRule.get() ).build();
         //noinspection ResultOfMethodCallIgnored
         logFiles.accept( ( file, version ) -> file.delete() );
 
         return storeId;
-    }
-
-    private StoreId toCasualStoreId( org.neo4j.storageengine.api.StoreId storeId )
-    {
-        return new StoreId( storeId.getCreationTime(), storeId.getRandomId(), storeId.getUpgradeTime(), storeId.getUpgradeId() );
     }
 
     private static CommittedTransactionRepresentation tx( long txId )

@@ -20,7 +20,11 @@
 package org.neo4j.kernel.api.impl.schema.reader;
 
 import org.apache.lucene.index.Fields;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.LeafReader;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.ReaderSlice;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.BooleanClause;
@@ -30,12 +34,14 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.NumericUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.StreamSupport;
 
 import org.neo4j.helpers.TaskControl;
 import org.neo4j.internal.kernel.api.IndexOrder;
@@ -58,6 +64,7 @@ import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.api.schema.BridgingIndexProgressor;
 import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
@@ -150,22 +157,12 @@ public class SimpleIndexReader extends AbstractIndexReader
             return LuceneDocumentStructure.newScanQuery();
         case range:
             assertNotComposite( predicates );
-            switch ( predicate.valueGroup() )
+            if ( predicate.valueGroup() == ValueGroup.TEXT )
             {
-            case NUMBER:
-                IndexQuery.NumberRangePredicate np = (IndexQuery.NumberRangePredicate) predicate;
-                return LuceneDocumentStructure.newInclusiveNumericRangeSeekQuery( np.from(),
-                                                                                  np.to() );
-
-            case TEXT:
                 IndexQuery.TextRangePredicate sp = (IndexQuery.TextRangePredicate) predicate;
-                return LuceneDocumentStructure.newRangeSeekByStringQuery( sp.from(), sp.fromInclusive(),
-                                                                          sp.to(), sp.toInclusive() );
-
-            default:
-                throw new UnsupportedOperationException(
-                        format( "Range scans of value group %s are not supported", predicate.valueGroup() ) );
+                return LuceneDocumentStructure.newRangeSeekByStringQuery( sp.from(), sp.fromInclusive(), sp.to(), sp.toInclusive() );
             }
+            throw new UnsupportedOperationException( format( "Range scans of value group %s are not supported", predicate.valueGroup() ) );
 
         case stringPrefix:
             assertNotComposite( predicates );
@@ -206,9 +203,21 @@ public class SimpleIndexReader extends AbstractIndexReader
         {
             IndexQuery[] noQueries = new IndexQuery[0];
             BridgingIndexProgressor multiProgressor = new BridgingIndexProgressor( client, descriptor.schema().getPropertyIds() );
-            Fields fields = MultiFields.getFields( getIndexSearcher().getIndexReader() );
+            IndexReader reader = getIndexSearcher().getIndexReader();
+            List<LeafReaderContext> leaves = reader.leaves();
+            Fields[] subFields = new Fields[leaves.size()];
+            ReaderSlice[] readerSlices = new ReaderSlice[leaves.size()];
+            for ( int i = 0; i < leaves.size(); i++ )
+            {
+                LeafReaderContext context = leaves.get( i );
+                LeafReader leafReader = context.reader();
+                subFields[i] = fieldsOf( leafReader );
+                readerSlices[i] = new ReaderSlice( context.docBase, reader.maxDoc(), i );
+            }
+            Fields fields = new MultiFields( subFields, readerSlices );
             for ( ValueEncoding valueEncoding : ValueEncoding.values() )
             {
+
                 Terms terms = fields.terms( valueEncoding.key() );
                 if ( terms != null )
                 {
@@ -216,10 +225,6 @@ public class SimpleIndexReader extends AbstractIndexReader
                                                                  ? term -> Values.stringValue( term.utf8ToString() )
                                                                  : term -> null;
                     TermsEnum termsIterator = terms.iterator();
-                    if ( valueEncoding == ValueEncoding.Number )
-                    {
-                        termsIterator = NumericUtils.filterPrefixCodedLongs( termsIterator );
-                    }
                     multiProgressor.initialize( descriptor, new LuceneDistinctValuesProgressor( termsIterator, client, valueMaterializer ), noQueries,
                             IndexOrder.NONE, needsValues, false );
                 }
@@ -232,6 +237,30 @@ public class SimpleIndexReader extends AbstractIndexReader
         }
     }
 
+    private Fields fieldsOf( LeafReader leafReader )
+    {
+        return new Fields()
+        {
+            @Override
+            public Iterator<String> iterator()
+            {
+                return StreamSupport.stream( leafReader.getFieldInfos().spliterator(), false ).map( info -> info.name ).iterator();
+            }
+
+            @Override
+            public Terms terms( String field ) throws IOException
+            {
+                return leafReader.terms( field );
+            }
+
+            @Override
+            public int size()
+            {
+                return leafReader.getFieldInfos().size();
+            }
+        };
+    }
+
     private void assertNotComposite( IndexQuery[] predicates )
     {
         assert predicates.length == 1 : "composite indexes not yet supported for this operation";
@@ -242,7 +271,7 @@ public class SimpleIndexReader extends AbstractIndexReader
     {
         Query nodeIdQuery = new TermQuery( LuceneDocumentStructure.newTermForChangeOrRemove( nodeId ) );
         Query valueQuery = LuceneDocumentStructure.newSeekQuery( propertyValues );
-        BooleanQuery.Builder nodeIdAndValueQuery = new BooleanQuery.Builder().setDisableCoord( true );
+        BooleanQuery.Builder nodeIdAndValueQuery = new BooleanQuery.Builder();
         nodeIdAndValueQuery.add( nodeIdQuery, BooleanClause.Occur.MUST );
         nodeIdAndValueQuery.add( valueQuery, BooleanClause.Occur.MUST );
         try

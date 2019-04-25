@@ -44,8 +44,21 @@ public class QueryStringTest
     @Test
     public void changingQueryStringWithChangingSuppliedShouldActuallyBeChanging()
     {
-        QueryString changingQS = ChangingQueryString.atDefaults(
-                () -> String.format( "MATCH (n:N) WHERE n.`%s` > 0 RETURN n", UUID.randomUUID().toString() ) );
+        ChangingQueryString.ValueSupplier valueSupplier = new ChangingQueryString.ValueSupplier()
+        {
+            @Override
+            public String stableTemplate()
+            {
+                return "MATCH (n:N) WHERE n.`%s` > 0 RETURN n";
+            }
+
+            @Override
+            public String get()
+            {
+                return String.format( stableTemplate(), UUID.randomUUID().toString() );
+            }
+        };
+        QueryString changingQS = ChangingQueryString.atDefaults( valueSupplier );
         assertNotEquals( changingQS.value(), changingQS.value() );
     }
 

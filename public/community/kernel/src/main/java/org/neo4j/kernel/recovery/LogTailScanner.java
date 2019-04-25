@@ -22,6 +22,7 @@ package org.neo4j.kernel.recovery;
 import java.io.IOException;
 import java.nio.channels.ClosedByInterruptException;
 
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
@@ -36,7 +37,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 
 import static org.neo4j.kernel.recovery.Recovery.throwUnableToCleanRecover;
 import static org.neo4j.storageengine.api.LogVersionRepository.INITIAL_LOG_VERSION;
@@ -348,5 +348,24 @@ public class LogTailScanner
         {
             return recordAfterCheckpoint;
         }
+
+        boolean logsMissing()
+        {
+            return lastCheckPoint == null && oldestLogVersionFound == -1;
+        }
+
+        public boolean isRecoveryRequired()
+        {
+            return recordAfterCheckpoint || logsMissing();
+        }
+
+        @Override
+        public String toString()
+        {
+            return "LogTailInformation{" + "lastCheckPoint=" + lastCheckPoint + ", firstTxIdAfterLastCheckPoint=" + firstTxIdAfterLastCheckPoint +
+                    ", oldestLogVersionFound=" + oldestLogVersionFound + ", currentLogVersion=" + currentLogVersion + ", latestLogEntryVersion=" +
+                    latestLogEntryVersion + ", recordAfterCheckpoint=" + recordAfterCheckpoint + '}';
+        }
+
     }
 }

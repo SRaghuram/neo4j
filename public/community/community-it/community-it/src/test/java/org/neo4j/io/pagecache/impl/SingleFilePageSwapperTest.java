@@ -35,6 +35,8 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.OpenOption;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,7 +50,6 @@ import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.StoreFileChannel;
 import org.neo4j.io.pagecache.PageSwapper;
@@ -59,12 +60,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assume.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.test.matchers.ByteArrayMatcher.byteArray;
@@ -138,7 +140,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
     void swappingInMustFillPageWithData( int noChannelStriping ) throws Exception
     {
         byte[] bytes = new byte[] { 1, 2, 3, 4 };
-        StoreChannel channel = getFs().create( getFile() );
+        StoreChannel channel = getFs().write( getFile() );
         channel.writeAll( wrap( bytes ) );
         channel.close();
 
@@ -160,7 +162,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
                 // --- page 1:
                 5, 6
         };
-        StoreChannel channel = getFs().create( getFile() );
+        StoreChannel channel = getFs().write( getFile() );
         channel.writeAll( wrap( bytes ) );
         channel.close();
 
@@ -176,7 +178,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
     @ValueSource( ints = {0, 1} )
     void swappingOutMustWritePageToFile( int noChannelStriping ) throws Exception
     {
-        getFs().create( getFile() ).close();
+        getFs().write( getFile() ).close();
 
         byte[] expected = new byte[] { 1, 2, 3, 4 };
         long page = createPage( expected );
@@ -219,7 +221,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
                 // --- page 2:
                 9, 10
         };
-        StoreChannel channel = getFs().create( getFile() );
+        StoreChannel channel = getFs().write( getFile() );
         channel.writeAll( wrap( initialData ) );
         channel.close();
 
@@ -248,13 +250,13 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         PageSwapperFactory factory = createSwapperFactory();
         factory.open( fileSystem, Configuration.EMPTY );
         File file = testDir.file( "file" );
-        fileSystem.create( file ).close();
+        fileSystem.write( file ).close();
 
         PageSwapper pageSwapper = createSwapper( factory, file, 4, NO_CALLBACK, false, bool( noChannelStriping ) );
 
         try
         {
-            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
+            StoreChannel channel = fileSystem.write( file );
             assertThrows( OverlappingFileLockException.class, channel::tryLock );
         }
         finally
@@ -272,7 +274,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         factory.open( fileSystem, Configuration.EMPTY );
         File file = testDir.file( "file" );
 
-        StoreFileChannel channel = fileSystem.create( file );
+        StoreFileChannel channel = fileSystem.write( file );
 
         try ( FileLock fileLock = channel.tryLock() )
         {
@@ -290,7 +292,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         factory.open( fileSystem, Configuration.EMPTY );
         File file = testDir.file( "file" );
 
-        fileSystem.create( file ).close();
+        fileSystem.write( file ).close();
 
         ProcessBuilder pb = new ProcessBuilder(
                 getJavaExecutable().toString(),
@@ -303,7 +305,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         InputStream stderr = process.getErrorStream();
         try
         {
-            assumeThat( stdout.readLine(), is( LockThisFileProgram.LOCKED_OUTPUT ) );
+            assumeTrue( LockThisFileProgram.LOCKED_OUTPUT.equals( stdout.readLine() ) );
         }
         catch ( Throwable e )
         {
@@ -339,11 +341,11 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         PageSwapperFactory factory = createSwapperFactory();
         factory.open( fileSystem, Configuration.EMPTY );
         File file = testDir.file( "file" );
-        fileSystem.create( file ).close();
+        fileSystem.write( file ).close();
 
         createSwapper( factory, file, 4, NO_CALLBACK, false, false ).close();
 
-        try ( StoreFileChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
+        try ( StoreFileChannel channel = fileSystem.write( file );
               FileLock fileLock = channel.tryLock() )
         {
             assertThat( fileLock, is( not( nullValue() ) ) );
@@ -358,13 +360,13 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         PageSwapperFactory factory = createSwapperFactory();
         factory.open( fileSystem, Configuration.EMPTY );
         File file = testDir.file( "file" );
-        fileSystem.create( file ).close();
+        fileSystem.write( file ).close();
 
         PageSwapper pageSwapper = createSwapper( factory, file, 4, NO_CALLBACK, false, bool( noChannelStriping ) );
 
         try
         {
-            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
+            StoreChannel channel = fileSystem.write( file );
 
             Thread.currentThread().interrupt();
             pageSwapper.force();
@@ -387,10 +389,10 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         factory.open( new DelegatingFileSystemAbstraction( fileSystem )
         {
             @Override
-            public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
+            public StoreChannel open( File fileName, Set<OpenOption> options ) throws IOException
             {
                 openFilesCounter.getAndIncrement();
-                return new DelegatingStoreChannel( super.open( fileName, openMode ) )
+                return new DelegatingStoreChannel( super.open( fileName, options ) )
                 {
                     @Override
                     public void close() throws IOException
@@ -402,7 +404,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
             }
         }, Configuration.EMPTY );
         File file = testDir.file( "file" );
-        try ( StoreChannel ch = fileSystem.create( file );
+        try ( StoreChannel ch = fileSystem.write( file );
                 FileLock ignore = ch.tryLock() )
         {
             createSwapper( factory, file, 4, NO_CALLBACK, false, bool( noChannelStriping ) ).close();
@@ -640,8 +642,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
         StoreChannel channel = mock( StoreChannel.class );
         when( channel.tryLock() ).thenReturn( mock( FileLock.class ) );
-        when( fs.create( any( File.class ) ) ).thenReturn( channel );
-        when( fs.open( any( File.class ), any() ) ).thenReturn( channel );
+        when( fs.write( any( File.class ) ) ).thenReturn( channel ).thenReturn( channel );
 
         // when
         factory.open( fs, Configuration.EMPTY );
@@ -649,7 +650,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         try
         {
             // then
-            verify( fs ).open( eq( file ), any( OpenMode.class ) );
+            verify( fs, times(2) ).write( eq( file ) );
         }
         finally
         {

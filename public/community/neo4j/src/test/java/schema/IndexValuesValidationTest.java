@@ -28,11 +28,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -43,6 +44,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.index.internal.gbptree.TreeNodeDynamicSize.keyValueSizeCapFromPageSize;
@@ -55,25 +57,26 @@ class IndexValuesValidationTest
     private TestDirectory directory;
 
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     void setUp( String... settings )
     {
-        database = new GraphDatabaseFactory()
+        managementService = new DatabaseManagementServiceBuilder()
                 .newEmbeddedDatabaseBuilder( directory.storeDir() )
-                .setConfig( stringMap( settings ) )
-                .newGraphDatabase();
+                .setConfig( stringMap( settings ) ).newDatabaseManagementService();
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
     void tearDown()
     {
-        database.shutdown();
+        managementService.shutdown();
     }
 
     @Test
     void validateIndexedNodePropertiesInLucene()
     {
-        setUp( default_schema_provider.name(), GraphDatabaseSettings.SchemaIndex.NATIVE10.providerName() );
+        setUp( default_schema_provider.name(), GraphDatabaseSettings.SchemaIndex.NATIVE30.providerName() );
         Label label = Label.label( "indexedNodePropertiesTestLabel" );
         String propertyName = "indexedNodePropertyName";
 
@@ -93,7 +96,8 @@ class IndexValuesValidationTest
                 transaction.success();
             }
         } );
-        assertThat( argumentException.getMessage(), equalTo( "Property value size is too large for index. Please see index documentation for limitations." ) );
+        assertThat( argumentException.getMessage(),
+                equalTo( "Property value is too large to index into this particular index. Please see index documentation for limitations." ) );
     }
 
     @Test

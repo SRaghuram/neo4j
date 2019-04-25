@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.neo4j.internal.id.IdType;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static java.lang.String.format;
 
@@ -26,15 +27,15 @@ public class ReplicatedIdAllocationRequest implements CoreReplicatedContent
     private final IdType idType;
     private final long idRangeStart;
     private final int idRangeLength;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public ReplicatedIdAllocationRequest( MemberId owner, IdType idType, long idRangeStart, int idRangeLength, String databaseName )
+    public ReplicatedIdAllocationRequest( MemberId owner, IdType idType, long idRangeStart, int idRangeLength, DatabaseId databaseId )
     {
         this.owner = owner;
         this.idType = idType;
         this.idRangeStart = idRangeStart;
         this.idRangeLength = idRangeLength;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -77,9 +78,9 @@ public class ReplicatedIdAllocationRequest implements CoreReplicatedContent
     }
 
     @Override
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     public MemberId owner()

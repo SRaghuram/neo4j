@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt.v4.runtime.integration;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -24,13 +24,14 @@ import org.neo4j.bolt.v3.messaging.request.CommitMessage;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.bolt.v3.messaging.request.RollbackMessage;
 import org.neo4j.bolt.v4.messaging.BeginMessage;
-import org.neo4j.bolt.v4.messaging.PullNMessage;
+import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
@@ -63,7 +64,7 @@ public class BoltV4TransportCommercialIT
 
     @Rule
     public final Neo4jWithSocket server =
-            new Neo4jWithSocket( getClass(), new TestCommercialGraphDatabaseFactory(), settings -> settings.put( auth_enabled.name(), "false" ) );
+            new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), settings -> settings.put( auth_enabled.name(), "false" ) );
 
     private HostnamePort address;
     private TransportConnection connection;
@@ -121,10 +122,10 @@ public class BoltV4TransportCommercialIT
             // execute a query
             connection.send( util.chunk( new RunMessage( query, paramWithRange( 30, 40 ) ) ) );
             assertThat( connection, util.eventuallyReceives(
-                    msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                    msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
-            // request 5 records but do not provide stmt_id
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 5L ) ) ) ) );
+            // request 5 records but do not provide qid
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 5L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 30L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 31L ) ) ) ),
@@ -133,23 +134,23 @@ public class BoltV4TransportCommercialIT
                     msgRecord( eqRecord( equalTo( longValue( 34L ) ) ) ),
                     msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-            // request 2 more records but do not provide stmt_id
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 2L ) ) ) ) );
+            // request 2 more records but do not provide qid
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 2L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 35L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 36L ) ) ) ),
                     msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-            // request 3 more records and provide stmt_id
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 3L, "stmt_id", 0L ) ) ) ) );
+            // request 3 more records and provide qid
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 3L, "qid", 0L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 37L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 38L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 39L ) ) ) ),
                     msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-            // request 10 more records but do not provide stmt_id, only 1 more record is available
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 10L ) ) ) ) );
+            // request 10 more records but do not provide qid, only 1 more record is available
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 10L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 40L ) ) ) ),
                     msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
@@ -172,10 +173,10 @@ public class BoltV4TransportCommercialIT
         // execute a query
         connection.send( util.chunk( new RunMessage( "CALL db.labels()" ) ) ); // Standalone procedure call
         assertThat( connection, util.eventuallyReceives(
-                msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
-        // request 5 records but do not provide stmt_id
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 5L ) ) ) ) );
+        // request 5 records but do not provide qid
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 5L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
                 msgRecord( eqRecord( equalTo( stringValue( "L30" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgRecord( eqRecord( equalTo( stringValue( "L31" ) ), equalTo( longValue( 1 ) ) ) ),
@@ -184,23 +185,23 @@ public class BoltV4TransportCommercialIT
                 msgRecord( eqRecord( equalTo( stringValue( "L34" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-        // request 2 more records but do not provide stmt_id
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 2L ) ) ) ) );
+        // request 2 more records but do not provide qid
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 2L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
                 msgRecord( eqRecord( equalTo( stringValue( "L35" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgRecord( eqRecord( equalTo( stringValue( "L36" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-        // request 3 more records and provide stmt_id
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 3L, "stmt_id", 0L ) ) ) ) );
+        // request 3 more records and provide qid
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 3L, "qid", 0L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
                 msgRecord( eqRecord( equalTo( stringValue( "L37" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgRecord( eqRecord( equalTo( stringValue( "L38" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgRecord( eqRecord( equalTo( stringValue( "L39" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
-        // request 10 more records but do not provide stmt_id, only 1 more record is available
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 10L ) ) ) ) );
+        // request 10 more records but do not provide qid, only 1 more record is available
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 10L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
                 msgRecord( eqRecord( equalTo( stringValue( "L40" ) ), equalTo( longValue( 1 ) ) ) ),
                 msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
@@ -226,10 +227,10 @@ public class BoltV4TransportCommercialIT
             // execute query #0
             connection.send( util.chunk( new RunMessage( query, paramWithRange( 1, 10 ) ) ) );
             assertThat( connection, util.eventuallyReceives(
-                    msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                    msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
             // request 3 records for query #0
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 3L, "stmt_id", 0L ) ) ) ) );
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 3L, "qid", 0L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 1L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 2L ) ) ) ),
@@ -239,10 +240,10 @@ public class BoltV4TransportCommercialIT
             // execute query #1
             connection.send( util.chunk( new RunMessage( query, paramWithRange(11, 20) ) ) );
             assertThat( connection, util.eventuallyReceives(
-                    msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 1L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                    msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 1L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
             // request 2 records for query #1
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 2L, "stmt_id", 1L ) ) ) ) );
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 2L, "qid", 1L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 11L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 12L ) ) ) ),
@@ -251,11 +252,11 @@ public class BoltV4TransportCommercialIT
             // execute query #2
             connection.send( util.chunk( new RunMessage( query, paramWithRange(21, 30) ) ) );
             assertThat( connection, util.eventuallyReceives(
-                    msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 2L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                    msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 2L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
             // request 4 records for query #2
-            // no stmt_id - should use the statement from the latest RUN
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 4L ) ) ) ) );
+            // no qid - should use the statement from the latest RUN
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 4L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 21L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 22L ) ) ) ),
@@ -266,23 +267,23 @@ public class BoltV4TransportCommercialIT
             // execute query #3
             connection.send( util.chunk( new RunMessage( query, paramWithRange(31, 40) ) ) );
             assertThat( connection, util.eventuallyReceives(
-                    msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 3L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                    msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 3L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
             // request 1 record for query #3
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 1L, "stmt_id", 3L ) ) ) ) );
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 1L, "qid", 3L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 31L ) ) ) ),
                     msgSuccess( singletonMap( "has_more", true ) ) ) );
 
             // request 2 records for query #0
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 2L, "stmt_id", 0L ) ) ) ) );
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 2L, "qid", 0L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 4L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 5L ) ) ) ),
                     msgSuccess( singletonMap( "has_more", true ) ) ) );
 
             // request 9 records for query #3
-            connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 9L, "stmt_id", 3L ) ) ) ) );
+            connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 9L, "qid", 3L ) ) ) ) );
             assertThat( connection, util.eventuallyReceives(
                     msgRecord( eqRecord( equalTo( longValue( 32L ) ) ) ),
                     msgRecord( eqRecord( equalTo( longValue( 33L ) ) ) ),
@@ -317,7 +318,7 @@ public class BoltV4TransportCommercialIT
             connection.send( util.chunk(
                     new BeginMessage(),
                     new RunMessage( query ),
-                    new PullNMessage( asMapValue( map( "n", 5L ) ) ),
+                    new PullMessage( asMapValue( map( "n", 5L ) ) ),
                     RollbackMessage.ROLLBACK_MESSAGE ) );
 
             // Then
@@ -330,9 +331,9 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager databaseManager = server.getDatabaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        DatabaseManager<?> databaseManager = server.getDatabaseManager();
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
 
         // create a node
         sessionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
@@ -348,9 +349,9 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager databaseManager = server.getDatabaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        DatabaseManager<?> databaseManager = server.getDatabaseManager();
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
 
         // create a node
         transactionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
@@ -363,11 +364,11 @@ public class BoltV4TransportCommercialIT
 
     private void sessionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
-        connection.send( util.chunk( new RunMessage( query, VirtualValues.EMPTY_MAP, asMapValue( map( "db_name", databaseName ) ) ) ) );
+        connection.send( util.chunk( new RunMessage( query, VirtualValues.EMPTY_MAP, asMapValue( map( "db", databaseName ) ) ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess( allOf( hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
         // "pull all"
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 100L ) ) ) ) );
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 100L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives( msgRecord( eqRecord( equalTo( expected ) ) ),
                 msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
     }
@@ -375,16 +376,16 @@ public class BoltV4TransportCommercialIT
     private void transactionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
         // begin a transaction
-        connection.send( util.chunk( new BeginMessage( asMapValue( map( "db_name", databaseName ) ) ) ) );
+        connection.send( util.chunk( new BeginMessage( asMapValue( map( "db", databaseName ) ) ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
         // run
         connection.send( util.chunk( new RunMessage( query ) ) );
         assertThat( connection, util.eventuallyReceives(
-                msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+                msgSuccess( allOf( hasEntry( is( "qid" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
         // "pull all"
-        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 100L, "stmt_id", 0L ) ) ) ) );
+        connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 100L, "qid", 0L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
                 msgRecord( eqRecord( equalTo( expected ) ) ),
                 msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );

@@ -30,6 +30,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DefaultDatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -42,6 +43,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.core.DefaultLabelIdCreator;
@@ -60,7 +62,8 @@ import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.procedure.builtin.routing.CommunityRoutingProcedureInstaller;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
+import org.neo4j.procedure.builtin.routing.SingleInstanceRoutingProcedureInstaller;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
@@ -68,7 +71,6 @@ import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
-import org.neo4j.udc.UsageData;
 
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockManager;
@@ -77,19 +79,14 @@ import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockManager;
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
  * that are specific to the Community edition.
  */
-public class CommunityEditionModule extends DefaultEditionModule
+public class CommunityEditionModule extends StandaloneEditionModule
 {
     public static final String COMMUNITY_SECURITY_MODULE_ID = "community-security-module";
 
-    private final Config config;
-    private final ConnectorPortRegister portRegister;
     protected final SslPolicyLoader sslPolicyLoader;
 
     public CommunityEditionModule( GlobalModule globalModule )
     {
-        this.config = globalModule.getGlobalConfig();
-        this.portRegister = globalModule.getConnectorPortRegister();
-
         Dependencies globalDependencies = globalModule.getGlobalDependencies();
         Config globalConfig = globalModule.getGlobalConfig();
         LogService logService = globalModule.getLogService();
@@ -132,22 +129,24 @@ public class CommunityEditionModule extends DefaultEditionModule
         ioLimiter = IOLimiter.UNLIMITED;
 
         connectionTracker = globalDependencies.satisfyDependency( createConnectionTracker() );
-
-        publishEditionInfo( globalDependencies.resolveDependency( UsageData.class ), globalModule.getDatabaseInfo(), globalConfig );
     }
 
-    protected Function<String,TokenHolders> createTokenHolderProvider( GlobalModule platform )
+    protected Function<DatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
         Config globalConfig = platform.getGlobalConfig();
-        Supplier<Kernel> kernelSupplier = () -> platform.getGlobalDependencies().resolveDependency( DatabaseManager.class )
-                        .getDatabaseContext( config.get( GraphDatabaseSettings.default_database ) )
-                        .map( DatabaseContext::getDatabase)
-                        .map( Database::getKernel )
-                        .orElseThrow( () -> new IllegalStateException( "Default database kernel should be always accessible" ) );
-        return ignored -> new TokenHolders(
-                new DelegatingTokenHolder( createPropertyKeyCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
-                new DelegatingTokenHolder( createLabelIdCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_LABEL ),
-                new DelegatingTokenHolder( createRelationshipTypeCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+        return databaseId -> {
+            DatabaseManager<?> databaseManager = platform.getGlobalDependencies().resolveDependency( DefaultDatabaseManager.class );
+            Supplier<Kernel> kernelSupplier = () ->
+            {
+                DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseId )
+                        .orElseThrow( () -> new IllegalStateException( "Default and system database kernels should always be accessible" ) );
+                return databaseContext.dependencies().resolveDependency( Kernel.class );
+            };
+            return new TokenHolders(
+                    new DelegatingTokenHolder( createPropertyKeyCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
+                    new DelegatingTokenHolder( createLabelIdCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_LABEL ),
+                    new DelegatingTokenHolder( createRelationshipTypeCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+        };
     }
 
     protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
@@ -224,12 +223,19 @@ public class CommunityEditionModule extends DefaultEditionModule
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
-        CommunityRoutingProcedureInstaller routingProcedureInstaller = new CommunityRoutingProcedureInstaller( portRegister, config );
-        routingProcedureInstaller.install( globalProcedures );
+        // no additional procedures in community edition
     }
 
     @Override
-    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+    protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    {
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
+        Config config = globalModule.getGlobalConfig();
+        return new SingleInstanceRoutingProcedureInstaller( databaseManager, portRegister, config );
+    }
+
+    @Override
+    public void createSecurityModule( GlobalModule globalModule )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )

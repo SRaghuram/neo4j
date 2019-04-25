@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexSample;
 import org.neo4j.kernel.api.index.IndexUpdater;
+import org.neo4j.kernel.impl.api.index.PhaseTracker;
 import org.neo4j.kernel.impl.index.schema.IndexFiles;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.NodePropertyAccessor;
@@ -71,7 +72,7 @@ class FusionIndexPopulator extends FusionIndexBase<IndexPopulator> implements In
         LazyInstanceSelector<Collection<IndexEntryUpdate<?>>> batchSelector = new LazyInstanceSelector<>( slot -> new ArrayList<>() );
         for ( IndexEntryUpdate<?> update : updates )
         {
-            batchSelector.select( slotSelector.selectSlot( update.values(), GROUP_OF ) ).add( update );
+            batchSelector.select( slotSelector.selectSlot( update.values(), CATEGORY_OF ) ).add( update );
         }
 
         // Manual loop due do multiple exception types
@@ -118,12 +119,18 @@ class FusionIndexPopulator extends FusionIndexBase<IndexPopulator> implements In
     @Override
     public void includeSample( IndexEntryUpdate<?> update )
     {
-        instanceSelector.select( slotSelector.selectSlot( update.values(), GROUP_OF ) ).includeSample( update );
+        instanceSelector.select( slotSelector.selectSlot( update.values(), CATEGORY_OF ) ).includeSample( update );
     }
 
     @Override
     public IndexSample sampleResult()
     {
         return combineSamples( instanceSelector.transform( IndexPopulator::sampleResult ) );
+    }
+
+    @Override
+    public void scanCompleted( PhaseTracker phaseTracker ) throws IndexEntryConflictException
+    {
+        instanceSelector.throwingForAll( ip -> ip.scanCompleted( phaseTracker ) );
     }
 }

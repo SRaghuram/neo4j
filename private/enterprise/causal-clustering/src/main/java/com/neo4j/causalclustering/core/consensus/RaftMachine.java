@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManage
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
@@ -44,28 +45,16 @@ import static java.lang.String.format;
  * <p>
  * The algorithm is driven by incoming messages provided to {@link #handle}.
  */
-public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandler
+public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandler, RoleProvider
 {
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
-    private InFlightCache inFlightCache;
-
-    @Override
-    public void onPanic()
-    {
-        stopTimers();
-    }
-
-    public enum Timeouts implements TimerService.TimerName
-    {
-        ELECTION,
-        HEARTBEAT
-    }
+    private final InFlightCache inFlightCache;
 
     private final RaftState state;
     private final MemberId myself;
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
-    private RaftMembershipManager membershipManager;
+    private final RaftMembershipManager membershipManager;
 
     private final VolatileFuture<MemberId> volatileLeader = new VolatileFuture<>( null );
 
@@ -73,7 +62,8 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
     private final Log log;
     private volatile Role currentRole = Role.FOLLOWER;
 
-    private RaftLogShippingManager logShipping;
+    private final RaftLogShippingManager logShipping;
+    private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
     public RaftMachine( MemberId myself, StateStorage<TermState> termStorage, StateStorage<VoteState> voteStorage, RaftLog entryLog,
             LeaderAvailabilityTimers leaderAvailabilityTimers, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LogProvider logProvider,
@@ -94,6 +84,12 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
                 logProvider, supportPreVoting, refuseToBecomeLeader );
 
         raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
+    }
+
+    @Override
+    public void onPanic()
+    {
+        stopTimers();
     }
 
     /**
@@ -168,8 +164,6 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
             throw new NoLeaderFoundException( e );
         }
     }
-
-    private Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
     @Override
     public synchronized void registerListener( LeaderListener listener )
@@ -291,6 +285,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
         return currentRole == LEADER;
     }
 
+    @Override
     public Role currentRole()
     {
         return currentRole;
@@ -325,5 +320,11 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
     public Set<MemberId> replicationMembers()
     {
         return membershipManager.replicationMembers();
+    }
+
+    public enum Timeouts implements TimerService.TimerName
+    {
+        ELECTION,
+        HEARTBEAT
     }
 }

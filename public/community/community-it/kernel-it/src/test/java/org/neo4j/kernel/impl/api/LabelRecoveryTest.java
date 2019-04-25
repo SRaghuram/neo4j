@@ -23,16 +23,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
@@ -41,13 +43,14 @@ class LabelRecoveryTest
     @Inject
     private EphemeralFileSystemAbstraction filesystem;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
-        if ( database != null )
+        if ( managementService != null )
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -65,7 +68,8 @@ class LabelRecoveryTest
     void shouldRecoverNodeWithDynamicLabelRecords()
     {
         // GIVEN
-        database = new TestGraphDatabaseFactory().setFileSystem( filesystem ).newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( filesystem ).newImpermanentService();
+        database = managementService.database( DEFAULT_DATABASE_NAME );
         Node node;
         Label[] labels = new Label[] { label( "a" ),
                 label( "b" ),
@@ -91,8 +95,9 @@ class LabelRecoveryTest
             tx.success();
         }
         EphemeralFileSystemAbstraction snapshot = filesystem.snapshot();
-        database.shutdown();
-        database = new TestGraphDatabaseFactory().setFileSystem( snapshot ).newImpermanentDatabase();
+        managementService.shutdown();
+        managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( snapshot ).newImpermanentService();
+        database = managementService.database( DEFAULT_DATABASE_NAME );
 
         // THEN
         try ( Transaction ignored = database.beginTx() )

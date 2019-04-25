@@ -42,11 +42,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.kernel.database.Database;
@@ -55,10 +56,11 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.Race;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -67,6 +69,7 @@ import org.neo4j.values.storable.Values;
 import static java.time.Duration.ofSeconds;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -77,11 +80,12 @@ class RecoveryCleanupIT
 
     private GraphDatabaseService db;
     private File storeDir;
-    private final TestGraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+    private final TestDatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
     private final ExecutorService executor = Executors.newFixedThreadPool( 2 );
     private final Label label = Label.label( "label" );
     private final String propKey = "propKey";
     private Map<Setting,String> testSpecificConfig = new HashMap<>();
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setup()
@@ -123,7 +127,7 @@ class RecoveryCleanupIT
             {
                 if ( db != null )
                 {
-                    db.shutdown();
+                    managementService.shutdown();
                 }
             }
         } );
@@ -139,7 +143,8 @@ class RecoveryCleanupIT
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
         factory.setUserLogProvider( logProvider );
         factory.setInternalLogProvider( logProvider );
-        startDatabase().shutdown();
+        startDatabase();
+        managementService.shutdown();
 
         // then
         logProvider.assertContainsLogCallContaining( "Label index cleanup job registered" );
@@ -153,15 +158,9 @@ class RecoveryCleanupIT
     }
 
     @Test
-    void nativeIndexFusion10MustLogCrashPointerCleanupDuringRecovery() throws Exception
+    void nativeIndexFusion30MustLogCrashPointerCleanupDuringRecovery() throws Exception
     {
-        nativeIndexMustLogCrashPointerCleanupDuringRecovery( GraphDatabaseSettings.SchemaIndex.NATIVE10, "native", "spatial", "temporal" );
-    }
-
-    @Test
-    void nativeIndexFusion20MustLogCrashPointerCleanupDuringRecovery() throws Exception
-    {
-        nativeIndexMustLogCrashPointerCleanupDuringRecovery( GraphDatabaseSettings.SchemaIndex.NATIVE20, "string", "native", "spatial", "temporal" );
+        nativeIndexMustLogCrashPointerCleanupDuringRecovery( GraphDatabaseSettings.SchemaIndex.NATIVE30, "native-btree-1.0" );
     }
 
     @Test
@@ -179,7 +178,8 @@ class RecoveryCleanupIT
         // when
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
         factory.setInternalLogProvider( logProvider );
-        startDatabase().shutdown();
+        startDatabase();
+        managementService.shutdown();
 
         // then
         List<Matcher<String>> matchers = new ArrayList<>();
@@ -220,13 +220,13 @@ class RecoveryCleanupIT
     {
         db = startDatabase();
 
-        DatabaseHealth databaseHealth = databaseHealth( db );
+        Health databaseHealth = databaseHealth( db );
         index( db );
         someData( db );
         checkpoint( db );
         someData( db );
         databaseHealth.panic( new Throwable( "Trigger recovery on next startup" ) );
-        db.shutdown();
+        managementService.shutdown();
         db = null;
     }
 
@@ -293,12 +293,13 @@ class RecoveryCleanupIT
 
     private GraphDatabaseService startDatabase()
     {
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         testSpecificConfig.forEach( builder::setConfig );
-        return builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static DatabaseHealth databaseHealth( GraphDatabaseService db )
+    private static Health databaseHealth( GraphDatabaseService db )
     {
         return dependencyResolver( db ).resolveDependency( DatabaseHealth.class );
     }
@@ -325,7 +326,7 @@ class RecoveryCleanupIT
         }
 
         @Override
-        public void recoveryCleanupFinished( long numberOfPagesVisited, long numberOfCleanedCrashPointers, long durationMillis )
+        public void recoveryCleanupFinished( long numberOfPagesVisited, long numberOfTreeNodes, long numberOfCleanedCrashPointers, long durationMillis )
         {
             barrier.reached();
         }

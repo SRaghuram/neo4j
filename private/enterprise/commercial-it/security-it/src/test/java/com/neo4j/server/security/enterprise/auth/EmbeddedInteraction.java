@@ -7,7 +7,7 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.util.Collections;
 import java.util.Map;
@@ -17,8 +17,9 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -29,6 +30,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
@@ -37,15 +39,16 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     private GraphDatabaseFacade db;
     private CommercialAuthManager authManager;
     private ConnectorPortRegister connectorRegister;
+    private DatabaseManagementService managementService;
 
     EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
-        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
+        DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         init( builder, config );
     }
 
-    private void init( GraphDatabaseBuilder builder, Map<String,String> config ) throws Throwable
+    private void init( DatabaseManagementServiceInternalBuilder builder, Map<String,String> config ) throws Throwable
     {
         builder.setConfig( new BoltConnector( "bolt" ).type, "BOLT" );
         builder.setConfig( new BoltConnector( "bolt" ).enabled, "true" );
@@ -58,7 +61,8 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
         builder.setConfig( config );
 
-        db = (GraphDatabaseFacade) builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
@@ -77,6 +81,12 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     public GraphDatabaseFacade getLocalGraph()
     {
         return db;
+    }
+
+    @Override
+    public void shutdown()
+    {
+        managementService.shutdown();
     }
 
     @Override
@@ -134,7 +144,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     @Override
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Override

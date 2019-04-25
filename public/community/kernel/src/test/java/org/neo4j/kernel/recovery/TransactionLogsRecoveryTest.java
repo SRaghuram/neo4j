@@ -35,7 +35,6 @@ import org.neo4j.common.ProgressReporter;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
@@ -60,6 +59,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -76,15 +76,19 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LOG_VERSION;
+import static org.neo4j.kernel.recovery.RecoveryStartInformation.NO_RECOVERY_REQUIRED;
 import static org.neo4j.kernel.recovery.RecoveryStartInformationProvider.NO_MONITOR;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
-class RecoveryTest
+class TransactionLogsRecoveryTest
 {
 
     @Inject
@@ -167,7 +171,7 @@ class RecoveryTest
                     monitors, false );
             CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
             life.add( new TransactionLogsRecovery( new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore,
-                    txStore, versionRepository,  NO_MONITOR )
+                    txStore, versionRepository,  NO_MONITOR, mock( Log.class ) )
             {
                 private int nr;
 
@@ -267,7 +271,7 @@ class RecoveryTest
                     monitors, false );
             CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
             life.add( new TransactionLogsRecovery( new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore,
-                    txStore, versionRepository, NO_MONITOR )
+                    txStore, versionRepository, NO_MONITOR, mock( Log.class ) )
             {
                 @Override
                 public void startRecovery()
@@ -406,6 +410,25 @@ class RecoveryTest
         assertEquals( marker.getByteOffset(), lastClosedTransaction[2] );
     }
 
+    @Test
+    void shouldInitSchemaLifeWhenRecoveryNotRequired() throws Exception
+    {
+        Lifecycle schemaLife = mock( Lifecycle.class );
+
+        RecoveryService recoveryService = mock( RecoveryService.class );
+        when( recoveryService.getRecoveryStartInformation() ).thenReturn( NO_RECOVERY_REQUIRED );
+
+        CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
+        RecoveryMonitor monitor = mock( RecoveryMonitor.class );
+
+        TransactionLogsRecovery logsRecovery = new TransactionLogsRecovery( recoveryService, logPruner, schemaLife, monitor, ProgressReporter.SILENT, true );
+
+        logsRecovery.init();
+
+        verify( monitor, never() ).recoveryRequired( any() );
+        verify( schemaLife ).init();
+    }
+
     private boolean recover( File storeDir, LogFiles logFiles )
     {
         LifeSupport life = new LifeSupport();
@@ -421,7 +444,7 @@ class RecoveryTest
             LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFiles, metadataCache, reader, monitors, false );
             CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
             life.add( new TransactionLogsRecovery( new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore,
-                    txStore, versionRepository, NO_MONITOR )
+                    txStore, versionRepository, NO_MONITOR, mock( Log.class ) )
             {
                 @Override
                 public void startRecovery()
@@ -448,7 +471,7 @@ class RecoveryTest
     private void writeSomeData( File file, Visitor<Pair<LogEntryWriter,Consumer<LogPositionMarker>>,IOException> visitor ) throws IOException
     {
 
-        try ( LogVersionedStoreChannel versionedStoreChannel = new PhysicalLogVersionedStoreChannel( fileSystem.open( file, OpenMode.READ_WRITE ), logVersion,
+        try ( LogVersionedStoreChannel versionedStoreChannel = new PhysicalLogVersionedStoreChannel( fileSystem.write( file ), logVersion,
                 CURRENT_LOG_VERSION );
                 PositionAwarePhysicalFlushableChannel writableLogChannel = new PositionAwarePhysicalFlushableChannel( versionedStoreChannel,
                         ByteBuffer.allocate( 1024 ) ) )

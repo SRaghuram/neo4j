@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.counts.CountsAccessor;
@@ -64,7 +63,7 @@ import org.neo4j.lock.LockService;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
@@ -86,6 +85,7 @@ import org.neo4j.util.Preconditions;
 import org.neo4j.util.VisibleForTesting;
 import org.neo4j.util.concurrent.WorkSync;
 
+import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.RECOVERY;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
@@ -94,7 +94,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 {
     private final NeoStores neoStores;
     private final TokenHolders tokenHolders;
-    private final DatabaseHealth databaseHealth;
+    private final Health databaseHealth;
     private final SchemaCache schemaCache;
     private final IntegrityValidator integrityValidator;
     private final CacheAccessBackDoor cacheAccess;
@@ -124,7 +124,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             SchemaState schemaState,
             ConstraintRuleAccessor constraintSemantics,
             LockService lockService,
-            DatabaseHealth databaseHealth,
+            Health databaseHealth,
             IdGeneratorFactory idGeneratorFactory,
             IdController idController,
             VersionContextSupplier versionContextSupplier )
@@ -145,13 +145,13 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
             schemaCache = new SchemaCache( constraintSemantics );
 
-            countsStore = openCountsStore( fs, pageCache, databaseLayout, config, logProvider, versionContextSupplier );
-
             integrityValidator = new IntegrityValidator( neoStores );
             cacheAccess = new BridgingCacheAccess( schemaCache, schemaState, tokenHolders );
 
             denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
             recordIdBatchSize = config.get( GraphDatabaseSettings.record_id_batch_size );
+
+            countsStore = openCountsStore( fs, pageCache, databaseLayout, config, logProvider, versionContextSupplier );
         }
         catch ( Throwable failure )
         {
@@ -318,7 +318,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             // Schema index application
             appliers.add( new IndexBatchTransactionApplier( indexUpdateListener, labelScanStoreSync, indexUpdatesSync,
                     neoStores.getNodeStore(), neoStores.getRelationshipStore(),
-                    indexUpdatesConverter, this, schemaCache, indexActivator ) );
+                    neoStores.getPropertyStore(), this, schemaCache, indexActivator ) );
         }
 
         // Perform the application
@@ -329,12 +329,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private LockService lockService( TransactionApplicationMode mode )
     {
         return mode == RECOVERY || mode == REVERSE_RECOVERY ? NO_LOCK_SERVICE : lockService;
-    }
-
-    public void satisfyDependencies( DependencySatisfier satisfier )
-    {
-        satisfier.satisfyDependency( cacheAccess );
-        satisfier.satisfyDependency( integrityValidator );
     }
 
     @Override
@@ -360,15 +354,13 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public void stop() throws Exception
     {
-        idController.stop();
-        countsStore.stop();
+        executeAll( idController::stop, countsStore::stop );
     }
 
     @Override
     public void shutdown() throws Exception
     {
-        countsStore.shutdown();
-        neoStores.close();
+        executeAll( countsStore::shutdown, neoStores::close );
     }
 
     @Override

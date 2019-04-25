@@ -28,12 +28,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 
 import org.neo4j.commandline.admin.IncorrectUsage;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.Args;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.util.Validators;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -42,12 +43,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class DatabaseImporterTest
 {
     @Inject
     private TestDirectory testDir;
+    private DatabaseManagementService managementService;
 
     @Test
     void requiresFromArgument()
@@ -87,11 +90,14 @@ class DatabaseImporterTest
 
     private File provideStoreDirectory()
     {
-        GraphDatabaseService db = null;
-        File homeStoreDir = testDir.databaseDir( "home" );
+        GraphDatabaseAPI db = null;
+        File storeDir = testDir.databaseDir( "home" );
+        File databaseDirectory;
         try
         {
-            db = new TestGraphDatabaseFactory().newEmbeddedDatabase( homeStoreDir );
+            managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( storeDir );
+            db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+            databaseDirectory = db.databaseLayout().databaseDirectory();
             try ( Transaction transaction = db.beginTx() )
             {
                 db.createNode();
@@ -102,11 +108,11 @@ class DatabaseImporterTest
         {
             if ( db != null )
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         }
 
-        return homeStoreDir;
+        return databaseDirectory;
     }
 
     private static Matcher<File> isExistingDatabase()

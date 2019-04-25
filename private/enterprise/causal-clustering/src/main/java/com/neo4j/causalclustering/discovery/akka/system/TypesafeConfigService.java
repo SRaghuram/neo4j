@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.discovery.akka.marshal.BaseAkkaSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ClusterIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForMemberIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreTopologySerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseLeaderInfoMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.LeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.MemberIdSerializer;
@@ -42,6 +43,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.SocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService
 {
@@ -179,6 +181,7 @@ public final class TypesafeConfigService
         addSerializer( ReadReplicaTopology.class, ReadReplicaTopologySerializer.class, configMap );
         addSerializer( LeaderInfoDirectoryMessage.class, DatabaseLeaderInfoMessageSerializer.class, configMap );
         addSerializer( ReplicatedLeaderInfo.class, ReplicatedLeaderInfoSerializer.class, configMap );
+        addSerializer( DatabaseId.class, DatabaseIdSerializer.class, configMap );
 
         return ConfigFactory.parseMap( configMap );
     }

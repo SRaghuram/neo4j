@@ -5,13 +5,16 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.rule.TestDirectory;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PropertyExistenceIT
 {
@@ -21,7 +24,9 @@ public class PropertyExistenceIT
     @Test
     public void deletedNodesNotCheckedByExistenceConstraints()
     {
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.directory() );
+        DatabaseManagementService managementService =
+                new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.directory() );
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             try ( Transaction transaction = database.beginTx() )
@@ -44,7 +49,7 @@ public class PropertyExistenceIT
         }
         finally
         {
-            database.shutdown();
+            managementService.shutdown();
         }
 
     }

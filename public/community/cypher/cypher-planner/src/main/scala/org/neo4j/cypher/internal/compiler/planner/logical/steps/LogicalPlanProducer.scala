@@ -25,12 +25,11 @@ import org.neo4j.cypher.internal.compiler.planner._
 import org.neo4j.cypher.internal.compiler.planner.logical.LogicalPlanningContext
 import org.neo4j.cypher.internal.compiler.planner.logical.Metrics.CardinalityModel
 import org.neo4j.cypher.internal.ir._
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.{Union, UnwindCollection, ValueHashJoin, DeleteExpression => DeleteExpressionPlan, Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{Union, UnwindCollection, ValueHashJoin, DeleteExpression => DeleteExpressionPlan, Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner.Thunk
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attributes, IdGen}
 import org.neo4j.cypher.internal.v4_0.util.{AssertionRunner, ExhaustiveShortestPathForbiddenException, InputPosition, InternalException}
@@ -225,7 +224,7 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
 
   def planNodeIndexScan(idName: String,
                         label: LabelToken,
-                        property: IndexedProperty,
+                        properties: Seq[IndexedProperty],
                         solvedPredicates: Seq[Expression] = Seq.empty,
                         solvedHint: Option[UsingIndexHint] = None,
                         argumentIds: Set[String],
@@ -237,12 +236,12 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
       .addHints(solvedHint)
       .addArgumentIds(argumentIds.toIndexedSeq)
     )
-    annotate(NodeIndexScan(idName, label, property, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
+    annotate(NodeIndexScan(idName, label, properties, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
   }
 
   def planNodeIndexContainsScan(idName: String,
                                 label: LabelToken,
-                                property: IndexedProperty,
+                                properties: Seq[IndexedProperty],
                                 solvedPredicates: Seq[Expression],
                                 solvedHint: Option[UsingIndexHint],
                                 valueExpr: Expression,
@@ -255,12 +254,13 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
       .addHints(solvedHint)
       .addArgumentIds(argumentIds.toIndexedSeq)
     )
-    annotate(NodeIndexContainsScan(idName, label, property, valueExpr, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
+    // TODO uses .head at the moment
+    annotate(NodeIndexContainsScan(idName, label, properties.head, valueExpr, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
   }
 
   def planNodeIndexEndsWithScan(idName: String,
                                 label: LabelToken,
-                                property: IndexedProperty,
+                                properties: Seq[IndexedProperty],
                                 solvedPredicates: Seq[Expression],
                                 solvedHint: Option[UsingIndexHint],
                                 valueExpr: Expression,
@@ -273,7 +273,8 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
       .addHints(solvedHint)
       .addArgumentIds(argumentIds.toIndexedSeq)
     )
-    annotate(NodeIndexEndsWithScan(idName, label, property, valueExpr, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
+    // TODO uses .head at the moment
+    annotate(NodeIndexEndsWithScan(idName, label, properties.head, valueExpr, argumentIds, toIndexOrder(providedOrder)), solved, providedOrder, context)
   }
 
   def planNodeHashJoin(nodes: Set[String], left: LogicalPlan, right: LogicalPlan, hints: Seq[UsingJoinHint], context: LogicalPlanningContext): LogicalPlan = {
@@ -422,12 +423,6 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
     planRegularProjectionHelper(inner, expressions, context, solved)
   }
 
-  private def planRegularProjectionHelper(inner: LogicalPlan, expressions: Map[String, Expression], context: LogicalPlanningContext, solved: PlannerQuery) = {
-    val columnsWithRenames = renameProvidedOrderColumns(providedOrders.get(inner.id).columns, expressions)
-    val providedOrder = ProvidedOrder(columnsWithRenames)
-    annotate(Projection(inner, expressions), solved, providedOrder, context)
-  }
-
   def planAggregation(left: LogicalPlan,
                       grouping: Map[String, Expression],
                       aggregation: Map[String, Expression],
@@ -438,21 +433,7 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
       AggregatingQueryProjection(groupingExpressions = reportedGrouping, aggregationExpressions = reportedAggregation)
     ))
 
-    // Trim provided order for each sort column, if it is a non-grouping column
-    val trimmed = providedOrders.get(left.id).columns.takeWhile {
-      case ProvidedOrder.Column(Property(Variable(varName), PropertyKeyName(propName))) =>
-        grouping.values.exists {
-          case CachedNodeProperty(`varName`, PropertyKeyName(`propName`)) => true
-          case Property(Variable(`varName`), PropertyKeyName(`propName`)) => true
-          case _ => false
-        }
-      case ProvidedOrder.Column(expression) =>
-        grouping.values.exists {
-          case `expression` => true
-          case _ => false
-        }
-    }
-    val trimmedAndRenamed = renameProvidedOrderColumns(trimmed, grouping)
+    val trimmedAndRenamed = trimAndRenameProvidedOrder(providedOrders.get(left.id), grouping)
 
     annotate(Aggregation(left, grouping, aggregation), solved, ProvidedOrder(trimmedAndRenamed), context)
   }
@@ -583,6 +564,17 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
     val columnsWithRenames = renameProvidedOrderColumns(providedOrders.get(left.id).columns, expressions)
     val providedOrder =  ProvidedOrder(columnsWithRenames)
     annotate(Distinct(left, expressions), solved, providedOrder, context)
+  }
+
+  def planOrderedDistinct(left: LogicalPlan,
+                          expressions: Map[String, Expression],
+                          orderToLeverage: Seq[Expression],
+                          reported: Map[String, Expression],
+                          context: LogicalPlanningContext): LogicalPlan = {
+    val solved: PlannerQuery = solveds.get(left.id).updateTailOrSelf(_.updateQueryProjection(_ => DistinctQueryProjection(reported)))
+    val columnsWithRenames = renameProvidedOrderColumns(providedOrders.get(left.id).columns, expressions)
+    val providedOrder =  ProvidedOrder(columnsWithRenames)
+    annotate(OrderedDistinct(left, expressions, orderToLeverage), solved, providedOrder, context)
   }
 
   def updateSolvedForOr(orPlan: LogicalPlan, orPredicate: Ors, predicates: Set[Expression], context: LogicalPlanningContext): LogicalPlan = {
@@ -783,13 +775,11 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
     * There probably exists some type level way of achieving this with type safety instead of manually searching through the expression tree like this
     */
   private def assertNoBadExpressionsExists(root: Any): Unit = {
-    AssertionRunner.runUnderAssertion(new Thunk {
-      override def apply(): Unit = new FoldableAny(root).treeExists {
-        case _: PatternComprehension | _: PatternExpression | _: MapProjection =>
-          throw new InternalException(s"This expression should not be added to a logical plan:\n$root")
-        case _ =>
-          false
-      }
+    AssertionRunner.runUnderAssertion(() => new FoldableAny(root).treeExists {
+      case _: PatternComprehension | _: PatternExpression | _: MapProjection =>
+        throw new InternalException(s"This expression should not be added to a logical plan:\n$root")
+      case _ =>
+        false
     })
   }
 
@@ -802,6 +792,12 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
     }
     else
       pattern.dir
+  }
+
+  private def planRegularProjectionHelper(inner: LogicalPlan, expressions: Map[String, Expression], context: LogicalPlanningContext, solved: PlannerQuery) = {
+    val columnsWithRenames = renameProvidedOrderColumns(providedOrders.get(inner.id).columns, expressions)
+    val providedOrder = ProvidedOrder(columnsWithRenames)
+    annotate(Projection(inner, expressions), solved, providedOrder, context)
   }
 
   /**
@@ -833,5 +829,23 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel, planningAttri
           case (newName, `expression`) => ProvidedOrder.Column(Variable(newName)(expression.position), columnOrder.isAscending)
         }.getOrElse(columnOrder)
     }
+  }
+
+  private def trimAndRenameProvidedOrder(providedOrder: ProvidedOrder, grouping: Map[String, Expression]): Seq[ProvidedOrder.Column] = {
+    // Trim provided order for each sort column, if it is a non-grouping column
+    val trimmed = providedOrder.columns.takeWhile {
+      case ProvidedOrder.Column(Property(Variable(varName), PropertyKeyName(propName))) =>
+        grouping.values.exists {
+          case CachedNodeProperty(`varName`, PropertyKeyName(`propName`)) => true
+          case Property(Variable(`varName`), PropertyKeyName(`propName`)) => true
+          case _ => false
+        }
+      case ProvidedOrder.Column(expression) =>
+        grouping.values.exists {
+          case `expression` => true
+          case _ => false
+        }
+    }
+    renameProvidedOrderColumns(trimmed, grouping)
   }
 }

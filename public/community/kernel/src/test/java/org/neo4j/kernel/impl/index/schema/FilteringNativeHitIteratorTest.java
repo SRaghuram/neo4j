@@ -22,13 +22,11 @@ package org.neo4j.kernel.impl.index.schema;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.TextValue;
@@ -55,7 +53,7 @@ public class FilteringNativeHitIteratorTest
             keys.add( random.nextAlphaNumericString() );
         }
 
-        RawCursor<Hit<StringIndexKey,NativeIndexValue>,IOException> cursor = new ResultCursor( keys.iterator() );
+        Seeker<StringIndexKey,NativeIndexValue> cursor = new ResultCursor( keys.iterator() );
         IndexQuery[] predicates = new IndexQuery[]{mock( IndexQuery.class )};
         Predicate<String> filter = string -> string.contains( "a" );
         when( predicates[0].acceptsValue( any( Value.class ) ) ).then( invocation -> filter.test( ((TextValue)invocation.getArgument( 0 )).stringValue() ) );

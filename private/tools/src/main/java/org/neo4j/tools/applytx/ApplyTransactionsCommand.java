@@ -5,7 +5,6 @@
  */
 package org.neo4j.tools.applytx;
 
-import java.io.File;
 import java.io.PrintStream;
 import java.util.function.Supplier;
 
@@ -48,12 +47,12 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
  */
 public class ApplyTransactionsCommand extends ArgsCommand
 {
-    private final File from;
+    private final DatabaseLayout fromLayout;
     private final Supplier<GraphDatabaseAPI> to;
 
-    public ApplyTransactionsCommand( File from, Supplier<GraphDatabaseAPI> to )
+    ApplyTransactionsCommand( DatabaseLayout fromLayout, Supplier<GraphDatabaseAPI> to )
     {
-        this.from = from;
+        this.fromLayout = fromLayout;
         this.to = to;
     }
 
@@ -83,11 +82,11 @@ public class ApplyTransactionsCommand extends ArgsCommand
             toTx = Long.parseLong( whereTo );
         }
 
-        long lastApplied = applyTransactions( from, to.get(), fromTx, toTx, out );
+        long lastApplied = applyTransactions( fromLayout, to.get(), fromTx, toTx, out );
         out.println( "Applied transactions up to and including " + lastApplied );
     }
 
-    private long applyTransactions( File fromPath, GraphDatabaseAPI toDb,
+    private long applyTransactions( DatabaseLayout fromLayout, GraphDatabaseAPI toDb,
             long fromTxExclusive, long toTxInclusive, PrintStream out ) throws Exception
     {
         DependencyResolver resolver = toDb.getDependencyResolver();
@@ -100,8 +99,7 @@ public class ApplyTransactionsCommand extends ArgsCommand
               JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem, jobScheduler ) )
         {
-            LogicalTransactionStore source = life.add( new ReadOnlyTransactionStore( pageCache, fileSystem, DatabaseLayout.of( fromPath ),
-                    Config.defaults(), new Monitors() ) );
+            LogicalTransactionStore source = life.add( new ReadOnlyTransactionStore( pageCache, fileSystem, fromLayout, Config.defaults(), new Monitors() ) );
             life.start();
             long lastAppliedTx = fromTxExclusive;
             // Some progress if there are more than a couple of transactions to apply

@@ -11,7 +11,6 @@ import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -26,6 +25,7 @@ import org.neo4j.test.DbRepresentation;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -44,7 +44,7 @@ public class RecoveryIT
 
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<File> storeDirs = cluster.coreMembers().stream().map( CoreClusterMember::databaseDirectory ).collect( toSet() );
+        Set<DatabaseLayout> databaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         assertEventually( "All cores have the same data",
                 () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
@@ -54,7 +54,7 @@ public class RecoveryIT
         cluster.shutdown();
 
         // then
-        storeDirs.forEach( RecoveryIT::assertConsistent );
+        databaseLayouts.forEach( RecoveryIT::assertConsistent );
     }
 
     @Test
@@ -62,11 +62,11 @@ public class RecoveryIT
     {
         // given
         Cluster cluster = clusterRule.startCluster();
-        int clusterSize = cluster.numberOfCoreMembersReportedByTopology();
+        int clusterSize = cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME );
 
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<File> storeDirs = cluster.coreMembers().stream().map( CoreClusterMember::databaseDirectory ).collect( toSet() );
+        Set<DatabaseLayout> layouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         // when
         for ( int i = 0; i < clusterSize; i++ )
@@ -83,7 +83,7 @@ public class RecoveryIT
 
         cluster.shutdown();
 
-        storeDirs.forEach( RecoveryIT::assertConsistent );
+        layouts.forEach( RecoveryIT::assertConsistent );
     }
 
     private static DbRepresentation dbRepresentation( CoreClusterMember member )
@@ -91,12 +91,12 @@ public class RecoveryIT
         return  DbRepresentation.of( member.database() );
     }
 
-    private static void assertConsistent( File storeDir )
+    private static void assertConsistent( DatabaseLayout databaseLayout )
     {
         ConsistencyCheckService.Result result;
         try
         {
-            result = new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( storeDir ), Config.defaults(),
+            result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(),
                     ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true );
         }
         catch ( Exception e )
@@ -109,7 +109,7 @@ public class RecoveryIT
 
     private static void fireSomeLoadAtTheCluster( Cluster cluster ) throws Exception
     {
-        for ( int i = 0; i < cluster.numberOfCoreMembersReportedByTopology(); i++ )
+        for ( int i = 0; i < cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ); i++ )
         {
             final String prop = "val" + i;
             cluster.coreTx( ( db, tx ) ->

@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
@@ -18,18 +19,13 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  */
 public interface TopologyService extends Lifecycle
 {
-    String localDBName();
+    Map<MemberId,CoreServerInfo> allCoreServers();
 
-    // It is perhaps confusing (Or even error inducing) that this core Topology will always contain the cluster id
-    // for the database local to the host upon which this method is called.
-    // TODO: evaluate returning clusterId = null for global Topologies returned by allCoreServers()
-    CoreTopology allCoreServers();
+    CoreTopology coreTopologyForDatabase( DatabaseId databaseId );
 
-    CoreTopology localCoreServers();
+    Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
-    ReadReplicaTopology allReadReplicas();
-
-    ReadReplicaTopology localReadReplicas();
+    ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 

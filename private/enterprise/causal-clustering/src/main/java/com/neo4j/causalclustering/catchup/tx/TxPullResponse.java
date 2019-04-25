@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.identity.StoreId;
-
 import java.util.Objects;
 
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.storageengine.api.StoreId;
 
 public class TxPullResponse
 {

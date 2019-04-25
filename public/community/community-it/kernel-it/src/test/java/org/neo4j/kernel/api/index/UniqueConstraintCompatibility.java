@@ -37,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -52,12 +53,13 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.lock.Lock;
 import org.neo4j.lock.LockService;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.lock.LockService.LockType;
 
@@ -68,6 +70,9 @@ import static org.neo4j.lock.LockService.LockType;
         " errors or warnings in some IDEs about test classes needing a public zero-arg constructor." )
 public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTestSuite.Compatibility
 {
+
+    private DatabaseManagementService managementService;
+
     public UniqueConstraintCompatibility( IndexProviderCompatibilityTestSuite testSuite )
     {
         super( testSuite, TestIndexDescriptorFactory.uniqueForLabel( 1, 2 ) );
@@ -133,17 +138,17 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
     @Before
     public void setUp()
     {
-        TestGraphDatabaseFactory dbFactory = new TestGraphDatabaseFactory();
+        TestDatabaseManagementServiceBuilder dbFactory = new TestDatabaseManagementServiceBuilder();
         dbFactory.setExtensions( Collections.singletonList( new PredefinedIndexProviderFactory( indexProvider ) ) );
-        db = dbFactory.newImpermanentDatabaseBuilder( graphDbDir )
-                      .setConfig( default_schema_provider, indexProvider.getProviderDescriptor().name() )
-                      .newGraphDatabase();
+        managementService = dbFactory.newImpermanentDatabaseBuilder( graphDbDir )
+                      .setConfig( default_schema_provider, indexProvider.getProviderDescriptor().name() ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     // -- Tests:
@@ -835,7 +840,7 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
     {
         private final String name;
 
-        protected Action( String name )
+        Action( String name )
         {
             this.name = name;
         }
@@ -976,7 +981,6 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
 
     private <T> T resolveInternalDependency( Class<T> type )
     {
-        @SuppressWarnings( "deprecation" )
         GraphDatabaseAPI api = (GraphDatabaseAPI) db;
         DependencyResolver resolver = api.getDependencyResolver();
         return resolver.resolveDependency( type );

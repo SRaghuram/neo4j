@@ -55,6 +55,9 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     else makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
   private val toOffset = toSlot.offset
 
+  nodePredicate.registerOwningPipe(this)
+  relationshipPredicate.registerOwningPipe(this)
+
   //===========================================================================
   // Runtime code
   //===========================================================================
@@ -117,7 +120,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.flatMap {
       inputRow =>
-        val fromNode = getFromNodeFunction(inputRow)
+        val fromNode = getFromNodeFunction.applyAsLong(inputRow)
         if (entityIsNull(fromNode)) {
           val resultRow = SlottedExecutionContext(slots)
           resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
@@ -159,5 +162,5 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     }
 
   private def isToNodeValid(row: ExecutionContext, node: LNode): Boolean =
-    shouldExpandAll || getToNodeFunction(row) == node
+    shouldExpandAll || getToNodeFunction.applyAsLong(row) == node
 }

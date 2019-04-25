@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -46,7 +47,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerImpl;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
@@ -54,6 +55,7 @@ import org.neo4j.token.api.TokenHolder;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
 
@@ -66,11 +68,13 @@ public class TestRecoveryScenarios
     private GraphDatabaseAPI db;
 
     private final FlushStrategy flush;
+    private DatabaseManagementService managementService;
 
     @Before
     public void before()
     {
-        db = (GraphDatabaseAPI) databaseFactory( fsRule.get() ).newImpermanentDatabase();
+        managementService = databaseFactory( fsRule.get() ).newImpermanentService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     public TestRecoveryScenarios( FlushStrategy flush )
@@ -81,7 +85,7 @@ public class TestRecoveryScenarios
     @After
     public void after()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -319,16 +323,17 @@ public class TestRecoveryScenarios
         }
     }
 
-    private static TestGraphDatabaseFactory databaseFactory( FileSystemAbstraction fs )
+    private static TestDatabaseManagementServiceBuilder databaseFactory( FileSystemAbstraction fs )
     {
-        return new TestGraphDatabaseFactory().setFileSystem( fs );
+        return new TestDatabaseManagementServiceBuilder().setFileSystem( fs );
     }
 
     @SuppressWarnings( "deprecation" )
     private void crashAndRestart() throws Exception
     {
         final GraphDatabaseService db1 = db;
-        FileSystemAbstraction uncleanFs = fsRule.snapshot( db1::shutdown );
-        db = (GraphDatabaseAPI) databaseFactory( uncleanFs ).newImpermanentDatabase();
+        FileSystemAbstraction uncleanFs = fsRule.snapshot( managementService::shutdown );
+        DatabaseManagementService managementService = databaseFactory( uncleanFs ).newImpermanentService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

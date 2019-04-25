@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
@@ -18,12 +18,12 @@ import java.util.function.Consumer;
 
 class AggregateStateMachinesCommandDispatcher implements CommandDispatcher
 {
-    private final DatabaseService databaseService;
+    private final ClusteredDatabaseManager databaseManager;
     private final CoreStateRepository coreStateRepository;
 
-    AggregateStateMachinesCommandDispatcher( DatabaseService databaseService, CoreStateRepository coreStateRepository )
+    AggregateStateMachinesCommandDispatcher( ClusteredDatabaseManager databaseManager, CoreStateRepository coreStateRepository )
     {
-        this.databaseService = databaseService;
+        this.databaseManager = databaseManager;
         this.coreStateRepository = coreStateRepository;
     }
 
@@ -65,11 +65,12 @@ class AggregateStateMachinesCommandDispatcher implements CommandDispatcher
 
     private CoreStateMachines stateMachinesForCommand( CoreReplicatedContent command )
     {
-        databaseService.assertHealthy( IllegalStateException.class );
-        PerDatabaseCoreStateComponents dbState = coreStateRepository.getDatabaseState( command.databaseName() )
+        var databaseId = command.databaseId();
+        //TODO: Move the healthy check to the CoreStateService. If its going to take a databaseManager as a param anyway.
+        databaseManager.assertHealthy( databaseId, IllegalStateException.class );
+        DatabaseCoreStateComponents dbState = coreStateRepository.getDatabaseState( command.databaseId() )
                 .orElseThrow( () -> new IllegalStateException( String.format( "The replicated command %s specifies a database %s " +
-                    "which does not exist or has not been initialised.", command, command.databaseName() ) ) );
-
+                    "which does not exist or has not been initialised.", command, command.databaseId().name() ) ) );
         return dbState.stateMachines();
     }
 }

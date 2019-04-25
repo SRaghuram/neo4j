@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt.v4.runtime.integration;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -20,6 +20,7 @@ import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -28,7 +29,6 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.bolt.runtime.StatementProcessor.EMPTY;
 import static org.neo4j.bolt.testing.BoltMatchers.containsRecord;
-import static org.neo4j.kernel.api.exceptions.Status.Request.Invalid;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SyntaxError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 
@@ -39,16 +39,16 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     protected static final BoltChannel BOLT_CHANNEL = BoltTestUtil.newTestBoltChannel( "conn-v0-test-boltchannel-id" );
 
     @RegisterExtension
-    static final SessionExtension env = new SessionExtension( new TestCommercialGraphDatabaseFactory() );
+    static final SessionExtension env = new SessionExtension( new TestCommercialDatabaseManagementServiceBuilder() );
 
-    protected DatabaseManager databaseManager()
+    protected DatabaseManager<?> databaseManager()
     {
         return env.databaseManager();
     }
 
-    private String defaultDatabaseName()
+    private DatabaseId defaultDatabaseId()
     {
-        return env.defaultDatabaseName();
+        return new DatabaseId( env.defaultDatabaseName() );
     }
 
     @Test
@@ -107,16 +107,16 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     void shouldErrorIfDatabaseNotExists() throws Throwable
     {
         BoltStateMachineV1 machine = newStateMachineInReadyState();
-        DatabaseManager databaseManager = databaseManager();
-        databaseManager.dropDatabase( defaultDatabaseName() );
-        runWithFailure( "RETURN 1", machine, Invalid );
+        DatabaseManager<?> databaseManager = databaseManager();
+        databaseManager.dropDatabase( defaultDatabaseId() );
+        runWithFailure( "RETURN 1", machine, Status.Database.DatabaseNotFound );
     }
 
     @Test
     void shouldErrorIfDatabaseStopped() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManager();
-        databaseManager.stopDatabase( defaultDatabaseName() );
+        DatabaseManager<?> databaseManager = databaseManager();
+        databaseManager.stopDatabase( defaultDatabaseId() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();
         runWithFailure( "RETURN 1", machine, Status.General.UnknownError );

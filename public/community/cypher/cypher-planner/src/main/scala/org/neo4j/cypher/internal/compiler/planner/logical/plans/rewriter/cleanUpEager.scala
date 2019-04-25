@@ -19,12 +19,12 @@
  */
 package org.neo4j.cypher.internal.compiler.planner.logical.plans.rewriter
 
+import org.neo4j.cypher.internal.logical.plans.{Eager, Limit, LoadCSV, LogicalPlan, UnwindCollection}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Solveds
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attributes, SameId}
 import org.neo4j.cypher.internal.v4_0.util.{Rewriter, bottomUp}
-import org.neo4j.cypher.internal.logical.plans.{Eager, Limit, LoadCSV, UnwindCollection}
 
-case class cleanUpEager(solveds: Solveds, attributes: Attributes) extends Rewriter {
+case class cleanUpEager(solveds: Solveds, attributes: Attributes[LogicalPlan]) extends Rewriter {
 
   private val instance: Rewriter = bottomUp(Rewriter.lift {
 
@@ -45,7 +45,7 @@ case class cleanUpEager(solveds: Solveds, attributes: Attributes) extends Rewrit
       res
 
     // LIMIT E => E LIMIT
-    case limit@Limit(eager@Eager(source), _, _8) =>
+    case limit@Limit(eager@Eager(source), _, _) =>
       val res = eager.copy(source = limit.copy(source = source)(SameId(limit.id)))(attributes.copy(eager.id))
       solveds.copy(limit.id, res.id)
       res

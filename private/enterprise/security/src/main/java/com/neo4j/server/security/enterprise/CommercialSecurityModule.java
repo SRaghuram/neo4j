@@ -15,15 +15,15 @@ import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.auth.ShiroCaffeineCache;
 import com.neo4j.server.security.enterprise.auth.UserManagementProcedures;
 import com.neo4j.server.security.enterprise.auth.plugin.PluginRealm;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
-import com.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
@@ -32,6 +32,7 @@ import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,15 +63,12 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.impl.factory.AccessCapability;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
@@ -91,7 +89,7 @@ public class CommercialSecurityModule extends SecurityModule
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
-    private DatabaseManager databaseManager;
+    private DatabaseManager<?> databaseManager;
     private boolean initSystemGraphOnStart;
     private Config config;
     private LogProvider logProvider;
@@ -107,9 +105,8 @@ public class CommercialSecurityModule extends SecurityModule
     }
 
     @Override
-    public void setup( Dependencies dependencies ) throws KernelException
+    public void setup( Dependencies dependencies ) throws KernelException, IOException
     {
-        // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
 
@@ -124,12 +121,7 @@ public class CommercialSecurityModule extends SecurityModule
         GlobalProcedures globalProcedures = dependencies.procedures();
         JobScheduler jobScheduler = dependencies.scheduler();
 
-        SecurityLog securityLog = SecurityLog.create(
-                config,
-                dependencies.logService().getInternalLog( GraphDatabaseFacade.class ),
-                fileSystem,
-                jobScheduler
-            );
+        SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
         authManager = newAuthManager( config, logProvider, securityLog, fileSystem, accessCapability );
@@ -143,6 +135,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.nativeAuthEnabled )
         {
+            // TODO shouldn't this be registered always now with assignable privileges?
             globalProcedures.registerComponent( EnterpriseUserManager.class,
                     ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
             if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
@@ -239,11 +232,8 @@ public class CommercialSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, securityLog, accessCapability );
-        if ( internalRealm != null )
-        {
-            realms.add( (Realm) internalRealm );
-        }
+        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
+        realms.add( (Realm) internalRealm );
 
         if ( securityConfig.hasLdapProvider )
         {
@@ -292,22 +282,6 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
-            SecurityLog securityLog, AccessCapability accessCapability )
-    {
-        EnterpriseUserManager internalRealm = null;
-        if ( securityConfig.hasNativeProvider )
-        {
-            internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
-        }
-        return internalRealm;
-    }
-
-    private static AuthenticationStrategy createAuthenticationStrategy( Config config )
-    {
-        return new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config );
-    }
-
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
@@ -326,7 +300,7 @@ public class CommercialSecurityModule extends SecurityModule
                 initSystemGraphOnStart,
                 secureHasher,
                 new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
+                CommunitySecurityModule.createAuthenticationStrategy( config ),
                 config.get( SecuritySettings.native_authentication_enabled ),
                 config.get( SecuritySettings.native_authorization_enabled )
         );
@@ -509,7 +483,7 @@ public class CommercialSecurityModule extends SecurityModule
         return new FileRoleRepository( fileSystem, getRoleRepositoryFile( config ), logProvider );
     }
 
-    public static UserRepository getDefaultAdminRepository( Config config, LogProvider logProvider,
+    private static UserRepository getDefaultAdminRepository( Config config, LogProvider logProvider,
             FileSystemAbstraction fileSystem )
     {
         return new FileUserRepository( fileSystem, getDefaultAdminRepositoryFile( config ), logProvider );
@@ -667,7 +641,7 @@ public class CommercialSecurityModule extends SecurityModule
     // This is used by ImportAuthCommand for offline import of auth information
     public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config,
             SecurityLog securityLog,
-            DatabaseManager databaseManager,
+            DatabaseManager<?> databaseManager,
             UserRepository importUserRepository, RoleRepository importRoleRepository,
             boolean shouldResetSystemGraphAuthBeforeImport )
     {
@@ -686,7 +660,7 @@ public class CommercialSecurityModule extends SecurityModule
                 true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
+                CommunitySecurityModule.createAuthenticationStrategy( config ),
                 false,
                 true // At least one of these needs to be true for the realm to consider imports
         );

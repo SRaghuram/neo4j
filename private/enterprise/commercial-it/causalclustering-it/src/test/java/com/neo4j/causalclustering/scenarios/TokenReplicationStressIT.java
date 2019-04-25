@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.net.Server;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -30,7 +30,6 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.stream.LongStream;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -38,26 +37,19 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
-import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
-import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @ClusterExtension
 class TokenReplicationStressIT
@@ -177,19 +169,7 @@ class TokenReplicationStressIT
             try
             {
                 SECONDS.sleep( 5 );
-                CoreClusterMember leader = awaitLeader( cluster );
-                CoreClusterMember follower = randomClusterMember( cluster, leader );
-
-                // make the current leader unresponsive
-                Server raftServer = raftServer( leader );
-                raftServer.stop();
-
-                // trigger an election and await until a new leader is elected
-                follower.raft().triggerElection();
-                Assert.assertEventually( "Leader re-election did not happen", () -> awaitLeader( cluster ), not( equalTo( leader ) ), 1, MINUTES );
-
-                // make the previous leader responsive again
-                raftServer.start();
+                CausalClusteringTestHelpers.forceReelection( cluster );
             }
             catch ( Throwable t )
             {
@@ -345,29 +325,9 @@ class TokenReplicationStressIT
         return LongStream.iterate( initialValue, i -> i + 2 ).iterator()::nextLong;
     }
 
-    private static Server raftServer( CoreClusterMember member )
-    {
-        return member.database().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
-    }
-
     private static KernelTransaction currentKernelTx( CoreClusterMember member )
     {
         ThreadToStatementContextBridge bridge = member.database().getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         return bridge.getKernelTransactionBoundToThisThread( true );
-    }
-
-    private static class RaftServerSelectionStrategy implements DependencyResolver.SelectionStrategy
-    {
-        @Override
-        public <T> T select( Class<T> type, Iterable<? extends T> candidates ) throws IllegalArgumentException
-        {
-            assertEquals( Server.class, type );
-            return Iterables.stream( candidates )
-                    .map( Server.class::cast )
-                    .filter( server -> RAFT_SERVER_NAME.equals( server.name() ) )
-                    .findFirst()
-                    .map( type::cast )
-                    .orElseThrow( IllegalStateException::new );
-        }
     }
 }

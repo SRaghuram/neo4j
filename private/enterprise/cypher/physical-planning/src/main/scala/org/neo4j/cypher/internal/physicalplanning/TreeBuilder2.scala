@@ -66,7 +66,7 @@ trait TreeBuilder2[T, ARGUMENT] {
   protected def onLeaf(plan: LogicalPlan, argument: ARGUMENT): T
   protected def onOneChildPlan(plan: LogicalPlan, source: T, argument: ARGUMENT): T
   protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan, lhs: T, argument: ARGUMENT): ARGUMENT
-  protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: T, rhs: T): T
+  protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: T, rhs: T, argument: ARGUMENT): T
 
   def build(plan: LogicalPlan): T = {
 
@@ -105,7 +105,7 @@ trait TreeBuilder2[T, ARGUMENT] {
           val output = onOneChildPlan(current, source, argument)
           outputStack.push(output)
 
-        case (Some(left), Some(right)) if right == left =>
+        case (Some(left), Some(right)) if right eq left =>
           throw new InternalException(s"Tried to map bad logical plan. LHS and RHS must never be the same: op: $current\nfull plan: $plan")
 
         case (Some(left), Some(right)) if comingFrom eq left =>
@@ -118,7 +118,7 @@ trait TreeBuilder2[T, ARGUMENT] {
         case (Some(left), Some(right)) if comingFrom eq right =>
           val rightOutput = outputStack.pop()
           val leftOutput = outputStack.pop()
-          val output = onTwoChildPlanComingFromRight(current, leftOutput, rightOutput)
+          val output = onTwoChildPlanComingFromRight(current, leftOutput, rightOutput, argument)
           argumentStack.pop()
           outputStack.push(output)
       }

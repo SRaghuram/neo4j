@@ -13,8 +13,10 @@ import org.mockito.InOrder;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
@@ -37,9 +39,9 @@ class CoreEditionModuleTest
     private TestDirectory testDirectory;
 
     @Test
-    void editionDatabaseCreationOrder()
+    void editionDatabaseCreationOrder() throws DatabaseExistsException
     {
-        DatabaseManager manager = mock( DatabaseManager.class );
+        DatabaseManager<?> manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
         GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {
@@ -53,7 +55,7 @@ class CoreEditionModuleTest
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );
-        order.verify( manager ).createDatabase( eq( SYSTEM_DATABASE_NAME ) );
-        order.verify( manager ).createDatabase( eq( DEFAULT_DATABASE_NAME ) );
+        order.verify( manager ).createDatabase( eq( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        order.verify( manager ).createDatabase( eq( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
     }
 }

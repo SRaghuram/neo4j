@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
@@ -21,13 +22,13 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
 {
     private final CoreTopologyService coreTopologyService;
     private final RaftMachine raftMachine;
-    private final String dbName;
+    private final DatabaseId databaseId;
 
-    public RaftCoreTopologyConnector( CoreTopologyService coreTopologyService, RaftMachine raftMachine, String dbName )
+    public RaftCoreTopologyConnector( CoreTopologyService coreTopologyService, RaftMachine raftMachine, DatabaseId databaseId )
     {
         this.coreTopologyService = coreTopologyService;
         this.raftMachine = raftMachine;
-        this.dbName = dbName;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -35,6 +36,13 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
     {
         coreTopologyService.addLocalCoreTopologyListener( this );
         raftMachine.registerListener( this );
+    }
+
+    @Override
+    public void stop()
+    {
+        raftMachine.unregisterListener( this );
+        coreTopologyService.removeLocalCoreTopologyListener( this );
     }
 
     @Override
@@ -47,18 +55,18 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
     @Override
     public void onLeaderSwitch( LeaderInfo leaderInfo )
     {
-        coreTopologyService.setLeader( leaderInfo, dbName );
+        coreTopologyService.setLeader( leaderInfo, databaseId );
     }
 
     @Override
     public void onLeaderStepDown( long stepDownTerm )
     {
-        coreTopologyService.handleStepDown( stepDownTerm, dbName );
+        coreTopologyService.handleStepDown( stepDownTerm, databaseId );
     }
 
     @Override
-    public String dbName()
+    public DatabaseId databaseId()
     {
-        return this.dbName;
+        return this.databaseId;
     }
 }

@@ -20,6 +20,8 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
@@ -30,7 +32,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -79,14 +81,14 @@ class BackupReadReplicaIT
         DbRepresentation beforeChange = DbRepresentation.of( readReplica );
         String backupAddress = backupAddress( readReplica );
 
-        String[] args = backupArguments( backupAddress, backupsDir, DEFAULT_DATABASE_NAME );
+        String[] args = backupArguments( backupAddress, backupsDir, new DatabaseId( DEFAULT_DATABASE_NAME ) );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( readReplica.databaseLayout().databaseDirectory(), args ) );
 
         // Add some new data
         DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
-        DbRepresentation backupRepresentation = DbRepresentation.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) );
+        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) ) );
         assertEquals( beforeChange, backupRepresentation );
         assertNotEquals( backupRepresentation, afterChange );
     }

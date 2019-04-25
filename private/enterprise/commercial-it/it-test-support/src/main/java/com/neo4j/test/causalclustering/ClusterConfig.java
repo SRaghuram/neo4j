@@ -6,20 +6,14 @@
 package com.neo4j.test.causalclustering;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
-import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -41,7 +35,6 @@ public class ClusterConfig
     private IpFamily ipFamily = IPV4;
     private boolean useWildcard;
     private VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
-    private Set<String> dbNames = Collections.singleton( CausalClusteringSettings.database.getDefaultValue() );
 
     public static ClusterConfig clusterConfig()
     {
@@ -56,29 +49,7 @@ public class ClusterConfig
     {
         return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
-                clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard, clusterConfig.dbNames );
-    }
-
-    public ClusterConfig withDatabaseNames( Set<String> dbNames )
-    {
-        this.dbNames = dbNames;
-        Map<Integer,String> coreDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noCoreMembers, dbNames );
-        Map<Integer,String> rrDBMap = CausalClusteringTestHelpers.distributeDatabaseNamesToHostNums( noReadReplicas, dbNames );
-
-        Map<String,Long> minCoresPerDb = coreDBMap.entrySet().stream().collect( Collectors.groupingBy( Map.Entry::getValue, Collectors.counting() ) );
-
-        Map<Integer,String> minCoresSettingsMap = new HashMap<>();
-
-        for ( Map.Entry<Integer,String> entry : coreDBMap.entrySet() )
-        {
-            Optional<Long> minNumCores = Optional.ofNullable( minCoresPerDb.get( entry.getValue() ) );
-            minNumCores.ifPresent( n -> minCoresSettingsMap.put( entry.getKey(), n.toString() ) );
-        }
-
-        withInstanceCoreParam( CausalClusteringSettings.database, coreDBMap::get );
-        withInstanceCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, minCoresSettingsMap::get );
-        withInstanceReadReplicaParam( CausalClusteringSettings.database, rrDBMap::get );
-        return this;
+                clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard );
     }
 
     public ClusterConfig withNumberOfCoreMembers( int noCoreMembers )

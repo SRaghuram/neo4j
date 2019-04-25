@@ -10,7 +10,6 @@ import org.junit.Test;
 import java.io.File;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 
 import static org.junit.Assert.assertEquals;
@@ -28,7 +27,7 @@ public class ReaderTest
     public void shouldCloseChannelOnClose() throws Exception
     {
         // given
-        when( fsa.open( file, OpenMode.READ ) ).thenReturn( channel );
+        when( fsa.read( file ) ).thenReturn( channel );
         Reader reader = new Reader( fsa, file, 0 );
 
         // when

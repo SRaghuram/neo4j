@@ -39,13 +39,14 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.consistency.checking.GraphStoreFixture;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.Strings;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -61,7 +62,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -72,8 +73,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.LUCENE10;
-import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE20;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
+import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.Property.property;
 import static org.neo4j.test.Property.set;
@@ -99,6 +101,7 @@ public class ConsistencyCheckServiceIntegrationTest
     private final TestDirectory testDirectory = TestDirectory.testDirectory( fs );
     @Rule
     public final RuleChain chain = RuleChain.outerRule( testDirectory ).around( fixture );
+    private DatabaseManagementService managementService;
 
     @Test
     public void reportNotUsedRelationshipReferencedInChain() throws Exception
@@ -116,7 +119,7 @@ public class ConsistencyCheckServiceIntegrationTest
         File reportFile = result.reportFile();
         assertTrue( "Consistency check report file should be generated.", reportFile.exists() );
         assertThat( "Expected to see report about not deleted relationship record present as part of a chain",
-                Files.readAllLines( reportFile.toPath() ).toString(),
+                Files.readString( reportFile.toPath() ),
                 containsString( "The relationship record is not in use, but referenced from relationships chain.") );
     }
 
@@ -196,10 +199,10 @@ public class ConsistencyCheckServiceIntegrationTest
         // given
         ConsistencyCheckService service = new ConsistencyCheckService();
         Config configuration = Config.defaults( settings() );
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.record_format, getRecordFormatName() )
-                .setConfig( "dbms.backup.enabled", "false" )
-                .newGraphDatabase();
+                .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         String propertyKey = "itemId";
         Label label = Label.label( "Item" );
@@ -214,7 +217,7 @@ public class ConsistencyCheckServiceIntegrationTest
             set( db.createNode( label ), property( propertyKey, 973305894188596864L ) );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
 
         // when
         Result result = runFullConsistencyCheck( service, configuration );
@@ -234,7 +237,7 @@ public class ConsistencyCheckServiceIntegrationTest
             tx.success();
         }
 
-        gds.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService service = new ConsistencyCheckService();
         Config configuration = Config.defaults(
@@ -252,13 +255,13 @@ public class ConsistencyCheckServiceIntegrationTest
     {
         // given
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
-        GraphDatabaseService gds = getGraphDatabaseService( databaseLayout.databaseDirectory() );
+        GraphDatabaseService gds = getGraphDatabaseService( testDirectory.storeDir() );
 
         Label label = Label.label( "label" );
         String propKey = "propKey";
         createIndex( gds, label, propKey );
 
-        gds.shutdown();
+        managementService.shutdown();
 
         // when
         File schemaDir = findFile( databaseLayout, "schema" );
@@ -273,7 +276,7 @@ public class ConsistencyCheckServiceIntegrationTest
         File reportFile = result.reportFile();
         assertTrue( "Consistency check report file should be generated.", reportFile.exists() );
         assertThat( "Expected to see report about schema index not being online",
-                Files.readAllLines( reportFile.toPath() ).toString(), allOf(
+                Files.readString( reportFile.toPath() ), allOf(
                         containsString( "schema rule" ),
                         containsString( "not online" )
                 ) );
@@ -288,7 +291,7 @@ public class ConsistencyCheckServiceIntegrationTest
         String propKey = "propKey";
 
         // Given a lucene index
-        GraphDatabaseService db = getGraphDatabaseService( databaseLayout.databaseDirectory(), defaultSchemaProvider, LUCENE10.providerName() );
+        GraphDatabaseService db = getGraphDatabaseService( databaseLayout.databaseDirectory(), defaultSchemaProvider, NATIVE30.providerName() );
         createIndex( db, label, propKey );
         try ( Transaction tx = db.beginTx() )
         {
@@ -296,11 +299,11 @@ public class ConsistencyCheckServiceIntegrationTest
             db.createNode( label ).setProperty( propKey, "string" );
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
 
         ConsistencyCheckService service = new ConsistencyCheckService();
         Config configuration =
-                Config.defaults( settings( defaultSchemaProvider, NATIVE20.providerName() ) );
+                Config.defaults( settings( defaultSchemaProvider, NATIVE_BTREE10.providerName() ) );
         Result result = runFullConsistencyCheck( service, configuration, databaseLayout );
         assertTrue( result.isSuccessful() );
     }
@@ -344,18 +347,19 @@ public class ConsistencyCheckServiceIntegrationTest
 
     private GraphDatabaseService getGraphDatabaseService( File storeDir, String... settings )
     {
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceInternalBuilder builder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( settings( settings ) );
 
-        return builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void prepareDbWithDeletedRelationshipPartOfTheChain()
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.record_format, getRecordFormatName() )
-                .setConfig( "dbms.backup.enabled", "false" )
-                .newGraphDatabase();
+                .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
 
@@ -384,7 +388,7 @@ public class ConsistencyCheckServiceIntegrationTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -392,12 +396,12 @@ public class ConsistencyCheckServiceIntegrationTest
     {
         File tmpLogDir = new File( testDirectory.directory(), "logs" );
         fs.mkdir( tmpLogDir );
-        File storeDir = testDirectory.databaseDir();
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( storeDir )
+        var databaseLayout = testDirectory.databaseLayout();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( GraphDatabaseSettings.record_format, getRecordFormatName() )
-                .setConfig( "dbms.backup.enabled", "false" )
-                .newGraphDatabase();
+                .setConfig( "dbms.backup.enabled", "false" ).newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         RelationshipType relationshipType = RelationshipType.withName( "testRelationshipType" );
         try ( Transaction tx = db.beginTx() )
@@ -407,12 +411,12 @@ public class ConsistencyCheckServiceIntegrationTest
             node1.createRelationshipTo( node2, relationshipType );
             tx.success();
         }
-        File[] txLogs = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDir, fs ).build().logFiles();
+        File[] txLogs = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs ).build().logFiles();
         for ( File file : txLogs )
         {
             fs.copyToDirectory( file, tmpLogDir );
         }
-        db.shutdown();
+        managementService.shutdown();
         for ( File txLog : txLogs )
         {
             fs.deleteFile( txLog );
@@ -420,7 +424,7 @@ public class ConsistencyCheckServiceIntegrationTest
 
         for ( File file : LogFilesBuilder.logFilesBasedOnlyBuilder( tmpLogDir, fs ).build().logFiles() )
         {
-            fs.moveToDirectory( file, storeDir );
+            fs.moveToDirectory( file, databaseLayout.getTransactionLogsDirectory() );
         }
     }
 

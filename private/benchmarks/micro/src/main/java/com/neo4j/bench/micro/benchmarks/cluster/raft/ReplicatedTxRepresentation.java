@@ -21,10 +21,10 @@ import org.openjdk.jmh.annotations.Param;
 
 import java.util.concurrent.ExecutionException;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.bench.micro.Main.run;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
@@ -66,7 +66,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         Log log = logProvider().getLog( getClass() );
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                   diffPercent( expectedSize, clusterTx.size() ) );
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), "db-name" );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), new DatabaseId( "db-name" ) );
         return RaftMessages.ClusterIdAwareMessage.of( CLUSTER_ID, new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 

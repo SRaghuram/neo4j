@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -42,9 +41,7 @@ public class CommitStateHelper
 
     CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException
     {
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( pageCache, databaseLayout );
-        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( dependencies );
+        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( databaseLayout, pageCache );
         long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
         Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );
@@ -71,7 +68,8 @@ public class CommitStateHelper
         ReadOnlyTransactionStore txStore = new ReadOnlyTransactionStore( pageCache, fs, databaseLayout, config, new Monitors() );
 
         long lastTxId = BASE_TX_ID;
-        try ( Lifespan ignored = new Lifespan( txStore ); TransactionCursor cursor = txStore.getTransactions( startTxId ) )
+        try ( Lifespan ignored = new Lifespan( txStore );
+              TransactionCursor cursor = txStore.getTransactions( startTxId ) )
         {
             while ( cursor.next() )
             {

@@ -29,11 +29,6 @@ public class Args
         return concat;
     }
 
-    public static String joinArgs( List<String> args )
-    {
-        return String.join( " ", args );
-    }
-
     public static String[] splitArgs( String string, String sep )
     {
         return Stream.of( string.split( sep ) )

@@ -5,22 +5,25 @@
  */
 package com.neo4j.dmbs.database.guard;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseGuardIT
@@ -28,11 +31,13 @@ class MultiDatabaseGuardIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -40,7 +45,7 @@ class MultiDatabaseGuardIT
     {
         if ( database != null )
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -48,7 +53,7 @@ class MultiDatabaseGuardIT
     void databaseGuardDynamicRegistration()
     {
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
-        DatabaseManager databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
         CompositeDatabaseAvailabilityGuard compositeGuard =
                 dependencyResolver.resolveDependency( CompositeDatabaseAvailabilityGuard.class );
 
@@ -58,18 +63,18 @@ class MultiDatabaseGuardIT
         String secondDatabase = "Lila";
         String thirdDatabase = "Bender";
 
-        databaseManager.createDatabase( firstDatabase );
+        databaseManager.createDatabase( new DatabaseId( firstDatabase ) );
         assertEquals( 3, compositeGuard.getGuards().size() );
 
-        databaseManager.createDatabase( secondDatabase );
-        databaseManager.createDatabase( thirdDatabase );
+        databaseManager.createDatabase( new DatabaseId( secondDatabase ) );
+        databaseManager.createDatabase( new DatabaseId( thirdDatabase ) );
         assertEquals( 5, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( thirdDatabase );
+        databaseManager.stopDatabase( new DatabaseId( thirdDatabase ) );
         assertEquals( 4, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( firstDatabase );
-        databaseManager.stopDatabase( secondDatabase );
+        databaseManager.stopDatabase( new DatabaseId( firstDatabase ) );
+        databaseManager.stopDatabase( new DatabaseId( secondDatabase ) );
 
         assertEquals( 2, compositeGuard.getGuards().size() );
     }

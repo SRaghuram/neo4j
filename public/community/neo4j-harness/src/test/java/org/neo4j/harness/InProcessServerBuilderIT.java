@@ -43,23 +43,24 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
 import org.neo4j.configuration.ssl.ClientAuth;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.harness.extensionpackage.MyUnmanagedExtension;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -78,10 +79,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.harness.internal.TestNeo4jBuilders.newInProcessBuilder;
 import static org.neo4j.helpers.collection.Iterables.asIterable;
 import static org.neo4j.helpers.collection.Iterators.single;
@@ -234,20 +237,22 @@ class InProcessServerBuilderIT
         // When
         // create graph db with one node upfront
         File existingStoreDir = directory.directory( "existingStore" );
-        DatabaseLayout databaseLayout =
-                DatabaseLayout.of( Config.defaults( data_directory, existingStoreDir.toPath().toString() ).get( databases_root_path ), DEFAULT_DATABASE_NAME );
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseLayout.databaseDirectory() );
+        Config config = Config.defaults( data_directory, existingStoreDir.toPath().toString() );
+        File rootDirectory = config.get( databases_root_path );
+        DatabaseManagementServiceInternalBuilder databaseBuilder = new TestDatabaseManagementServiceBuilder().newEmbeddedDatabaseBuilder( rootDirectory )
+                .setConfig( transaction_logs_root_path, new File( existingStoreDir, DEFAULT_TX_LOGS_ROOT_DIR_NAME ).getAbsolutePath() );
+        DatabaseManagementService managementService = databaseBuilder.newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             db.execute( "create ()" );
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
-        try ( InProcessNeo4j neo4j = getTestBuilder( directory.databaseDir() ).copyFrom( existingStoreDir )
-                .build() )
+        try ( InProcessNeo4j neo4j = getTestBuilder( directory.storeDir() ).copyFrom( existingStoreDir ).build() )
         {
             // Then
             try ( Transaction tx = neo4j.graph().beginTx() )
@@ -263,7 +268,8 @@ class InProcessServerBuilderIT
         }
 
         // Then: we still only have one node since the server is supposed to work on a copy
-        db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseLayout.databaseDirectory() );
+        managementService = databaseBuilder.newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             try ( Transaction tx = db.beginTx() )
@@ -274,7 +280,7 @@ class InProcessServerBuilderIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

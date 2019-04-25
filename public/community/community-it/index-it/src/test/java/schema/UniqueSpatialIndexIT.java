@@ -31,25 +31,27 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.index.schema.config.SpatialIndexValueTestUtil;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.PointValue;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class UniqueSpatialIndexIT
@@ -62,6 +64,7 @@ class UniqueSpatialIndexIT
     private GraphDatabaseService db;
     private PointValue point1;
     private PointValue point2;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setup()
@@ -76,7 +79,7 @@ class UniqueSpatialIndexIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -201,9 +204,10 @@ class UniqueSpatialIndexIT
 
     private void setupDb( GraphDatabaseSettings.SchemaIndex schemaIndex )
     {
-        TestGraphDatabaseFactory dbFactory = new TestGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = dbFactory.newEmbeddedDatabaseBuilder( directory.storeDir() )
+        TestDatabaseManagementServiceBuilder dbFactory = new TestDatabaseManagementServiceBuilder();
+        DatabaseManagementServiceInternalBuilder builder = dbFactory.newEmbeddedDatabaseBuilder( directory.storeDir() )
                 .setConfig( GraphDatabaseSettings.default_schema_provider, schemaIndex.providerName() );
-        db = builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

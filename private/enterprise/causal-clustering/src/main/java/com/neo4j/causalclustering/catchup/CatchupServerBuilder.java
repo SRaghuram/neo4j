@@ -5,9 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -24,7 +22,6 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.ServerSocketChannel;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -47,11 +44,11 @@ public final class CatchupServerBuilder
         return new StepBuilder();
     }
 
-    private static class StepBuilder implements NeedsCatchupServerHandler, NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols,
-            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, AcceptsOptionalParams
+    private static class StepBuilder implements NeedsCatchupServerHandler, NeedsCatchupProtocols, NeedsModifierProtocols,
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, NeedsPortRegister,
+            AcceptsOptionalParams
     {
         private CatchupServerHandler catchupServerHandler;
-        private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
         private Collection<ModifierSupportedProtocols> modifierProtocols;
@@ -69,16 +66,9 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler )
+        public NeedsCatchupProtocols catchupServerHandler( CatchupServerHandler catchupServerHandler )
         {
             this.catchupServerHandler = catchupServerHandler;
-            return this;
-        }
-
-        @Override
-        public NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName )
-        {
-            this.defaultDatabaseName = defaultDatabaseName;
             return this;
         }
 
@@ -125,6 +115,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister )
+        {
+            this.portRegister = portRegister;
+            return this;
+        }
+
+        @Override
         public AcceptsOptionalParams serverName( String serverName )
         {
             this.serverName = serverName;
@@ -146,14 +143,7 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister )
-        {
-            this.portRegister = portRegister;
-            return this;
-        }
-
-        @Override
-        public AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
+        public NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
             return this;
@@ -165,9 +155,7 @@ public final class CatchupServerBuilder
                     applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
 
-            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
-                    new CatchupProtocolServerInstallerV1.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler, defaultDatabaseName ),
-                    new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler, defaultDatabaseName ),
+            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = List.of(
                     new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
 
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
@@ -184,12 +172,7 @@ public final class CatchupServerBuilder
 
     public interface NeedsCatchupServerHandler
     {
-        NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler );
-    }
-
-    public interface NeedsDefaultDatabaseName
-    {
-        NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName );
+        NeedsCatchupProtocols catchupServerHandler( CatchupServerHandler catchupServerHandler );
     }
 
     public interface NeedsCatchupProtocols
@@ -224,7 +207,12 @@ public final class CatchupServerBuilder
 
     public interface NeedsBootstrapConfig
     {
-        AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration );
+        NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration );
+    }
+
+    public interface NeedsPortRegister
+    {
+        AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister );
     }
 
     public interface AcceptsOptionalParams
@@ -232,7 +220,6 @@ public final class CatchupServerBuilder
         AcceptsOptionalParams serverName( String serverName );
         AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
-        AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister );
         Server build();
     }
 

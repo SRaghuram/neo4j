@@ -19,9 +19,6 @@
  */
 package org.neo4j.internal.recordstorage;
 
-import org.eclipse.collections.api.set.primitive.IntSet;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
-import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -32,6 +29,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.ConstraintDescriptor.Type;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
@@ -43,7 +41,6 @@ import org.neo4j.test.Race;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
-import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyIterableOf;
@@ -314,10 +311,6 @@ public class SchemaCacheTest
         {
             assertEquals( 1, Iterators.count( cache.indexDescriptorsForLabel( labelId ) ) );
         }
-        for ( int propertyId = 0; propertyId < indexNumber; propertyId++ )
-        {
-            assertEquals( 1, Iterators.count( cache.indexesByNodeProperty( propertyId ) ) );
-        }
     }
 
     @Test
@@ -343,18 +336,14 @@ public class SchemaCacheTest
         {
             assertEquals( 1, Iterators.count( cache.indexDescriptorsForLabel( labelId ) ) );
         }
-        for ( int propertyId = numberOfDeletions; propertyId < indexNumber; propertyId++ )
-        {
-            assertEquals( 1, Iterators.count( cache.indexesByNodeProperty( propertyId ) ) );
-        }
     }
 
     @Test
     public void shouldGetRelatedIndexForLabel()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema3_4, node35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ),
+                containsInAnyOrder( schema3_4.schema(), node35_8.schema() ) );
     }
 
     @Test
@@ -362,16 +351,16 @@ public class SchemaCacheTest
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         assertThat(
-                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 3, 4, 5 ), properties( 4 ), NODE, identity() ),
-                containsInAnyOrder( schema3_4 ) );
+                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 3, 4, 5 ), properties( 4 ), false, NODE ),
+                containsInAnyOrder( schema3_4.schema() ) );
     }
 
     @Test
     public void shouldGetRelatedIndexesForLabel()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema5_6_7, schema5_8, node35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), properties(), false, NODE ),
+                containsInAnyOrder( schema5_6_7.schema(), schema5_8.schema(), node35_8.schema() ) );
     }
 
     @Test
@@ -379,8 +368,8 @@ public class SchemaCacheTest
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         assertThat(
-                cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), NODE, identity() ),
-                containsInAnyOrder( schema3_4, schema5_6_7, node35_8 ) );
+                cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), false, NODE ),
+                containsInAnyOrder( schema3_4.schema(), schema5_6_7.schema(), node35_8.schema() ) );
     }
 
     @Test
@@ -388,50 +377,50 @@ public class SchemaCacheTest
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         assertThat(
-                cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties( 4 ), NODE, identity() ),
-                containsInAnyOrder( schema3_4, node35_8 ) );
+                cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties( 4 ), false, NODE ),
+                containsInAnyOrder( schema3_4.schema(), node35_8.schema() ) );
 
         assertThat(
-                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 5 ), properties( 6, 7 ), NODE, identity() ),
-                containsInAnyOrder( schema5_6_7 ) );
+                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 5 ), properties( 6, 7 ), false, NODE ),
+                containsInAnyOrder( schema5_6_7.schema() ) );
     }
 
     @Test
     public void shouldHandleUnrelated()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( noEntityToken, noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                emptyIterableOf( StorageIndexReference.class ) );
+        assertThat( cache.getIndexesRelatedTo( noEntityToken, noEntityToken, properties(), false, NODE ),
+                emptyIterableOf( SchemaDescriptor.class ) );
 
-        assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ).isEmpty() );
+        assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), noEntityToken, properties(), false, NODE ).isEmpty() );
 
         assertThat(
-                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 2 ), properties( 1 ), NODE, identity() ),
-                emptyIterableOf( StorageIndexReference.class ) );
+                cache.getIndexesRelatedTo( noEntityToken, entityTokens( 2 ), properties( 1 ), false, NODE ),
+                emptyIterableOf( SchemaDescriptor.class ) );
 
-        assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), entityTokens( 2 ), properties( 1 ), NODE, identity() ).isEmpty() );
+        assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), entityTokens( 2 ), properties( 1 ), false, NODE ).isEmpty() );
     }
 
     @Test
     public void shouldGetMultiLabelForAnyOfTheLabels()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema3_4, node35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ),
+                containsInAnyOrder( schema3_4.schema(), node35_8.schema() ) );
 
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema5_8, schema5_6_7, node35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ),
+                containsInAnyOrder( schema5_8.schema(), schema5_6_7.schema(), node35_8.schema() ) );
     }
 
     @Test
     public void shouldOnlyGetRelIndexesForRelUpdates()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, IntSets.immutable.empty(), RELATIONSHIP, identity() ),
-                containsInAnyOrder( rel35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ),
+                containsInAnyOrder( rel35_8.schema() ) );
 
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, IntSets.immutable.empty(), RELATIONSHIP, identity() ),
-                containsInAnyOrder( rel35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ),
+                containsInAnyOrder( rel35_8.schema() ) );
     }
 
     @Test
@@ -439,29 +428,83 @@ public class SchemaCacheTest
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         cache.removeSchemaRule( node35_8.getId() );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema3_4 ) );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, IntSets.immutable.empty(), RELATIONSHIP, identity() ),
-                containsInAnyOrder( rel35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ),
+                containsInAnyOrder( schema3_4.schema() ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ),
+                containsInAnyOrder( rel35_8.schema() ) );
 
         cache.removeSchemaRule( 7 );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, IntSets.immutable.empty(), NODE, identity() ),
-                containsInAnyOrder( schema5_8, schema5_6_7 ) );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, IntSets.immutable.empty(), RELATIONSHIP, identity() ),
-                containsInAnyOrder( rel35_8 ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ),
+                containsInAnyOrder( schema5_8.schema(), schema5_6_7.schema() ) );
+        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ),
+                containsInAnyOrder( rel35_8.schema() ) );
 
+    }
+
+    @Test
+    public void shouldGetRelatedNodeConstraints()
+    {
+        // given
+        SchemaCache cache = new SchemaCache( new ConstraintSemantics() );
+        ConstraintRule constraint1 = ConstraintRule.constraintRule( 1L, ConstraintDescriptorFactory.uniqueForLabel( 1, 5, 6 ), null );
+        ConstraintRule constraint2 = ConstraintRule.constraintRule( 2L, ConstraintDescriptorFactory.uniqueForLabel( 1, 5 ), null );
+        ConstraintRule constraint3 = ConstraintRule.constraintRule( 3L, ConstraintDescriptorFactory.uniqueForLabel( 2, 5 ), null );
+        cache.addSchemaRule( constraint1 );
+        cache.addSchemaRule( constraint2 );
+        cache.addSchemaRule( constraint3 );
+
+        // when/then
+        assertEquals(
+                asSet( constraint2.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens( 1 ), entityTokens(), properties( 5 ), true, NODE ) );
+        assertEquals(
+                asSet( constraint1.getConstraintDescriptor(), constraint2.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens( 1 ), entityTokens(), properties( 5 ), false, NODE ) );
+        assertEquals(
+                asSet( constraint1.getConstraintDescriptor(), constraint2.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens( 1 ), entityTokens(), properties( 5, 6 ), true, NODE ) );
+        assertEquals(
+                asSet( constraint1.getConstraintDescriptor(), constraint2.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens(), entityTokens( 1 ), properties( 5 ), false, NODE ) );
+        assertEquals(
+                asSet( constraint1.getConstraintDescriptor(), constraint2.getConstraintDescriptor(), constraint3.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens( 1, 2 ), entityTokens(), properties(), false, NODE ) );
+    }
+
+    @Test
+    public void shouldRemoveNodeConstraints()
+    {
+        // given
+        SchemaCache cache = new SchemaCache( new ConstraintSemantics() );
+        ConstraintRule constraint1 = ConstraintRule.constraintRule( 1L, ConstraintDescriptorFactory.uniqueForLabel( 1, 5, 6 ), null );
+        ConstraintRule constraint2 = ConstraintRule.constraintRule( 2L, ConstraintDescriptorFactory.uniqueForLabel( 1, 5 ), null );
+        ConstraintRule constraint3 = ConstraintRule.constraintRule( 3L, ConstraintDescriptorFactory.uniqueForLabel( 2, 5 ), null );
+        cache.addSchemaRule( constraint1 );
+        cache.addSchemaRule( constraint2 );
+        cache.addSchemaRule( constraint3 );
+        assertEquals(
+                asSet( constraint2.getConstraintDescriptor() ),
+                cache.getUniquenessConstraintsRelatedTo( entityTokens( 1 ), entityTokens(), properties( 5 ), true, NODE ) );
+
+        // and when
+        cache.removeSchemaRule( constraint1.getId() );
+        cache.removeSchemaRule( constraint2.getId() );
+        cache.removeSchemaRule( constraint3.getId() );
+
+        // then
+        assertTrue( cache.getUniquenessConstraintsRelatedTo( entityTokens( 1 ), entityTokens(), properties( 5 ), true, NODE ).isEmpty() );
     }
 
     // HELPERS
 
-    private long[] entityTokens( long... entityTokenIds )
+    private static long[] entityTokens( long... entityTokenIds )
     {
         return entityTokenIds;
     }
 
-    private IntSet properties( int... propertyIds )
+    private static int[] properties( int... propertyIds )
     {
-        return new IntHashSet( propertyIds );
+        return propertyIds;
     }
 
     private StorageIndexReference newIndexRule( long id, int label, int... propertyKeys )

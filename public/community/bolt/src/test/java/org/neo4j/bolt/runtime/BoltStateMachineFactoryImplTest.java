@@ -36,12 +36,11 @@ import org.neo4j.bolt.v3.BoltStateMachineV3;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.internal.NullLogService;
-import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.udc.UsageData;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -95,24 +94,23 @@ class BoltStateMachineFactoryImplTest
         return newBoltFactory( newDbMock() );
     }
 
-    private static BoltStateMachineFactoryImpl newBoltFactory( DatabaseManager databaseManager )
+    private static BoltStateMachineFactoryImpl newBoltFactory( DatabaseManager<?> databaseManager )
     {
         Config config = Config.defaults( GraphDatabaseSettings.default_database, CUSTOM_DB_NAME );
-        return new BoltStateMachineFactoryImpl( databaseManager, new UsageData( new OnDemandJobScheduler() ),
-                mock( Authentication.class ), CLOCK, config,
-                NullLogService.getInstance() );
+        return new BoltStateMachineFactoryImpl( databaseManager, mock( Authentication.class ), CLOCK, config, NullLogService.getInstance() );
     }
 
-    private static DatabaseManager newDbMock()
+    private static DatabaseManager<?> newDbMock()
     {
-        DatabaseContext db = mock( DatabaseContext.class );
+        StandaloneDatabaseContext db = mock( StandaloneDatabaseContext.class );
         Dependencies dependencies = mock( Dependencies.class );
-        when( db.getDependencies() ).thenReturn( dependencies );
+        when( db.dependencies() ).thenReturn( dependencies );
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
         when( queryService.getDependencyResolver() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( GraphDatabaseQueryService.class ) ).thenReturn( queryService );
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
-        when( databaseManager.getDatabaseContext( CUSTOM_DB_NAME ) ).thenReturn( Optional.of( db ) );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = (DatabaseManager<StandaloneDatabaseContext>) mock( DatabaseManager.class );
+        when( databaseManager.getDatabaseContext( new DatabaseId( CUSTOM_DB_NAME ) ) ).thenReturn( Optional.of( db ) );
         return databaseManager;
     }
 }

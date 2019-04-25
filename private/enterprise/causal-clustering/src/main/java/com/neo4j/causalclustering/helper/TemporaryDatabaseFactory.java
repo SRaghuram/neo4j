@@ -6,11 +6,10 @@
 package com.neo4j.causalclustering.helper;
 
 import java.io.File;
-import java.util.Map;
 
-import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.configuration.Config;
 
 public interface TemporaryDatabaseFactory
 {
-    TemporaryDatabase startTemporaryDatabase( PageCache pageCache, File rootDirectory, Map<String,String> params );
+    TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig );
 }

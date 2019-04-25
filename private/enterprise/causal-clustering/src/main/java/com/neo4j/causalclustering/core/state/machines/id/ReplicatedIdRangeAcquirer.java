@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -30,9 +31,9 @@ public class ReplicatedIdRangeAcquirer
 
     private final MemberId me;
     private final Log log;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public ReplicatedIdRangeAcquirer( String databaseName,
+    public ReplicatedIdRangeAcquirer( DatabaseId databaseId,
             Replicator replicator, ReplicatedIdAllocationStateMachine idAllocationStateMachine,
             Map<IdType, Integer> allocationSizes, MemberId me, LogProvider logProvider )
     {
@@ -41,7 +42,7 @@ public class ReplicatedIdRangeAcquirer
         this.allocationSizes = allocationSizes;
         this.me = me;
         this.log = logProvider.getLog( getClass() );
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     IdAllocation acquireIds( IdType idType )
@@ -50,7 +51,7 @@ public class ReplicatedIdRangeAcquirer
         {
             long firstUnallocated = idAllocationStateMachine.firstUnallocated( idType );
             ReplicatedIdAllocationRequest idAllocationRequest =
-                    new ReplicatedIdAllocationRequest( me, idType, firstUnallocated, allocationSizes.get( idType ), databaseName );
+                    new ReplicatedIdAllocationRequest( me, idType, firstUnallocated, allocationSizes.get( idType ), databaseId );
 
             if ( replicateIdAllocationRequest( idType, idAllocationRequest ) )
             {

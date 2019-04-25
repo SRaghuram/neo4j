@@ -67,7 +67,7 @@ class ImportAuthCommandTest
         when( mock.fileSystem() ).thenReturn( fileSystem );
         File configDirectory = testDir.directory( "conf" );
         fileSystem.mkdirs( configDirectory );
-        fileSystem.create( new File( configDirectory, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
+        fileSystem.write( new File( configDirectory, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
         importAuth = new ImportAuthCommand( testDir.directory( "home" ).toPath(), configDirectory.toPath(), mock );
         config = importAuth.loadNeo4jConfig();
         UserRepository users = CommunitySecurityModule.getUserRepository( config, NullLogProvider.getInstance(), fileSystem );

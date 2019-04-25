@@ -6,12 +6,13 @@
 package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
-import org.neo4j.cypher.internal.compiler.{CypherPlanner, CypherPlannerConfiguration, StatsDivergenceCalculator, defaultUpdateStrategy}
 import org.neo4j.cypher.internal.compiler.phases.{LogicalPlanState, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
 import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
+import org.neo4j.cypher.internal.compiler.{CypherPlanner, CypherPlannerConfiguration, StatsDivergenceCalculator, defaultUpdateStrategy}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
@@ -19,8 +20,8 @@ import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted._
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticState}
@@ -31,6 +32,7 @@ import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSeque
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -38,7 +40,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
 import org.neo4j.logging.NullLog
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.util.Try
@@ -76,12 +78,14 @@ object CypherReductionSupport {
 trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   self: CypherFunSuite  =>
 
+  private var managementService: DatabaseManagementService = _
   private var graph: GraphDatabaseCypherService = _
   private var contextFactory: TransactionalContextFactory = _
 
   override protected def initTest() {
     super.initTest()
-    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase())
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    graph = new GraphDatabaseCypherService(managementService.database(DEFAULT_DATABASE_NAME))
     contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }
 
@@ -90,7 +94,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
       super.stopTest()
     }
     finally {
-      if (graph != null) graph.shutdown()
+      if (graph != null) managementService.shutdown()
     }
   }
 
@@ -104,7 +108,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   }
 
   def reduceQuery(query: String, executeBefore: Option[String] = None, enterprise: Boolean = false)(test: Oracle[Try[RewindableExecutionResult]]): String = {
-    val oracle: Oracle[Try[(String, RewindableExecutionResult)]] = (tryTuple) => {
+    val oracle: Oracle[Try[(String, RewindableExecutionResult)]] = tryTuple => {
       val tryResult = tryTuple.map(_._2)
       test(tryResult)
     }
@@ -115,7 +119,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
     val parsingBaseState = queryToParsingBaseState(query, enterprise)
     val statement = parsingBaseState.statement()
 
-    val oracle: Oracle[Statement] = (currentStatement) => {
+    val oracle: Oracle[Statement] = currentStatement => {
       // Actual query
       val currentlyRunQuery = CypherReductionSupport.prettifier.asString(currentStatement)
       val tryResults = Try((currentlyRunQuery, produceResult(query, currentStatement, parsingBaseState, executeBefore, enterprise)))

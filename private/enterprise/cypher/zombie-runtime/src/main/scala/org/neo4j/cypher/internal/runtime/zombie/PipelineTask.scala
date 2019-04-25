@@ -6,21 +6,21 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableInputOperatorTask, ContinuableOperatorTask, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask}
 
 /**
-  * The [[Task]] of executing a [[ExecutablePipeline]] once.
+  * The [[Task]] of executing an [[ExecutablePipeline]] once.
   *
-  * @param start  task for executing the start operator
+  * @param startTask  task for executing the start operator
   * @param state  the current QueryState
   */
-case class PipelineTask(start: ContinuableInputOperatorTask,
-                        middleOperators: Seq[StatelessOperator],
+case class PipelineTask(startTask: ContinuableOperatorTask,
+                        middleTasks: Array[OperatorTask],
                         produceResult: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
-                        pipeline: ExecutablePipeline)
+                        pipelineState: PipelineState)
   extends Task[QueryResources] {
 
   override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): Unit = {
@@ -34,8 +34,8 @@ case class PipelineTask(start: ContinuableInputOperatorTask,
 
   private def doExecuteWorkUnit(resources: QueryResources,
                                 output: MorselExecutionContext): Unit = {
-    start.operate(output, queryContext, state, resources)
-    for (op <- middleOperators) {
+    startTask.operate(output, queryContext, state, resources)
+    for (op <- middleTasks) {
       output.resetToFirstRow()
       op.operate(output, queryContext, state, resources)
     }
@@ -45,9 +45,25 @@ case class PipelineTask(start: ContinuableInputOperatorTask,
     }
   }
 
-  override def workId: Int = pipeline.workId
+  /**
+    * Remove everything related to cancelled argumentRowIds from to the task's input.
+    *
+    * @return `true` if the task has become obsolete.
+    */
+  def filterCancelledArguments(): Boolean = {
+    startTask.filterCancelledArguments(pipelineState)
+  }
 
-  override def workDescription: String = pipeline.workDescription
+  /**
+    * Close resources related to this task and update relevant counts.
+    */
+  def close(): Unit = {
+    startTask.close(pipelineState)
+  }
 
-  override def canContinue: Boolean = start.canContinue || (produceResult != null && produceResult.canContinue)
+  override def workId: Int = pipelineState.pipeline.workId
+
+  override def workDescription: String = pipelineState.pipeline.workDescription
+
+  override def canContinue: Boolean = startTask.canContinue || (produceResult != null && produceResult.canContinue)
 }

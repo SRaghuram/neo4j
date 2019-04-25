@@ -5,24 +5,26 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.io.fs.FileUtils;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ManagedStore
 {
@@ -30,6 +32,7 @@ public class ManagedStore
     private DataGeneratorConfig dataGeneratorConfig;
     private StoreAndConfig storeAndConfig;
     protected GraphDatabaseService db;
+    private static DatabaseManagementService managementService;
 
     public ManagedStore( Stores stores )
     {
@@ -68,32 +71,40 @@ public class ManagedStore
         return db = newDb( storeAndConfig.store(), storeAndConfig.config() );
     }
 
-    public static GraphDatabaseService newDb( Path dbPath )
+    public static GraphDatabaseService newDb( Store store )
     {
-        return newDb( dbPath, null );
+        return newDb( store, null );
     }
 
-    public static GraphDatabaseService newDb( Path dbPath, Path config )
+    public static GraphDatabaseService newDb( Store store, Path config )
     {
-        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbPath.toFile() );
+        DatabaseManagementServiceInternalBuilder builder = new CommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( store.topLevelDirectory().toFile() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
         }
-        return builder.newGraphDatabase();
+        managementService = builder.newDatabaseManagementService();
+
+        return managementService.database( DEFAULT_DATABASE_NAME );
+    }
+
+    public static DatabaseManagementService getManagementService()
+    {
+        return managementService;
     }
 
     public void tearDownDb() throws IOException
     {
         if ( isDatabaseRunning() )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         if ( !dataGeneratorConfig.isReusable() )
         {
             System.out.println( format( "Deleting store [%s] at: %s",
-                                        bytesToString( bytes( storeAndConfig.topLevelDir() ) ), storeAndConfig.topLevelDir() ) );
-            FileUtils.deleteRecursively( storeAndConfig.topLevelDir().toFile() );
+                                        bytesToString( storeAndConfig.store().bytes() ), storeAndConfig.store().topLevelDirectory() ) );
+            FileUtils.deleteRecursively( storeAndConfig.store().topLevelDirectory().toFile() );
         }
     }
 
@@ -102,7 +113,7 @@ public class ManagedStore
         return db;
     }
 
-    public Path store()
+    public Store store()
     {
         return storeAndConfig.store();
     }

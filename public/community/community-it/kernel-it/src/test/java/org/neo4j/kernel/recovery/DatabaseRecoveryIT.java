@@ -40,6 +40,7 @@ import org.neo4j.adversaries.ClassGuardedAdversary;
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -50,8 +51,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder.DatabaseCreator;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder.DatabaseCreator;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.collection.BoundedIterable;
@@ -61,6 +61,7 @@ import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -97,6 +98,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.NodePropertyAccessor;
@@ -105,7 +107,8 @@ import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
 import org.neo4j.test.AdversarialPageCacheGraphDatabaseFactory;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.TestDatabaseManagementServiceFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -127,10 +130,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.Config.defaults;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
-import static org.neo4j.helpers.ArrayUtil.array;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.Iterables.count;
 
@@ -146,11 +149,12 @@ class DatabaseRecoveryIT
     @Inject
     private RandomRule random;
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private DatabaseManagementService managementService;
 
     @Test
     void idGeneratorsRebuildAfterRecovery() throws IOException
     {
-        GraphDatabaseService database = startDatabase( directory.databaseDir() );
+        GraphDatabaseService database = startDatabase( directory.storeDir() );
         int numberOfNodes = 10;
         try ( Transaction transaction = database.beginTx() )
         {
@@ -161,10 +165,9 @@ class DatabaseRecoveryIT
             transaction.success();
         }
 
-        // copying only transaction log simulate non clean shutdown db that should be able to recover just from logs
-        File restoreDbStoreDir = copyStore();
+        var restoreDbLayout = copyStore();
 
-        GraphDatabaseService recoveredDatabase = startDatabase( restoreDbStoreDir );
+        GraphDatabaseService recoveredDatabase = startDatabase( restoreDbLayout.getStoreLayout().storeDirectory() );
         try ( Transaction tx = recoveredDatabase.beginTx() )
         {
             assertEquals( numberOfNodes, count( recoveredDatabase.getAllNodes() ) );
@@ -173,14 +176,13 @@ class DatabaseRecoveryIT
             recoveredDatabase.createNode();
         }
 
-        database.shutdown();
-        recoveredDatabase.shutdown();
+        managementService.shutdown();
     }
 
     @Test
     void reportProgressOnRecovery() throws IOException
     {
-        GraphDatabaseService database = startDatabase( directory.databaseDir() );
+        GraphDatabaseService database = startDatabase( directory.storeDir() );
         for ( int i = 0; i < 10; i++ )
         {
             try ( Transaction transaction = database.beginTx() )
@@ -190,23 +192,24 @@ class DatabaseRecoveryIT
             }
         }
 
-        File restoreDbStoreDir = copyStore();
-        GraphDatabaseService recoveredDatabase = startDatabase( restoreDbStoreDir );
-        try ( Transaction transaction = recoveredDatabase.beginTx() )
+        var restoreDbLayout = copyStore();
+        DatabaseManagementService recoveredService = getManagementService( restoreDbLayout.getStoreLayout().storeDirectory() );
+        GraphDatabaseService recoveredDatabase = recoveredService.database( DEFAULT_DATABASE_NAME );
+        try ( Transaction ignore = recoveredDatabase.beginTx() )
         {
             assertEquals( 10, count( recoveredDatabase.getAllNodes() ) );
         }
         logProvider.assertContainsMessageContaining( "10% completed" );
         logProvider.assertContainsMessageContaining( "100% completed" );
 
-        database.shutdown();
-        recoveredDatabase.shutdown();
+        managementService.shutdown();
+        recoveredService.shutdown();
     }
 
     @Test
     void shouldRecoverIdsCorrectlyWhenWeCreateAndDeleteANodeInTheSameRecoveryRun() throws IOException
     {
-        GraphDatabaseService database = startDatabase( directory.databaseDir() );
+        GraphDatabaseService database = startDatabase( directory.storeDir() );
         Label testLabel = Label.label( "testLabel" );
         final String propertyToDelete = "propertyToDelete";
         final String validPropertyName = "validProperty";
@@ -234,10 +237,11 @@ class DatabaseRecoveryIT
         }
 
         // copying only transaction log simulate non clean shutdown db that should be able to recover just from logs
-        File restoreDbStoreDir = copyStore();
+        var restoreDbLayout = copyStore();
 
         // database should be restored and node should have expected properties
-        GraphDatabaseService recoveredDatabase = startDatabase( restoreDbStoreDir );
+        DatabaseManagementService recoveredService = getManagementService( restoreDbLayout.getStoreLayout().storeDirectory() );
+        GraphDatabaseService recoveredDatabase = recoveredService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction ignored = recoveredDatabase.beginTx() )
         {
             Node node = findNodeByLabel( recoveredDatabase, testLabel );
@@ -245,8 +249,8 @@ class DatabaseRecoveryIT
             assertTrue( node.hasProperty( validPropertyName ) );
         }
 
-        database.shutdown();
-        recoveredDatabase.shutdown();
+        managementService.shutdown();
+        recoveredService.shutdown();
     }
 
     @Test
@@ -261,9 +265,10 @@ class DatabaseRecoveryIT
             ClassGuardedAdversary adversary = new ClassGuardedAdversary( new CountingAdversary( 1, true ), Command.RelationshipCommand.class );
             adversary.disable();
 
-            File databaseDir = directory.databaseDir();
-            GraphDatabaseService db =
-                    AdversarialPageCacheGraphDatabaseFactory.create( fileSystem, adversary ).newEmbeddedDatabaseBuilder( databaseDir ).newGraphDatabase();
+            File storeDir = directory.storeDir();
+            DatabaseManagementService managementService = AdversarialPageCacheGraphDatabaseFactory.create( fileSystem, adversary )
+                    .newEmbeddedDatabaseBuilder( storeDir ).newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
                 try ( Transaction tx = db.beginTx() )
@@ -303,9 +308,8 @@ class DatabaseRecoveryIT
                 healthOf( db ).panic( txFailure.getCause() ); // panic the db again to force recovery on the next startup
 
                 // restart the database, now with regular page cache
-                File databaseDirectory = ((GraphDatabaseAPI) db).databaseLayout().databaseDirectory();
-                db.shutdown();
-                db = startDatabase( databaseDirectory );
+                managementService.shutdown();
+                db = startDatabase( storeDir );
 
                 // now we observe correct state: node is in the index and relationship is removed
                 try ( Transaction tx = db.beginTx() )
@@ -317,7 +321,7 @@ class DatabaseRecoveryIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
         } );
     }
@@ -370,7 +374,7 @@ class DatabaseRecoveryIT
         UpdateCapturingIndexProvider recoveredUpdateCapturingIndexProvider =
                 new UpdateCapturingIndexProvider( IndexProvider.EMPTY, updatesAtLastCheckPoint );
         long lastCommittedTxIdBeforeRecovered = lastCommittedTxId( db );
-        db.shutdown();
+        managementService.shutdown();
         fs.close();
 
         db = startDatabase( storeDir, crashedFs, recoveredUpdateCapturingIndexProvider );
@@ -380,7 +384,7 @@ class DatabaseRecoveryIT
         // then
         assertEquals( lastCommittedTxIdBeforeRecovered, lastCommittedTxIdAfterRecovered );
         assertSameUpdates( updatesAtCrash, updatesAfterRecovery );
-        db.shutdown();
+        managementService.shutdown();
         crashedFs.close();
     }
 
@@ -389,7 +393,8 @@ class DatabaseRecoveryIT
     {
         // given
         EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
-        GraphDatabaseService db = new TestGraphDatabaseFactory().setFileSystem( fs ).newImpermanentDatabase( directory.databaseDir() );
+        managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( fs ).newImpermanentService( directory.storeDir() );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         produceRandomGraphUpdates( db, 100 );
         checkPoint( db );
         EphemeralFileSystemAbstraction checkPointFs = fs.snapshot();
@@ -398,7 +403,8 @@ class DatabaseRecoveryIT
         produceRandomGraphUpdates( db, 100 );
         flush( db );
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
-        db.shutdown();
+
+        managementService.shutdown();
         fs.close();
         Monitors monitors = new Monitors();
         AtomicReference<PageCache> pageCache = new AtomicReference<>();
@@ -423,40 +429,40 @@ class DatabaseRecoveryIT
                 reversedFs.set( crashedFs.snapshot() );
             }
         } );
-        new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
                 {
                     // This nested constructing is done purely to be able to fish out GlobalModule
                     // (and its PageCache inside it). It would be great if this could be done in a prettier way.
 
                     @Override
-                    protected DatabaseCreator createImpermanentDatabaseCreator( File storeDir, TestGraphDatabaseFactoryState state )
+                    protected DatabaseCreator createImpermanentDatabaseCreator( File storeDir1, TestGraphDatabaseFactoryState state )
                     {
-                        return new GraphDatabaseBuilder.DatabaseCreator()
+                        return new DatabaseCreator()
                         {
 
                             @Override
-                            public GraphDatabaseService newDatabase( @Nonnull Config config )
+                            public DatabaseManagementService newDatabase( @Nonnull Config config )
                             {
-                                TestGraphDatabaseFacadeFactory factory = new TestGraphDatabaseFacadeFactory( state, true )
+                                TestDatabaseManagementServiceFactory factory = new TestDatabaseManagementServiceFactory( state, true )
                                 {
                                     @Override
-                                    protected GlobalModule createGlobalModule( File storeDir, Config config, ExternalDependencies dependencies )
+                                    protected GlobalModule createGlobalModule( File storeDir11, Config config, ExternalDependencies dependencies )
                                     {
-                                        GlobalModule globalModule = super.createGlobalModule( storeDir, config, dependencies );
+                                        GlobalModule globalModule = super.createGlobalModule( storeDir11, config, dependencies );
                                         // nice way of getting the page cache dependency before db is created, huh?
                                         pageCache.set( globalModule.getPageCache() );
                                         return globalModule;
                                     }
                                 };
-                                return factory.newFacade( storeDir, config, newDependencies( state.databaseDependencies() ) );
+                                return factory.newFacade( storeDir1, config, newDependencies( state.databaseDependencies() ) );
                             }
                         };
                     }
                 }
                 .setFileSystem( crashedFs )
-                .setMonitors( monitors )
-                .newImpermanentDatabase( directory.databaseDir() )
-                .shutdown();
+                .setMonitors( monitors ).newImpermanentService( directory.storeDir() );
+
+        managementService.shutdown();
 
         // then
         fs.close();
@@ -469,8 +475,7 @@ class DatabaseRecoveryIT
         }
         finally
         {
-            checkPointFs.close();
-            reversedFs.get().close();
+            IOUtils.closeAll( checkPointFs, reversedFs.get() );
         }
     }
 
@@ -559,7 +564,7 @@ class DatabaseRecoveryIT
                     {   // create
                         if ( operation < 0.5 )
                         {   // create node (w/ random label, prop)
-                            Node node = db.createNode( random.nextBoolean() ? array( randomLabel() ) : new Label[0] );
+                            Node node = db.createNode( random.nextBoolean() ? new Label[] { randomLabel() } : new Label[0] );
                             if ( random.nextBoolean() )
                             {
                                 node.setProperty( randomKey(), random.nextValueAsObject() );
@@ -714,7 +719,7 @@ class DatabaseRecoveryIT
                     }
                     else if ( operation < 0.3 )
                     {   // Create node
-                        Node node = db.createNode( random.nextBoolean() ? array( label ) : new Label[0] );
+                        Node node = db.createNode( random.nextBoolean() ? new Label[] { label } : new Label[0] );
                         for ( String key : keys )
                         {
                             if ( random.nextBoolean() )
@@ -780,7 +785,7 @@ class DatabaseRecoveryIT
         assertThrows( NotFoundException.class, () -> db.getRelationshipById( id ) );
     }
 
-    private static DatabaseHealth healthOf( GraphDatabaseService db )
+    private static Health healthOf( GraphDatabaseService db )
     {
         DependencyResolver resolver = ((GraphDatabaseAPI) db).getDependencyResolver();
         return resolver.resolveDependency( DatabaseHealth.class );
@@ -793,12 +798,13 @@ class DatabaseRecoveryIT
         return Arrays.toString( strings );
     }
 
-    private File copyStore() throws IOException
+    private DatabaseLayout copyStore() throws IOException
     {
         File restoreDbStore = directory.storeDir( "restore-db" );
-        File restoreDbStoreDir = directory.databaseDir( restoreDbStore );
-        copy( fileSystem, this.directory.databaseDir(), restoreDbStoreDir );
-        return restoreDbStoreDir;
+        DatabaseLayout restoreDbLayout = directory.databaseLayout( restoreDbStore );
+        copy( fileSystem, directory.databaseLayout().getTransactionLogsDirectory(), restoreDbLayout.getTransactionLogsDirectory() );
+        copy( fileSystem, directory.databaseLayout().databaseDirectory(), restoreDbLayout.databaseDirectory() );
+        return restoreDbLayout;
     }
 
     private static void copy( FileSystemAbstraction fs, File fromDirectory, File toDirectory ) throws IOException
@@ -808,19 +814,26 @@ class DatabaseRecoveryIT
         fs.copyRecursively( fromDirectory, toDirectory );
     }
 
-    private static GraphDatabaseAPI startDatabase( File storeDir, EphemeralFileSystemAbstraction fs, UpdateCapturingIndexProvider indexProvider )
+    private GraphDatabaseAPI startDatabase( File storeDir, EphemeralFileSystemAbstraction fs, UpdateCapturingIndexProvider indexProvider )
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .setFileSystem( fs )
                 .setExtensions( singletonList( new IndexExtensionFactory( indexProvider ) ) )
                 .newImpermanentDatabaseBuilder( storeDir )
-                .setConfig( default_schema_provider, indexProvider.getProviderDescriptor().name() )
-                .newGraphDatabase();
+                .setConfig( default_schema_provider, indexProvider.getProviderDescriptor().name() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseService startDatabase( File storeDir )
     {
-        return new TestGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( storeDir );
+        managementService = getManagementService( storeDir );
+        return managementService.database( DEFAULT_DATABASE_NAME );
+    }
+
+    private DatabaseManagementService getManagementService( File storeDir )
+    {
+        return new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider )
+                .newDatabaseManagementService( storeDir );
     }
 
     public class UpdateCapturingIndexProvider extends IndexProvider

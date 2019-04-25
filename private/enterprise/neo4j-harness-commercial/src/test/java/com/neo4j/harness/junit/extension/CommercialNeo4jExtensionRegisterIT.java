@@ -5,7 +5,6 @@
  */
 package com.neo4j.harness.junit.extension;
 
-import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -33,7 +32,6 @@ import static java.time.ZoneOffset.UTC;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,12 +65,6 @@ class CommercialNeo4jExtensionRegisterIT
     {
         assertNotNull( neo4j );
         assertThat( HTTP.GET( neo4j.httpURI().toString() ).status(), equalTo( 200 ) );
-    }
-
-    @Test
-    void availableNeo4jIsCommercialEdition( GraphDatabaseService databaseService )
-    {
-        assertThat( databaseService, instanceOf( CommercialGraphDatabase.class ) );
     }
 
     @Test

@@ -12,6 +12,10 @@ if [ $# -lt 2 ] ; then
     exit -1
 fi
 
+if [[ -z "$JAVA_HOME" ]]; then
+    echo "JAVA_HOME not set, bye, bye"
+fi
+
 new_neo4j_version="${1}"
 old_neo4j_version="${2}"
 
@@ -51,7 +55,7 @@ for i in "${db_and_workloads[@]}"; do
     tar xzvf "${zip_file}" -C old
     rm "${zip_file}"
 
-    java -jar target/macro.jar upgrade-store \
+    "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
                                --original-db old/"${db_name}"/ \
                                --upgraded-db "${db_name}"/ \
                                --workload "${workload}" \

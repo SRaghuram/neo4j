@@ -28,15 +28,15 @@ import java.nio.file.NoSuchFileException;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
-import org.neo4j.cursor.RawCursor;
+import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Header;
-import org.neo4j.index.internal.gbptree.Hit;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.MetadataMismatchException;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -45,7 +45,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.NodeLabelUpdate;
 import org.neo4j.storageengine.api.NodeLabelUpdateListener;
-import org.neo4j.storageengine.api.UnderlyingStorageException;
 
 /**
  * {@link LabelScanStore} which is implemented using {@link GBPTree} atop a {@link PageCache}.
@@ -280,7 +279,7 @@ public class NativeLabelScanStore implements LabelScanStore, NodeLabelUpdateList
     @Override
     public AllEntriesLabelScanReader allNodeLabelRanges()
     {
-        IntFunction<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> seekProvider = labelId ->
+        IntFunction<Seeker<LabelScanKey,LabelScanValue>> seekProvider = labelId ->
         {
             try
             {
@@ -295,13 +294,13 @@ public class NativeLabelScanStore implements LabelScanStore, NodeLabelUpdateList
         };
 
         int highestLabelId = -1;
-        try ( RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor = index.seek(
+        try ( Seeker<LabelScanKey,LabelScanValue> cursor = index.seek(
                 new LabelScanKey().set( Integer.MAX_VALUE, Long.MAX_VALUE ),
                 new LabelScanKey().set( 0, -1 ) ) )
         {
             if ( cursor.next() )
             {
-                highestLabelId = cursor.get().key().labelId;
+                highestLabelId = cursor.key().labelId;
             }
         }
         catch ( IOException e )
@@ -453,7 +452,7 @@ public class NativeLabelScanStore implements LabelScanStore, NodeLabelUpdateList
     @Override
     public boolean isEmpty() throws IOException
     {
-        try ( RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor = index.seek(
+        try ( Seeker<LabelScanKey,LabelScanValue> cursor = index.seek(
                 new LabelScanKey( 0, 0 ),
                 new LabelScanKey( Integer.MAX_VALUE, Long.MAX_VALUE ) ) )
         {
@@ -508,9 +507,9 @@ public class NativeLabelScanStore implements LabelScanStore, NodeLabelUpdateList
         }
 
         @Override
-        public void cleanupFinished( long numberOfPagesVisited, long numberOfCleanedCrashPointers, long durationMillis )
+        public void cleanupFinished( long numberOfPagesVisited, long numberOfTreeNodes, long numberOfCleanedCrashPointers, long durationMillis )
         {
-            monitor.recoveryCleanupFinished( numberOfPagesVisited, numberOfCleanedCrashPointers, durationMillis );
+            monitor.recoveryCleanupFinished( numberOfPagesVisited, numberOfTreeNodes, numberOfCleanedCrashPointers, durationMillis );
         }
 
         @Override

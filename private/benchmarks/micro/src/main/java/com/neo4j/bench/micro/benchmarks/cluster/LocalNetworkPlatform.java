@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.configuration.Config;
@@ -48,8 +49,8 @@ public class LocalNetworkPlatform
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", SOME_BULLSHIT_PORT );
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
-            server = new Server( serverProtocolInstaller::install, logProvider, logProvider, listenSocketAddress, "RaftServer", executor,
-                                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
+            server = new Server( serverProtocolInstaller::install, null, logProvider, logProvider, listenSocketAddress, "RaftServer", executor,
+                                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
 

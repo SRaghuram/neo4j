@@ -88,14 +88,20 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
         }
         if ( leafMaxKeyCount < 2 )
         {
-            throw new MetadataMismatchException( "A page size of %d would only fit leaf keys, minimum is 2",
-                    pageSize, leafMaxKeyCount );
+            throw new MetadataMismatchException( "A page size of %d would only fit %d leaf keys (keySize:%d, valueSize:%d), minimum is 2",
+                    pageSize, leafMaxKeyCount, keySize, valueSize );
         }
     }
 
     @Override
     void writeAdditionalHeader( PageCursor cursor )
     {   // no-op
+    }
+
+    @Override
+    long offloadIdAt( PageCursor cursor, int pos, Type type )
+    {
+        return NO_OFFLOAD_ID;
     }
 
     private static int childSize()
@@ -127,28 +133,28 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount )
+    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration )
     {
         insertKeyAt( cursor, key, pos, keyCount );
         insertValueAt( cursor, value, pos, keyCount );
     }
 
     @Override
-    void removeKeyValueAt( PageCursor cursor, int pos, int keyCount )
+    void removeKeyValueAt( PageCursor cursor, int pos, int keyCount, long stableGeneration, long unstableGeneration )
     {
         removeKeyAt( cursor, pos, keyCount );
         removeValueAt( cursor, pos, keyCount );
     }
 
     @Override
-    void removeKeyAndLeftChildAt( PageCursor cursor, int keyPos, int keyCount )
+    void removeKeyAndLeftChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration )
     {
         removeKeyAt( cursor, keyPos, keyCount );
         removeChildAt( cursor, keyPos, keyCount );
     }
 
     @Override
-    void removeKeyAndRightChildAt( PageCursor cursor, int keyPos, int keyCount )
+    void removeKeyAndRightChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration )
     {
         removeKeyAt( cursor, keyPos, keyCount );
         removeChildAt( cursor, keyPos + 1, keyCount );
@@ -189,6 +195,12 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     int keyValueSizeCap()
     {
         return NO_KEY_VALUE_SIZE_CAP;
+    }
+
+    @Override
+    int inlineKeyValueSizeCap()
+    {
+        return keyValueSizeCap();
     }
 
     @Override
@@ -352,7 +364,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
 
     @Override
     void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            VALUE newValue, KEY newSplitter, double ratioToKeepInLeftOnSplit )
+            VALUE newValue, KEY newSplitter, double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration )
     {
         int keyCountAfterInsert = leftKeyCount + 1;
         int splitPos = splitPos( keyCountAfterInsert, ratioToKeepInLeftOnSplit );
@@ -374,7 +386,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
             // insert _,_,_,X,_,_,_,_,_,_,_
             // split            ^
             copyKeysAndValues( leftCursor, splitPos - 1, rightCursor, 0, rightKeyCount );
-            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, splitPos - 1 );
+            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, splitPos - 1, stableGeneration, unstableGeneration );
         }
         else
         {
@@ -389,7 +401,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
                 // first copy
                 copyKeysAndValues( leftCursor, splitPos, rightCursor, 0, countBeforePos );
             }
-            insertKeyValueAt( rightCursor, newKey, newValue, countBeforePos, countBeforePos );
+            insertKeyValueAt( rightCursor, newKey, newValue, countBeforePos, countBeforePos, stableGeneration, unstableGeneration );
             int countAfterPos = leftKeyCount - insertPos;
             if ( countAfterPos > 0 )
             {

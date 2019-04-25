@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.Random;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.kernel.database.DatabaseId;
 
 @ServiceProvider
 public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelectionStrategy
@@ -27,11 +28,11 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     }
 
     @Override
-    public Optional<MemberId> upstreamDatabase() throws UpstreamDatabaseSelectionException
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
-        final CoreTopology coreTopology = topologyService.localCoreServers();
+        final CoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
 
-        if ( coreTopology.members().size() == 0 )
+        if ( coreTopology.members().isEmpty() )
         {
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }

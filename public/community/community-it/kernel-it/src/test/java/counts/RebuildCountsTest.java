@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -44,7 +45,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -52,6 +53,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.index_background_sampling_enabled;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
@@ -77,11 +79,12 @@ class RebuildCountsTest
 
     private GraphDatabaseService db;
     private File storeDir;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void before() throws IOException
     {
-        storeDir = testDirectory.databaseDir();
+        storeDir = testDirectory.storeDir();
         restart( fileSystem );
     }
 
@@ -217,24 +220,24 @@ class RebuildCountsTest
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         fs.mkdirs( storeDir );
-        TestGraphDatabaseFactory dbFactory = new TestGraphDatabaseFactory();
-        db = dbFactory.setUserLogProvider( userLogProvider )
+        TestDatabaseManagementServiceBuilder dbFactory = new TestDatabaseManagementServiceBuilder();
+        managementService = dbFactory.setUserLogProvider( userLogProvider )
                       .setInternalLogProvider( internalLogProvider )
                       .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) )
                       .newImpermanentDatabaseBuilder( storeDir )
-                      .setConfig( index_background_sampling_enabled, "false" )
-                      .newGraphDatabase();
+                      .setConfig( index_background_sampling_enabled, "false" ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void doCleanShutdown()
     {
         try
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         finally
         {

@@ -32,7 +32,6 @@ import java.util.function.IntConsumer;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.ByteArrayPageCursor;
 import org.neo4j.util.Preconditions;
@@ -80,7 +79,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
         this.bufferFactory = bufferFactory;
         this.byteBuffer = bufferFactory.newBuffer( blockSize );
         this.comparator = ( e0, e1 ) -> layout.compare( e0.key(), e1.key() );
-        this.storeChannel = fs.create( blockFile );
+        this.storeChannel = fs.write( blockFile );
         resetBufferedEntries();
     }
 
@@ -159,7 +158,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
                 // Perform one complete merge iteration, merging all blocks from source into target.
                 // After this step, target will contain fewer blocks than source, but may need another merge iteration.
                 try ( BlockReader<KEY,VALUE> reader = reader( sourceFile );
-                      StoreChannel targetChannel = fs.open( targetFile, OpenMode.READ_WRITE ) )
+                      StoreChannel targetChannel = fs.write( targetFile ) )
                 {
                     long blocksMergedSoFar = 0;
                     long blocksInMergedFile = 0;

@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForMultiDC;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForSingleDC;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForSingleDC;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -41,7 +41,7 @@ class CoreRoutingProcedureInstallerTest
         installRoutingProcedures( config, procedures );
 
         verifyRegisteredProcedureNames( procedures );
-        verify( procedures, times( 2 ) ).register( any( GetServersProcedureForSingleDC.class ) );
+        verify( procedures, times( 2 ) ).register( any( GetRoutingTableProcedureForSingleDC.class ) );
     }
 
     @Test
@@ -53,7 +53,7 @@ class CoreRoutingProcedureInstallerTest
         installRoutingProcedures( config, procedures );
 
         verifyRegisteredProcedureNames( procedures );
-        verify( procedures, times( 2 ) ).register( any( GetServersProcedureForMultiDC.class ) );
+        verify( procedures, times( 2 ) ).register( any( GetRoutingTableProcedureForMultiDC.class ) );
     }
 
     private static Config newConfig( boolean multiDC )
@@ -66,9 +66,9 @@ class CoreRoutingProcedureInstallerTest
     private static void installRoutingProcedures( Config config, GlobalProcedures procedures ) throws ProcedureException
     {
         TopologyService topologyService = mock( TopologyService.class );
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        LeaderService leaderService = mock( LeaderService.class );
 
-        CoreRoutingProcedureInstaller installer = new CoreRoutingProcedureInstaller( topologyService, leaderLocator, config, NullLogProvider.getInstance() );
+        CoreRoutingProcedureInstaller installer = new CoreRoutingProcedureInstaller( topologyService, leaderService, config, NullLogProvider.getInstance() );
         installer.install( procedures );
     }
 

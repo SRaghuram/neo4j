@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.crypto.hash.SimpleHash;
 import org.junit.Test;
 

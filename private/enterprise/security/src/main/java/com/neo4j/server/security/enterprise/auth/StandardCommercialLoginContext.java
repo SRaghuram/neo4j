@@ -22,13 +22,8 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
-class StandardCommercialLoginContext implements CommercialLoginContext
+public class StandardCommercialLoginContext implements CommercialLoginContext
 {
-    private static final String SCHEMA_READ_WRITE = "schema:read,write";
-    private static final String TOKEN_CREATE = "token:create";
-    private static final String READ_WRITE = "data:read,write";
-    private static final String READ = "data:read";
-
     private final MultiRealmAuthManager authManager;
     private final ShiroSubject shiroSubject;
     private final NeoShiroSubject neoShiroSubject;
@@ -40,36 +35,38 @@ class StandardCommercialLoginContext implements CommercialLoginContext
         this.neoShiroSubject = new NeoShiroSubject();
     }
 
-    private boolean isAdmin()
-    {
-        return shiroSubject.isAuthenticated() && shiroSubject.isPermitted( "*" );
-    }
-
     @Override
     public AuthSubject subject()
     {
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( PropertyKeyIdLookup tokenLookup )
+    private StandardAccessMode mode( PropertyKeyIdLookup resolver, String dbName )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
-        return new StandardAccessMode(
-                isAuthenticated && shiroSubject.isPermitted( READ ),
-                isAuthenticated && shiroSubject.isPermitted( READ_WRITE ),
-                isAuthenticated && shiroSubject.isPermitted( TOKEN_CREATE ),
-                isAuthenticated && shiroSubject.isPermitted( SCHEMA_READ_WRITE ),
-                shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED,
-                queryForRoleNames(),
-                queryForPropertyPermissions( tokenLookup )
-            );
+        boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
+        Set<String> roles = queryForRoleNames();
+        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles );
+
+        Set<DatabasePrivilege> privileges = authManager.getPermissions( roles );
+        for ( DatabasePrivilege privilege : privileges )
+        {
+            String privilegeDbName = privilege.getDbName();
+            if ( privilegeDbName.equals( dbName ) || privilegeDbName.equals( "*" ) )
+            {
+                accessModeBuilder.addPrivileges( privilege );
+            }
+        }
+
+        accessModeBuilder.addPropertyPermissions( queryForPropertyPermissions( resolver ) );
+        return accessModeBuilder.build();
     }
 
     @Override
-    public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( PropertyKeyIdLookup resolver, String dbName )
     {
-        StandardAccessMode mode = mode( propertyKeyIdLookup );
-        return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, isAdmin() );
+        StandardAccessMode mode = mode( resolver, dbName );
+        return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, mode.isAdmin() );
     }
 
     @Override
@@ -91,9 +88,9 @@ class StandardCommercialLoginContext implements CommercialLoginContext
                 .collect( Collectors.toSet() );
     }
 
-    private IntPredicate queryForPropertyPermissions( PropertyKeyIdLookup tokenLookup )
+    private IntPredicate queryForPropertyPermissions( PropertyKeyIdLookup resolver )
     {
-        return authManager.getPropertyPermissions( roles(), tokenLookup );
+        return authManager.getPropertyPermissions( roles(), resolver );
     }
 
     private static class StandardAccessMode implements AccessMode
@@ -105,14 +102,16 @@ class StandardCommercialLoginContext implements CommercialLoginContext
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
         private final IntPredicate propertyPermissions;
+        private final boolean isAdmin;
 
         StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
-                boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions )
+                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
             this.allowsTokenCreates = allowsTokenCreates;
             this.allowsSchemaWrites = allowsSchemaWrites;
+            this.isAdmin = isAdmin;
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
@@ -161,6 +160,11 @@ class StandardCommercialLoginContext implements CommercialLoginContext
             return false;
         }
 
+        public boolean isAdmin()
+        {
+            return isAdmin;
+        }
+
         @Override
         public AuthorizationViolationException onViolation( String msg )
         {
@@ -179,6 +183,105 @@ class StandardCommercialLoginContext implements CommercialLoginContext
         {
             Set<String> sortedRoles = new TreeSet<>( roles );
             return roles.isEmpty() ? "no roles" : "roles [" + String.join( ",", sortedRoles ) + "]";
+        }
+
+        static class Builder
+        {
+            private final boolean isAuthenticated;
+            private final boolean passwordChangeRequired;
+            private final Set<String> roles;
+
+            private boolean read;
+            private boolean write;
+            private boolean token;
+            private boolean schema;
+            private boolean admin;
+            private IntPredicate propertyPermissions;
+
+            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles )
+            {
+                this.isAuthenticated = isAuthenticated;
+                this.passwordChangeRequired = passwordChangeRequired;
+                this.roles = roles;
+            }
+
+            void addPropertyPermissions( IntPredicate propertyPermissions )
+            {
+
+                this.propertyPermissions = propertyPermissions;
+            }
+
+            StandardAccessMode build()
+            {
+                return new StandardAccessMode(
+                        isAuthenticated && read,
+                        isAuthenticated && write,
+                        isAuthenticated && token,
+                        isAuthenticated && schema,
+                        isAuthenticated && admin,
+                        passwordChangeRequired,
+                        roles,
+                        propertyPermissions );
+            }
+
+            void addPrivileges( DatabasePrivilege dbPrivilege )
+            {
+                for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+                {
+                    switch ( privilege.getAction() )
+                    {
+                    case READ:
+                        switch ( privilege.getResource() )
+                        {
+                        case TOKEN:
+                        case SCHEMA:
+                        case SYSTEM:
+                        case PROCEDURE:
+                            break;
+                        case GRAPH:
+                            read = true;
+                            break;
+                        default:
+                        }
+                        break;
+                    case WRITE:
+                        switch ( privilege.getResource() )
+                        {
+                        case GRAPH:
+                            write = true;
+                            break;
+                        case TOKEN:
+                            token = true;
+                            break;
+                        case SCHEMA:
+                            schema = true;
+                            break;
+                        case SYSTEM:
+                            admin = true;
+                            break;
+                        case PROCEDURE:
+                            break;
+                        default:
+                        }
+                        break;
+                    case EXECUTE:
+                        switch ( privilege.getResource() )
+                        {
+                        case GRAPH:
+                        case TOKEN:
+                        case SCHEMA:
+                        case SYSTEM:
+                            break;
+                        case PROCEDURE:
+                            // implement when porting procedure execute privileges to system graph
+                            break;
+                        default:
+                        }
+                        break;
+                    default:
+                    }
+                }
+            }
         }
     }
 
@@ -224,10 +327,10 @@ class StandardCommercialLoginContext implements CommercialLoginContext
         public boolean hasUsername( String username )
         {
             Object principal = shiroSubject.getPrincipal();
-            return principal != null && username != null && username.equals( principal );
+            return username != null && username.equals( principal );
         }
 
-        public String getAuthenticationFailureMessage()
+        String getAuthenticationFailureMessage()
         {
             String message = "";
             List<Throwable> throwables = shiroSubject.getAuthenticationInfo().getThrowables();
@@ -253,7 +356,7 @@ class StandardCommercialLoginContext implements CommercialLoginContext
             return message;
         }
 
-        public void clearAuthenticationInfo()
+        void clearAuthenticationInfo()
         {
             shiroSubject.clearAuthenticationInfo();
         }

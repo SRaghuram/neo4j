@@ -23,12 +23,12 @@ class CommercialCatchupV3Test extends CommercialCatchupTest
 
     @ParameterizedTest
     @MethodSource( "v3Tests" )
-    void runTests( Function<DatabaseManager,RequestResponse> scenario ) throws Exception
+    void runTests( Function<DatabaseManager<?>,RequestResponse> scenario ) throws Exception
     {
         executeTestScenario( scenario );
     }
 
-    private static Stream<Function<DatabaseManager,RequestResponse>> v3Tests()
+    private static Stream<Function<DatabaseManager<?>,RequestResponse>> v3Tests()
     {
         return Stream.of( storeId(), wrongDb() );
     }

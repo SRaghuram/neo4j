@@ -18,6 +18,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -39,6 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class ReplicatedTransactionStateMachineTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
     private final int batchSize = 16;
@@ -49,7 +51,7 @@ public class ReplicatedTransactionStateMachineTest
         // given
         int lockSessionId = 23;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( lockSessionId ), DEFAULT_DATABASE_NAME );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( lockSessionId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
@@ -76,7 +78,7 @@ public class ReplicatedTransactionStateMachineTest
         int txLockSessionId = 23;
         int currentLockSessionId = 24;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
@@ -119,7 +121,7 @@ public class ReplicatedTransactionStateMachineTest
         int currentLockSessionId = 24;
         long txId = 42L;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( txId );
 
@@ -163,7 +165,7 @@ public class ReplicatedTransactionStateMachineTest
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( txLockSessionId ), batchSize, logProvider, PageCursorTracerSupplier.NULL,
                         EmptyVersionContextSupplier.EMPTY );
 
-        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
+        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
         // and
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( anyTransactionId );
@@ -208,7 +210,7 @@ public class ReplicatedTransactionStateMachineTest
 
     private  ReplicatedLockTokenStateMachine lockState( int lockSessionId )
     {
-        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, DEFAULT_DATABASE_NAME );
+        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, DATABASE_ID );
         ReplicatedLockTokenStateMachine lockState = mock( ReplicatedLockTokenStateMachine.class );
         when( lockState.snapshot() ).thenReturn( new ReplicatedLockTokenState( -1, lockTokenRequest ) );
         return lockState;

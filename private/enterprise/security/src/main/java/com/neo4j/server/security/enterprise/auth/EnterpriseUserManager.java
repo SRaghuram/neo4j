@@ -47,6 +47,38 @@ public interface EnterpriseUserManager extends UserManager
      */
     void removeRoleFromUser( String roleName, String username ) throws IOException, InvalidArgumentsException;
 
+    /**
+     * Grant privilege on a resource to a role. The role have to exist.
+     * If the role already have this privilege nothing will change.
+     *
+     * @param roleName name of role
+     * @param dbPrivilege privilege to grant
+     * @throws InvalidArgumentsException if the role or database does not exist
+     */
+    void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException;
+
+    /**
+     * Revoke a privilege on a resource from a role. The role have to exist.
+     * If the role does not have a existing grant on the privilege, no change will happen.
+     *
+     * @param roleName name of role
+     * @param dbPrivilege privilege to revoke
+     * @throws InvalidArgumentsException if the role or database does not exist
+     */
+    void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException;
+
+    /**
+     * Show the privileges for a user.
+     *
+     * @param username name of user
+     * @throws InvalidArgumentsException if the user does not exist
+     */
+    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException;
+
+    Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles );
+
+    void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException;
+
     Set<String> getAllRoleNames();
 
     Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException;
@@ -92,6 +124,33 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void removeRoleFromUser( String roleName, String username )
+        {
+        }
+
+        @Override
+        public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege )
+        {
+        }
+
+        @Override
+        public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege )
+        {
+        }
+
+        @Override
+        public Set<DatabasePrivilege> showPrivilegesForUser( String username )
+        {
+            return emptySet();
+        }
+
+        @Override
+        public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+        {
+            return emptySet();
+        }
+
+        @Override
+        public void setAdmin( String roleName, boolean setToAdmin )
         {
         }
 

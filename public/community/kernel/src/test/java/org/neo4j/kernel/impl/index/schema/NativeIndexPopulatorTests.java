@@ -37,7 +37,6 @@ import java.util.Random;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
@@ -105,7 +104,7 @@ public abstract class NativeIndexPopulatorTests<KEY extends NativeIndexKey<KEY>,
         populator.create();
 
         // then
-        try ( StoreChannel r = fs.open( indexFiles.getStoreFile(), OpenMode.READ ) )
+        try ( StoreChannel r = fs.read( indexFiles.getStoreFile() ) )
         {
             byte[] firstBytes = new byte[someBytes.length];
             r.readAll( ByteBuffer.wrap( firstBytes ) );
@@ -794,7 +793,7 @@ public abstract class NativeIndexPopulatorTests<KEY extends NativeIndexKey<KEY>,
     {
         int size = 1000;
         fs.mkdirs( indexFiles.getStoreFile().getParentFile() );
-        try ( StoreChannel storeChannel = fs.create( indexFiles.getStoreFile() ) )
+        try ( StoreChannel storeChannel = fs.write( indexFiles.getStoreFile() ) )
         {
             byte[] someBytes = new byte[size];
             random.nextBytes( someBytes );

@@ -10,6 +10,10 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 object WorkIdentity {
   def fromPlan(plan: LogicalPlan): WorkIdentity =
     WorkIdentityImpl(plan.id.x, plan.getClass.getSimpleName)
+
+  def fromFusedPlans(fusedPlans: Iterable[LogicalPlan]): WorkIdentity = {
+    WorkIdentityImpl(fusedPlans.head.id.x, s"Fused(${fusedPlans.map(_.getClass.getSimpleName).mkString("->")})")
+  }
 }
 
 trait HasWorkIdentity {

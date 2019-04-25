@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.log;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
-import com.neo4j.causalclustering.core.consensus.membership.RaftTestGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
@@ -41,7 +41,7 @@ public class RaftMachineLogTest
     {
         // given
         testEntryLog = new InMemoryRaftLog();
-        testEntryLog.append( new RaftLogEntry( 0, new RaftTestGroup( myself ) ) );
+        testEntryLog.append( new RaftLogEntry( 0, new RaftTestMembers( myself ) ) );
 
         raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
                 .raftLog( testEntryLog )

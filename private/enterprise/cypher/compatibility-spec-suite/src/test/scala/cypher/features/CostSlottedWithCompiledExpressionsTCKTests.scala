@@ -7,7 +7,7 @@ package cypher.features
 
 import java.util
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
@@ -20,12 +20,12 @@ class CostSlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests 
   def runCostSlotted(): util.Collection[DynamicTest] = {
     //TODO this is a temporary measure, use CostSlottedWithCompiledExpressionsTestConfig here when TCK is fixed
     createTests(scenarios, new TestConfig(Some("cost-slotted-compiled-expressions.txt"),
-                                          "CYPHER planner=cost runtime=slotted expressionEngine=COMPILED"), new TestCommercialGraphDatabaseFactory())
+                                          "CYPHER planner=cost runtime=slotted expressionEngine=COMPILED"), new TestCommercialDatabaseManagementServiceBuilder())
   }
 
   @Disabled
   def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestCommercialGraphDatabaseFactory())
+    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

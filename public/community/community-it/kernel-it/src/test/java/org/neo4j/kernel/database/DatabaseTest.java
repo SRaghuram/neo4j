@@ -44,6 +44,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.monitoring.Health;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.PageCacheConfig;
 import org.neo4j.test.rule.PageCacheRule;
@@ -51,12 +52,14 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.util.Optional.of;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -87,7 +90,7 @@ public class DatabaseTest
         Database database = null;
         try
         {
-            DatabaseHealth databaseHealth = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ),
+            Health databaseHealth = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ),
                     NullLogProvider.getInstance().getLog( DatabaseHealth.class ) );
             Dependencies dependencies = new Dependencies();
             dependencies.satisfyDependency( databaseHealth );
@@ -231,7 +234,7 @@ public class DatabaseTest
     @Test
     public void flushOfThePageCacheOnShutdownDoesNotHappenIfTheDbIsUnhealthy() throws Throwable
     {
-        DatabaseHealth health = mock( DatabaseHealth.class );
+        Health health = mock( DatabaseHealth.class );
         when( health.isHealthy() ).thenReturn( false );
         PageCache pageCache = spy( pageCacheRule.getPageCache( fs.get() ) );
 
@@ -272,11 +275,11 @@ public class DatabaseTest
         }
         catch ( Exception e )
         {
-            assertEquals( openStoresError, e );
+            assertSame( openStoresError, getRootCause( e ) );
         }
 
         logProvider.assertAtLeastOnce( inLog( Database.class ).warn(
-                equalTo( "Exception occurred while setting up store modules. Attempting to close things down." ),
+                equalTo( "Exception occurred while starting the database. Trying to stop already started components." ),
                 equalTo( openStoresError ) ) );
     }
 
@@ -286,7 +289,7 @@ public class DatabaseTest
         // Given
         FileSystemAbstraction fs = this.fs.get();
         PageCache pageCache = pageCacheRule.getPageCache( fs );
-        DatabaseHealth databaseHealth = mock( DatabaseHealth.class );
+        Health databaseHealth = mock( DatabaseHealth.class );
         when( databaseHealth.isHealthy() ).thenReturn( true );
         IOException ex = new IOException( "boom!" );
         doThrow( ex ).when( databaseHealth )

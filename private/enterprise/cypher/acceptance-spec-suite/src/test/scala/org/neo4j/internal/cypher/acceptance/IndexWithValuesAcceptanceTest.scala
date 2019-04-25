@@ -200,7 +200,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("should plan index seek with GetValue when the property is part of a distinct column") {
     val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes)
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("Distinct")
+    result.executionPlanDescription() should includeSomewhere.aPlan("OrderedDistinct")
       .withDBHits(0)
       .onTopOf(aPlan("NodeIndexSeekByRange")
         .withExactVariables("n", "cached[n.prop1]"))
@@ -388,7 +388,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
+        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
           .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]"))
     result.toList should equal(List(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3)))
   }
@@ -399,7 +399,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
+        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
           .withExactVariables("n", "cached[n.prop1]"))
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))
   }

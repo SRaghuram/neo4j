@@ -8,10 +8,12 @@ package org.neo4j.cypher
 import java.util
 
 import org.neo4j.collection.RawIterator
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.{GraphDatabaseService, Result}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
@@ -21,7 +23,7 @@ import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.{CallableProcedure, Context, GlobalProcedures}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.procedure.Mode
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
@@ -33,15 +35,17 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   private val runtimes = Seq("interpreted", "compiled")
 
+  private var managementService: DatabaseManagementService = _
   private var db : GraphDatabaseService = _
 
   override protected def initTest(): Unit = {
     super.initTest()
-    db = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    db = managementService.database(DEFAULT_DATABASE_NAME)
   }
 
   override protected def stopTest(): Unit = {
-    db.shutdown()
+    managementService.shutdown()
     super.stopTest()
   }
 

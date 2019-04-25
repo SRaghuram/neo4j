@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Rule;
@@ -19,6 +19,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -38,6 +39,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class BoltSnapshotQueryExecutionIT
 {
@@ -46,13 +48,14 @@ public class BoltSnapshotQueryExecutionIT
 
     private Driver driver;
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @After
     public void tearDown()
     {
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
         IOUtils.closeAllSilently( driver );
     }
@@ -71,11 +74,13 @@ public class BoltSnapshotQueryExecutionIT
 
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
-        db = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
-                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();
         connectDirver();
         verifyQueryExecution();

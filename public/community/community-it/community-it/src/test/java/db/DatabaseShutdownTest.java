@@ -27,35 +27,41 @@ import java.io.IOException;
 import java.nio.file.OpenOption;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.event.DatabaseEventHandlerAdapter;
+import org.neo4j.graphdb.event.DatabaseEventContext;
+import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.DelegatingPageCache;
 import org.neo4j.io.pagecache.DelegatingPagedFile;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class, } )
 class DatabaseShutdownTest
@@ -66,36 +72,40 @@ class DatabaseShutdownTest
     @Test
     void shouldShutdownCorrectlyWhenCheckPointingOnShutdownFails()
     {
-        TestGraphDatabaseFactoryWithFailingPageCacheFlush factory = new TestGraphDatabaseFactoryWithFailingPageCacheFlush();
-        assertThrows( LifecycleException.class, () -> {
-            GraphDatabaseService databaseService = factory.newEmbeddedDatabase( testDirectory.storeDir() );
-            factory.setFailFlush( true );
-            databaseService.shutdown();
-        } );
+        TestDatabaseManagementServiceBuilderWithFailingPageCacheFlush factory = new TestDatabaseManagementServiceBuilderWithFailingPageCacheFlush();
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+        DatabaseManagementService managementService = factory.newDatabaseManagementService( databaseLayout.databaseDirectory() );
+        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) databaseService).getDependencyResolver().resolveDependency( DatabaseManager.class );
+        var databaseContext = databaseManager.getDatabaseContext( new DatabaseId( databaseLayout.getDatabaseName() ) );
+        factory.setFailFlush( true );
+        managementService.shutdown();
+        DatabaseContext context = databaseContext.get();
+        assertTrue( context.isFailed() );
         assertEquals( LifecycleStatus.SHUTDOWN, factory.getDatabaseStatus() );
     }
 
     @Test
-    void invokeKernelEventHandlersBeforeShutdown()
+    void invokeDatabaseShutdownListenersOnShutdown()
     {
-        GraphDatabaseService database = new TestGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
-        ShutdownListenerDatabaseEventHandler shutdownHandler = new ShutdownListenerDatabaseEventHandler();
-        database.registerDatabaseEventHandler( shutdownHandler );
-        database.shutdown();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        ShutdownListenerDatabaseEventListener shutdownHandler = new ShutdownListenerDatabaseEventListener();
+        managementService.registerDatabaseEventListener( shutdownHandler );
+        managementService.shutdown();
 
-        assertTrue( shutdownHandler.isShutdownInvoked() );
+        assertEquals( 2, shutdownHandler.shutdownCounter() );
     }
 
-    private static class TestGraphDatabaseFactoryWithFailingPageCacheFlush extends TestGraphDatabaseFactory
+    private static class TestDatabaseManagementServiceBuilderWithFailingPageCacheFlush extends TestDatabaseManagementServiceBuilder
     {
         private LifeSupport globalLife;
         private volatile boolean failFlush;
 
         @Override
-        protected GraphDatabaseService newEmbeddedDatabase( File storeDir, Config config,
+        protected DatabaseManagementService newEmbeddedDatabase( File storeDir, Config config,
                 ExternalDependencies dependencies )
         {
-            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
+            return new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
             {
 
                 @Override
@@ -142,25 +152,25 @@ class DatabaseShutdownTest
             return globalLife.getStatus();
         }
 
-        public void setFailFlush( boolean failFlush )
+        void setFailFlush( boolean failFlush )
         {
             this.failFlush = failFlush;
         }
     }
 
-    private static class ShutdownListenerDatabaseEventHandler extends DatabaseEventHandlerAdapter
+    private static class ShutdownListenerDatabaseEventListener extends DatabaseEventListenerAdapter
     {
-        private volatile boolean shutdownInvoked;
+        private int shutdownCounter;
 
         @Override
-        public void beforeShutdown()
+        public void databaseShutdown( DatabaseEventContext eventContext )
         {
-            shutdownInvoked = true;
+            shutdownCounter++;
         }
 
-        boolean isShutdownInvoked()
+        int shutdownCounter()
         {
-            return shutdownInvoked;
+            return shutdownCounter;
         }
     }
 }

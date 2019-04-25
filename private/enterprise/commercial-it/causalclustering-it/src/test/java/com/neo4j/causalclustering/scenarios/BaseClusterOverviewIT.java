@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -236,8 +236,8 @@ public abstract class BaseClusterOverviewIT
 
             cluster.start();
 
+            CoreClusterMember leader = cluster.awaitLeader();
             List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
-            CoreClusterMember leader = cluster.getMemberWithRole( Role.LEADER );
             cluster.removeCoreMembers( followers );
 
             ClusterOverviewHelper.assertEventualOverview( ClusterOverviewHelper.containsRole( LEADER, 0 ), leader, "core" );
@@ -246,25 +246,27 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverGreaterTermBasedLeaderStepdown() throws Exception
         {
+            int coreMembers = 3;
+            int readReplicas = 0;
             Cluster cluster = clusterFactory.createCluster( clusterConfig
-                    .withNumberOfCoreMembers( 3 )
-                    .withNumberOfReadReplicas( 0 )
+                    .withNumberOfCoreMembers( coreMembers )
+                    .withNumberOfReadReplicas( readReplicas )
                     .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, "false" ) ); // triggering elections doesn't work otherwise
             cluster.start();
 
-            int originalCoreMembers = cluster.coreMembers().size();
-
             CoreClusterMember leader = cluster.awaitLeader();
-            leader.config().augment( CausalClusteringSettings.refuse_to_be_leader, Settings.TRUE );
-
-            List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
-
-            CoreClusterMember follower = cluster.getMemberWithRole( Role.FOLLOWER );
-            follower.raft().triggerElection();
 
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, originalCoreMembers - 1 ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, coreMembers - 1 ) ), leader, "core" );
+
+            List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
+
+            CausalClusteringTestHelpers.forceReelection( cluster );
+
+            ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
+                    ClusterOverviewHelper.containsRole( LEADER, 1 ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, coreMembers - 1 ),
                     not( equalTo( preElectionOverview ) ) ), leader, "core" );
         }
     }

@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import io.netty.buffer.ByteBuf;
 
@@ -12,6 +14,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReplicatedTokenRequestMarshalV2
 {
@@ -22,7 +25,7 @@ public class ReplicatedTokenRequestMarshalV2
 
     public static void marshal( ReplicatedTokenRequest tokenRequest, WritableChannel channel ) throws IOException
     {
-        StringMarshal.marshal( channel, tokenRequest.databaseName() );
+        DatabaseIdMarshal.INSTANCE.marshal( tokenRequest.databaseId(), channel );
         channel.putInt( tokenRequest.type().ordinal() );
         StringMarshal.marshal( channel, tokenRequest.tokenName() );
 
@@ -30,9 +33,9 @@ public class ReplicatedTokenRequestMarshalV2
         channel.put( tokenRequest.commandBytes(), tokenRequest.commandBytes().length );
     }
 
-    public static ReplicatedTokenRequest unmarshal( ReadableChannel channel ) throws IOException
+    public static ReplicatedTokenRequest unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        String databaseName = StringMarshal.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         TokenType type = TokenType.values()[channel.getInt()];
         String tokenName = StringMarshal.unmarshal( channel );
 
@@ -40,7 +43,7 @@ public class ReplicatedTokenRequestMarshalV2
         byte[] commandBytes = new byte[commandBytesLength];
         channel.get( commandBytes, commandBytesLength );
 
-        return new ReplicatedTokenRequest( databaseName, type, tokenName, commandBytes );
+        return new ReplicatedTokenRequest( databaseId, type, tokenName, commandBytes );
     }
 
     public static void marshal( ReplicatedTokenRequest content, ByteBuf buffer )
@@ -52,7 +55,7 @@ public class ReplicatedTokenRequestMarshalV2
         buffer.writeBytes( content.commandBytes() );
     }
 
-    public static ReplicatedTokenRequest unmarshal( ByteBuf buffer, String databaseName )
+    public static ReplicatedTokenRequest unmarshal( ByteBuf buffer, DatabaseId databaseId )
     {
         TokenType type = TokenType.values()[buffer.readInt()];
         String tokenName = StringMarshal.unmarshal( buffer );
@@ -61,6 +64,6 @@ public class ReplicatedTokenRequestMarshalV2
         byte[] commandBytes = new byte[commandBytesLength];
         buffer.readBytes( commandBytes );
 
-        return new ReplicatedTokenRequest( databaseName, type, tokenName, commandBytes );
+        return new ReplicatedTokenRequest( databaseId, type, tokenName, commandBytes );
     }
 }

@@ -15,9 +15,10 @@ import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.identity.ClusterId;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
-public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,ClusterId>>
+public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,ClusterId>>
 {
     static final String CLUSTER_ID_PER_DB_KEY = "cluster-id-per-db-name";
     private final ActorRef coreTopologyActor;
@@ -56,7 +57,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<String,ClusterId> newData )
+    protected void handleIncomingData( LWWMap<DatabaseId,ClusterId> newData )
     {
         data = data.merge( newData );
         coreTopologyActor.tell( new ClusterIdDirectoryMessage( data ), getSelf() );

@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -40,12 +41,13 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ConcurrentChangesOnEntitiesTest
 {
@@ -58,13 +60,14 @@ public class ConcurrentChangesOnEntitiesTest
     private final CyclicBarrier barrier = new CyclicBarrier( 2 );
     private final AtomicReference<Exception> ex = new AtomicReference<>();
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setup()
     {
-        db = new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -79,7 +82,7 @@ public class ConcurrentChangesOnEntitiesTest
 
         startAndWait( t1, t2 );
 
-        db.shutdown();
+        managementService.shutdown();
 
         assertDatabaseConsistent();
     }
@@ -95,7 +98,7 @@ public class ConcurrentChangesOnEntitiesTest
 
         startAndWait( t1, t2 );
 
-        db.shutdown();
+        managementService.shutdown();
 
         assertDatabaseConsistent();
     }
@@ -112,7 +115,7 @@ public class ConcurrentChangesOnEntitiesTest
 
         startAndWait( t1, t2 );
 
-        db.shutdown();
+        managementService.shutdown();
 
         assertDatabaseConsistent();
     }

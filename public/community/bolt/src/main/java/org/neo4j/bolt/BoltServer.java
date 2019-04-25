@@ -59,7 +59,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
-import org.neo4j.udc.UsageData;
 
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -67,11 +66,10 @@ import static java.util.stream.Collectors.toMap;
 public class BoltServer extends LifecycleAdapter
 {
     // platform dependencies
-    private final DatabaseManager databaseManager;
+    private final DatabaseManager<?> databaseManager;
     private final JobScheduler jobScheduler;
     private final ConnectorPortRegister connectorPortRegister;
     private final NetworkConnectionTracker connectionTracker;
-    private final UsageData usageData;
     private final Config config;
     private final Clock clock;
     private final Monitors monitors;
@@ -82,15 +80,14 @@ public class BoltServer extends LifecycleAdapter
 
     private final LifeSupport life = new LifeSupport();
 
-    public BoltServer( DatabaseManager databaseManager, JobScheduler jobScheduler,
-            ConnectorPortRegister connectorPortRegister, NetworkConnectionTracker connectionTracker, UsageData usageData, Config config, Clock clock,
+    public BoltServer( DatabaseManager<?> databaseManager, JobScheduler jobScheduler,
+            ConnectorPortRegister connectorPortRegister, NetworkConnectionTracker connectionTracker, Config config, Clock clock,
             Monitors monitors, LogService logService, DependencyResolver dependencyResolver )
     {
         this.databaseManager = databaseManager;
         this.jobScheduler = jobScheduler;
         this.connectorPortRegister = connectorPortRegister;
         this.connectionTracker = connectionTracker;
-        this.usageData = usageData;
         this.config = config;
         this.clock = clock;
         this.monitors = monitors;
@@ -222,6 +219,6 @@ public class BoltServer extends LifecycleAdapter
 
     private BoltStateMachineFactory createBoltFactory( Authentication authentication, Clock clock )
     {
-        return new BoltStateMachineFactoryImpl( databaseManager, usageData, authentication, clock, config, logService );
+        return new BoltStateMachineFactoryImpl( databaseManager, authentication, clock, config, logService );
     }
 }

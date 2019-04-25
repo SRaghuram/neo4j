@@ -281,44 +281,44 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("LIMIT should influence cardinality estimation even when parameterized") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT {limit}", params = Map("limit" -> 10))
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation with literal") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT 10")
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
   }
 
   test("LIMIT should influence cardinality estimation with literal and parameters") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) WHERE 50 = {fifty} RETURN p LIMIT 10", params = Map("fifty" -> 50))
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
   }
 
   test("LIMIT should influence cardinality estimation with independent parameterless expression") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(ceil(cos(0))) + 4")
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(5)
   }
 
   test("LIMIT should influence cardinality estimation by default value when expression contains parameter") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(sin({limit}))", params = Map("limit" -> 1))
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation by default value when expression contains rand()") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     // NOTE: We cannot executeWith because of random result
     val result = executeSingle(s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(rand()*10)", Map.empty)
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation by default value when expression contains timestamp()") {
-    (0 until 100).map(i => createLabeledNode("Person"))
+    (0 until 100).map(_ => createLabeledNode("Person"))
     //TODO this cannot be run with executeWith since it will occasionally succeed on 2.3 and we have decided not
     //to fix this on 2.3. So if we fix the issue on 2.3 or if we no longer need to depend on 2.3 we should update test
     //to run with `executeWith`
@@ -681,6 +681,19 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   }
 
+  test("profiling with compiled runtime") {
+    //given
+    createLabeledNode("L")
+    createLabeledNode("L")
+    createLabeledNode("L")
+
+    //when
+    val result = executeSingle("PROFILE CYPHER runtime=compiled MATCH (n:L) RETURN count(n.prop)", Map.empty)
+
+    //then
+    result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation").withRows(1)
+  }
+
   type Planner = (String, Map[String, Any]) => RewindableExecutionResult
 
   def profileWithPlanner(planner: Planner, q: String, params: Map[String, Any]): RewindableExecutionResult = {
@@ -714,8 +727,4 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   def legacyProfile(q: String, params: (String, Any)*): RewindableExecutionResult = profileWithPlanner(executeSingle, q, params.toMap)
-
-  private def getArgument[A <: Argument](plan: InternalPlanDescription)(implicit manifest: ClassTag[A]): A = plan.arguments.collectFirst {
-    case x: A => x
-  }.getOrElse(fail(s"Failed to find plan description argument where expected. Wanted ${manifest.toString()} but only found ${plan.arguments}"))
 }

@@ -7,41 +7,41 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-
-import static java.util.Collections.emptySet;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfo implements DiscoveryServerInfo
 {
     private final AdvertisedSocketAddress catchupServerAddress;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
-    private final String dbName;
+    private final Set<DatabaseId> databaseIds;
 
-    public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses, AdvertisedSocketAddress catchupServerAddress, String dbName )
+    public ReadReplicaInfo( Config config, Set<DatabaseId> databaseIds )
     {
-        this( clientConnectorAddresses, catchupServerAddress, emptySet(), dbName );
+        this( ClientConnectorAddresses.extractFromConfig( config ),
+                config.get( CausalClusteringSettings.transaction_advertised_address ),
+                Set.copyOf( config.get( CausalClusteringSettings.server_groups ) ),
+                databaseIds );
     }
 
     public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
-            AdvertisedSocketAddress catchupServerAddress, Set<String> groups, String dbName )
+            AdvertisedSocketAddress catchupServerAddress, Set<String> groups, Set<DatabaseId> databaseIds )
     {
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.catchupServerAddress = catchupServerAddress;
         this.groups = groups;
-        this.dbName = dbName;
+        this.databaseIds = databaseIds;
     }
 
     @Override
-    public String getDatabaseName()
+    public Set<DatabaseId> getDatabaseIds()
     {
-        return dbName;
+        return databaseIds;
     }
 
     @Override
@@ -63,27 +63,6 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public String toString()
-    {
-        return "ReadReplicaInfo{" +
-               "catchupServerAddress=" + catchupServerAddress +
-               ", clientConnectorAddresses=" + clientConnectorAddresses +
-               ", groups=" + groups +
-               '}';
-    }
-
-    public static ReadReplicaInfo from( Config config )
-    {
-        AdvertisedSocketAddress transactionSource = config.get( CausalClusteringSettings.transaction_advertised_address );
-        ClientConnectorAddresses clientConnectorAddresses = ClientConnectorAddresses.extractFromConfig( config );
-        String dbName = config.get( CausalClusteringSettings.database );
-        List<String> groupList = config.get( CausalClusteringSettings.server_groups );
-        Set<String> groups = new HashSet<>( groupList );
-
-        return new ReadReplicaInfo( clientConnectorAddresses, transactionSource, groups, dbName );
-    }
-
-    @Override
     public boolean equals( Object o )
     {
         if ( this == o )
@@ -95,14 +74,26 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
             return false;
         }
         ReadReplicaInfo that = (ReadReplicaInfo) o;
-        return Objects.equals( catchupServerAddress, that.catchupServerAddress ) && Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
-                Objects.equals( groups, that.groups ) && Objects.equals( dbName, that.dbName );
+        return Objects.equals( catchupServerAddress, that.catchupServerAddress ) &&
+               Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
+               Objects.equals( groups, that.groups ) &&
+               Objects.equals( databaseIds, that.databaseIds );
     }
 
     @Override
     public int hashCode()
     {
+        return Objects.hash( catchupServerAddress, clientConnectorAddresses, groups, databaseIds );
+    }
 
-        return Objects.hash( catchupServerAddress, clientConnectorAddresses, groups, dbName );
+    @Override
+    public String toString()
+    {
+        return "ReadReplicaInfo{" +
+               "catchupServerAddress=" + catchupServerAddress +
+               ", clientConnectorAddresses=" + clientConnectorAddresses +
+               ", groups=" + groups +
+               ", databaseIds=" + databaseIds +
+               '}';
     }
 }

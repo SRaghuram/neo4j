@@ -24,13 +24,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.hasProperty;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
@@ -38,6 +40,7 @@ import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 public class CypherUpdateMapTest
 {
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Test
     public void updateNodeByMapParameter()
@@ -84,12 +87,13 @@ public class CypherUpdateMapTest
     @Before
     public void setup()
     {
-        db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
     public void cleanup()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 }

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -31,20 +32,23 @@ import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TestNeo4jApiExceptions
 {
     private Transaction tx;
     private GraphDatabaseService graph;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void init()
     {
-        graph = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        graph = managementService.database( DEFAULT_DATABASE_NAME );
         newTransaction();
     }
 
@@ -54,7 +58,7 @@ class TestNeo4jApiExceptions
         if ( graph != null )
         {
             rollback();
-            graph.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -113,7 +117,7 @@ class TestNeo4jApiExceptions
         GraphDatabaseService graphDb = graph;
         Node node = graphDb.createNode();
         commit();
-        graphDb.shutdown();
+        managementService.shutdown();
 
         assertThrows( NotInTransactionException.class, () -> node.getLabels().iterator() );
     }
@@ -124,7 +128,7 @@ class TestNeo4jApiExceptions
         GraphDatabaseService graphDb = graph;
         Node node = graphDb.createNode();
         commit();
-        graphDb.shutdown();
+        managementService.shutdown();
 
         assertThrows( NotInTransactionException.class, node::getRelationships );
         assertThrows( NotInTransactionException.class, graphDb::createNode );

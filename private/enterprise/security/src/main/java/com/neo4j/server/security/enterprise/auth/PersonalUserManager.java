@@ -263,6 +263,94 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
+    public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege )
+            throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.grantPrivilegeToRole( roleName, dbPrivilege );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.info( subject, "granted `%s` privilege on `%s` for database `%s` to role `%s`",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
+            }
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.error( subject, "tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege )
+            throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.revokePrivilegeFromRole( roleName, dbPrivilege );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.info( subject, "revoked `%s` privilege on `%s` for database `%s` from role `%s`",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
+            }
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    {
+        try
+        {
+            assertSelfOrUserManager( username );
+            return userManager.showPrivilegesForUser( username );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to show privileges for user `%s`: %s", username, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
+    public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+    {
+        assertUserManager();
+        return userManager.getPrivilegesForRoles( roles );
+    }
+
+    @Override
+    public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.setAdmin( roleName, setToAdmin );
+            securityLog.info( subject, "%s admin privilege for role `%s`", setToAdmin ? "granted" : "revoked", roleName );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to %s admin privilege for role `%s`: %s", setToAdmin ? "grant" : "revoke", roleName, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
     public Set<String> getAllRoleNames() throws AuthorizationViolationException
     {
         try

@@ -21,6 +21,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -221,7 +222,7 @@ class DatabaseMetricsExtensionTest
         public Database database()
         {
             Database database = mock( Database.class );
-            when( database.getDatabaseName() ).thenReturn( "testdb" );
+            when( database.getDatabaseId() ).thenReturn( new DatabaseId( "testdb" ) );
             return database;
         }
 

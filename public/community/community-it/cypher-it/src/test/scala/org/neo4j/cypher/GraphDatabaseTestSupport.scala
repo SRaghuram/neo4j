@@ -21,8 +21,10 @@ package org.neo4j.cypher
 
 import java.io.File
 
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.helpers.Indexes
@@ -34,7 +36,7 @@ import org.neo4j.kernel.api.InwardKernel
 import org.neo4j.kernel.api.procedure.{CallableProcedure, CallableUserAggregationFunction, CallableUserFunction, GlobalProcedures}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 import scala.collection.JavaConverters._
@@ -45,6 +47,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
 
   var graphOps: GraphDatabaseService = _
   var graph: GraphDatabaseCypherService = _
+  var managementService: DatabaseManagementService = _
   var nodes: List[Node] = _
 
   def databaseConfig(): Map[Setting[_],String] = Map()
@@ -55,16 +58,18 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
   }
 
   protected def startGraphDatabase(config: Map[Setting[_], String] = databaseConfig()): Unit = {
-    graphOps = graphDatabaseFactory().newImpermanentDatabase(config.asJava)
+    managementService = graphDatabaseFactory().newImpermanentService(config.asJava)
+    graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }
 
   protected def startGraphDatabase(storeDir: File): Unit = {
-    graphOps = graphDatabaseFactory().newImpermanentDatabase(storeDir)
+    managementService = graphDatabaseFactory().newImpermanentService(storeDir)
+    graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }
 
-  protected def graphDatabaseFactory(): TestGraphDatabaseFactory = {
+  protected def graphDatabaseFactory(): TestDatabaseManagementServiceBuilder = {
     val factory = createDatabaseFactory()
     this match {
       case custom: FakeClock =>
@@ -74,10 +79,10 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
     factory
   }
 
-  protected def createDatabaseFactory(): TestGraphDatabaseFactory = new TestGraphDatabaseFactory
+  protected def createDatabaseFactory(): TestDatabaseManagementServiceBuilder = new TestDatabaseManagementServiceBuilder
 
   protected def restartWithConfig(config: Map[Setting[_], String] = databaseConfig()): Unit = {
-    graph.shutdown()
+    managementService.shutdown()
     startGraphDatabase(config)
   }
 
@@ -86,7 +91,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
       super.stopTest()
     }
     finally {
-      if (graph != null) graph.shutdown()
+      if (managementService != null) managementService.shutdown()
     }
   }
 

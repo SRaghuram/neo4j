@@ -57,7 +57,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
       maybeLimit match {
         case Some(limit) if limit <= 0 =>
           currentRow.finishedWriting()
-        case Some(limit) if limit < currentRow.numberOfRows =>
+        case Some(limit) if limit < currentRow.getValidRows =>
           // a table to hold the top n entries
           val topTable = new DefaultComparatorTopTable(comparator, limit)
 

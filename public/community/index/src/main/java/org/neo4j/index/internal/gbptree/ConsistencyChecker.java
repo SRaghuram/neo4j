@@ -20,12 +20,15 @@
 package org.neo4j.index.internal.gbptree;
 
 import org.eclipse.collections.api.iterator.LongIterator;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
+import org.eclipse.collections.impl.list.mutable.primitive.LongArrayList;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.StringJoiner;
 
 import org.neo4j.index.internal.gbptree.GenerationSafePointerPair.GenerationTarget;
 import org.neo4j.io.pagecache.CursorException;
@@ -35,6 +38,7 @@ import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.pointer;
 import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
+import static org.neo4j.index.internal.gbptree.TreeNode.NO_OFFLOAD_ID;
 import static org.neo4j.index.internal.gbptree.TreeNode.Type.INTERNAL;
 import static org.neo4j.index.internal.gbptree.TreeNode.Type.LEAF;
 
@@ -57,6 +61,7 @@ class ConsistencyChecker<KEY>
     private final long stableGeneration;
     private final long unstableGeneration;
     private final GenerationKeeper generationTarget = new GenerationKeeper();
+    private final MutableLongList offloadIds = new LongArrayList();
 
     ConsistencyChecker( TreeNode<KEY,?> node, Layout<KEY,?> layout, long stableGeneration, long unstableGeneration )
     {
@@ -66,17 +71,6 @@ class ConsistencyChecker<KEY>
         this.layout = layout;
         this.stableGeneration = stableGeneration;
         this.unstableGeneration = unstableGeneration;
-    }
-
-    public boolean check( PageCursor cursor, long expectedGeneration ) throws IOException
-    {
-        assertOnTreeNode( cursor );
-        KeyRange<KEY> openRange = new KeyRange<>( comparator, null, null, layout, null );
-        boolean result = checkSubtree( cursor, openRange, expectedGeneration, 0 );
-
-        // Assert that rightmost node on each level has empty right sibling.
-        rightmostPerLevel.forEach( RightmostInChain::assertLast );
-        return result;
     }
 
     /**
@@ -90,7 +84,7 @@ class ConsistencyChecker<KEY>
      * assert calls.
      * @throws IOException on {@link PageCursor} error.
      */
-    boolean checkSpace( PageCursor cursor, long lastId, LongIterator freelistIds ) throws IOException
+    boolean check( PageCursor cursor, long expectedGeneration, long lastId, LongIterator freelistIds ) throws IOException
     {
         assertOnTreeNode( cursor );
 
@@ -102,45 +96,13 @@ class ConsistencyChecker<KEY>
             addToSeenList( seenIds, freelistIds.next(), lastId );
         }
 
-        // Traverse the tree
-        do
-        {
-            // One level at the time
-            long leftmostSibling = cursor.getCurrentPageId();
-            addToSeenList( seenIds, leftmostSibling, lastId );
+        KeyRange<KEY> openRange = new KeyRange<>( comparator, layout );
+        boolean result = checkSubtree( cursor, openRange, expectedGeneration, 0, seenIds, lastId );
 
-            // Go right through all siblings
-            traverseAndAddRightSiblings( cursor, seenIds, lastId );
-
-            // Then go back to the left-most node on this level
-            TreeNode.goTo( cursor, "back", leftmostSibling );
-        }
-        // And continue down to next level if this level was an internal level
-        while ( goToLeftmostChild( cursor ) );
-
+        // Assert that rightmost node on each level has empty right sibling.
+        rightmostPerLevel.forEach( RightmostInChain::assertLast );
         assertAllIdsOccupied( highId, seenIds );
-        return true;
-    }
-
-    private boolean goToLeftmostChild( PageCursor cursor ) throws IOException
-    {
-        boolean isInternal;
-        long leftmostSibling = -1;
-        do
-        {
-            isInternal = TreeNode.isInternal( cursor );
-            if ( isInternal )
-            {
-                leftmostSibling = node.childAt( cursor, 0, stableGeneration, unstableGeneration );
-            }
-        }
-        while ( cursor.shouldRetry() );
-
-        if ( isInternal )
-        {
-            TreeNode.goTo( cursor, "child", leftmostSibling );
-        }
-        return isInternal;
+        return result;
     }
 
     private static void assertAllIdsOccupied( long highId, BitSet seenIds )
@@ -148,7 +110,7 @@ class ConsistencyChecker<KEY>
         long expectedNumberOfPages = highId - IdSpace.MIN_TREE_NODE_ID;
         if ( seenIds.cardinality() != expectedNumberOfPages )
         {
-            StringBuilder builder = new StringBuilder( "[" );
+            StringJoiner builder = new StringJoiner( ",", "[", "]" );
             int index = (int) IdSpace.MIN_TREE_NODE_ID;
             int count = 0;
             while ( index >= 0 && index < highId )
@@ -156,37 +118,12 @@ class ConsistencyChecker<KEY>
                 index = seenIds.nextClearBit( index );
                 if ( index != -1 )
                 {
-                    if ( count++ > 0 )
-                    {
-                        builder.append( "," );
-                    }
-                    builder.append( index );
+                    builder.add( Integer.toString( index ) );
                     index++;
                 }
             }
-            builder.append( "]" );
             throw new RuntimeException( "There are " + count + " unused pages in the store:" + builder );
         }
-    }
-
-    private void traverseAndAddRightSiblings( PageCursor cursor, BitSet seenIds, long lastId ) throws IOException
-    {
-        long rightSibling;
-        do
-        {
-            do
-            {
-                rightSibling = TreeNode.rightSibling( cursor, stableGeneration, unstableGeneration );
-            }
-            while ( cursor.shouldRetry() );
-
-            if ( TreeNode.isNode( rightSibling ) )
-            {
-                TreeNode.goTo( cursor, "right sibling", rightSibling );
-                addToSeenList( seenIds, pointer( rightSibling ), lastId );
-            }
-        }
-        while ( TreeNode.isNode( rightSibling ) );
     }
 
     private static void addToSeenList( BitSet target, long id, long lastId )
@@ -228,9 +165,11 @@ class ConsistencyChecker<KEY>
         }
     }
 
-    private boolean checkSubtree( PageCursor cursor, KeyRange<KEY> range, long expectedGeneration, int level )
+    private boolean checkSubtree( PageCursor cursor, KeyRange<KEY> range, long expectedGeneration, int level, BitSet seenIds, long lastId )
             throws IOException
     {
+        addToSeenList( seenIds, cursor.getCurrentPageId(), lastId );
+
         boolean isInternal = false;
         boolean isLeaf = false;
         int keyCount;
@@ -285,10 +224,12 @@ class ConsistencyChecker<KEY>
 
         do
         {
-            assertKeyOrder( cursor, range, keyCount, isLeaf ? LEAF : INTERNAL );
+            offloadIds.clear();
+            assertKeyOrder( cursor, range, keyCount, isLeaf ? LEAF : INTERNAL, offloadIds );
         }
         while ( cursor.shouldRetry() );
         checkAfterShouldRetry( cursor );
+        offloadIds.forEach( id -> addToSeenList( seenIds, id, lastId ) );
 
         do
         {
@@ -304,7 +245,7 @@ class ConsistencyChecker<KEY>
 
         if ( isInternal )
         {
-            assertSubtrees( cursor, range, keyCount, level );
+            assertSubtrees( cursor, range, keyCount, level, seenIds, lastId );
         }
         return true;
     }
@@ -362,7 +303,7 @@ class ConsistencyChecker<KEY>
                 rightSiblingPointerGeneration );
     }
 
-    private void assertSubtrees( PageCursor cursor, KeyRange<KEY> range, int keyCount, int level )
+    private void assertSubtrees( PageCursor cursor, KeyRange<KEY> range, int keyCount, int level, BitSet seenIds, long lastId )
             throws IOException
     {
         long pageId = cursor.getCurrentPageId();
@@ -391,7 +332,7 @@ class ConsistencyChecker<KEY>
             }
 
             TreeNode.goTo( cursor, "child at pos " + pos, child );
-            checkSubtree( cursor, childRange, childGeneration, level + 1 );
+            checkSubtree( cursor, childRange, childGeneration, level + 1, seenIds, lastId );
 
             TreeNode.goTo( cursor, "parent", pageId );
 
@@ -416,7 +357,7 @@ class ConsistencyChecker<KEY>
 
         TreeNode.goTo( cursor, "child at pos " + pos, child );
         childRange = range.restrictLeft( prev );
-        checkSubtree( cursor, childRange, childGeneration, level + 1 );
+        checkSubtree( cursor, childRange, childGeneration, level + 1, seenIds, lastId );
         TreeNode.goTo( cursor, "parent", pageId );
     }
 
@@ -433,7 +374,7 @@ class ConsistencyChecker<KEY>
         return node.childAt( cursor, pos, stableGeneration, unstableGeneration, childGeneration );
     }
 
-    private void assertKeyOrder( PageCursor cursor, KeyRange<KEY> range, int keyCount, TreeNode.Type type )
+    private void assertKeyOrder( PageCursor cursor, KeyRange<KEY> range, int keyCount, TreeNode.Type type, MutableLongList offloadIds )
     {
         KEY prev = layout.newKey();
         boolean first = true;
@@ -458,6 +399,11 @@ class ConsistencyChecker<KEY>
                 first = false;
             }
             layout.copyKey( readKey, prev );
+            long offloadId = node.offloadIdAt( cursor, pos, type );
+            if ( offloadId != NO_OFFLOAD_ID )
+            {
+                offloadIds.add( offloadId );
+            }
         }
     }
 
@@ -511,6 +457,11 @@ class ConsistencyChecker<KEY>
         private final KEY toExclusive;
         private final Layout<KEY,?> layout;
         private final KeyRange<KEY> superRange;
+
+        private KeyRange( Comparator<KEY> comparator, Layout<KEY,?> layout )
+        {
+            this( comparator, null, null, layout, null );
+        }
 
         private KeyRange( Comparator<KEY> comparator, KEY fromInclusive, KEY toExclusive, Layout<KEY,?> layout,
                 KeyRange<KEY> superRange )

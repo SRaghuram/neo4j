@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 
@@ -46,8 +47,8 @@ class ConnectionInfoIT
         ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", testSocket.getLocalPort() );
 
         ExecutorService executor = Executors.newCachedThreadPool();
-        Server catchupServer = new Server( channel -> { }, logProvider, userLogProvider, listenSocketAddress, "server-name", executor,
-                serverConfig( Config.defaults() ) );
+        Server catchupServer = new Server( channel -> { }, null, logProvider, userLogProvider, listenSocketAddress, "server-name", executor,
+                new ConnectorPortRegister(), serverConfig( Config.defaults() ) );
 
         //then
         try

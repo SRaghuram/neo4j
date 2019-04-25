@@ -23,16 +23,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterables.firstOrNull;
 import static org.neo4j.helpers.collection.Iterables.single;
 
@@ -42,17 +44,19 @@ public class IndexConstraintsTest
     private static final String PROPERTY_KEY = "x";
 
     private GraphDatabaseService graphDb;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setup()
     {
-        graphDb = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        graphDb = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @After
     public void shutdown()
     {
-        graphDb.shutdown();
+        managementService.shutdown();
     }
 
     // The following tests verify that multiple interacting schema commands can be applied in the same transaction.

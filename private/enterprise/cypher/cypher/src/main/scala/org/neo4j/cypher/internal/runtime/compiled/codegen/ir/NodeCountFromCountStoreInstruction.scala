@@ -11,9 +11,9 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Varia
 case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable, labels: List[Option[(Option[Int], String)]],
                                               inner: Instruction) extends Instruction {
   override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
-    val ops: List[(MethodStructure[E]) => E] = labels.map(findOps[E])
+    val ops: List[MethodStructure[E] => E] = labels.map(findOps[E])
     generator.trace(opName) { body =>
-      ops.foreach( b => {
+      ops.foreach( _ => {
         body.incrementDbHits()
       })
       body.assign(variable, multiplyAll[E](ops, body))
@@ -21,7 +21,7 @@ case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable
     }
   }
 
-  private def multiplyAll[E](ops: List[(MethodStructure[E]) => E], body: MethodStructure[E]): E = ops match {
+  private def multiplyAll[E](ops: List[MethodStructure[E] => E], body: MethodStructure[E]): E = ops match {
     case Nil => throw new IllegalStateException("At least one operation must be present at this stage")
     case f :: Nil => f(body)
     case a :: b :: Nil =>

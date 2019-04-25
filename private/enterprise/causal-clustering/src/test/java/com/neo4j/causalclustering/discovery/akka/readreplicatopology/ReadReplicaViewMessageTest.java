@@ -14,23 +14,23 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.database.DatabaseId;
 
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ReadReplicaViewMessageTest extends TestKit
+class ReadReplicaViewMessageTest extends TestKit
 {
-    public ReadReplicaViewMessageTest()
-    {
-        super( ActorSystem.create( "ReadReplicaViewMessage" ) );
-    }
-
     private ActorRef clusterClient = TestProbe.apply( getSystem() ).ref();
     private ActorRef topologyClient = TestProbe.apply( getSystem() ).ref();
     private ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
@@ -39,31 +39,67 @@ public class ReadReplicaViewMessageTest extends TestKit
 
     private ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, topologyClient, memberId, now );
 
-    private ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( MapUtil.genericMap( clusterClient, record ) );
+    private ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( Map.of( clusterClient, record ) );
+
+    ReadReplicaViewMessageTest()
+    {
+        super( ActorSystem.create( "ReadReplicaViewMessage" ) );
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        TestKit.shutdownActorSystem( getSystem() );
+    }
 
     @Test
-    public void shouldReturnEmptyTopologyClientIfClusterClientUnknown()
+    void shouldReturnEmptyTopologyClientIfClusterClientUnknown()
     {
         assertThat( ReadReplicaViewMessage.EMPTY.topologyClient( clusterClient ), StreamMatchers.empty() );
     }
 
     @Test
-    public void shouldGetTopologyClientForClusterClient()
+    void shouldGetTopologyClientForClusterClient()
     {
         assertThat( readReplicaViewMessage.topologyClient( clusterClient ), StreamMatchers.contains( topologyClient ) );
     }
 
     @Test
-    public void shouldReturnEmptyTopologyIfEmptyView()
+    void shouldReturnEmptyTopologyIfEmptyView()
     {
-        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology(), Matchers.equalTo( ReadReplicaTopology.EMPTY ) );
+        DatabaseId databaseId = new DatabaseId( "no_such_database" );
+        assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( databaseId ), equalTo( new ReadReplicaTopology( databaseId, Map.of() ) ) );
     }
 
     @Test
-    public void shouldReturnReadReplicaTopology()
+    void shouldReturnReadReplicaTopology()
     {
-        ReadReplicaTopology expected = new ReadReplicaTopology( MapUtil.genericMap( memberId, readReplicaInfo ) );
+        DatabaseId databaseId = Iterables.single( readReplicaInfo.getDatabaseIds() );
+        ReadReplicaTopology expected = new ReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
 
-        assertThat( readReplicaViewMessage.toReadReplicaTopology(), Matchers.equalTo( expected ) );
+        assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
+    }
+
+    @Test
+    void shouldReturnDatabaseIds()
+    {
+        var clusterClient1 = TestProbe.apply( getSystem() ).ref();
+        var clusterClient2 = TestProbe.apply( getSystem() ).ref();
+        var clusterClient3 = TestProbe.apply( getSystem() ).ref();
+
+        var info1 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ) ) );
+        var info2 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "employees" ), new DatabaseId( "orders" ) ) );
+        var info3 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "customers" ), new DatabaseId( "employees" ) ) );
+
+        var record1 = new ReadReplicaViewRecord( info1, topologyClient, memberId, now );
+        var record2 = new ReadReplicaViewRecord( info2, topologyClient, memberId, now );
+        var record3 = new ReadReplicaViewRecord( info3, topologyClient, memberId, now );
+
+        var clusterClientReadReplicas = Map.of( clusterClient1, record1, clusterClient2, record2, clusterClient3, record3 );
+        var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
+
+        var expectedDatabaseIds = Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ), new DatabaseId( "employees" ) );
+        var actualDatabaseIds = readReplicaViewMessage.databaseIds();
+        assertEquals( expectedDatabaseIds, actualDatabaseIds );
     }
 }

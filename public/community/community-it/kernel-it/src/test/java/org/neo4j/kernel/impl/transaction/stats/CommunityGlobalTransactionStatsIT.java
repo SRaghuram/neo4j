@@ -24,18 +24,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -52,11 +52,13 @@ class CommunityGlobalTransactionStatsIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
-        database = new TestGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( testDirectory.storeDir() );
+        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -64,7 +66,7 @@ class CommunityGlobalTransactionStatsIT
     {
         if ( database != null )
         {
-            database.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -72,9 +74,9 @@ class CommunityGlobalTransactionStatsIT
     void useAggregatedTransactionMonitorForSystemAndDefaultDatabase() throws InterruptedException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
-        DatabaseManager databaseManager = getDatabaseManager();
-        Optional<DatabaseContext> defaultDatabase = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME );
-        Optional<DatabaseContext> systemDatabase = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
+        DatabaseManager<?> databaseManager = getDatabaseManager();
+        var defaultDatabase = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        var systemDatabase = databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) );
 
         assertTrue( defaultDatabase.isPresent() );
         assertTrue( systemDatabase.isPresent() );
@@ -84,8 +86,8 @@ class CommunityGlobalTransactionStatsIT
         CountDownLatch startSeparateTransaction = new CountDownLatch( 1 );
         try
         {
-            GraphDatabaseFacade systemFacade = systemDatabase.get().getDatabaseFacade();
-            GraphDatabaseFacade defaultFacade = defaultDatabase.get().getDatabaseFacade();
+            GraphDatabaseFacade systemFacade = systemDatabase.get().databaseFacade();
+            GraphDatabaseFacade defaultFacade = defaultDatabase.get().databaseFacade();
             transactionExecutor.execute( () ->
             {
                 systemFacade.beginTx();
@@ -107,7 +109,7 @@ class CommunityGlobalTransactionStatsIT
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

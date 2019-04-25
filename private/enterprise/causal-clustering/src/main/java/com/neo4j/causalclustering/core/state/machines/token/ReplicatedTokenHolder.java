@@ -16,6 +16,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -35,9 +36,9 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final TokenType type;
     private final Supplier<StorageEngine> storageEngineSupplier;
     private final ReplicatedTokenCreator tokenCreator;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    ReplicatedTokenHolder( String databaseName, TokenRegistry tokenRegistry, Replicator replicator,
+    ReplicatedTokenHolder( DatabaseId databaseId, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
                            ReplicatedTokenCreator tokenCreator )
@@ -49,7 +50,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.type = type;
         this.storageEngineSupplier = storageEngineSupplier;
         this.tokenCreator = tokenCreator;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -73,7 +74,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     @Override
     protected int createToken( String tokenName, boolean internal )
     {
-        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName, internal ) );
+        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseId, type, tokenName, createCommands( tokenName, internal ) );
         try
         {
             return (int) replicator.replicate( tokenRequest ).consume();

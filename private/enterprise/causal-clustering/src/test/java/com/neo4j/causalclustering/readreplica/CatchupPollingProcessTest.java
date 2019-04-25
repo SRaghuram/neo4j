@@ -11,21 +11,17 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -33,20 +29,20 @@ import java.util.concurrent.Future;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -56,47 +52,45 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-public class CatchupPollingProcessTest
+class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final Executor executor = new FakeExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
-    private final LocalDatabase localDatabase = mock( LocalDatabase.class );
+    private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
-    private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
-    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-    private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
+    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
     private final MockClientResponses clientResponses = responses();
-    private final CatchupClientV1 v1Client = Mockito.spy( new MockCatchupClient.MockClientV1( clientResponses ) );
-    private final CatchupClientV2 v2Client = Mockito.spy( new MockCatchupClient.MockClientV2( clientResponses ) );
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
     private final Panicker panicker = mock( Panicker.class );
-    private CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
+    private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 
     private CatchupPollingProcess txPuller;
     private MockCatchupClient catchupClient;
 
-    @Before
-    public void before() throws Throwable
+    @BeforeEach
+    void before() throws Throwable
     {
-        databaseService.registerDatabase( databaseName, localDatabase );
+        databaseService.registerDatabase( databaseId, clusteredDatabaseContext );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
-        when( localDatabase.storeId() ).thenReturn( storeId );
-        when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );
-        when( catchupAddressProvider.secondary() ).thenReturn( coreMemberAddress );
+        when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
+        when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
 
-        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client, v3Client );
+        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
+        txPuller = new CatchupPollingProcess( executor, databaseId, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
                 storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
     }
 
     @Test
-    public void shouldSendPullRequestOnTickForAllVersions() throws Exception
+    void shouldSendPullRequestOnTickForAllVersions() throws Exception
     {
         // given
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
@@ -105,43 +99,15 @@ public class CatchupPollingProcessTest
         when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
         // when
         txPuller.tick().get();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 ); // Need to switch protocols to test both clients without having two txPuller objects
         txPuller.tick().get();
 
         // then
-        verify( v1Client ).pullTransactions( storeId, lastAppliedTxId );
-        verify( v2Client ).pullTransactions( storeId, lastAppliedTxId, databaseName );
-        verify( catchupAddressProvider, times( 2 ) ).primary();
+        verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, databaseId );
+        verify( catchupAddressProvider, times( 2 ) ).primary( databaseId );
     }
 
     @Test
-    public void shouldKeepMakingPullRequestsUntilEndOfStream() throws Exception
-    {
-        //TODO make a real test
-        // given
-        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
-        txPuller.start();
-        long lastAppliedTxId = 99L;
-        when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
-
-        // when
-        txPuller.tick().get();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
-        txPuller.tick().get();
-
-        // then
-        verify( v1Client ).pullTransactions( any( StoreId.class ), anyLong() );
-        verify( v2Client ).pullTransactions( any( StoreId.class ), anyLong(), anyString() );
-        verify( catchupAddressProvider, times( 2 ) ).primary();
-    }
-
-    // TODO:  Come up with a way of avoiding V1/V2 versions of these tests.  I tried to parameterize instead but that wasn't much better re: clarity.
-    // I believe it *should* be possible with a bunch of unsafe casting, but again, messy and confusing. The problem is that we need to expect/verify
-    // different method calls (pullTransactions with 2 or 3 params) for each catchup version. Open to ideas ...
-    // Should be able to simple parameterize with the new mock catchup client
-
-    @Test
-    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1() throws Exception
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1() throws Exception
     {
         // when
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -156,13 +122,13 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2() throws Exception
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2() throws Exception
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
 
         // when
         txPuller.tick().get();
@@ -172,13 +138,13 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldUseProvidedCatchupAddressProviderWhenStoreCopying() throws Exception
+    void shouldUseProvidedCatchupAddressProviderWhenStoreCopying() throws Exception
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
 
         // when
         txPuller.tick().get();
@@ -194,7 +160,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
+    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -219,13 +185,13 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
+    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
 
         // when (tx pull)
         txPuller.tick().get();
@@ -245,7 +211,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldPanicOnException() throws ExecutionException, InterruptedException
+    void shouldPanicOnException() throws ExecutionException, InterruptedException
     {
         when( txApplier.lastQueuedTxId() ).thenThrow( IllegalStateException.class );
         txPuller.start();
@@ -255,7 +221,7 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldNotSignalOperationalUntilPullingV1() throws Throwable
+    void shouldNotSignalOperationalUntilPullingV1() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -283,12 +249,12 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldNotSignalOperationalUntilPullingV2() throws Throwable
+    void shouldNotSignalOperationalUntilPullingV2() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
 
         // when
         txPuller.start();

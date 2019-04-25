@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -33,7 +32,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -259,7 +257,7 @@ public class LogFilesBuilder
         {
             requireNonNull( dependencies, LogVersionRepository.class.getSimpleName() + " is required. " +
                     "Please provide an instance or a dependencies where it can be found." );
-            return getSupplier( LogVersionRepository.class );
+            return dependencies.provideDependency( LogVersionRepository.class );
         }
     }
 
@@ -331,23 +329,14 @@ public class LogFilesBuilder
 
     private TransactionIdStore readOnlyTransactionIdStore() throws IOException
     {
-        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( pageCache, databaseLayout );
-        return storageEngineFactory.readOnlyTransactionIdStore( dependencies );
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        return storageEngineFactory.readOnlyTransactionIdStore( databaseLayout, pageCache );
     }
 
     private LogVersionRepository readOnlyLogVersionRepository() throws IOException
     {
-        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( pageCache, databaseLayout );
-        return storageEngineFactory.readOnlyLogVersionRepository( dependencies );
-    }
-
-    private <T> Supplier<T> getSupplier( Class<T> clazz )
-    {
-        return () -> resolveDependency( clazz );
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        return storageEngineFactory.readOnlyLogVersionRepository( databaseLayout, pageCache );
     }
 
     private <T> T resolveDependency( Class<T> clazz )

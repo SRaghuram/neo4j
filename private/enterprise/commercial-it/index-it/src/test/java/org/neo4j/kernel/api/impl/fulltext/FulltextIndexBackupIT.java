@@ -6,7 +6,7 @@
 package org.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +23,7 @@ import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -30,6 +31,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -41,6 +43,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
@@ -68,13 +71,16 @@ class FulltextIndexBackupIT
 
     private GraphDatabaseAPI db;
     private GraphDatabaseAPI backupDb;
+    private DatabaseManagementService dbManagementService;
+    private static DatabaseManagementService backupManagementService;
 
     @BeforeEach
     void setUp()
     {
-        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( dir.databaseDir() )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newGraphDatabase();
+        dbManagementService = new TestCommercialDatabaseManagementServiceBuilder()
+                    .newEmbeddedDatabaseBuilder( dir.storeDir() )
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE ).newDatabaseManagementService();
+        db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -82,11 +88,11 @@ class FulltextIndexBackupIT
     {
         if ( db != null )
         {
-            db.shutdown();
+            dbManagementService.shutdown();
         }
         if ( backupDb != null )
         {
-            backupDb.shutdown();
+            backupManagementService.shutdown();
         }
     }
 
@@ -96,7 +102,7 @@ class FulltextIndexBackupIT
         initializeTestData();
         verifyData( db );
         Path backupDir = executeBackup();
-        db.shutdown();
+        dbManagementService.shutdown();
 
         backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
@@ -128,7 +134,7 @@ class FulltextIndexBackupIT
 
         executeBackup();
 
-        db.shutdown();
+        dbManagementService.shutdown();
 
         backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
@@ -186,9 +192,12 @@ class FulltextIndexBackupIT
         }
     }
 
-    private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
+    private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase();
+        backupManagementService = new TestCommercialDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( backupDatabaseDir )
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() ).newDatabaseManagementService();
+        return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void verifyData( GraphDatabaseAPI db )
@@ -224,7 +233,7 @@ class FulltextIndexBackupIT
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( backupAddress.getHost(), backupAddress.getPort() )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseId( new DatabaseId( DEFAULT_DATABASE_NAME ) )
                 .withBackupDirectory( backupDir )
                 .withReportsDirectory( backupDir )
                 .withConsistencyCheck( true )
@@ -233,6 +242,6 @@ class FulltextIndexBackupIT
 
         OnlineBackupExecutor.buildDefault().executeBackup( context );
 
-        return backupDir.resolve( DEFAULT_DATABASE_NAME );
+        return backupDir;
     }
 }

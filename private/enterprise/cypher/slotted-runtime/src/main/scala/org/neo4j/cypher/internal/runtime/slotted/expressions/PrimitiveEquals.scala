@@ -19,5 +19,5 @@ case class PrimitiveEquals(a: Expression, b: Expression) extends Predicate with 
   }
   override def containsIsNull: Boolean = false
 
-  override def rewrite(f: (Expression) => Expression): Expression = f(PrimitiveEquals(a.rewrite(f), b.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(PrimitiveEquals(a.rewrite(f), b.rewrite(f)))
 }

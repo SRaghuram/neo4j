@@ -27,13 +27,15 @@ import java.io.File;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
+import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -51,15 +53,15 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.register.Register;
 import org.neo4j.register.Registers;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.nodeKey;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.relationshipKey;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -77,21 +79,22 @@ class CountsComputerTest
     @Inject
     private PageCache pageCache;
 
-    private GraphDatabaseBuilder dbBuilder;
+    private DatabaseManagementServiceInternalBuilder dbBuilder;
 
     @BeforeEach
     void setup()
     {
-        dbBuilder = new TestGraphDatabaseFactory().setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
-                .newImpermanentDatabaseBuilder( testDirectory.databaseDir() );
+        dbBuilder = new TestDatabaseManagementServiceBuilder().setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
+                .newImpermanentDatabaseBuilder( testDirectory.storeDir() );
     }
 
     @Test
     void skipPopulationWhenNodeAndRelationshipStoresAreEmpty()
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         InvocationTrackingProgressReporter progressReporter = new InvocationTrackingProgressReporter();
         rebuildCounts( lastCommittedTransactionId, progressReporter );
@@ -104,9 +107,10 @@ class CountsComputerTest
     @Test
     void shouldCreateAnEmptyCountsStoreFromAnEmptyDatabase()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 
@@ -116,7 +120,8 @@ class CountsComputerTest
     @Test
     void shouldCreateACountsStoreWhenThereAreNodesInTheDB()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( Label.label( "A" ) );
@@ -126,7 +131,7 @@ class CountsComputerTest
             tx.success();
         }
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 
@@ -146,7 +151,8 @@ class CountsComputerTest
     @Test
     void shouldCreateACountsStoreWhenThereAreUnusedNodeRecordsInTheDB()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( Label.label( "A" ) );
@@ -157,7 +163,7 @@ class CountsComputerTest
             tx.success();
         }
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 
@@ -177,7 +183,8 @@ class CountsComputerTest
     @Test
     void shouldCreateACountsStoreWhenThereAreUnusedRelationshipRecordsInTheDB()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             Node nodeA = db.createNode( Label.label( "A" ) );
@@ -188,7 +195,7 @@ class CountsComputerTest
             tx.success();
         }
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 
@@ -210,7 +217,8 @@ class CountsComputerTest
     @Test
     void shouldCreateACountsStoreWhenThereAreNodesAndRelationshipsInTheDB()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             Node nodeA = db.createNode( Label.label( "A" ) );
@@ -222,7 +230,7 @@ class CountsComputerTest
             tx.success();
         }
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 
@@ -248,8 +256,9 @@ class CountsComputerTest
     @Test
     void shouldCreateACountStoreWhenDBContainsDenseNodes()
     {
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) dbBuilder.
-                setConfig( GraphDatabaseSettings.dense_node_threshold, "2" ).newGraphDatabase();
+        DatabaseManagementService managementService = dbBuilder.
+                setConfig( GraphDatabaseSettings.dense_node_threshold, "2" ).newDatabaseManagementService();
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             Node nodeA = db.createNode( Label.label( "A" ) );
@@ -262,7 +271,7 @@ class CountsComputerTest
             tx.success();
         }
         long lastCommittedTransactionId = getLastTxId( db );
-        db.shutdown();
+        managementService.shutdown();
 
         rebuildCounts( lastCommittedTransactionId );
 

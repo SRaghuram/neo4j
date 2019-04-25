@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.ClusterId;
-import com.neo4j.causalclustering.identity.DatabaseName;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +21,7 @@ import java.io.PrintStream;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -38,7 +38,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 @ExtendWith( {TestDirectoryExtension.class, LifeExtension.class} )
 class DumpClusterStateTest
 {
-    private static final String DB_NAME = DEFAULT_DATABASE_NAME;
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Inject
     private TestDirectory testDirectory;
@@ -60,15 +60,14 @@ class DumpClusterStateTest
     void shouldDumpClusterState() throws Exception
     {
         // given
-        int numClusterStateItems = 10;
+        int numClusterStateItems = 9;
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
-        DatabaseName nonDefaultClusterName = new DatabaseName( "foo" );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
         ClusterId nonDefaultClusterId = new ClusterId( UUID.randomUUID() );
-        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultClusterName, nonDefaultTermState );
+        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DB_NAME );
+        DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DATABASE_ID );
 
         // when
         dumpTool.dump();
@@ -78,32 +77,28 @@ class DumpClusterStateTest
         assertThat( outStr, allOf(
                 containsString( nonDefaultMember.toString() ),
                 containsString( nonDefaultClusterId.toString() ),
-                containsString( nonDefaultClusterName.toString() ),
                 containsString( nonDefaultTermState.toString() ) ) );
         int lineCount = outStr.split( System.lineSeparator() ).length;
         assertEquals( numClusterStateItems, lineCount );
     }
 
-    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId,
-            DatabaseName nonDefaultClusterName, TermState nonDefaultTermState ) throws IOException
+    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId, TermState nonDefaultTermState ) throws IOException
     {
         // We're writing to 4 pieces of cluster state
         SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
-        SimpleStorage<DatabaseName> clusterNameStorage = storageFactory.createMultiClusteringDbNameStorage();
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
 
-        StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DB_NAME, life );
+        StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life );
 
         // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
-        storageFactory.createLockTokenStorage( DB_NAME, life );
-        storageFactory.createIdAllocationStorage( DB_NAME, life );
-        storageFactory.createSessionTrackerStorage( DB_NAME, life );
-        storageFactory.createLastFlushedStorage( DB_NAME, life );
-        storageFactory.createRaftMembershipStorage( DB_NAME, life );
-        storageFactory.createRaftVoteStorage( DB_NAME, life );
+        storageFactory.createLockTokenStorage( DATABASE_ID, life );
+        storageFactory.createIdAllocationStorage( DATABASE_ID, life );
+        storageFactory.createSessionTrackerStorage( DATABASE_ID, life );
+        storageFactory.createLastFlushedStorage( DATABASE_ID, life );
+        storageFactory.createRaftMembershipStorage( DATABASE_ID, life );
+        storageFactory.createRaftVoteStorage( DATABASE_ID, life );
 
         memberIdStorage.writeState( nonDefaultMember );
-        clusterNameStorage.writeState( nonDefaultClusterName );
         termStateStateStorage.persistStoreData( nonDefaultTermState );
         clusterIdStorage.writeState( nonDefaultClusterId );
     }

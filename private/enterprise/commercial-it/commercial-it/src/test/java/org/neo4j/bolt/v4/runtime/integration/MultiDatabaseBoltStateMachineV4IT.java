@@ -19,7 +19,7 @@ import org.neo4j.bolt.v1.runtime.BoltStateMachineV1;
 import org.neo4j.bolt.v4.BoltProtocolV4;
 import org.neo4j.bolt.v4.BoltStateMachineV4;
 import org.neo4j.bolt.v4.messaging.BeginMessage;
-import org.neo4j.bolt.v4.messaging.PullNMessage;
+import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.bolt.v4.runtime.AutoCommitState;
 import org.neo4j.bolt.v4.runtime.FailedState;
@@ -27,6 +27,7 @@ import org.neo4j.bolt.v4.runtime.InTransactionState;
 import org.neo4j.bolt.v4.runtime.ReadyState;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.ValueUtils;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -40,7 +41,8 @@ import static org.neo4j.bolt.testing.BoltMatchers.succeeded;
 import static org.neo4j.bolt.testing.BoltMatchers.wasIgnored;
 import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
-import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_NAME;
+import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
+import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_ID;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 
@@ -50,18 +52,18 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     void shouldAllowSessionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager databaseManager = databaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        DatabaseManager<?> databaseManager = databaseManager();
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When
-        RecordedBoltResponse first = sessionRun( "Unwind [1, 2, 3] as n return n", machine, "first" );
+        RecordedBoltResponse first = sessionRun( "Unwind [1, 2, 3] as n return n", machine, new DatabaseId( "first" ) );
         assertThat( first, containsRecord( 1L ) );
         reset( machine );
 
         // Then
-        RecordedBoltResponse second = sessionRun( "Unwind [4, 5] as n return n", machine, "second" );
+        RecordedBoltResponse second = sessionRun( "Unwind [4, 5] as n return n", machine, new DatabaseId( "second" ) );
         assertThat( second, containsRecord( 4L ) );
         reset( machine );
     }
@@ -70,18 +72,18 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     void shouldAllowTransactionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager databaseManager = databaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        DatabaseManager<?> databaseManager = databaseManager();
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When
-        RecordedBoltResponse first = txRun( "Unwind [1, 2, 3] as n return n", machine, "first" );
+        RecordedBoltResponse first = txRun( "Unwind [1, 2, 3] as n return n", machine, new DatabaseId( "first" ) );
         assertThat( first, containsRecord( 1L ) );
         reset( machine );
 
         // Then
-        RecordedBoltResponse second = txRun( "Unwind [4, 5] as n return n", machine, "second" );
+        RecordedBoltResponse second = txRun( "Unwind [4, 5] as n return n", machine, new DatabaseId( "second" ) );
         assertThat( second, containsRecord( 4L ) );
         reset( machine );
     }
@@ -101,7 +103,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     @Override
     protected RecordedBoltResponse sessionRun( String query, BoltStateMachineV1 machine ) throws Throwable
     {
-        return sessionRun( query, machine, ABSENT_DB_NAME );
+        return sessionRun( query, machine, ABSENT_DB_ID );
     }
 
     @Override
@@ -118,7 +120,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     @Override
     protected RecordedBoltResponse txRun( String query, BoltStateMachineV1 machine ) throws Throwable
     {
-        return txRun( query, machine, ABSENT_DB_NAME );
+        return txRun( query, machine, ABSENT_DB_ID );
     }
 
     @Override
@@ -147,14 +149,14 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         return machine;
     }
 
-    private RecordedBoltResponse sessionRun( String query, BoltStateMachineV1 machine, String databaseName ) throws Throwable
+    private RecordedBoltResponse sessionRun( String query, BoltStateMachineV1 machine, DatabaseId databaseId ) throws Throwable
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
-        machine.process( new RunMessage( query, EMPTY_PARAMS, asMapValue( map( "db_name", databaseName ) ) ), recorder );
+        machine.process( new RunMessage( query, EMPTY_PARAMS, asMapValue( map( "db", databaseId.name() ) ) ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( AutoCommitState.class ) );
-        verifyStatementProcessorNotEmpty( machine, databaseName );
+        verifyStatementProcessorNotEmpty( machine, databaseId );
 
         // PULL_ALL
         machine.process( newPullAll(), recorder );
@@ -165,14 +167,14 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         return response;
     }
 
-    private RecordedBoltResponse txRun( String query, BoltStateMachineV1 machine, String databaseName ) throws Throwable
+    private RecordedBoltResponse txRun( String query, BoltStateMachineV1 machine, DatabaseId databaseId ) throws Throwable
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // BEGIN
-        machine.process( new BeginMessage( asMapValue( map( "db_name", databaseName ) ) ), recorder );
+        machine.process( new BeginMessage( asMapValue( map( "db", databaseId.name() ) ) ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( InTransactionState.class ) );
-        verifyStatementProcessorNotEmpty( machine, databaseName );
+        verifyStatementProcessorNotEmpty( machine, databaseId );
 
         // RUN
         machine.process( new RunMessage( query, EMPTY_PARAMS ), recorder );
@@ -183,7 +185,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         assertThat( response, succeeded() );
 
         assertThat( machine.state(), instanceOf( InTransactionState.class ) );
-        verifyStatementProcessorNotEmpty( machine, databaseName );
+        verifyStatementProcessorNotEmpty( machine, databaseId );
 
         // COMMIT
         machine.process( COMMIT_MESSAGE, recorder );
@@ -196,12 +198,12 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     /**
      * Verify the database is set in the current connection context
      */
-    private static void verifyStatementProcessorNotEmpty( BoltStateMachineV1 machine, String databaseName )
+    private static void verifyStatementProcessorNotEmpty( BoltStateMachineV1 machine, DatabaseId databaseId )
     {
         StatementProcessor processor = machine.connectionState().getStatementProcessor();
-        if ( !Objects.equals( databaseName, ABSENT_DB_NAME ) )
+        if ( !Objects.equals( databaseId, ABSENT_DB_ID ) )
         {
-            assertThat( processor.databaseName(), equalTo( databaseName ) );
+            assertThat( processor.databaseId(), equalTo( databaseId ) );
         }
         else
         {
@@ -209,8 +211,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         }
     }
 
-    private static PullNMessage newPullAll() throws BoltIOException
+    private static PullMessage newPullAll() throws BoltIOException
     {
-        return new PullNMessage( ValueUtils.asMapValue( Collections.singletonMap( "n", Long.MAX_VALUE ) ) );
+        return new PullMessage( ValueUtils.asMapValue( Collections.singletonMap( "n", STREAM_LIMIT_UNLIMITED ) ) );
     }
 }

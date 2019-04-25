@@ -19,19 +19,15 @@
  */
 package org.neo4j.kernel.impl.transaction.log.files;
 
-import org.apache.commons.lang3.SystemUtils;
-
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
@@ -76,7 +72,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
         logVersionRepository = context.getLogVersionRepository();
         // Make sure at least a bare bones log file is available before recovery
         long lastLogVersionUsed = this.logVersionRepository.getCurrentLogVersion();
-        channel = logFiles.createLogChannelForVersion( lastLogVersionUsed, OpenMode.READ_WRITE, context::getLastCommittedTransactionId );
+        channel = logFiles.createLogChannelForVersion( lastLogVersionUsed, context::getLastCommittedTransactionId );
         channel.close();
     }
 
@@ -86,7 +82,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
         // Recovery has taken place before this, so the log file has been truncated to last known good tx
         // Just read header and move to the end
         long lastLogVersionUsed = logVersionRepository.getCurrentLogVersion();
-        channel = logFiles.createLogChannelForVersion( lastLogVersionUsed, OpenMode.READ_WRITE, context::getLastCommittedTransactionId );
+        channel = logFiles.createLogChannelForVersion( lastLogVersionUsed, context::getLastCommittedTransactionId );
         // Move to the end
         channel.position( channel.size() );
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect( calculateLogBufferSize() );
@@ -192,8 +188,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
          * we can have transactions that are not yet published as committed but were already stored
          * into transaction log that was just rotated.
          */
-        PhysicalLogVersionedStoreChannel newLog = logFiles.createLogChannelForVersion( newLogVersion,
-                OpenMode.READ_WRITE, context::committingTransactionId );
+        PhysicalLogVersionedStoreChannel newLog = logFiles.createLogChannelForVersion( newLogVersion, context::committingTransactionId );
         currentLog.close();
         return newLog;
     }
@@ -248,11 +243,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
      * Invokes cleaner if required of provided byte buffer.
      * In case if byte buffer is not direct - nothing will gonna be executed on close.
      * <br/>
-     * For direct byte buffers:
-     * <ul>
-     *   <li>For Java 8 direct byte buffer cleaner will be invoked.</li>
-     *   <li>For more recent java versions (9 and above ) unsafe helper method will be invoked to clean native buffer resources.</li>
-     *</ul>
+     * For direct byte buffers: unsafe helper method will be invoked to clean native buffer resources.
      */
     private static class CloseableByteBuffer implements Closeable
     {
@@ -272,29 +263,12 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
             }
             try
             {
-                if ( SystemUtils.IS_JAVA_1_8 )
-                {
-                    invokeOldBufferCleaner();
-                }
-                else
-                {
-                    UnsafeUtil.invokeCleaner( byteBuffer );
-                }
+                UnsafeUtil.invokeCleaner( byteBuffer );
             }
             catch ( Throwable t )
             {
                 throw new RuntimeException( t );
             }
-        }
-
-        private void invokeOldBufferCleaner() throws Throwable
-        {
-
-            Class<?> cleanerClass = Class.forName( "sun.misc.Cleaner" );
-            Method cleanerAccessor = byteBuffer.getClass().getMethod( "cleaner" );
-            cleanerAccessor.setAccessible( true );
-            Object cleanerObject = cleanerAccessor.invoke( byteBuffer );
-            cleanerClass.getDeclaredMethod( "clean" ).invoke( cleanerObject );
         }
     }
 }

@@ -26,10 +26,10 @@ import org.junit.Rule;
 import java.util.Iterator;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.Procedures;
@@ -50,11 +50,12 @@ import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyIterator;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 import static org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allIterator;
 import static org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingIterator;
@@ -77,6 +78,7 @@ public abstract class KernelIntegrationTest
     private DbmsOperations dbmsOperations;
     protected DependencyResolver dependencyResolver;
     protected DefaultValueMapper valueMapper;
+    private DatabaseManagementService managementService;
 
     protected TokenWrite tokenWriteInNewTransaction() throws KernelException
     {
@@ -165,7 +167,8 @@ public abstract class KernelIntegrationTest
 
     protected void startDb()
     {
-        db = (GraphDatabaseAPI) createGraphDatabase();
+        managementService = createDatabaseService();
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         dependencyResolver = db.getDependencyResolver();
         kernel = dependencyResolver.resolveDependency( Kernel.class );
         indexingService = dependencyResolver.resolveDependency( IndexingService.class );
@@ -174,25 +177,25 @@ public abstract class KernelIntegrationTest
         valueMapper = new DefaultValueMapper( dependencyResolver.resolveDependency( EmbeddedProxySPI.class ) );
     }
 
-    protected GraphDatabaseService createGraphDatabase()
+    protected DatabaseManagementService createDatabaseService()
     {
-        GraphDatabaseBuilder graphDatabaseBuilder = configure( createGraphDatabaseFactory() )
+        DatabaseManagementServiceInternalBuilder databaseManagementServiceInternalBuilder = configure( createGraphDatabaseFactory() )
                 .setFileSystem( testDir.getFileSystem() )
                 .newEmbeddedDatabaseBuilder( testDir.storeDir() );
-        return configure( graphDatabaseBuilder ).newGraphDatabase();
+        return configure( databaseManagementServiceInternalBuilder ).newDatabaseManagementService();
     }
 
-    protected TestGraphDatabaseFactory createGraphDatabaseFactory()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory()
     {
-        return new TestGraphDatabaseFactory();
+        return new TestDatabaseManagementServiceBuilder();
     }
 
-    protected GraphDatabaseBuilder configure( GraphDatabaseBuilder graphDatabaseBuilder )
+    protected DatabaseManagementServiceInternalBuilder configure( DatabaseManagementServiceInternalBuilder databaseManagementServiceInternalBuilder )
     {
-        return graphDatabaseBuilder;
+        return databaseManagementServiceInternalBuilder;
     }
 
-    protected TestGraphDatabaseFactory configure( TestGraphDatabaseFactory factory )
+    protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
     {
         return factory;
     }
@@ -209,7 +212,7 @@ public abstract class KernelIntegrationTest
         {
             transaction.close();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     public void restartDb() throws TransactionFailureException
@@ -250,26 +253,28 @@ public abstract class KernelIntegrationTest
 
     Iterator<Long> nodeGetRelationships( Transaction transaction, long node, Direction direction, int[] types )
     {
-        NodeCursor cursor = transaction.cursors().allocateNodeCursor();
-        transaction.dataRead().singleNode( node, cursor );
-        if ( !cursor.next() )
+        try ( NodeCursor cursor = transaction.cursors().allocateNodeCursor() )
         {
-            return emptyIterator();
-        }
+            transaction.dataRead().singleNode( node, cursor );
+            if ( !cursor.next() )
+            {
+                return emptyIterator();
+            }
 
-        switch ( direction )
-        {
-        case OUTGOING:
-            return outgoingIterator( transaction.cursors(), cursor, types,
-                    ( id, startNodeId, typeId, endNodeId ) -> id );
-        case INCOMING:
-            return incomingIterator( transaction.cursors(), cursor, types,
-                    ( id, startNodeId, typeId, endNodeId ) -> id );
-        case BOTH:
-            return allIterator( transaction.cursors(), cursor, types,
-                    ( id, startNodeId, typeId, endNodeId ) -> id );
-        default:
-            throw new IllegalStateException( direction + " is not a valid direction" );
+            switch ( direction )
+            {
+            case OUTGOING:
+                return outgoingIterator( transaction.cursors(), cursor, types,
+                        ( id, startNodeId, typeId, endNodeId ) -> id );
+            case INCOMING:
+                return incomingIterator( transaction.cursors(), cursor, types,
+                        ( id, startNodeId, typeId, endNodeId ) -> id );
+            case BOTH:
+                return allIterator( transaction.cursors(), cursor, types,
+                        ( id, startNodeId, typeId, endNodeId ) -> id );
+            default:
+                throw new IllegalStateException( direction + " is not a valid direction" );
+            }
         }
     }
 

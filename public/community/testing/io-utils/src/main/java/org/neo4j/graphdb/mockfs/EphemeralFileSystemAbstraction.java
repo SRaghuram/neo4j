@@ -46,6 +46,7 @@ import java.nio.charset.Charset;
 import java.nio.file.CopyOption;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.OpenOption;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,7 +69,6 @@ import java.util.zip.ZipOutputStream;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.StoreFileChannel;
 import org.neo4j.io.fs.StreamFilesRecursive;
@@ -251,27 +251,21 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public synchronized StoreChannel open( File fileName, OpenMode openMode ) throws IOException
+    public synchronized StoreChannel open( File fileName, Set<OpenOption> options ) throws IOException
     {
-        EphemeralFileData data = files.get( canonicalFile( fileName ) );
-        if ( data != null )
-        {
-            return new StoreFileChannel( new EphemeralFileChannel(
-                    data, new FileStillOpenException( fileName.getPath() ) ) );
-        }
-        return create( fileName );
+        return getStoreChannel( fileName );
     }
 
     @Override
     public OutputStream openAsOutputStream( File fileName, boolean append ) throws IOException
     {
-        return new ChannelOutputStream( open( fileName, OpenMode.READ_WRITE ), append );
+        return new ChannelOutputStream( write( fileName ), append );
     }
 
     @Override
     public InputStream openAsInputStream( File fileName ) throws IOException
     {
-        return new ChannelInputStream( open( fileName, OpenMode.READ ) );
+        return new ChannelInputStream( read( fileName) );
     }
 
     @Override
@@ -287,7 +281,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public synchronized StoreChannel create( File fileName ) throws IOException
+    public synchronized StoreChannel write( File fileName ) throws IOException
     {
         File parentFile = fileName.getParentFile();
         if ( parentFile != null /*means that this is the 'default location'*/ && !fileExists( parentFile ) )
@@ -299,6 +293,12 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
         EphemeralFileData data = files.computeIfAbsent( canonicalFile( fileName ), key -> new EphemeralFileData( clock ) );
         return new StoreFileChannel(
                 new EphemeralFileChannel( data, new FileStillOpenException( fileName.getPath() ) ) );
+    }
+
+    @Override
+    public synchronized StoreChannel read( File fileName ) throws IOException
+    {
+        return getStoreChannel( fileName );
     }
 
     @Override
@@ -508,6 +508,17 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
                fileNamePathItems.subList( 0, directoryPathItems.size() ).equals( directoryPathItems );
     }
 
+    private StoreChannel getStoreChannel( File fileName ) throws IOException
+    {
+        EphemeralFileData data = files.get( canonicalFile( fileName ) );
+        if ( data != null )
+        {
+            return new StoreFileChannel( new EphemeralFileChannel(
+                    data, new FileStillOpenException( fileName.getPath() ) ) );
+        }
+        return write( fileName );
+    }
+
     private List<String> splitPath( File path )
     {
         return asList( path.getPath().replaceAll( "\\\\", "/" ).split( "/" ) );
@@ -631,8 +642,8 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
 
     private void copyFile( File from, FileSystemAbstraction fromFs, File to, ByteBuffer buffer ) throws IOException
     {
-        try ( StoreChannel source = fromFs.open( from, OpenMode.READ );
-              StoreChannel sink = this.open( to, OpenMode.READ_WRITE ) )
+        try ( StoreChannel source = fromFs.read( from );
+              StoreChannel sink = this.write( to ) )
         {
             sink.truncate( 0 );
             for ( int available; (available = (int) (source.size() - source.position())) > 0; )
@@ -1054,7 +1065,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
         {
             final Iterator<WeakReference<EphemeralFileChannel>> refs = channels.iterator();
 
-            return new PrefetchingIterator<EphemeralFileChannel>()
+            return new PrefetchingIterator<>()
             {
                 @Override
                 protected EphemeralFileChannel fetchNextOrNull()
@@ -1400,7 +1411,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction
                     }
                 }
             }
-            return currentIterator != null && currentIterator.hasNext() ? currentIterator.next() : null;
+            return currentIterator != null ? currentIterator.next() : null;
         }
 
         protected Iterator<T> nextIteratorOrNull()

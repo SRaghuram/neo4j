@@ -11,15 +11,15 @@ import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.common.CopyOnWriteHashMap;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
 
 public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>
 {
-    private final Map<ClusterId,MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>> handlersById = new CopyOnWriteHashMap<>();
+    private final Map<ClusterId,MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>> handlersById = new ConcurrentHashMap<>();
     private final CappedLogger log;
 
     public RaftMessageDispatcher( LogProvider logProvider, Clock clock )

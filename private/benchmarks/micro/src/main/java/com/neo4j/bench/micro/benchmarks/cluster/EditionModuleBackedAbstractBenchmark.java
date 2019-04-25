@@ -21,13 +21,15 @@ import java.nio.file.Path;
 import java.util.Stack;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -37,6 +39,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     private final Stack<ClusterTx> clusterTxStack = new Stack<>();
     private GraphDatabaseFacade graphDatabaseFacade;
     private Path tempDirectory;
+    private DatabaseManagementService managementService;
 
     protected GraphDatabaseService db()
     {
@@ -51,11 +54,11 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
-        graphDatabaseFacade = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY,
-                                                              TxProbingEditionModule::new ).newFacade( tempDirectory.toFile(),
-                                                                                                       Config.defaults(),
-                                                                                                       GraphDatabaseDependencies.newDependencies() );
-
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY,
+                                                                  TxProbingEditionModule::new ).newFacade( tempDirectory.toFile(),
+                                                                                                           Config.defaults(),
+                                                                                                           GraphDatabaseDependencies.newDependencies() );
+        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
     }
 
@@ -72,7 +75,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected void benchmarkTearDown()
     {
         shutdown();
-        graphDatabaseFacade.shutdown();
+        managementService.shutdown();
         BenchmarkUtil.assertDirectoryExists( tempDirectory );
         BenchmarkUtil.deleteDir( tempDirectory );
     }
@@ -95,7 +98,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 try
                 {
                     TransactionRepresentationReplicatedTransaction txRepresentation = ReplicatedTransaction.from( batch.transactionRepresentation(),
-                                                                                                                  "db-name" );
+                                                                                                                  new DatabaseId( "db-name" ) );
 
                     ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
 
@@ -110,7 +113,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         }
 
         @Override
-        public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+        public void createSecurityModule( GlobalModule globalModule )
         {
             securityProvider = NoAuthSecurityProvider.INSTANCE;
         }

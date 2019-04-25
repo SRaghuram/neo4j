@@ -5,9 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.core.state.DatabaseCoreStateComponents.LifecycleDependencies;
 
-public interface CoreStateFactory<DB extends LocalDatabase>
+import org.neo4j.kernel.database.DatabaseId;
+
+public interface CoreStateFactory
 {
-    PerDatabaseCoreStateComponents create( DB localDatabase );
+    DatabaseCoreStateComponents create( DatabaseId databaseId, LifecycleDependencies dependencies );
 }

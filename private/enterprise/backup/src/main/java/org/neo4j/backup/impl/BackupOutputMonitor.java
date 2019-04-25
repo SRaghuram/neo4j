@@ -6,6 +6,7 @@
 package org.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -57,39 +58,4 @@ class BackupOutputMonitor implements StoreCopyClientMonitor
         log.info( "Finish receiving transactions at %d", endTxId );
     }
 
-    @Override
-    public void startRecoveringStore()
-    {
-        log.info( "Start recovering store" );
-    }
-
-    @Override
-    public void finishRecoveringStore()
-    {
-        log.info( "Finish recovering store" );
-    }
-
-    @Override
-    public void startReceivingIndexSnapshots()
-    {
-        log.info( "Start receiving index snapshots" );
-    }
-
-    @Override
-    public void startReceivingIndexSnapshot( long indexId )
-    {
-        log.info( "Start receiving index snapshot id %d", indexId );
-    }
-
-    @Override
-    public void finishReceivingIndexSnapshot( long indexId )
-    {
-        log.info( "Finished receiving index snapshot id %d", indexId );
-    }
-
-    @Override
-    public void finishReceivingIndexSnapshots()
-    {
-        log.info( "Finished receiving index snapshots" );
-    }
 }

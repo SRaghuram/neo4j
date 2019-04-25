@@ -61,7 +61,7 @@ public class ClusterIndexProcedureIT
         // create an index
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL db.createIndex( \":Person(name)\", \"lucene+native-1.0\")" ).close();
+            db.execute( "CALL db.createIndex( \":Person(name)\", \"lucene+native-3.0\")" ).close();
             tx.success();
         } );
 
@@ -92,7 +92,7 @@ public class ClusterIndexProcedureIT
         // create a constraint
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL db.createUniquePropertyConstraint( \":Person(name)\", \"lucene+native-1.0\")" ).close();
+            db.execute( "CALL db.createUniquePropertyConstraint( \":Person(name)\", \"lucene+native-3.0\")" ).close();
             tx.success();
         } );
 
@@ -123,7 +123,7 @@ public class ClusterIndexProcedureIT
         // create a node key
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL db.createNodeKey( \":Person(name)\", \"lucene+native-1.0\")" ).close();
+            db.execute( "CALL db.createNodeKey( \":Person(name)\", \"lucene+native-3.0\")" ).close();
             tx.success();
         } );
 
@@ -213,6 +213,6 @@ public class ClusterIndexProcedureIT
         SchemaRead schemaRead = kernelTransaction.schemaRead();
         IndexReference index = schemaRead.index( labelId, propId );
         assertEquals( "correct provider key", "lucene+native", index.providerKey() );
-        assertEquals( "correct provider version", "1.0", index.providerVersion() );
+        assertEquals( "correct provider version", "3.0", index.providerVersion() );
     }
 }

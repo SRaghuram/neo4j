@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.net.ConnectException;
 import java.time.Clock;
@@ -20,9 +19,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
@@ -38,17 +39,18 @@ class TxPuller
     private State currentState = State.NORMAL;
     private long highestTx;
 
-    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
+    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config, DatabaseId databaseId )
     {
         Clock clock = Clock.systemUTC();
         Duration inactivityTimeout = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout );
-        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock );
+        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock, databaseId );
     }
 
     @VisibleForTesting
-    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock )
+    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock,
+            DatabaseId databaseId )
     {
-        this.addressProvider = new StateBasedAddressProvider( catchupAddressProvider );
+        this.addressProvider = new StateBasedAddressProvider( databaseId, catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );
         this.resettableCondition = noProgressHandler;
         this.connectionErrorLogger = new CappedLogger( log );
@@ -184,10 +186,12 @@ class TxPuller
 
     private static class StateBasedAddressProvider
     {
+        private final DatabaseId databaseId;
         private final CatchupAddressProvider catchupAddressProvider;
 
-        private StateBasedAddressProvider( CatchupAddressProvider catchupAddressProvider )
+        private StateBasedAddressProvider( DatabaseId databaseId, CatchupAddressProvider catchupAddressProvider )
         {
+            this.databaseId = databaseId;
             this.catchupAddressProvider = catchupAddressProvider;
         }
 
@@ -197,9 +201,9 @@ class TxPuller
             {
             case LAST_ATTEMPT:
             case COMPLETE:
-                return catchupAddressProvider.primary();
+                return catchupAddressProvider.primary( databaseId );
             default:
-                return catchupAddressProvider.secondary();
+                return catchupAddressProvider.secondary( databaseId );
             }
         }
     }

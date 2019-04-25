@@ -12,84 +12,36 @@ import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
-class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements Comparable<SharedDiscoveryCoreClient>
+class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
 {
     private final SharedDiscoveryService sharedDiscoveryService;
-    private final CoreServerInfo coreServerInfo;
-    private final String localDBName;
     private final boolean refusesToBeLeader;
 
-    private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
-    private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
-    private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
-    private volatile ReadReplicaTopology localReadReplicaTopology = ReadReplicaTopology.EMPTY;
-    private volatile CoreTopology localCoreTopology = CoreTopology.EMPTY;
-
     SharedDiscoveryCoreClient( SharedDiscoveryService sharedDiscoveryService,
-            MemberId member, LogProvider logProvider, Config config )
+            DiscoveryMember myself, LogProvider logProvider, Config config )
     {
-        super( config, member, logProvider, logProvider );
-        this.localDBName = config.get( CausalClusteringSettings.database );
+        super( config, myself, logProvider, logProvider );
         this.sharedDiscoveryService = sharedDiscoveryService;
-        this.coreServerInfo = CoreServerInfo.from( config );
         this.refusesToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
-    }
-
-    @Override
-    public int compareTo( SharedDiscoveryCoreClient o )
-    {
-        return Optional.ofNullable( o ).map( c -> c.myself.getUuid().compareTo( this.myself.getUuid() ) ).orElse( -1 );
-    }
-
-    @Override
-    public boolean setClusterId( ClusterId clusterId, String dbName )
-    {
-        return sharedDiscoveryService.casClusterId( clusterId, dbName );
-    }
-
-    @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
-    {
-        return sharedDiscoveryService.getCoreRoles();
-    }
-
-    @Override
-    public void setLeader0( LeaderInfo newLeader )
-    {
-        leaderInfo =  newLeader;
-        sharedDiscoveryService.casLeaders( newLeader, localDBName );
-    }
-
-    @Override
-    public LeaderInfo getLeader()
-    {
-        return leaderInfo;
-    }
-
-    @Override
-    public void init0()
-    {
-        // nothing to do
     }
 
     @Override
     public void start0() throws InterruptedException
     {
-        coreTopology = sharedDiscoveryService.getCoreTopology( this );
-        localCoreTopology = coreTopology.filterTopologyByDb( localDBName );
-        readReplicaTopology = sharedDiscoveryService.getReadReplicaTopology();
-        localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDBName );
-
         sharedDiscoveryService.registerCoreMember( this );
         log.info( "Registered core server %s", myself );
 
-        sharedDiscoveryService.waitForClusterFormation();
+        for ( DatabaseId databaseId : getDatabaseIds() )
+        {
+            sharedDiscoveryService.waitForClusterFormation( databaseId );
+        }
         log.info( "Cluster formed" );
     }
 
@@ -101,95 +53,86 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void shutdown0()
+    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
     {
-        // nothing to do
+        return sharedDiscoveryService.casClusterId( clusterId, databaseId );
     }
 
     @Override
-    public String localDBName()
+    public Map<MemberId,RoleInfo> allCoreRoles()
     {
-        return localDBName;
+        return sharedDiscoveryService.getCoreRoles();
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        return coreTopology;
+        return sharedDiscoveryService.allCoreServers();
     }
 
     @Override
-    public CoreTopology localCoreServers()
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return localCoreTopology;
+        return sharedDiscoveryService.getCoreTopology( databaseId, this );
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return readReplicaTopology;
+        return sharedDiscoveryService.allReadReplicas();
     }
 
     @Override
-    public ReadReplicaTopology localReadReplicas()
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return localReadReplicaTopology;
+        return sharedDiscoveryService.getReadReplicaTopology( databaseId );
     }
 
     @Override
     public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        Optional<AdvertisedSocketAddress> coreAdvertisedSocketAddress = localCoreServers().find( upstream ).map( CoreServerInfo::getCatchupServer );
-        if ( coreAdvertisedSocketAddress.isPresent() )
-        {
-            return coreAdvertisedSocketAddress.get();
-        }
-        return readReplicaTopology
-                .find( upstream )
-                .map( ReadReplicaInfo::getCatchupServer )
-                .orElseThrow( () -> new CatchupAddressResolutionException( upstream ) );
+        return sharedDiscoveryService.findCatchupAddress( upstream );
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void setLeader0( LeaderInfo newLeader, DatabaseId databaseId )
     {
-        sharedDiscoveryService.casLeaders( steppingDown, localDBName );
+        sharedDiscoveryService.casLeaders( newLeader, databaseId );
     }
 
-    public MemberId getMemberId()
+    @Override
+    public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
-        return myself;
+        sharedDiscoveryService.casLeaders( steppingDown, databaseId );
     }
 
-    public CoreServerInfo getCoreServerInfo()
+    Set<DatabaseId> getDatabaseIds()
     {
-        return coreServerInfo;
+        return myself.hostedDatabases();
+    }
+
+    CoreServerInfo getCoreServerInfo()
+    {
+        return new CoreServerInfo( config, getDatabaseIds() );
+    }
+
+    boolean refusesToBeLeader()
+    {
+        return refusesToBeLeader;
     }
 
     void onCoreTopologyChange( CoreTopology coreTopology )
     {
         log.info( "Notified of core topology change " + coreTopology );
-        this.coreTopology = coreTopology;
-        this.localCoreTopology = coreTopology.filterTopologyByDb( localDBName );
         listenerService.notifyListeners( coreTopology );
-    }
-
-    void onReadReplicaTopologyChange( ReadReplicaTopology readReplicaTopology )
-    {
-        log.info( "Notified of read replica topology change " + readReplicaTopology );
-        this.readReplicaTopology = readReplicaTopology;
-        this.localReadReplicaTopology = readReplicaTopology.filterTopologyByDb( localDBName );
-    }
-
-    public boolean refusesToBeLeader()
-    {
-        return refusesToBeLeader;
     }
 
     @Override
     public String toString()
     {
-        return "SharedDiscoveryCoreClient{" + "myself=" + myself + ", coreServerInfo=" + coreServerInfo + ", refusesToBeLeader=" + refusesToBeLeader +
-                ", localDBName='" + localDBName + '\'' + ", leaderInfo=" + leaderInfo + ", coreTopology=" + coreTopology + '}';
+        return "SharedDiscoveryCoreClient{" +
+               "myself=" + myself +
+               ", refusesToBeLeader=" + refusesToBeLeader +
+               '}';
     }
 }

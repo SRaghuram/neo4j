@@ -24,14 +24,16 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class LargePropertiesIT
 {
@@ -44,12 +46,12 @@ public class LargePropertiesIT
         String stringValue = RandomStringUtils.randomAlphanumeric( 10000 );
         byte[] arrayValue = RandomStringUtils.randomAlphanumeric( 10000 ).getBytes();
 
-        GraphDatabaseService db = new TestGraphDatabaseFactory()
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
                 .setFileSystem( fs.get() )
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.string_block_size, "1024" )
-                .setConfig( GraphDatabaseSettings.array_block_size, "2048" )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.array_block_size, "2048" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             long nodeId;
@@ -72,7 +74,7 @@ public class LargePropertiesIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

@@ -31,14 +31,16 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -49,21 +51,22 @@ import org.neo4j.kernel.api.InwardKernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.register.Register.DoubleLongRegister;
 import org.neo4j.register.Registers;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
+import org.neo4j.test.mockito.matcher.RootCauseMatcher;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -76,10 +79,12 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.helpers.collection.Iterables.count;
@@ -154,13 +159,15 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
+            store.prepareDirectory( testDir.databaseDir() );
 
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
-            GraphDatabaseService db = builder.newGraphDatabase();
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
@@ -168,28 +175,29 @@ public class StoreUpgradeIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+            assertConsistentStore( databaseLayout );
         }
 
         @Test
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             File rootDir = testDir.directory();
-            Config config = Config.defaults( GraphDatabaseSettings.data_directory, rootDir.toString() );
-            DatabaseLayout databaseLayout = DatabaseLayout.of( config.get( databases_root_path ), DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( rootDir, DEFAULT_DATABASE_NAME );
 
             store.prepareDirectory( databaseLayout.databaseDirectory() );
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
             props.putAll( ServerTestUtils.getDefaultRelativeProperties() );
-            props.setProperty( GraphDatabaseSettings.data_directory.name(), rootDir.getAbsolutePath() );
-            props.setProperty( GraphDatabaseSettings.logs_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( data_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
+            props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( allow_upgrade.name(), "true" );
-            props.setProperty( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
+            props.setProperty( pagecache_memory.name(), "8m" );
             props.setProperty( new HttpConnector( "http" ).type.name(), "HTTP" );
             props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
             props.setProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
@@ -225,13 +233,14 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
-            GraphDatabaseService database = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
-            database.shutdown();
+            managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
@@ -251,14 +260,15 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory.getParentFile() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
-            GraphDatabaseService database = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
-            database.shutdown();
+            managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
@@ -266,7 +276,7 @@ public class StoreUpgradeIT
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
 
-        private void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
+        private static void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
                 throws IOException
         {
             File[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
@@ -276,7 +286,7 @@ public class StoreUpgradeIT
             }
         }
 
-        private Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
+        private static Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
             File[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
             assertThat( availableLogFilesBeforeMigration, not( emptyArray() ) );
@@ -320,21 +330,22 @@ public class StoreUpgradeIT
             // migrate the store using a single instance
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
+            builder.setConfig( pagecache_memory, "8m" );
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
-                builder.newGraphDatabase();
-                fail( "It should have failed." );
+                DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) databaseService).getDependencyResolver().resolveDependency( DatabaseManager.class );
+                DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+                assertTrue( databaseContext.isFailed() );
+                assertThat( databaseContext.failureCause(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
             }
-            catch ( RuntimeException ex )
+            finally
             {
-                assertTrue( ex.getCause() instanceof LifecycleException );
-                Throwable realException = ex.getCause().getCause();
-                assertTrue( "Unexpected exception", Exceptions.contains( realException,
-                        StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
+                managementService.shutdown();
             }
         }
     }
@@ -368,11 +379,13 @@ public class StoreUpgradeIT
                 }
             }
 
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
+            DatabaseManagementServiceBuilder factory = new TestDatabaseManagementServiceBuilder();
+            DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.storeDir() );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
-            GraphDatabaseService db = builder.newGraphDatabase();
+            DatabaseManagementService managementService = builder.newDatabaseManagementService();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
@@ -380,10 +393,10 @@ public class StoreUpgradeIT
             }
             finally
             {
-                db.shutdown();
+                managementService.shutdown();
             }
 
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+            assertConsistentStore( databaseLayout );
         }
     }
 

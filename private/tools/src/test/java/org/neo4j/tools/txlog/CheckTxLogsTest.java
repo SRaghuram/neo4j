@@ -20,7 +20,6 @@ import java.util.function.LongFunction;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -965,7 +964,7 @@ public class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
-        try ( StoreChannel channel = fsRule.open( log, OpenMode.READ_WRITE );
+        try ( StoreChannel channel = fsRule.write( log );
               LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0 );
               PhysicalFlushableChannel writableLogChannel = new PhysicalFlushableChannel( versionedChannel ) )
         {
@@ -976,14 +975,13 @@ public class CheckTxLogsTest
         }
     }
 
-    private File ensureLogExists( File logFile ) throws IOException
+    private void ensureLogExists( File logFile ) throws IOException
     {
         FileSystemAbstraction fs = fsRule.get();
         if ( !fs.fileExists( logFile ) )
         {
             LogHeaderWriter.writeLogHeader( fs, logFile, getLogFiles().getLogVersion( logFile ), 0 );
         }
-        return logFile;
     }
 
     private class CheckTxLogsWithCustomLogEntryCursor extends CheckTxLogs

@@ -5,10 +5,8 @@
  */
 package com.neo4j.causalclustering.diagnostics;
 
-import com.neo4j.causalclustering.core.consensus.membership.MembershipWaiter;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
-import com.neo4j.causalclustering.discovery.HazelcastCoreTopologyService;
 import com.neo4j.causalclustering.helper.Limiters;
 import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.identity.ClusterId;
@@ -17,7 +15,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.neo4j.helpers.SocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -35,13 +33,12 @@ import static java.lang.String.format;
  * This pattern also de-clutters implementing classes from specifics of logging (e.g.
  * formatting, dual-logging, rate limiting, ...) and encourages a structured interface.
  */
-public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopologyService.Monitor, PersistentSnapshotDownloader.Monitor, MembershipWaiter.Monitor
+public class CoreMonitor implements ClusterBinder.Monitor, PersistentSnapshotDownloader.Monitor
 {
     private final Log debug;
     private final Log user;
 
     private final Consumer<Runnable> binderLimit = Limiters.rateLimiter( Duration.ofSeconds( 10 ) );
-    private final Consumer<Runnable> waiterLimit = Limiters.rateLimiter( Duration.ofSeconds( 10 ) );
 
     public static void register( LogProvider debugLogProvider, LogProvider userLogProvider, Monitors monitors )
     {
@@ -72,7 +69,7 @@ public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopology
     }
 
     @Override
-    public void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId )
+    public void bootstrapped( Map<DatabaseId,CoreSnapshot> snapshots, ClusterId clusterId )
     {
         user.info( "This instance bootstrapped the cluster." );
         debug.info( format( "Bootstrapped with snapshots: %s and clusterId: %s", snapshots, clusterId ) );
@@ -85,18 +82,6 @@ public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopology
     }
 
     @Override
-    public void discoveredMember( SocketAddress socketAddress )
-    {
-        user.info( "Discovered core member at " + socketAddress );
-    }
-
-    @Override
-    public void lostMember( SocketAddress socketAddress )
-    {
-        user.warn( "Lost core member at " + socketAddress );
-    }
-
-    @Override
     public void startedDownloadingSnapshot()
     {
         user.info( "Started downloading snapshot..." );
@@ -106,27 +91,5 @@ public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopology
     public void downloadSnapshotComplete()
     {
         user.info( "Download of snapshot complete." );
-    }
-
-    @Override
-    public void waitingToHearFromLeader()
-    {
-        waiterLimit.accept( () -> user.info( "Waiting to hear from leader..." ) );
-    }
-
-    @Override
-    public void waitingToCatchupWithLeader( long localCommitIndex, long leaderCommitIndex )
-    {
-        waiterLimit.accept( () -> {
-            long gap = leaderCommitIndex - localCommitIndex;
-            user.info( "Waiting to catchup with leader... we are %d entries behind leader at %d.", gap,
-                    leaderCommitIndex );
-        } );
-    }
-
-    @Override
-    public void joinedRaftGroup()
-    {
-        user.info( "Successfully joined the Raft group." );
     }
 }

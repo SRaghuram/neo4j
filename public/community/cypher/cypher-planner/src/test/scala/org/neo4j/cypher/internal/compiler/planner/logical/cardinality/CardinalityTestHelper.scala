@@ -35,6 +35,10 @@ import org.scalatest.matchers.Matcher
 import scala.collection.mutable
 
 trait CardinalityTestHelper extends QueryGraphProducer with CardinalityCustomMatchers {
+  // This does not support composite indexes, but the only test that uses this will not differentiate
+  // between single property and composite indexes anyway, so adding support here will not improve test coverage.
+  // Adding support for composite indexes to AssumeIndependenceQueryGraphCardinalityModelTest will not improve coverage either
+  // because it only verifies that you get back what you put in, which means we will just be testing the test framework.
 
   self: CypherFunSuite with LogicalPlanningTestSupport =>
 
@@ -131,7 +135,7 @@ trait CardinalityTestHelper extends QueryGraphProducer with CardinalityCustomMat
       )
 
     def prepareTestContext:(GraphStatistics, SemanticTable) = {
-      val labelIds: Map[String, Int] = knownLabelCardinality.map(_._1).zipWithIndex.toMap
+      val labelIds: Map[String, Int] = knownLabelCardinality.keys.zipWithIndex.toMap
       val propertyIds: Map[String, Int] = knownProperties.zipWithIndex.toMap
       val relTypeIds: Map[String, Int] = knownRelationshipCardinality.map(_._1._2).toSeq.distinct.zipWithIndex.toMap
 
@@ -150,7 +154,6 @@ trait CardinalityTestHelper extends QueryGraphProducer with CardinalityCustomMat
         def uniqueValueSelectivity(index: IndexDescriptor): Option[Selectivity] = {
           val labelName: Option[String] = getLabelName(index.label)
           val propertyName: Option[String] = getPropertyName(index.property)
-          //TODO: Refactor for composite indexes
           (labelName, propertyName) match {
             case (Some(lName), Some(pName)) =>
               val selectivity = knownIndexSelectivity.get((lName, pName))
@@ -163,7 +166,6 @@ trait CardinalityTestHelper extends QueryGraphProducer with CardinalityCustomMat
         def indexPropertyExistsSelectivity(index: IndexDescriptor): Option[Selectivity] = {
           val labelName: Option[String] = getLabelName(index.label)
           val propertyName: Option[String] = getPropertyName(index.property)
-          //TODO: Refactor for composite indexes
           (labelName, propertyName) match {
             case (Some(lName), Some(pName)) =>
               val selectivity = knownIndexPropertyExistsSelectivity.get((lName, pName))

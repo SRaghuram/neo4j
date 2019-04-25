@@ -115,7 +115,11 @@ trait RowOrderMatcher extends RowsMatcher {
     this
   }
   def groupBy(columns: String*): RowOrderMatcher = {
-    append(new GroupBy(columns:_*))
+    append(new GroupBy(None, None, columns:_*))
+    this
+  }
+  def groupBy(nGroups: Int, groupSize: Int, columns: String*): RowOrderMatcher = {
+    append(new GroupBy(Some(nGroups), Some(groupSize), columns:_*))
     this
   }
 
@@ -129,12 +133,16 @@ trait RowOrderMatcher extends RowsMatcher {
 
   override def matches(columns: IndexedSeq[String], rows: IndexedSeq[Array[AnyValue]]): Boolean = {
     foreach(_.reset())
+    if (rows.isEmpty) {
+      return false
+    }
+
     for (row <- rows) {
       if (!onRow(columns, row)) {
         return false
       }
     }
-    true
+    onComplete()
   }
 
   def foreach(f: RowOrderMatcher => Unit): Unit = {
@@ -148,11 +156,18 @@ trait RowOrderMatcher extends RowsMatcher {
 
   def reset(): Unit
   def onRow(columns: IndexedSeq[String], row: Array[AnyValue]): Boolean
+  def onComplete(): Boolean
 }
 
-class GroupBy(val groupingColumns: String*) extends RowOrderMatcher {
-  def description: String = s"grouped by '${groupingColumns.mkString(",")}'"
+class GroupBy(val nGroups: Option[Int], val groupSize: Option[Int], val groupingColumns: String*) extends RowOrderMatcher {
+  def description: String = {
+    val n = nGroups.map(n => s"$n ").getOrElse("")
+    val size = groupSize.map(n => s"of size $n ").getOrElse("")
+    s"in ${n}groups ${size}by '${groupingColumns.mkString(",")}'"
+  }
 
+  private var groupCount: Int = 0
+  private var currentCount: Int = 0
   private var previous: Seq[AnyValue] = _
   private val seenGroupingKeys = mutable.Set[Seq[AnyValue]]()
 
@@ -173,10 +188,16 @@ class GroupBy(val groupingColumns: String*) extends RowOrderMatcher {
 
     val current = is.map(row)
     if (current == previous) {
+      currentCount += 1
       inner.forall(_.onRow(columns, row))
     } else {
       if (!seenGroupingKeys.add(current)) false
       else {
+        if (currentCount > 0 && groupSize.exists(_ != currentCount)) {
+          return false
+        }
+        groupCount += 1
+        currentCount = 1
         previous = current
         inner.forall { tail =>
           tail.reset()
@@ -184,6 +205,10 @@ class GroupBy(val groupingColumns: String*) extends RowOrderMatcher {
         }
       }
     }
+  }
+
+  override def onComplete(): Boolean = {
+    groupSize.forall(_ == currentCount) && nGroups.forall(_ == groupCount)
   }
 }
 
@@ -229,6 +254,8 @@ abstract class Sort extends RowOrderMatcher {
       false
     }
   }
+
+  override def onComplete(): Boolean = true
 
   def column: String
   def initialValue: AnyValue

@@ -12,12 +12,12 @@ import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 
 import static org.junit.Assert.assertEquals;
@@ -54,7 +54,7 @@ public class ClusterCustomLogLocationIT
             assertEquals( logFiles.logFilesDirectory().getName(), coreClusterMember.database().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
-            logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseDirectory(), dependencyResolver );
+            logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseLayout(), dependencyResolver );
         }
 
         Collection<ReadReplica> readReplicas = cluster.readReplicas();
@@ -66,14 +66,14 @@ public class ClusterCustomLogLocationIT
             assertEquals( logFiles.logFilesDirectory().getName(), readReplica.database().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
-            logFileInStoreDirectoryDoesNotExist( readReplica.databaseDirectory(), dependencyResolver );
+            logFileInStoreDirectoryDoesNotExist( readReplica.databaseLayout(), dependencyResolver );
         }
     }
 
-    private static void logFileInStoreDirectoryDoesNotExist( File storeDir, DependencyResolver dependencyResolver ) throws IOException
+    private static void logFileInStoreDirectoryDoesNotExist( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver ) throws IOException
     {
         FileSystemAbstraction fileSystem = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( storeDir, fileSystem ).build();
+        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem ).build();
         assertFalse( storeLogFiles.versionExists( 0 ) );
     }
 }

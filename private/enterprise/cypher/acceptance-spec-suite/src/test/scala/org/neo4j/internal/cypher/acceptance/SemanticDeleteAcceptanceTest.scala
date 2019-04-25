@@ -17,7 +17,7 @@ import org.scalacheck.{Gen, Shrink}
 class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternGen {
 
   //we don't want scala check to shrink patterns here and leave things in the database
-  implicit val dontShrink: Shrink[List[Element]] = Shrink(s => Stream.empty)
+  implicit val dontShrink: Shrink[List[Element]] = Shrink(_ => Stream.empty)
 
   test("match and delete random patterns") {
 

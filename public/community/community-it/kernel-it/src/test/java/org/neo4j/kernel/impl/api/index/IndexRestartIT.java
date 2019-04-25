@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.NotFoundException;
@@ -35,13 +36,14 @@ import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.test.DoubleLatch;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.kernel.api.InternalIndexState.ONLINE;
@@ -59,14 +61,15 @@ public class IndexRestartIT
     public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 
     private GraphDatabaseService db;
-    private TestGraphDatabaseFactory factory;
+    private TestDatabaseManagementServiceBuilder factory;
     private final ControlledPopulationIndexProvider provider = new ControlledPopulationIndexProvider();
     private final Label myLabel = label( "MyLabel" );
+    private DatabaseManagementService managementService;
 
     @Before
     public void before()
     {
-        factory = new TestGraphDatabaseFactory();
+        factory = new TestDatabaseManagementServiceBuilder();
         factory.setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs.get() ) );
         factory.setExtensions( Collections.singletonList(
             singleInstanceIndexProviderFactory( "test", provider )
@@ -76,7 +79,7 @@ public class IndexRestartIT
     @After
     public void after()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     /* This is somewhat difficult to test since dropping an index while it's populating forces it to be cancelled
@@ -169,20 +172,21 @@ public class IndexRestartIT
 
     private void startDb()
     {
-        if ( db != null )
+        if ( managementService != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
-        db = factory.newImpermanentDatabaseBuilder()
-                    .setConfig( default_schema_provider, provider.getProviderDescriptor().name() ).newGraphDatabase();
+        managementService = factory.newImpermanentDatabaseBuilder()
+                    .setConfig( default_schema_provider, provider.getProviderDescriptor().name() ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void stopDb()
     {
-        if ( db != null )
+        if ( managementService != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

@@ -37,7 +37,6 @@ import java.util.function.Supplier;
 import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -171,7 +170,7 @@ public abstract class PageCacheTestSupport<T extends PageCache>
     protected void ensureExists( File file ) throws IOException
     {
         fs.mkdirs( file.getParentFile() );
-        fs.create( file ).close();
+        fs.write( file ).close();
     }
 
     protected File existingFile( String name ) throws IOException
@@ -280,7 +279,7 @@ public abstract class PageCacheTestSupport<T extends PageCache>
             int recordCount,
             int recordSize ) throws IOException
     {
-        try ( StoreChannel channel = fs.open( file, OpenMode.READ_WRITE ) )
+        try ( StoreChannel channel = fs.write( file ) )
         {
             generateFileWithRecords( channel, recordCount, recordSize );
         }
@@ -317,7 +316,7 @@ public abstract class PageCacheTestSupport<T extends PageCache>
 
     protected void verifyRecordsInFile( File file, int recordCount ) throws IOException
     {
-        try ( StoreChannel channel = fs.open( file, OpenMode.READ ) )
+        try ( StoreChannel channel = fs.read( file ) )
         {
             verifyRecordsInFile( channel, recordCount );
         }

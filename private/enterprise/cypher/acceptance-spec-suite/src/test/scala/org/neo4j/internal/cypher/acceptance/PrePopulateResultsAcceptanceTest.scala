@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.ExecutionResult
 import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual._
@@ -45,11 +44,11 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   test("should populate node if asked to") {
-    val n1 = createNode()
+    createNode()
 
     val query = "MATCH (n) RETURN n"
 
-    assertOnOnlyReturnValue(query, true, assertPopulatedNode)
+    assertOnOnlyReturnValue(query, prePopulateResults = true, assertPopulatedNode)
   }
 
   test("should populate relationship if asked to") {
@@ -58,7 +57,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH ()-[r]-() RETURN r"
 
-    assertOnOnlyReturnValue(query, true, assertPopulatedRelationship)
+    assertOnOnlyReturnValue(query, prePopulateResults = true, assertPopulatedRelationship)
   }
 
   test("should populate paths if asked to") {
@@ -67,17 +66,16 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH p = ()-[r]-() RETURN p"
 
-    assertOnOnlyReturnValue(query, true,
+    assertOnOnlyReturnValue(query, prePopulateResults = true,
       value => {
         val path = value.asInstanceOf[PathValue]
         for (n <- path.nodes()) assertPopulatedNode(n)
         for (r <- path.relationships()) assertPopulatedRelationship(r)
-      }
-    )
+      })
   }
 
   test("should populate inside maps and lists if asked to") {
-    val n1 = createNode()
+    createNode()
 
     val query = "MATCH (n) RETURN {prop: [{prop: [n]}]}"
 
@@ -121,6 +119,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
         "CYPHER runtime=interpreted",
         "CYPHER runtime=slotted",
         "CYPHER runtime=compiled",
+        "CYPHER runtime=morsel",
         ""
       )
 
@@ -129,12 +128,10 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
         val q = prefix + " " + query
         val context = graph.transactionalContext(query = q -> Map.empty)
         try {
-          val result = eengine.execute(q, VirtualValues.EMPTY_MAP, context, false, prePopulateResults).asInstanceOf[ExecutionResult]
-          result.queryResult().accept(new QueryResultVisitor[Exception] {
-            override def visit(row: QueryResult.Record): Boolean = {
-              f(row.fields()(0))
-              true
-            }
+          val result = eengine.execute(q, VirtualValues.EMPTY_MAP, context, prePopulate = prePopulateResults).asInstanceOf[ExecutionResult]
+          result.queryResult().accept((row: QueryResult.Record) => {
+            f(row.fields()(0))
+            true
           })
         } finally {
           context.close(true)

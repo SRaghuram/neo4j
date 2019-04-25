@@ -21,13 +21,12 @@ import org.neo4j.commandline.admin.RealOutsideWorld;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.ext.udc.UdcSettings;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -58,10 +57,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public final CommercialDbmsRule db = new CommercialDbmsRule( testDirectory )
     {
         @Override
-        protected void configure( GraphDatabaseFactory databaseFactory )
+        protected void configure( DatabaseManagementServiceBuilder databaseFactory )
         {
             super.configure( databaseFactory );
-            ((TestGraphDatabaseFactory) databaseFactory).setInternalLogProvider( logProvider );
+            ((TestDatabaseManagementServiceBuilder) databaseFactory).setInternalLogProvider( logProvider );
         }
     }.startLazily();
 
@@ -97,7 +96,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public void cacheProfilesMustBeIncludedInOnlineBackups() throws Exception
     {
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
-          .withSetting( UdcSettings.udc_enabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
           .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:0" )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
@@ -151,6 +149,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Test
     public void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
     {
+        File data = testDirectory.directory( "data" );
+        File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
@@ -172,9 +172,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 },
                 true );
         File databaseDir = db.databaseLayout().databaseDirectory();
-        File data = testDirectory.cleanDirectory( "data" );
         File databases = new File( data, "databases" );
-        File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         File graphdb = testDirectory.databaseDir( databases );
         FileUtils.copyRecursively( databaseDir, graphdb );
         deleteRecursively( databaseDir );
@@ -193,6 +191,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         db.withSetting( MetricsSettings.neoPageCacheEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvInterval, "100ms" )
+          .withSetting( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
           .withSetting( MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() );
         db.ensureStarted();
 

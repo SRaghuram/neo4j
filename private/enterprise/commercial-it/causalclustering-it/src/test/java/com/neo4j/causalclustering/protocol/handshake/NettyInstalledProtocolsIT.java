@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
@@ -35,15 +33,12 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -52,65 +47,50 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_1;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_2;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.contains;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@RunWith( Parameterized.class )
-public class NettyInstalledProtocolsIT
+class NettyInstalledProtocolsIT
 {
     private static final int TIMEOUT_SECONDS = 10;
-    private Parameters parameters;
-    private AssertableLogProvider logProvider;
 
-    public NettyInstalledProtocolsIT( Parameters parameters )
-    {
-        this.parameters = parameters;
-    }
+    private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
 
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Parameters> data()
+    private static Collection<Parameters> data()
     {
         Stream<Optional<ModifierProtocol>> noModifierProtocols = Stream.of( Optional.empty() );
         Stream<Optional<ModifierProtocol>> individualModifierProtocols = Stream.of( ModifierProtocols.values() ).map( Optional::of );
 
         return Stream
                 .concat( noModifierProtocols, individualModifierProtocols )
-                .flatMap( protocol -> Stream.of( raft1WithCompressionModifier( protocol ), raft2WithCompressionModifiers( protocol ) ) )
+                .flatMap( protocol -> Stream.of( raft2WithCompressionModifiers( protocol ) ) )
                 .collect( Collectors.toList() );
-    }
-
-    @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
-    private static Parameters raft1WithCompressionModifier( Optional<ModifierProtocol> protocol )
-    {
-        List<String> versions = Streams.ofOptional( protocol ).map( Protocol::implementation ).collect( Collectors.toList() );
-        return new Parameters( "Raft 1, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_1.implementation() ) ),
-                singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private static Parameters raft2WithCompressionModifiers( Optional<ModifierProtocol> protocol )
     {
-        List<String> versions = Streams.ofOptional( protocol ).map( Protocol::implementation ).collect( Collectors.toList() );
+        List<String> versions = protocol.stream().map( Protocol::implementation ).collect( Collectors.toList() );
         return new Parameters( "Raft 2, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_2.implementation() ) ),
                 singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }
 
-    @Test
-    public void shouldSuccessfullySendAndReceiveAMessage() throws Throwable
+    @ParameterizedTest( name = "{0}" )
+    @MethodSource( "data" )
+    void shouldSuccessfullySendAndReceiveAMessage( Parameters parameters ) throws Throwable
     {
+        startServerAndConnect( parameters );
+
         // given
         RaftMessages.Heartbeat raftMessage = new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 1, 2, 3 );
         RaftMessages.ClusterIdAwareMessage<RaftMessages.Heartbeat> networkMessage =
@@ -129,10 +109,8 @@ public class NettyInstalledProtocolsIT
     private Server server;
     private Client client;
 
-    @Before
-    public void setUp()
+    private void startServerAndConnect( Parameters parameters )
     {
-        logProvider = new AssertableLogProvider( true );
         ApplicationProtocolRepository applicationProtocolRepository =
                 new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), parameters.applicationSupportedProtocol );
         ModifierProtocolRepository modifierProtocolRepository =
@@ -151,8 +129,8 @@ public class NettyInstalledProtocolsIT
         client.connect( server.port() );
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void afterEach()
     {
         client.disconnect();
         server.stop();
@@ -206,11 +184,8 @@ public class NettyInstalledProtocolsIT
         {
             RaftProtocolServerInstallerV2.Factory raftFactoryV2 =
                     new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
-            RaftProtocolServerInstallerV1.Factory raftFactoryV1 =
-                    new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, DEFAULT_DATABASE_NAME,
-                            logProvider );
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
-                    new ProtocolInstallerRepository<>( Arrays.asList( raftFactoryV1, raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );
+                    new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
             eventLoopGroup = new NioEventLoopGroup();
             ServerBootstrap bootstrap = new ServerBootstrap().group( eventLoopGroup )
@@ -234,7 +209,7 @@ public class NettyInstalledProtocolsIT
             return ((InetSocketAddress) channel.localAddress()).getPort();
         }
 
-        public Collection<Object> received()
+        Collection<Object> received()
         {
             return received;
         }
@@ -251,10 +226,8 @@ public class NettyInstalledProtocolsIT
                 NettyPipelineBuilderFactory pipelineBuilderFactory, Config config, LogProvider logProvider )
         {
             RaftProtocolClientInstallerV2.Factory raftFactoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, logProvider );
-            RaftProtocolClientInstallerV1.Factory raftFactoryV1 =
-                    new RaftProtocolClientInstallerV1.Factory( pipelineBuilderFactory, logProvider );
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository =
-                    new ProtocolInstallerRepository<>( Arrays.asList( raftFactoryV1, raftFactoryV2 ), ModifierProtocolInstaller.allClientInstallers );
+                    new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allClientInstallers );
             eventLoopGroup = new NioEventLoopGroup();
             Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
             handshakeClientInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,

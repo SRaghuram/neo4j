@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -22,11 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -55,7 +54,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private TestDirectory testDirectory;
 
     private File logDirectory;
-    private final String databaseName = DEFAULT_DATABASE_NAME;
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
@@ -64,16 +63,15 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
-        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ),
+        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshalV2(),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
     }
 
     private RecoveryProtocol createRecoveryProtocol()
     {
         FileNames fileNames = new FileNames( logDirectory );
-        // TODO: Marshal map
         return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
-                ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ), getInstance() );
+                ignored -> new CoreReplicatedContentMarshalV2(), getInstance() );
     }
 
     @Test
@@ -87,16 +85,15 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
         // Add a bunch of entries, preferably one of each available kind.
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
         raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1, 1024, databaseName ) ) );
+                IdType.RELATIONSHIP, 1, 1024, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1025, 1024, databaseName ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 1, databaseName ) ) );
+                IdType.RELATIONSHIP, 1025, 1024, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
+        raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
         raftLog.append( new RaftLogEntry( 5,
-                ReplicatedTransaction.from( new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9 , 10 }, databaseName ) ) );
+                ReplicatedTransaction.from( new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9 , 10 }, databaseId ) ) );
 
         raftLog.stop();
 
@@ -160,13 +157,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
         File logFile = new File( logDirectory, logFilename );
-        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.write( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
 
         // When
         // We induce an incomplete entry at the end of the last file
-        lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        lastFile = fs.write( logFile );
         lastFile.truncate( currentSize - 1 );
         lastFile.close();
 
@@ -201,13 +198,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private void truncateAndRecover( File logFile, long truncateDownToSize )
             throws IOException, DamagedLogStorageException, DisposedException
     {
-        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.write( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
         RecoveryProtocol recovery;
         while ( currentSize-- > truncateDownToSize )
         {
-            lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+            lastFile = fs.write( logFile );
             lastFile.truncate( currentSize );
             lastFile.close();
             recovery = createRecoveryProtocol();

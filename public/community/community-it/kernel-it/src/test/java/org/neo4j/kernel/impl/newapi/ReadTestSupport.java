@@ -25,17 +25,21 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReadTestSupport implements KernelAPIReadTestSupport
 {
     private final Map<Setting,String> settings = new HashMap<>();
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     void addSetting( Setting setting, String value )
     {
@@ -45,9 +49,11 @@ public class ReadTestSupport implements KernelAPIReadTestSupport
     @Override
     public void setup( File storeDir, Consumer<GraphDatabaseService> create )
     {
-        GraphDatabaseBuilder graphDatabaseBuilder = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder( storeDir );
-        settings.forEach( graphDatabaseBuilder::setConfig );
-        db = graphDatabaseBuilder.newGraphDatabase();
+        DatabaseManagementServiceInternalBuilder databaseManagementServiceInternalBuilder =
+                new TestDatabaseManagementServiceBuilder().newImpermanentDatabaseBuilder( storeDir );
+        settings.forEach( databaseManagementServiceInternalBuilder::setConfig );
+        managementService = databaseManagementServiceInternalBuilder.newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
         create.accept( db );
     }
 
@@ -61,7 +67,7 @@ public class ReadTestSupport implements KernelAPIReadTestSupport
     @Override
     public void tearDown()
     {
-        db.shutdown();
+        managementService.shutdown();
         db = null;
     }
 }

@@ -10,11 +10,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
@@ -28,7 +28,7 @@ import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -58,16 +58,20 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        File from = directory.directory( "from" );
-        File to = directory.directory( "to" );
-        databaseWithSomeTransactions( from );
+        var fromLayout = directory.databaseLayout( "from" );
+        var toLayout = directory.databaseLayout( "to" );
+        databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( System.in, NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", databaseDirectory( from ).getAbsolutePath(), "--to", to.getAbsolutePath(), "apply last" );
+        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
+                "--to", toLayout.databaseDirectory().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath(),
+                "apply last" );
 
         // THEN
-        assertEquals( DbRepresentation.of( databaseDirectory( from ) ), DbRepresentation.of( databaseDirectory( to ) ) );
+        assertEquals( DbRepresentation.of( fromLayout ), DbRepresentation.of( toLayout ) );
     }
 
     @Test
@@ -77,17 +81,19 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        File from = directory.directory( "from" );
-        DatabaseLayout to = directory.databaseLayout( "to" );
-        databaseWithSomeTransactions( from );
+        var fromLayout = directory.databaseLayout( "from" );
+        var toLayout = directory.databaseLayout( "to" );
+        databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( input( "apply next", "apply next", "cc", "exit" ),
                 NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", from.getAbsolutePath(), "--to", to.databaseDirectory().getPath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
+                "--to", toLayout.databaseDirectory().getPath(), "-i" );
 
         // THEN
-        assertEquals( TransactionIdStore.BASE_TX_ID + 2, lastAppliedTx( to ) );
+        assertEquals( TransactionIdStore.BASE_TX_ID + 2, lastAppliedTx( toLayout ) );
     }
 
     @Test
@@ -140,16 +146,16 @@ class DatabaseRebuildToolTest
     private void shouldPrint( String command, String... expectedResultContaining ) throws Exception
     {
         // GIVEN
-        File from = directory.directory( "from" );
-        File to = directory.directory( "to" );
-        databaseWithSomeTransactions( to );
+        var fromLayout = directory.databaseLayout( "from" );
+        var toLayout = directory.databaseLayout( "to" );
+        databaseWithSomeTransactions( toLayout );
         ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( byteArrayOut );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( input( command, "exit" ),
                 out, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", from.getAbsolutePath(), "--to", to.getAbsolutePath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(), "--to", toLayout.databaseDirectory().getAbsolutePath(), "-i" );
 
         // THEN
         out.flush();
@@ -158,11 +164,6 @@ class DatabaseRebuildToolTest
         {
             assertThat( "dump from command '" + command + "'", dump, containsString( string ) );
         }
-    }
-
-    private File databaseDirectory( File storeDir )
-    {
-        return directory.databaseDir( storeDir );
     }
 
     private static long lastAppliedTx( DatabaseLayout databaseLayout )
@@ -190,11 +191,13 @@ class DatabaseRebuildToolTest
         return new ByteArrayInputStream( all.toString().getBytes() );
     }
 
-    private static void databaseWithSomeTransactions( File storeDir )
+    private static void databaseWithSomeTransactions( DatabaseLayout databaseLayout )
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+                .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
+                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );
         Node[] nodes = new Node[10];
         for ( int i = 0; i < nodes.length; i++ )
         {
@@ -226,7 +229,7 @@ class DatabaseRebuildToolTest
             node.delete();
             tx.success();
         }
-        db.shutdown();
+        managementService.shutdown();
     }
 
     private static void setProperties( PropertyContainer entity, int i )

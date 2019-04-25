@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -35,16 +36,15 @@ public class TopologyBuilder
         this.log = logProvider.getLog( getClass() );
     }
 
-    CoreTopology buildCoreTopology( @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
+    CoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
-
         log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
         Map<MemberId, CoreServerInfo> coreMembers =
                 getCoreInfos( cluster, memberData )
                 .collect( Collectors.toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
-        boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData );
-        CoreTopology newCoreTopology = new CoreTopology( clusterId, canBeBootstrapped, coreMembers );
+        boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData, databaseId );
+        CoreTopology newCoreTopology = new CoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
         log.debug( "Returned topology: %s", newCoreTopology );
         return newCoreTopology;
     }
@@ -56,32 +56,31 @@ public class TopologyBuilder
                  .flatMap( memberData::getStream );
     }
 
-    private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData )
+    private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData, DatabaseId databaseId )
     {
         boolean iDoNotRefuseToBeLeader = !config.get( CausalClusteringSettings.refuse_to_be_leader );
         boolean clusterHasConverged = cluster.converged();
-        String dbName = config.get( CausalClusteringSettings.database );
-        boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( cluster, memberData, dbName );
+        boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( cluster, memberData, databaseId );
 
         return iDoNotRefuseToBeLeader && clusterHasConverged  && iAmFirstPotentialLeader;
     }
 
-    private Boolean iAmFirstPotentialLeader( ClusterViewMessage cluster, MetadataMessage memberData, String dbName )
+    private Boolean iAmFirstPotentialLeader( ClusterViewMessage cluster, MetadataMessage memberData, DatabaseId databaseId )
     {
         // Ensure consistent view of "first" member across cluster
         Optional<UniqueAddress> firstPotentialLeader = cluster.availableMembers()
-                .filter( member -> potentialLeaderForDatabase( member, memberData, dbName ) )
+                .filter( member -> potentialLeaderForDatabase( member, memberData, databaseId ) )
                 .findFirst();
 
         return firstPotentialLeader.map( first -> first.equals( uniqueAddress ) ).orElse( false );
     }
 
-    private boolean potentialLeaderForDatabase( UniqueAddress member, MetadataMessage memberData, String dbName )
+    private boolean potentialLeaderForDatabase( UniqueAddress member, MetadataMessage memberData, DatabaseId databaseId )
     {
         return memberData.getOpt( member )
                 .map( metadata -> {
                     CoreServerInfo c = metadata.coreServerInfo();
-                    return !c.refusesToBeLeader() && c.getDatabaseName().equals( dbName );
+                    return !c.refusesToBeLeader() && c.getDatabaseIds().contains( databaseId );
                 })
                 .orElse( false );
     }

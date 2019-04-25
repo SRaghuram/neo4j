@@ -25,7 +25,6 @@ import java.nio.ByteBuffer;
 import java.util.function.Predicate;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
@@ -99,11 +98,11 @@ public class LogTestUtils
         return files;
     }
 
-    static void filterTransactionLogFile( FileSystemAbstraction fileSystem, File file, final LogHook<LogEntry> filter )
+    private static void filterTransactionLogFile( FileSystemAbstraction fileSystem, File file, final LogHook<LogEntry> filter )
             throws IOException
     {
         filter.file( file );
-        try ( StoreChannel in = fileSystem.open( file, OpenMode.READ ) )
+        try ( StoreChannel in = fileSystem.read( file ) )
         {
             LogHeader logHeader = readLogHeader( ByteBuffer.allocate( LOG_HEADER_SIZE ), in, true, file );
             PhysicalLogVersionedStoreChannel inChannel =

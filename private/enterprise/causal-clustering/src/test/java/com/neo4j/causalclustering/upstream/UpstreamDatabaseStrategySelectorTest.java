@@ -11,18 +11,18 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
@@ -30,38 +30,40 @@ import static org.neo4j.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( "clients" );
+
     @Test
-    public void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception
+    void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception
     {
         // given
         UpstreamDatabaseSelectionStrategy badOne = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( badOne.upstreamDatabase() ).thenReturn( Optional.empty() );
+        when( badOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.empty() );
 
         UpstreamDatabaseSelectionStrategy anotherBadOne = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( anotherBadOne.upstreamDatabase() ).thenReturn( Optional.empty() );
+        when( anotherBadOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.empty() );
 
         UpstreamDatabaseSelectionStrategy goodOne = mock( UpstreamDatabaseSelectionStrategy.class );
         MemberId theMemberId = new MemberId( UUID.randomUUID() );
-        when( goodOne.upstreamDatabase() ).thenReturn( Optional.of( theMemberId ) );
+        when( goodOne.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.of( theMemberId ) );
 
         UpstreamDatabaseStrategySelector selector =
                 new UpstreamDatabaseStrategySelector( badOne, iterable( goodOne, anotherBadOne ), NullLogProvider.getInstance() );
 
         // when
-        MemberId result = selector.bestUpstreamDatabase();
+        MemberId result = selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertEquals( theMemberId, result );
     }
 
     @Test
-    public void shouldDefaultToRandomCoreServerIfNoOtherStrategySpecified() throws Exception
+    void shouldDefaultToRandomCoreServerIfNoOtherStrategySpecified() throws Exception
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
-        when( topologyService.localCoreServers() ).thenReturn(
-                new CoreTopology( new ClusterId( UUID.randomUUID() ), false, mapOf( memberId, mock( CoreServerInfo.class ) ) ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
+                new CoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
         defaultStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
@@ -69,31 +71,31 @@ public class UpstreamDatabaseStrategySelectorTest
         UpstreamDatabaseStrategySelector selector = new UpstreamDatabaseStrategySelector( defaultStrategy );
 
         // when
-        MemberId instance = selector.bestUpstreamDatabase();
+        MemberId instance = selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         assertEquals( memberId, instance );
     }
 
     @Test
-    public void shouldUseSpecifiedStrategyInPreferenceToDefault() throws Exception
+    void shouldUseSpecifiedStrategyInPreferenceToDefault() throws Exception
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
-        when( topologyService.localCoreServers() ).thenReturn(
-                new CoreTopology( new ClusterId( UUID.randomUUID() ), false, mapOf( memberId, mock( CoreServerInfo.class ) ) ) );
+        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
+                new CoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), false, Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy shouldNotUse = mock( ConnectToRandomCoreServerStrategy.class );
 
         UpstreamDatabaseSelectionStrategy mockStrategy = mock( UpstreamDatabaseSelectionStrategy.class );
-        when( mockStrategy.upstreamDatabase() ).thenReturn( Optional.of( new MemberId( UUID.randomUUID() ) ) );
+        when( mockStrategy.upstreamMemberForDatabase( DATABASE_ID ) ).thenReturn( Optional.of( new MemberId( UUID.randomUUID() ) ) );
 
         UpstreamDatabaseStrategySelector selector =
                 new UpstreamDatabaseStrategySelector( shouldNotUse, iterable( mockStrategy ), NullLogProvider.getInstance() );
 
         // when
-        selector.bestUpstreamDatabase();
+        selector.bestUpstreamMemberForDatabase( DATABASE_ID );
 
         // then
         verifyZeroInteractions( shouldNotUse );
@@ -110,7 +112,7 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase()
+        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
             return Optional.ofNullable( memberId );
         }
@@ -130,7 +132,7 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase()
+        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
             return Optional.of( new MemberId( UUID.randomUUID() ) );
         }
@@ -145,18 +147,9 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase()
+        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
         {
             return Optional.of( new MemberId( UUID.randomUUID() ) );
         }
-    }
-
-    private Map<MemberId,CoreServerInfo> mapOf( MemberId memberId, CoreServerInfo coreServerInfo )
-    {
-        HashMap<MemberId,CoreServerInfo> map = new HashMap<>();
-
-        map.put( memberId, coreServerInfo );
-
-        return map;
     }
 }

@@ -99,7 +99,10 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 import java.io.File;
 import java.util.List;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
@@ -148,10 +151,9 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
     @Override
     public Neo4jConnectionState openConnection( String path ) throws Exception
     {
-        return new Neo4jConnectionState(
-                Neo4jDb.newDb(
-                        new File( path ),
-                        DriverConfigUtils.neo4jTestConfig() ),
+        File dbDir = new File( path );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        return new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
                 null,
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
@@ -165,7 +167,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.db().shutdown();
+        connection.getManagementService().shutdown();
     }
 
     @Override

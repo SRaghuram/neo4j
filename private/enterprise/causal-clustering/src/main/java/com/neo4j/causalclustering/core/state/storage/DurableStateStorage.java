@@ -13,7 +13,6 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -66,7 +65,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         if ( !fsa.fileExists( file ) )
         {
             fsa.mkdirs( file.getParentFile() );
-            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.create( file ) ) )
+            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.write( file ) ) )
             {
                 marshal.marshal( marshal.startState(), channel );
             }
@@ -147,7 +146,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel resetStoreFile( File nextStore ) throws IOException
     {
         fsa.truncate( nextStore, 0 );
-        return new PhysicalFlushableChannel( fsa.open( nextStore, OpenMode.READ_WRITE ) );
+        return new PhysicalFlushableChannel( fsa.write( nextStore ) );
     }
 
 }

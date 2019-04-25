@@ -6,90 +6,158 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.BiConsumer
 
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, Zombie}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie._
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.zombie.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 
 /**
   * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
   */
-class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
+class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
-                                                         constructor: () => T) extends ArgumentStateMap[T] {
+                                                         factory: ArgumentStateFactory[STATE]) extends ArgumentStateMap[STATE] {
 
-  private val accumulatorControllers = new java.util.concurrent.ConcurrentHashMap[Long, AccumulatorController[T]]()
+  private val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
 
-  override def update(morsel: MorselExecutionContext): Unit = {
+  override def update(morsel: MorselExecutionContext,
+                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,
       (argumentRowId, morselView) => {
-        val controller = accumulatorControllers.get(argumentRowId)
-        controller.update(morselView)
-        val newCount = controller.decrement()
-        debug("decr %03d to %s".format(argumentRowId, newCount))
+        val controller = controllers.get(argumentRowId)
+        onState(controller.state, morselView)
       }
     )
-    morsel.removeCounter(owningPlanId)
   }
 
-  override def consumeCompleted(): Iterator[T] = {
-    val completeAccumulators = new ArrayBuffer[T]
-    val completeArguments = new ArrayBuffer[Long]
+  override def filter[U](readingRow: MorselExecutionContext,
+                         onArgument: (STATE, Long) => U,
+                         onRow: (U, MorselExecutionContext) => Boolean): Unit = {
+    ArgumentStateMap.filter(
+      argumentSlotOffset,
+      readingRow,
+      (argumentRowId, nRows) =>
+        onArgument(controllers.get(argumentRowId).state, nRows),
+      onRow
+    )
+  }
 
-    accumulatorControllers.forEach(new BiConsumer[Long, AccumulatorController[T]] {
-      override def accept(argument: Long, controller: AccumulatorController[T]): Unit = {
-        if (controller.isZero) {
-          completeArguments += argument
-          completeAccumulators += controller.result
-        }
+  override def filterCancelledArguments(morsel: MorselExecutionContext,
+                                        isCancelled: STATE => Boolean): IndexedSeq[Long] = {
+    ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
+                                              morsel,
+                                              argumentRowId => isCancelled(controllers.get(argumentRowId).state))
+  }
+
+  override def takeOneCompleted(): STATE = {
+    val iterator = controllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller: ConcurrentStateController[STATE] = iterator.next()
+      if (controller.take) {
+        controllers.remove(controller.state.argumentRowId)
+        debug("ASM %s take %03d".format(argumentStateMapId, controller.state.argumentRowId))
+        return controller.state
       }
-    })
+    }
+    null.asInstanceOf[STATE]
+  }
 
-    completeArguments.foreach(arg => accumulatorControllers.remove(arg))
-    completeAccumulators.toIterator
+  override def peekCompleted(): Iterator[STATE] = {
+    controllers.values().stream().filter(_.isZero).map[STATE](_.state).iterator().asScala
+  }
+
+  override def peek(argumentId: Long): STATE = {
+    val controller = controllers.get(argumentId)
+    if (controller != null) {
+      controller.state
+    } else {
+      null.asInstanceOf[STATE]
+    }
+  }
+
+  override def hasCompleted: Boolean = {
+    val iterator = controllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller: ConcurrentStateController[STATE] = iterator.next()
+      if (controller.isZero)
+        return true
+    }
+    false
+  }
+
+  override def hasCompleted(argument: Long): Boolean = {
+    val controller = controllers.get(argument)
+    controller != null && controller.isZero
+  }
+
+  override def remove(argument: Long): Boolean = {
+    debug("ASM %s rem %03d".format(argumentStateMapId, argument))
+    controllers.remove(argument) != null
   }
 
   override def initiate(argument: Long): Unit = {
-    val id = if (Zombie.DEBUG) s"Accumulator[plan=$owningPlanId, rowId=$argument]" else "Accumulator[...]"
-    val newController = new AccumulatorController(id, constructor())
-    accumulatorControllers.put(argument, newController)
+    val id = if (Zombie.DEBUG) s"ArgumentState[id=$argumentStateMapId, rowId=$argument]" else "ArgumentState[...]"
+    debug("ASM %s init %03d".format(argumentStateMapId, argument))
+    val newController = new ConcurrentStateController(id, factory.newConcurrentArgumentState(argument))
+    controllers.put(argument, newController)
   }
 
   override def increment(argument: Long): Unit = {
-    val controller = accumulatorControllers.get(argument)
+    val controller = controllers.get(argument)
     val newCount = controller.increment()
-    debug("incr %03d to %d".format(argument, newCount))
+    debug("ASM %s incr %03d to %d".format(argumentStateMapId, argument, newCount))
   }
 
-  override def decrement(argument: Long): Unit = {
-    val newCount = accumulatorControllers.get(argument).decrement()
-    debug("decr %03d to %d".format(argument, newCount))
+  override def decrement(argument: Long): Boolean = {
+    val newCount = controllers.get(argument).decrement()
+    debug("ASM %s decr %03d to %d".format(argumentStateMapId, argument, newCount))
+    newCount == 0
+  }
+
+  override def toString: String = {
+    val sb = new StringBuilder
+    sb ++= "ConcurrentArgumentStateMap(\n"
+    controllers.forEach((argumentRowId, controller) => {
+      sb ++= s"$argumentRowId -> $controller\n"
+    })
+    sb += ')'
+    sb.result()
   }
 }
 
-/**
-  * Controller which knows when a [[MorselAccumulator]] has completed accumulation,
-  * and protects it from concurrent access.
-  */
-class AccumulatorController[T <: MorselAccumulator](id: String, accumulator: T) {
-  private val count = new AtomicLong(1)
-  private val lock = new ConcurrentLock(id)
 
-  def increment(): Long = count.incrementAndGet()
-  def decrement(): Long = count.decrementAndGet()
-  def isZero: Boolean = count.compareAndSet(0, -1000000)
+object ConcurrentArgumentStateMap {
+  /**
+    * CAS the count to this value once taken.
+    */
+  private val TAKEN = -1000000
 
-  def update(morsel: MorselExecutionContext): Unit = {
-    lock.lock()
-    accumulator.update(morsel)
-    lock.unlock()
+  /**
+    * Controller which knows when an [[ArgumentState]] is complete,
+    * and protects it from concurrent access.
+    */
+  private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](id: String, val state: STATE) {
+    private val count = new AtomicLong(1)
+
+    def increment(): Long = count.incrementAndGet()
+
+    def decrement(): Long = count.decrementAndGet()
+
+    def take: Boolean = count.compareAndSet(0, TAKEN)
+
+    def isZero: Boolean = count.get() == 0
+
+    override def toString: String = {
+      s"[count: ${count.get()}, state: $state]"
+    }
   }
-
-  def result: T = accumulator
 }

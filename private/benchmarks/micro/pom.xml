@@ -15,8 +15,10 @@
     <properties>
         <jmh.version>1.21</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
+        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
+        <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
     </properties>
 
     <licenses>
@@ -49,11 +51,6 @@
             <artifactId>commons-math3</artifactId>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>27.0.1-jre</version>
-        </dependency>
         <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
@@ -64,6 +61,11 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-commercial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-data-collector</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -87,6 +89,15 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>27.1-jre</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-storage-engine-api</artifactId>
             <version>${project.version}</version>
@@ -107,10 +118,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-        </dependency>
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
@@ -149,6 +156,25 @@
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-results-client</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.findify</groupId>
+            <artifactId>s3mock_2.12</artifactId>
+            <version>0.2.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.test</groupId>
+            <artifactId>neo4j-harness-commercial</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>java-hamcrest</artifactId>
+            <version>${java-hamcrest.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -231,7 +257,7 @@
                         <configuration>
                             <includePluginDependencies>true</includePluginDependencies>
                             <mainClass>org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator</mainClass>
-                            <!--<compiled-bytecode-dir> <output-source-dir> 
+                            <!--<compiled-bytecode-dir> <output-source-dir>
                                 <output-resource-dir> [generator-type] -->
                             <arguments>
                                 <argument>${project.basedir}/target/classes/</argument>
@@ -296,7 +322,7 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!-- Shading signed JARs will fail without 
+                                    <!-- Shading signed JARs will fail without
                                         this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
                                     <artifact>*:*</artifact>
                                     <excludes>

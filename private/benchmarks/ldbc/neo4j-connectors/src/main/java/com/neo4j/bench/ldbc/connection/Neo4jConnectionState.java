@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.Logger;
 import org.neo4j.driver.v1.Logging;
@@ -35,7 +36,6 @@ import org.neo4j.graphdb.Result;
 
 import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
 import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
-
 import static java.lang.String.format;
 import static java.lang.ThreadLocal.withInitial;
 
@@ -44,6 +44,7 @@ public class Neo4jConnectionState extends DbConnectionState
     private final ThreadLocal<QueryDateUtil> dateUtilThreadLocal;
     private final ThreadLocal<Calendar> calendarThreadLocal;
 
+    private final DatabaseManagementService managementService;
     private final GraphDatabaseService db;
     private final TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache;
     private final DriverSupplier driverSupplier;
@@ -53,15 +54,11 @@ public class Neo4jConnectionState extends DbConnectionState
     private final Int2ObjectMap<ExecutionPlanDescription> planMap;
     private final Int2ObjectMap<PlanMeta> planMetaMap;
 
-    public Neo4jConnectionState(
-            GraphDatabaseService db,
-            URI uri,
-            AuthToken authToken,
-            LoggingService loggingService,
-            AnnotatedQueries annotatedQueries,
-            final LdbcDateCodec.Format dateFormat,
-            final LdbcDateCodec.Resolution timestampResolution ) throws DbException
+    public Neo4jConnectionState( DatabaseManagementService managementService, GraphDatabaseService db, URI uri, AuthToken authToken,
+            LoggingService loggingService, AnnotatedQueries annotatedQueries, final LdbcDateCodec.Format dateFormat,
+            final LdbcDateCodec.Resolution timestampResolution )
     {
+        this.managementService = managementService;
         this.db = db;
         this.driverSupplier = new DriverSupplier( new LoggingServiceFactoryWrapper( loggingService ), uri, authToken );
         this.timeStampedRelationshipTypesCache = new TimeStampedRelationshipTypesCache();
@@ -77,6 +74,11 @@ public class Neo4jConnectionState extends DbConnectionState
     public GraphDatabaseService db()
     {
         return db;
+    }
+
+    public DatabaseManagementService getManagementService()
+    {
+        return managementService;
     }
 
     public Session session()
@@ -214,7 +216,7 @@ public class Neo4jConnectionState extends DbConnectionState
 
         if ( null != db )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 

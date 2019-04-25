@@ -231,7 +231,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    executeWith(Configs.InterpretedAndSlotted, query)
   }
 
   test("should still be able to return shortest path expression") {
@@ -632,7 +632,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     //({prop: "bar"})-[:R]->({prop: "bar"})…-[:R]->({prop: "foo"})
     val start = createNode(Map("prop" -> "start"))
     val end = createNode(Map("prop" -> "end"))
-    val nodes = start +: (for (i <- 1 to 15) yield createNode(Map("prop" -> "bar"))) :+ end
+    val nodes = start +: (for (_ <- 1 to 15) yield createNode(Map("prop" -> "bar"))) :+ end
     nodes.sliding(2).foreach {
       case Seq(node1, node2) => relate(node1, node2, "R")
     }

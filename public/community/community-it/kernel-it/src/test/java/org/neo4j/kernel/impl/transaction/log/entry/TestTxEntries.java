@@ -24,19 +24,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
 class TestTxEntries
@@ -49,13 +51,15 @@ class TestTxEntries
     @Test
     void testStartEntryWrittenOnceOnRollback()
     {
-        File storeDir = testDirectory.databaseDir();
-        final GraphDatabaseService db = new TestGraphDatabaseFactory().setFileSystem( fs ).newImpermanentDatabase( storeDir );
+        File storeDir = testDirectory.storeDir();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( fs ).newImpermanentService( storeDir );
+        final GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createSomeTransactions( db );
         EphemeralFileSystemAbstraction snapshot = fs.snapshot();
-        db.shutdown();
+        managementService.shutdown();
 
-        new TestGraphDatabaseFactory().setFileSystem( snapshot ).newImpermanentDatabase( storeDir ).shutdown();
+        managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( snapshot ).newImpermanentService( storeDir );
+        managementService.shutdown();
     }
 
     private void createSomeTransactions( GraphDatabaseService db )

@@ -194,7 +194,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     graph.inTx {
       (1 to config.nodesWithoutLabel).foreach { _ => createNode() }
       (1 to config.aNodesWithoutProp).foreach { _ => createLabeledNode("A") }
-      (1 to config.bNodesWithoutProp).foreach { i => createLabeledNode("B") }
+      (1 to config.bNodesWithoutProp).foreach { _ => createLabeledNode("B") }
       (1 to config.aNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> i), "A") }
       (1 to config.bNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> (i + 10000)), "B") }
     }

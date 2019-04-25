@@ -42,7 +42,7 @@ public class DataGeneratorConfigBuilder
     private LabelKeyDefinition[] uniqueConstraints = {};
     private LabelKeyDefinition[] mandatoryNodeConstraints = {};
     private RelationshipKeyDefinition[] mandatoryRelationshipConstraints = {};
-    private Neo4jConfig neo4jConfig = new Neo4jConfig();
+    private Neo4jConfig neo4jConfig = Neo4jConfig.empty();
     private boolean isReusable;
     private String augmentedBy = NullAugmenterizer.AUGMENT_KEY;
     private long rngSeed = 42;
@@ -181,14 +181,14 @@ public class DataGeneratorConfigBuilder
     public DataGeneratorConfigBuilder withNodeProperties( PropertyDefinition... properties )
     {
         Map<String,Long> propertyKeyCounts = Stream.of( properties )
-                .map( PropertyDefinition::key )
-                .collect( groupingBy( identity(), counting() ) );
+                                                   .map( PropertyDefinition::key )
+                                                   .collect( groupingBy( identity(), counting() ) );
         if ( propertyKeyCounts.size() != properties.length )
         {
             String incorrectCountsMsg = propertyKeyCounts.entrySet().stream()
-                    .filter( e -> e.getValue() > 1 )
-                    .map( e -> format( "Found %s entries of %s", e.getValue(), e.getKey() ) )
-                    .collect( joining( "\n" ) );
+                                                         .filter( e -> e.getValue() > 1 )
+                                                         .map( e -> format( "Found %s entries of %s", e.getValue(), e.getKey() ) )
+                                                         .collect( joining( "\n" ) );
             throw new IllegalArgumentException( "Duplicate node property keys\n" + incorrectCountsMsg );
         }
         this.nodeProperties = properties;
@@ -206,14 +206,14 @@ public class DataGeneratorConfigBuilder
     public DataGeneratorConfigBuilder withRelationshipProperties( PropertyDefinition... properties )
     {
         Map<String,Long> propertyKeyCounts = Stream.of( properties )
-                .map( PropertyDefinition::key )
-                .collect( groupingBy( identity(), counting() ) );
+                                                   .map( PropertyDefinition::key )
+                                                   .collect( groupingBy( identity(), counting() ) );
         if ( propertyKeyCounts.size() != properties.length )
         {
             String incorrectCountsMsg = propertyKeyCounts.entrySet().stream()
-                    .filter( e -> e.getValue() > 1 )
-                    .map( e -> format( "Found %s entries of %s", e.getValue(), e.getKey() ) )
-                    .collect( joining( "\n" ) );
+                                                         .filter( e -> e.getValue() > 1 )
+                                                         .map( e -> format( "Found %s entries of %s", e.getValue(), e.getKey() ) )
+                                                         .collect( joining( "\n" ) );
             throw new IllegalArgumentException( "Duplicate relationship property keys\n" + incorrectCountsMsg );
         }
         this.relationshipProperties = properties;

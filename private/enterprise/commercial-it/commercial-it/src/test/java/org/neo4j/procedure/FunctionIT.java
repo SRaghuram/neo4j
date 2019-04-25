@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,6 +31,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -50,7 +52,7 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
@@ -67,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -84,6 +87,7 @@ class FunctionIT
     private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
 
     private GraphDatabaseService db;
+    private DatabaseManagementService managementService;
 
     @Test
     void shouldGiveNiceErrorMessageOnWrongStaticType()
@@ -335,14 +339,14 @@ class FunctionIT
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        db.shutdown();
-        db = new TestGraphDatabaseFactory()
+        managementService.shutdown();
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
         try ( Transaction ignore = db.beginTx() )
@@ -480,22 +484,6 @@ class FunctionIT
             node.setProperty( "name", "Stefan" );
             tx.success();
         }
-    }
-
-    @Test
-    void shouldFailToShutdown()
-    {
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () ->
-                {
-                    try ( Transaction ignore = db.beginTx() )
-                    {
-                        db.execute( "RETURN org.neo4j.procedure.shutdown()" ).next();
-                    }
-                } );
-        assertThat( exception.getMessage(), equalTo(
-                "Failed to invoke function `org.neo4j.procedure.shutdown`: Caused by: java.lang" +
-                        ".UnsupportedOperationException" ) );
     }
 
     @Test
@@ -805,7 +793,7 @@ class FunctionIT
      * built-in functions in any shape or form.
      */
     @Test
-    public void shouldListAllFunctions()
+    void shouldListAllFunctions()
     {
         //Given/When
         Result res = db.execute( "CALL dbms.functions()" );
@@ -856,12 +844,12 @@ class FunctionIT
     {
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        db = new TestGraphDatabaseFactory()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).newDatabaseManagementService();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
 
     }
 
@@ -870,7 +858,7 @@ class FunctionIT
     {
         if ( this.db != null )
         {
-            this.db.shutdown();
+            this.managementService.shutdown();
         }
     }
 
@@ -902,7 +890,7 @@ class FunctionIT
                 @Name( value = "boolean", defaultValue = "true" ) boolean aBoolean
         )
         {
-            return String.format( "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
+            return String.format( Locale.ROOT, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
         }
 
         @UserFunction
@@ -1057,13 +1045,6 @@ class FunctionIT
         public void writingProcedure()
         {
             db.createNode();
-        }
-
-        @UserFunction
-        public String shutdown()
-        {
-            db.shutdown();
-            return "oh no!";
         }
 
         @UserFunction

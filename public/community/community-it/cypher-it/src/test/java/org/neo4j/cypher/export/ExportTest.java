@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.neo4j.cypher.internal.javacompat.ExecutionResult;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphalgo.impl.util.PathImpl;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -39,23 +40,26 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.lang.System.lineSeparator;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ExportTest
 {
 
     private GraphDatabaseService gdb;
     private Transaction tx;
+    private DatabaseManagementService managementService;
 
     @Before
     public void setUp()
     {
-        gdb = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService();
+        gdb = managementService.database( DEFAULT_DATABASE_NAME );
         tx = gdb.beginTx();
     }
 
@@ -63,7 +67,7 @@ public class ExportTest
     public void tearDown()
     {
         tx.close();
-        gdb.shutdown();
+        managementService.shutdown();
     }
 
     @Test

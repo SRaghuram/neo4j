@@ -17,6 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -26,7 +28,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -62,15 +64,16 @@ class BackupCoreIT
             // Run backup
             DbRepresentation beforeChange = DbRepresentation.of( createSomeData( cluster ) );
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
-            File coreDefaultDbBackupDir = new File( coreBackupDir, DEFAULT_DATABASE_NAME );
-            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, DEFAULT_DATABASE_NAME );
-            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseDirectory(), args ) );
+            DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+            File coreDefaultDbBackupDir = new File( coreBackupDir, databaseId.name() );
+            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, databaseId );
+            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );
 
             // Add some new data
             DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
             // Verify that old data is back
-            DbRepresentation backupRepresentation = DbRepresentation.of( coreDefaultDbBackupDir );
+            DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( coreDefaultDbBackupDir ) );
             assertEquals( beforeChange, backupRepresentation );
             assertNotEquals( backupRepresentation, afterChange );
         }

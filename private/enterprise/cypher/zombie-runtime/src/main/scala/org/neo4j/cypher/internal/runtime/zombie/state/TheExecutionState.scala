@@ -5,27 +5,36 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers}
 import org.neo4j.util.Preconditions
+
+
+object TheExecutionState {
+  def build(stateDefinition: StateDefinition,
+            executablePipelines: Seq[ExecutablePipeline],
+            stateFactory: StateFactory,
+            workerWaker: WorkerWaker): ExecutionState =
+    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.argumentStateMaps, stateDefinition.physicalPlan, stateFactory, workerWaker)
+}
 
 /**
   * Implementation of [[ExecutionState]].
   */
-object TheExecutionState {
-  def build(stateDefinition: StateDefinition, executablePipelines: Seq[ExecutablePipeline], stateFactory: StateFactory): ExecutionState =
-    new TheExecutionState(stateDefinition.rowBuffers, executablePipelines, stateDefinition.physicalPlan, stateFactory)
-}
-
-class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
+class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
                         pipelines: Seq[ExecutablePipeline],
+                        argumentStateDefinitions: IndexedSeq[ArgumentStateDefinition],
                         physicalPlan: PhysicalPlan,
-                        stateFactory: StateFactory) extends ExecutionState {
+                        stateFactory: StateFactory,
+                        workerWaker: WorkerWaker) extends ExecutionState {
 
   private val tracker = stateFactory.newTracker()
-  private val asms = new ArgumentStateMaps
 
   // Verify that IDs and offsets match
 
@@ -35,99 +44,139 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
   for (i <- bufferDefinitions.indices)
     Preconditions.checkState(i == bufferDefinitions(i).id.x, "Buffer definition id does not match offset!")
 
-  // Build state
+  // State
 
-  private val pipelineStates =
-    for (pipeline <- pipelines.toArray) yield {
-      pipeline.createState(this)
-    }
+  private var pipelineLocks: Array[Lock] = _
+  private var buffers: Buffers = _
+  private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](argumentStateDefinitions.size)
+  private var continuations: Array[Buffer[PipelineTask]] = _
 
-  private val pipelineLocks =
-    for (pipeline <- pipelines.toArray) yield {
-      stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
-    }
-
-  private val buffers: Array[MorselBuffer] =
-    for (bufferDefinition <- bufferDefinitions.toArray) yield {
-      val counters = bufferDefinition.counters.map(_.reducingPlanId)
-      bufferDefinition match {
-        case x: ArgumentBufferDefinition =>
-          new MorselArgumentBuffer(x.argumentSlotOffset,
-                                   tracker,
-                                   x.countersForThisBuffer.map(_.reducingPlanId),
-                                   counters,
-                                   asms,
-                                   stateFactory.newBuffer(),
-                                   stateFactory.newIdAllocator())
-
-        case _: RowBufferDefinition =>
-          new MorselBuffer(tracker, counters, asms, stateFactory.newBuffer())
+  override def initializeState(): Unit = {
+    pipelineLocks =
+      for (pipeline <- pipelines.toArray) yield {
+        stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
       }
-    }
 
-  private val continuations =
-    new Array[Buffer[PipelineTask]](pipelines.size).map(i => stateFactory.newBuffer[PipelineTask]())
+    val asms: ArgumentStateMaps = id => argumentStateMaps(id.x)
+
+    buffers = new Buffers(bufferDefinitions, tracker, asms, stateFactory)
+    continuations = pipelines.map(_ => stateFactory.newBuffer[PipelineTask]()).toArray
+
+    // Assumption: Buffer with ID 0 is the initual buffer
+    putMorsel(NO_PIPELINE, BufferId(0), MorselExecutionContext.createInitialRow())
+  }
 
   // Methods
 
-  override def produceMorsel(bufferId: BufferId,
-                             output: MorselExecutionContext): Unit = buffers(bufferId.x).produce(output)
-
-  override def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
-    consumeUnderPotentialLock(pipeline, buffers(bufferId.x))
+  override def putMorsel(fromPipeline: PipelineId,
+                         bufferId: BufferId,
+                         output: MorselExecutionContext): Unit = {
+    buffers.sink(fromPipeline, bufferId).put(output)
+    workerWaker.wakeAll()
   }
 
-  def closeWorkUnit(task: PipelineTask): Unit = {
-    val pipeline = task.pipeline
-    if (pipeline.serial)
-      pipelineLocks(pipeline.id.x).unlock()
+  override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
+    buffers.morselBuffer(bufferId).take()
   }
 
-  override def closeTask(task: PipelineTask): Unit = {
-    closeWorkUnit(task)
-    buffers(task.pipeline.inputRowBuffer.id.x).close(task.start.inputMorsel)
+  override def takeAccumulator[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): ACC = {
+    buffers.source[ACC](bufferId).take()
   }
 
-  override def addContinuation(task: PipelineTask): Unit = {
-    closeWorkUnit(task)
-    continuations(task.pipeline.id.x).produce(task)
+  override def takeAccumulatorAndMorsel[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[ACC] = {
+    buffers.source[AccumulatorAndMorsel[ACC]](bufferId).take()
   }
 
-  override def continue(pipeline: ExecutablePipeline): PipelineTask = {
-    consumeUnderPotentialLock(pipeline, continuations(pipeline.id.x))
-  }
-
-  private def consumeUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, consumable: Consumable[T]): T = {
+  override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
     if (pipeline.serial) {
-      if (consumable.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
-        val t = consumable.consume() // the data might have been consumed while we took the lock
-        if (t == null)
-          pipelineLocks(pipeline.id.x).unlock()
-        t
-      } else null.asInstanceOf[T]
-    } else
-      consumable.consume()
+      pipelineLocks(pipeline.id.x).unlock()
+    }
   }
 
-  override def initialize(): Unit = {
-    buffers.head.produce(MorselExecutionContext.createInitialRow())
+  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
+    closeWorkUnit(pipeline)
+    buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
 
-  override def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
+  override def closeAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulator: ACC): Unit = {
+    closeWorkUnit(pipeline)
+    buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulator)
+  }
 
-  override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                                    constructor: () => T): ArgumentStateMap[T] = {
-    val argumentSlotOffset =
-      physicalPlan
-        .slotConfigurations(reducePlanId)
-        .getArgumentLongOffsetFor(physicalPlan.applyPlans(reducePlanId))
+  override def closeMorselAndAccumulatorTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                       inputMorsel: MorselExecutionContext,
+                                                                       accumulator: ACC): Unit = {
+    closeWorkUnit(pipeline)
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+    buffer.close(accumulator, inputMorsel)
+  }
 
-    val asm = stateFactory.newArgumentStateMap(reducePlanId, argumentSlotOffset, constructor)
-    asms.set(reducePlanId, asm)
+  override def filterCancelledArguments(pipeline: ExecutablePipeline,
+                                        inputMorsel: MorselExecutionContext): Boolean = {
+    val isCancelled = buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                  accumulator: ACC): Boolean = {
+    val isCancelled = buffers.argumentStateBuffer[ACC](pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                  inputMorsel: MorselExecutionContext,
+                                                                  accumulator: ACC): Boolean = {
+    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer[ACC](pipeline.inputBuffer.id)
+    val isCancelled = buffer.filterCancelledArguments(accumulator, inputMorsel)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
+  }
+
+  override def putContinuation(task: PipelineTask): Unit = {
+    continuations(task.pipelineState.pipeline.id.x).put(task)
+    if (!task.pipelineState.pipeline.serial) {
+      // We only wake up other Threads if this pipeline is not serial.
+      // Otherwise they will all race to get this continuation while
+      // this Thread can just as well continue on its own.
+      workerWaker.wakeAll()
+    }
+  }
+
+  override def takeContinuation(pipeline: ExecutablePipeline): PipelineTask = {
+    continuations(pipeline.id.x).take()
+  }
+
+  override def tryLock(pipeline: ExecutablePipeline): Boolean = pipelineLocks(pipeline.id.x).tryLock()
+
+  override def unlock(pipeline: ExecutablePipeline): Unit = pipelineLocks(pipeline.id.x).unlock()
+
+  override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
+    continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
+  }
+
+  override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                                                                factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
+    val argumentSlotOffset = argumentStateDefinitions(argumentStateMapId.x).argumentSlotOffset
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
+    argumentStateMaps(argumentStateMapId.x) = asm
     asm
   }
 
   override def awaitCompletion(): Unit = tracker.await()
 
   override def isCompleted: Boolean = tracker.isCompleted
+
+  override def prettyString(pipeline: ExecutablePipeline): String = {
+    s"""continuations: ${continuations(pipeline.id.x)}
+       |""".stripMargin
+  }
+
+  // used by join operator, to create thread-safe argument states in its RHS ASM
+  override def newBuffer[T <: AnyRef](): Buffer[T] =
+    stateFactory.newBuffer()
 }

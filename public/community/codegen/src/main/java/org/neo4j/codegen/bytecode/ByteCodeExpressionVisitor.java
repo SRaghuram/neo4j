@@ -31,14 +31,17 @@ import org.neo4j.codegen.LocalVariable;
 import org.neo4j.codegen.MethodReference;
 import org.neo4j.codegen.TypeReference;
 
+import static org.neo4j.codegen.ByteCodeUtils.assertMethodExists;
 import static org.neo4j.codegen.ByteCodeUtils.byteCodeName;
 import static org.neo4j.codegen.ByteCodeUtils.desc;
 import static org.neo4j.codegen.ByteCodeUtils.typeName;
+import static org.neo4j.util.FeatureToggles.flag;
 import static org.objectweb.asm.Opcodes.AALOAD;
 import static org.objectweb.asm.Opcodes.AASTORE;
 import static org.objectweb.asm.Opcodes.ACONST_NULL;
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.ANEWARRAY;
+import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.BALOAD;
 import static org.objectweb.asm.Opcodes.BASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
@@ -122,6 +125,8 @@ import static org.objectweb.asm.Opcodes.T_SHORT;
 
 class ByteCodeExpressionVisitor implements ExpressionVisitor
 {
+    private static final boolean
+            DEBUG_BYTE_CODE = flag( ByteCodeExpressionVisitor.class, "checkByteCode", false );
     private final MethodVisitor methodVisitor;
 
     ByteCodeExpressionVisitor( MethodVisitor methodVisitor )
@@ -132,6 +137,10 @@ class ByteCodeExpressionVisitor implements ExpressionVisitor
     @Override
     public void invoke( Expression target, MethodReference method, Expression[] arguments )
     {
+        if ( DEBUG_BYTE_CODE )
+        {
+            assertMethodExists( method );
+        }
         target.accept( this );
         for ( Expression argument : arguments )
         {
@@ -161,6 +170,10 @@ class ByteCodeExpressionVisitor implements ExpressionVisitor
     @Override
     public void invoke( MethodReference method, Expression[] arguments )
     {
+        if ( DEBUG_BYTE_CODE )
+        {
+            assertMethodExists( method );
+        }
         for ( Expression argument : arguments )
         {
             argument.accept( this );
@@ -250,6 +263,14 @@ class ByteCodeExpressionVisitor implements ExpressionVisitor
         index.accept( this );
         value.accept( this );
         arrayStore( value.type() );
+    }
+
+    @Override
+    public void arrayLength( Expression array )
+    {
+        assert array.type().isArray();
+        array.accept( this );
+        methodVisitor.visitInsn( ARRAYLENGTH );
     }
 
     @Override
@@ -915,5 +936,4 @@ class ByteCodeExpressionVisitor implements ExpressionVisitor
             );
         }
     }
-
 }

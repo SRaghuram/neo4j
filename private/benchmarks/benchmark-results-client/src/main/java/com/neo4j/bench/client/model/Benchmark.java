@@ -12,9 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
-
 import static java.lang.String.format;
-import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
 public class Benchmark
@@ -32,40 +30,47 @@ public class Benchmark
     public static final String DESCRIPTION = "description";
     public static final String QUERY = "cypher_query";
     public static final String MODE = "mode";
+
+    public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parametersMap )
+    {
+        Parameters parameters = Parameters.fromMap( parametersMap );
+        String name = constructName( simpleName, parameters, mode );
+        return new Benchmark( name, simpleName, description, mode, parameters );
+    }
+
+    public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parametersMap, String queryString )
+    {
+        Parameters parameters = Parameters.fromMap( parametersMap );
+        String name = constructName( simpleName, parameters, mode );
+        return new Benchmark( name, simpleName, description, mode, parameters, queryString );
+    }
+
+    // TODO rather than saving the 'name' this method could split the name into params, and not take params as input at all
+    public static Benchmark benchmarkFor( String description, String simpleName, String name, Mode mode, Map<String,String> parametersMap )
+    {
+        return new Benchmark( name, simpleName, description, mode, Parameters.fromMap( parametersMap ) );
+    }
+
+    private static String constructName( String simpleName, Parameters parameters, Mode mode )
+    {
+        return simpleName + nameSuffixFor( parameters, mode );
+    }
+
+    // orders parameters to achieve determinism, names are used as keys in results store
+    private static String nameSuffixFor( Parameters parameters, Mode mode )
+    {
+        String parametersString = parameters.toString();
+        parametersString = parametersString.isEmpty() ? parametersString : "_" + parametersString;
+        return parametersString + format( "_(%s,%s)", MODE, mode.name() );
+    }
+
+    // TODO is it even necessary to store the 'name', given that it can be recomputed from the other fields?
     private final String name;
     private final String queryString;
     private final String simpleName;
     private final String description;
     private final Mode mode;
-    private final Map<String,String> parameters;
-
-    public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parameters )
-    {
-        String name = simpleName + nameSuffixFor( parameters, mode );
-        return new Benchmark( name, simpleName, description, mode, parameters );
-    }
-
-    public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parameters, String queryString )
-    {
-        String name = simpleName + nameSuffixFor( parameters, mode );
-        return new Benchmark( name, simpleName, description, mode, parameters, queryString );
-    }
-
-    // TODO maybe remove later in favor of regular constructor, but keep constructor private for now to force compilation errors
-    public static Benchmark benchmarkFor( String description, String simpleName, String name, Mode mode, Map<String,String> parameters )
-    {
-        return new Benchmark( name, simpleName, description, mode, parameters );
-    }
-
-    // orders parameters to achieve determinism, names are used as keys in results store
-    private static String nameSuffixFor( Map<String,String> parameters, Mode mode )
-    {
-        return parameters.keySet().stream()
-                         .sorted()
-                         .map( key -> format( "_(%s,%s)", key, parameters.get( key ) ) )
-                         .reduce( "", ( name, parameterValueString ) -> name + parameterValueString )
-                         .concat( format( "_(%s,%s)", MODE, mode.name() ) );
-    }
+    private final Parameters parameters;
 
     /**
      * WARNING: Never call this explicitly.
@@ -73,15 +78,15 @@ public class Benchmark
      */
     Benchmark()
     {
-        this( "11", "1", "1", LATENCY, emptyMap(), "" );
+        this( "11", "1", "1", LATENCY, Parameters.NONE, "" );
     }
 
-    private Benchmark( String name, String simpleName, String description, Mode mode, Map<String,String> parameters )
+    private Benchmark( String name, String simpleName, String description, Mode mode, Parameters parameters )
     {
         this( name, simpleName, description, mode, parameters, null );
     }
 
-    private Benchmark( String name, String simpleName, String description, Mode mode, Map<String,String> parameters, String queryString )
+    private Benchmark( String name, String simpleName, String description, Mode mode, Parameters parameters, String queryString )
     {
         this.name = requireNonNull( name );
         this.simpleName = requireNonNull( simpleName );
@@ -131,7 +136,7 @@ public class Benchmark
 
     public Map<String,String> parameters()
     {
-        return parameters;
+        return parameters.asMap();
     }
 
     public Map<String,Object> toMap()

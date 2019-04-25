@@ -25,7 +25,6 @@ Apache Software License, Version 2.0
   Data Mapper for Jackson
   Graphite Integration for Metrics
   Guava: Google Core Libraries for Java
-  hazelcast-all
   Jackson
   Jackson-annotations
   Jackson-core

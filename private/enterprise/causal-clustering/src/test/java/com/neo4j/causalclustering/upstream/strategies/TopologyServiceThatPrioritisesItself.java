@@ -15,19 +15,21 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
 {
+    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+
     private final MemberId myself;
     private final String matchingGroupName;
 
@@ -41,40 +43,29 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public String localDBName()
+    public Map<MemberId,CoreServerInfo> allCoreServers()
     {
-        throw new RuntimeException( "Unimplemented" );
+        return Map.of( myself, coreServerInfo(),
+                coreNotSelf, coreServerInfo() );
     }
 
     @Override
-    public CoreTopology allCoreServers()
+    public CoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        boolean canBeBootstrapped = true;
-        Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
-        coreMembers.put( myself, coreServerInfo() );
-        coreMembers.put( coreNotSelf, coreServerInfo() );
-        return new CoreTopology( new ClusterId( new UUID( 99, 88 ) ), canBeBootstrapped, coreMembers );
+        return new CoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), true, allCoreServers() );
     }
 
     @Override
-    public CoreTopology localCoreServers()
+    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
     {
-        return allCoreServers();
+        return Map.of( myself, readReplicaInfo( matchingGroupName ),
+                readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
     }
 
     @Override
-    public ReadReplicaTopology allReadReplicas()
+    public ReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        Map<MemberId,ReadReplicaInfo> readReplicaMembers = new HashMap<>();
-        readReplicaMembers.put( myself, readReplicaInfo( matchingGroupName ) );
-        readReplicaMembers.put( readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
-        return new ReadReplicaTopology( readReplicaMembers );
-    }
-
-    @Override
-    public ReadReplicaTopology localReadReplicas()
-    {
-        return allReadReplicas();
+        return new ReadReplicaTopology( DATABASE_ID, allReadReplicas() );
     }
 
     @Override
@@ -100,16 +91,17 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         AdvertisedSocketAddress anyRaftAddress = new AdvertisedSocketAddress( "hostname", 1234 );
         AdvertisedSocketAddress anyCatchupServer = new AdvertisedSocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
-        Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, "dbName", false );
+        Set<String> groups = Set.of( groupNames );
+        Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
+        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
     }
 
     private static ReadReplicaInfo readReplicaInfo( String... groupNames )
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 2468 );
-        Set<String> groups = new HashSet<>( Arrays.asList( groupNames ) );
-        ReadReplicaInfo readReplicaInfo = new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, "dbName" );
-        return readReplicaInfo;
+        Set<String> groups = Set.of( groupNames );
+        Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 }

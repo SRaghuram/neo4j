@@ -26,19 +26,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
@@ -49,16 +54,15 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.io.compress.ZipUtils;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
-import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10;
-import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20;
+import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory30;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider;
-import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
@@ -71,7 +75,9 @@ import org.neo4j.values.storable.Values;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.ArrayUtil.concat;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.test.Unzip.unzip;
@@ -83,29 +89,31 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
 
     private static final String KEY1 = "key1";
     private static final String KEY2 = "key2";
+    private DatabaseManagementService managementService;
 
     private enum Provider
     {
         // in order of appearance
-        LUCENE_10( "Label1", GraphDatabaseSettings.SchemaIndex.LUCENE10, LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR ),
-        FUSION_10( "Label2", GraphDatabaseSettings.SchemaIndex.NATIVE10, NativeLuceneFusionIndexProviderFactory10.DESCRIPTOR ),
-        FUSION_20( "Label3", GraphDatabaseSettings.SchemaIndex.NATIVE20, NativeLuceneFusionIndexProviderFactory20.DESCRIPTOR ),
-        BTREE_10( "Label4", GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10, GenericNativeIndexProvider.DESCRIPTOR ),
-        BTREE_10_35( "Label5", GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10, GenericNativeIndexProvider.DESCRIPTOR );
+        LUCENE_10( "Label1", "lucene-1.0", NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR ),
+        FUSION_10( "Label2", "lucene+native-1.0", NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR ),
+        FUSION_20( "Label3", "lucene+native-2.0", GenericNativeIndexProvider.DESCRIPTOR ),
+        BTREE_10( "Label4", "native-btree-1.0", GenericNativeIndexProvider.DESCRIPTOR ),
+        BTREE_10_40( "Label5", "native-btree-1.0", GenericNativeIndexProvider.DESCRIPTOR );
 
         private final Label label;
-        private final GraphDatabaseSettings.SchemaIndex setting;
+        @SuppressWarnings( {"unused", "FieldCanBeLocal"} )
+        private final String originallyCreatedWithProvider;
         private final IndexProviderDescriptor descriptor;
 
-        Provider( String labelName, GraphDatabaseSettings.SchemaIndex setting, IndexProviderDescriptor descriptor )
+        Provider( String labelName, String originallyCreatedWithProvider, IndexProviderDescriptor descriptor )
         {
             this.label = Label.label( labelName );
-            this.setting = setting;
+            this.originallyCreatedWithProvider = originallyCreatedWithProvider;
             this.descriptor = descriptor;
         }
     }
 
-    private static final Provider DEFAULT_PROVIDER = Provider.BTREE_10_35;
+    private static final Provider DEFAULT_PROVIDER = Provider.BTREE_10_40;
 
     @Inject
     private TestDirectory directory;
@@ -115,25 +123,43 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
     void create3_5Database() throws Exception
     {
         File storeDir = tempStoreDirectory();
-        GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        DatabaseManagementServiceBuilder factory = new DatabaseManagementServiceBuilder();
+        DatabaseManagementServiceInternalBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
 
-        builder.setConfig( GraphDatabaseSettings.default_schema_provider, GraphDatabaseSettings.SchemaIndex.LUCENE10.providerName() );
-        GraphDatabaseService db = builder.newGraphDatabase();
-        createIndexDataAndShutdown( db, Provider.LUCENE_10.label );
+        createIndexDataAndShutdown( builder, "lucene-1.0", Provider.LUCENE_10.label );
+        createIndexDataAndShutdown( builder, "lucene+native-1.0", Provider.FUSION_10.label );
+        createIndexDataAndShutdown( builder, "lucene+native-2.0", Provider.FUSION_20.label );
+        createIndexDataAndShutdown( builder, GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName(), Provider.BTREE_10.label, db ->
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.execute( "CALL db.index.fulltext.createNodeIndex('fts1', ['Fts1'], ['prop1'] )" ).close();
+                db.execute( "CALL db.index.fulltext.createNodeIndex('fts2', ['Fts2', 'Fts3'], ['prop1', 'prop2'] )" ).close();
+                db.execute( "CALL db.index.fulltext.createNodeIndex('fts3', ['Fts4'], ['prop1'], {eventually_consistent: 'true'} )" ).close();
+                db.execute( "CALL db.index.fulltext.createRelationshipIndex('fts4', ['FtsRel1', 'FtsRel2'], ['prop1', 'prop2'], " +
+                        "{eventually_consistent: 'true'} )" ).close();
+                tx.success();
+            }
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+                Node node = db.createNode( Label.label( "Fts1" ), Label.label( "Fts2" ), Label.label( "Fts3" ), Label.label( "Fts4" ) );
+                node.setProperty( "prop1", "a" );
+                node.setProperty( "prop2", "a" );
+                node.createRelationshipTo( node, RelationshipType.withName( "FtsRel1" ) ).setProperty( "prop1", "a" );
+                node.createRelationshipTo( node, RelationshipType.withName( "FtsRel2" ) ).setProperty( "prop2", "a" );
+                tx.success();
+            }
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.execute( "call db.index.fulltext.awaitEventuallyConsistentIndexRefresh" ).close();
+                tx.success();
+            }
+        } );
 
-        builder.setConfig( GraphDatabaseSettings.default_schema_provider, GraphDatabaseSettings.SchemaIndex.NATIVE10.providerName() );
-        db = builder.newGraphDatabase();
-        createIndexDataAndShutdown( db, Provider.FUSION_10.label );
-
-        builder.setConfig( GraphDatabaseSettings.default_schema_provider, GraphDatabaseSettings.SchemaIndex.NATIVE20.providerName() );
-        db = builder.newGraphDatabase();
-        createIndexDataAndShutdown( db, Provider.FUSION_20.label );
-
-        builder.setConfig( GraphDatabaseSettings.default_schema_provider, GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName() );
-        db = builder.newGraphDatabase();
-        createIndexDataAndShutdown( db, Provider.BTREE_10.label );
-        System.out.println( "Db created in " + storeDir.getAbsolutePath() );
+        File zipFile = new File( storeDir.getParentFile(), storeDir.getName() + ".zip" );
+        ZipUtils.zip( new DefaultFileSystemAbstraction(), storeDir, zipFile );
+        System.out.println( "Db created in " + zipFile.getAbsolutePath() );
     }
 
     @Test
@@ -150,15 +176,32 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         unzip( getClass(), zippedDbName, targetDirectory );
         IndexRecoveryTracker indexRecoveryTracker = new IndexRecoveryTracker();
         // when
-        GraphDatabaseAPI db = setupDb( targetDirectory, indexRecoveryTracker );
-
+        File storeDir = directory.storeDir();
+        managementService = setupDb( storeDir, indexRecoveryTracker );
+        GraphDatabaseAPI db = getDefaultDatabase();
         // then
         Provider[] providers = providersUpToAndIncluding( highestProviderInOldVersion );
         Provider[] providersIncludingSubject = concat( providers, DEFAULT_PROVIDER );
-        int expectedNumberOfIndexes = providers.length * 2;
+        int fulltextIndexes = 4;
+        int expectedNumberOfIndexes = fulltextIndexes + providers.length * 2;
         try
         {
-            verifyInitialState( indexRecoveryTracker, expectedNumberOfIndexes, InternalIndexState.ONLINE );
+            IndexRecoveryTracker nonMigratedNativeRecoveries = new IndexRecoveryTracker();
+            filterOutNonMigratedNativeIndexes( db, indexRecoveryTracker, nonMigratedNativeRecoveries );
+            int nonMigratedIndexCount = nonMigratedNativeRecoveries.initialStateMap.size();
+            int migratedIndexCount = expectedNumberOfIndexes - nonMigratedIndexCount;
+
+            // All indexes that has been migrated to other provider needs to be rebuilt:
+            verifyInitialState( indexRecoveryTracker, migratedIndexCount, InternalIndexState.POPULATING );
+            // All indexes that was already backed by Generic Native Index Provider do not need rebuilding, and start up as ONLINE:
+            verifyInitialState( nonMigratedNativeRecoveries, nonMigratedIndexCount, InternalIndexState.ONLINE );
+
+            // Wait for all populating indexes to finish, so we can verify their contents:
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
+                tx.success();
+            }
 
             // then
             for ( Provider provider : providers )
@@ -181,6 +224,87 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
                 verifyAfterAdditionalUpdate( db, provider.label );
             }
 
+            // then
+            try ( Transaction tx = db.beginTx() )
+            {
+                IndexDefinition fts1 = db.schema().getIndexByName( "fts1" );
+
+                Iterator<Label> fts1labels = fts1.getLabels().iterator();
+                assertTrue( fts1labels.hasNext() );
+                assertEquals( fts1labels.next().name(), "Fts1" );
+                assertFalse( fts1labels.hasNext() );
+
+                Iterator<String> fts1props = fts1.getPropertyKeys().iterator();
+                assertTrue( fts1props.hasNext() );
+                assertEquals( fts1props.next(), "prop1" );
+                assertFalse( fts1props.hasNext() );
+
+                IndexDefinition fts2 = db.schema().getIndexByName( "fts2" );
+
+                Iterator<Label> fts2labels = fts2.getLabels().iterator();
+                assertTrue( fts2labels.hasNext() );
+                assertEquals( fts2labels.next().name(), "Fts2" );
+                assertTrue( fts2labels.hasNext() );
+                assertEquals( fts2labels.next().name(), "Fts3" );
+                assertFalse( fts2labels.hasNext() );
+
+                Iterator<String> fts2props = fts2.getPropertyKeys().iterator();
+                assertTrue( fts2props.hasNext() );
+                assertEquals( fts2props.next(), "prop1" );
+                assertTrue( fts2props.hasNext() );
+                assertEquals( fts2props.next(), "prop2" );
+                assertFalse( fts2props.hasNext() );
+
+                IndexDefinition fts3 = db.schema().getIndexByName( "fts3" );
+
+                Iterator<Label> fts3labels = fts3.getLabels().iterator();
+                assertTrue( fts3labels.hasNext() );
+                assertEquals( fts3labels.next().name(), "Fts4" );
+                assertFalse( fts3labels.hasNext() );
+
+                Iterator<String> fts3props = fts3.getPropertyKeys().iterator();
+                assertTrue( fts3props.hasNext() );
+                assertEquals( fts3props.next(), "prop1" );
+                assertFalse( fts3props.hasNext() );
+                // TODO verify the index configuration of 'fts3' -- it is eventually consistent.
+
+                IndexDefinition fts4 = db.schema().getIndexByName( "fts4" );
+
+                Iterator<RelationshipType> fts4relTypes = fts4.getRelationshipTypes().iterator();
+                assertTrue( fts4relTypes.hasNext() );
+                assertEquals( fts4relTypes.next().name(), "FtsRel1" );
+                assertTrue( fts4relTypes.hasNext() );
+                assertEquals( fts4relTypes.next().name(), "FtsRel2" );
+                assertFalse( fts4relTypes.hasNext() );
+
+                Iterator<String> fts4props = fts4.getPropertyKeys().iterator();
+                assertTrue( fts4props.hasNext() );
+                assertEquals( fts4props.next(), "prop1" );
+                assertTrue( fts4props.hasNext() );
+                assertEquals( fts4props.next(), "prop2" );
+                assertFalse( fts4props.hasNext() );
+                // TODO verify the index configuration of 'fts3' -- it is eventually consistent.
+
+                try ( var result = db.execute( "CALL db.index.fulltext.queryNodes( 'fts1', 'a' )" ).stream() )
+                {
+                    assertEquals( result.count(), 1L );
+                }
+                try ( var result = db.execute( "CALL db.index.fulltext.queryNodes( 'fts2', 'a' )" ).stream() )
+                {
+                    assertEquals( result.count(), 1L );
+                }
+                try ( var result = db.execute( "CALL db.index.fulltext.queryNodes( 'fts3', 'a' )" ).stream() )
+                {
+                    assertEquals( result.count(), 1L );
+                }
+                try ( var result = db.execute( "CALL db.index.fulltext.queryRelationships( 'fts4', 'a' )" ).stream() )
+                {
+                    assertEquals( result.count(), 2L );
+                }
+
+                tx.success();
+            }
+
             // and finally
             for ( Provider provider : providersIncludingSubject )
             {
@@ -189,11 +313,11 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
 
         // when
-        db = setupDb( targetDirectory, indexRecoveryTracker );
+        managementService = setupDb( storeDir, indexRecoveryTracker );
         try
         {
             // then
@@ -201,8 +325,43 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
+    }
+
+    private void filterOutNonMigratedNativeIndexes( GraphDatabaseAPI db, IndexRecoveryTracker indexRecoveryTracker,
+            IndexRecoveryTracker nonMigratedIndexRecoveries )
+    {
+        String nonMigratedLabelName = Provider.BTREE_10.label.name();
+        int nonMigratedLabelId = getLabelId( db, nonMigratedLabelName );
+        indexRecoveryTracker.initialStateMap.entrySet().removeIf( entry ->
+        {
+            StoreIndexDescriptor indexDescriptor = entry.getKey();
+            InternalIndexState internalIndexState = entry.getValue();
+            if ( indexDescriptor.schema().getEntityTokenIds()[0] == nonMigratedLabelId )
+            {
+                nonMigratedIndexRecoveries.initialState( indexDescriptor, internalIndexState );
+                return true;
+            }
+            return false;
+        } );
+    }
+
+    private int getLabelId( GraphDatabaseAPI db, String labelName )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            TokenRead tokenRead = getTokenRead( db );
+            return tokenRead.nodeLabel( labelName );
+        }
+    }
+
+    private TokenRead getTokenRead( GraphDatabaseAPI db )
+    {
+        return db.getDependencyResolver()
+                .resolveDependency( ThreadToStatementContextBridge.class )
+                .getKernelTransactionBoundToThisThread( false )
+                .tokenRead();
     }
 
     private Provider[] providersUpToAndIncluding( Provider provider )
@@ -210,15 +369,19 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         return Stream.of( Provider.values() ).filter( p -> p.ordinal() <= provider.ordinal() ).toArray( Provider[]::new );
     }
 
-    private GraphDatabaseAPI setupDb( File storeDir, IndexRecoveryTracker indexRecoveryTracker )
+    private DatabaseManagementService setupDb( File storeDir, IndexRecoveryTracker indexRecoveryTracker )
     {
         Monitors monitors = new Monitors();
         monitors.addMonitorListener( indexRecoveryTracker );
-        return (GraphDatabaseAPI) new GraphDatabaseFactory()
+        return new DatabaseManagementServiceBuilder()
                 .setMonitors( monitors )
                 .newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
-                .newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE ).newDatabaseManagementService();
+    }
+
+    private GraphDatabaseAPI getDefaultDatabase()
+    {
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void verifyInitialState( IndexRecoveryTracker indexRecoveryTracker, int expectedNumberOfIndexes, InternalIndexState expectedInitialState )
@@ -226,7 +389,7 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         assertEquals( expectedNumberOfIndexes, indexRecoveryTracker.initialStateMap.size(), "exactly " + expectedNumberOfIndexes + " indexes " );
         for ( InternalIndexState actualInitialState : indexRecoveryTracker.initialStateMap.values() )
         {
-            assertEquals( expectedInitialState, actualInitialState, "initial state is online, don't do recovery" );
+            assertEquals( expectedInitialState, actualInitialState, "initial state is online, don't do recovery: " + indexRecoveryTracker.initialStateMap );
         }
     }
 
@@ -258,16 +421,31 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
         assertEquals( expectedDescriptor.getVersion(), index.providerVersion(), "same version" );
     }
 
-    private static void createIndexDataAndShutdown( GraphDatabaseService db, Label label )
+    private static void createIndexDataAndShutdown( DatabaseManagementServiceInternalBuilder builder, String indexProvider, Label label )
     {
+        createIndexDataAndShutdown( builder, indexProvider, label, db -> {} );
+    }
+
+    private static void createIndexDataAndShutdown( DatabaseManagementServiceInternalBuilder builder, String indexProvider, Label label,
+            Consumer<GraphDatabaseService> otherActions )
+    {
+        builder.setConfig( GraphDatabaseSettings.default_schema_provider, indexProvider );
+        DatabaseManagementService dbms = builder.newDatabaseManagementService();
         try
         {
-            createIndexesAndData( db, label );
+            GraphDatabaseService db = dbms.database( DEFAULT_DATABASE_NAME );
+            otherActions.accept( db );
+            createIndexData( db, label );
         }
         finally
         {
-            db.shutdown();
+            dbms.shutdown();
         }
+    }
+
+    private static void createIndexData( GraphDatabaseService db, Label label )
+    {
+        createIndexesAndData( db, label );
     }
 
     private static File tempStoreDirectory() throws IOException
@@ -379,16 +557,18 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
             }
             IndexReference index = ktx.schemaRead().index( labelId, propertyKeyIds );
             IndexReadSession indexSession = ktx.dataRead().indexReadSession( index );
-            NodeValueIndexCursor cursor = ktx.cursors().allocateNodeValueIndexCursor();
-            ktx.dataRead().nodeIndexSeek( indexSession, cursor, IndexOrder.NONE, false, predicates );
-            int count = 0;
-            while ( cursor.next() )
+            try ( NodeValueIndexCursor cursor = ktx.cursors().allocateNodeValueIndexCursor() )
             {
-                count++;
-            }
+                ktx.dataRead().nodeIndexSeek( indexSession, cursor, IndexOrder.NONE, false, predicates );
+                int count = 0;
+                while ( cursor.next() )
+                {
+                    count++;
+                }
 
-            tx.success();
-            return count;
+                tx.success();
+                return count;
+            }
         }
     }
 
@@ -411,7 +591,7 @@ class StartOldDbOnCurrentVersionAndCreateFusionIndexIT
 
     private class IndexRecoveryTracker extends IndexingService.MonitorAdapter
     {
-        Map<IndexDescriptor,InternalIndexState> initialStateMap = new HashMap<>();
+        Map<StoreIndexDescriptor,InternalIndexState> initialStateMap = new HashMap<>();
 
         @Override
         public void initialState( StoreIndexDescriptor descriptor, InternalIndexState state )

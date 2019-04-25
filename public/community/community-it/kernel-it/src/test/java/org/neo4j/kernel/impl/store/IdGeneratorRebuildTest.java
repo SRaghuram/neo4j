@@ -30,31 +30,27 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.EphemeralPageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @EphemeralPageCacheExtension
 class IdGeneratorRebuildTest
@@ -68,14 +64,18 @@ class IdGeneratorRebuildTest
 
     private StoreFactory factory;
     private DatabaseLayout databaseLayout;
+    private UncloseableDelegatingFileSystemAbstraction uncloseableFs;
 
     @BeforeEach
     void initialize()
     {
         databaseLayout = testDirectory.databaseLayout();
-        GraphDatabaseService graphdb = new Database( databaseLayout.databaseDirectory() );
+        uncloseableFs = new UncloseableDelegatingFileSystemAbstraction( fs );
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( uncloseableFs )
+                .newImpermanentService( testDirectory.storeDir() );
+        GraphDatabaseService graphdb = managementService.database( DEFAULT_DATABASE_NAME );
         createInitialData( graphdb );
-        graphdb.shutdown();
+        managementService.shutdown();
         Map<String, String> params = new HashMap<>();
         params.put( GraphDatabaseSettings.rebuild_idgenerators_fast.name(), Settings.FALSE );
         Config config = Config.defaults( params );
@@ -86,16 +86,19 @@ class IdGeneratorRebuildTest
     void verifyAndDispose() throws Exception
     {
         GraphDatabaseService graphdb = null;
+        DatabaseManagementService managementService = null;
         try
         {
-            graphdb = new Database( databaseLayout.databaseDirectory() );
+            managementService = new TestDatabaseManagementServiceBuilder().setFileSystem( uncloseableFs )
+                    .newImpermanentService( testDirectory.storeDir() );
+            graphdb = managementService.database( DEFAULT_DATABASE_NAME );
             verifyData( graphdb );
         }
         finally
         {
             if ( graphdb != null )
             {
-                graphdb.shutdown();
+                managementService.shutdown();
             }
             if ( fs != null )
             {
@@ -230,37 +233,5 @@ class IdGeneratorRebuildTest
             count++;
         }
         return count;
-    }
-
-    private class Database extends ImpermanentGraphDatabase
-    {
-        Database( File storeDir )
-        {
-            super( storeDir );
-        }
-
-        @Override
-        protected void create( File storeDir, Map<String, String> params, ExternalDependencies dependencies )
-        {
-            File absoluteStoreDir = storeDir.getAbsoluteFile();
-            File databasesRoot = absoluteStoreDir.getParentFile();
-            params.put( GraphDatabaseSettings.default_database.name(), absoluteStoreDir.getName() );
-            params.put( GraphDatabaseSettings.databases_root_path.name(), databasesRoot.getAbsolutePath() );
-            new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
-            {
-                @Override
-                protected GlobalModule createGlobalModule( File storeDir, Config config, ExternalDependencies dependencies )
-                {
-                    return new ImpermanentGlobalModule( storeDir, config, databaseInfo, dependencies )
-                    {
-                        @Override
-                        protected FileSystemAbstraction createFileSystemAbstraction()
-                        {
-                            return new UncloseableDelegatingFileSystemAbstraction( fs );
-                        }
-                    };
-                }
-            }.initFacade( databasesRoot, params, dependencies, this );
-        }
     }
 }

@@ -7,33 +7,37 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.http.HttpRequest;
 import java.util.Map;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.net.http.HttpClient.newHttpClient;
+import static java.net.http.HttpResponse.BodyHandlers.ofString;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CausalClusterStatusEndpointHelpers
 {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
 
     static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
@@ -66,9 +70,14 @@ class CausalClusterStatusEndpointHelpers
     {
         return cluster.getCoreNeo4j()
                 .stream()
-                .filter( core -> Role.LEADER.equals( ((CoreGraphDatabase) core.graph()).getRole() ) )
+                .filter( core -> Role.LEADER.equals( getCurrentCoreRole( core ) ) )
                 .findAny()
                 .orElseThrow( () -> new IllegalStateException( "Leader does not exist" ) );
+    }
+
+    private static Role getCurrentCoreRole( InProcessNeo4j core )
+    {
+        return ((CoreGraphDatabase) core.graph()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     static Boolean[] availabilityStatuses( URI server )
@@ -81,33 +90,38 @@ class CausalClusterStatusEndpointHelpers
 
     static String getStatusRaw( String address )
     {
-        return getStatusRaw( address, null );
-    }
+        var request = HttpRequest.newBuilder( URI.create( address ) )
+                .header( ACCEPT, APPLICATION_JSON )
+                .GET()
+                .build();
 
-    private static String getStatusRaw( String address, Integer expectedStatus )
-    {
-        Client client = Client.create();
-        ClientResponse r = client.resource( address ).accept( APPLICATION_JSON ).get( ClientResponse.class );
-        if ( expectedStatus != null )
-        {
-            assertEquals( expectedStatus.intValue(), r.getStatus() );
-        }
-        return r.getEntity( String.class );
-    }
-
-    static Map<String,Object> getStatus( String address )
-    {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String raw = getStatusRaw( address );
         try
         {
-            return objectMapper.readValue( raw, new TypeReference<Map<String,Object>>()
-            {
-            } );
+            var response = newHttpClient().send( request, ofString() );
+            return response.body();
         }
         catch ( IOException e )
         {
+            throw new UncheckedIOException( e );
+        }
+        catch ( InterruptedException e )
+        {
+            Thread.currentThread().interrupt();
             throw new RuntimeException( e );
+        }
+    }
+
+    @SuppressWarnings( "unchecked" )
+    static Map<String,Object> getStatus( String address )
+    {
+        try
+        {
+            String raw = getStatusRaw( address );
+            return OBJECT_MAPPER.readValue( raw, Map.class );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
         }
     }
 

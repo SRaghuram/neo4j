@@ -25,11 +25,13 @@ import org.hamcrest.Matchers.greaterThan
 import org.junit.Assert.assertThat
 import org.mockito.Mockito._
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.dbms.database.DatabaseManagementService
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.Transaction.Type
@@ -49,7 +51,7 @@ import org.neo4j.kernel.impl.newapi.DefaultPooledCursors
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, Neo4jTransactionalContextFactory}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.lock.LockTracer
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.ValueMapper
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
@@ -57,6 +59,7 @@ import scala.collection.JavaConverters._
 
 class TransactionBoundQueryContextTest extends CypherFunSuite {
 
+  var managementService: DatabaseManagementService = _
   var graphOps: GraphDatabaseService = null
   var graph: GraphDatabaseQueryService = null
   var outerTx: InternalTransaction = null
@@ -66,7 +69,8 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
 
   override def beforeEach() {
     super.beforeEach()
-    graphOps = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService()
+    graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new javacompat.GraphDatabaseCypherService(graphOps)
     valueMapper = new DefaultValueMapper(mock[GraphDatabaseFacade])
     outerTx = mock[InternalTransaction]
@@ -80,7 +84,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
   }
 
   override def afterEach() {
-    graphOps.shutdown()
+    managementService.shutdown()
   }
 
   test("should mark transaction successful if successful") {
@@ -178,7 +182,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
 
   test("should deny file URLs when not allowed by config") {
     // GIVEN
-    graphOps.shutdown()
+    managementService.shutdown()
     startGraph(GraphDatabaseSettings.allow_file_urls -> "false")
     val tx = graph.beginTransaction(Type.explicit, AnonymousContext.read())
     val transactionalContext = TransactionalContextWrapper(createTransactionContext(graph, tx))
@@ -254,7 +258,8 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
     context.nodeOps.all
 
     // THEN
-    context.resources.allResources should have size initSize + 1
+    context.resources.allResources should have size initSize + 2
+    context.resources.close(true)
     tx.close()
   }
 
@@ -269,7 +274,8 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
     context.nodeOps.allPrimitive
 
     // THEN
-    context.resources.allResources should have size initSize + 1
+    context.resources.allResources should have size initSize + 2
+    context.resources.close(true)
     tx.close()
   }
 
@@ -282,7 +288,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
 
     // WHEN
     context.nodeOps.all
-    context.resources.allResources should have size initSize + 1
+    context.resources.allResources should have size initSize + 2
     context.resources.close(success = true)
 
     // THEN
@@ -292,7 +298,8 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
 
   private def startGraph(config:(Setting[_], String)) = {
     val configs = Map[Setting[_], String](config)
-    graphOps = new TestGraphDatabaseFactory().newImpermanentDatabase(configs.asJava)
+    managementService = new TestDatabaseManagementServiceBuilder().newImpermanentService(configs.asJava)
+    graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }
 

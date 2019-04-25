@@ -6,8 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheFactory;
-import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -63,6 +61,9 @@ import static org.neo4j.configuration.Settings.setting;
 @ServiceProvider
 public class CausalClusteringSettings implements LoadableConfig
 {
+    public static final String TEMP_STORE_COPY_DIRECTORY_NAME = "temp-copy";
+    public static final String TEMP_BOOTSTRAP_DIRECTORY_NAME = "temp-bootstrap";
+
     @Description( "Time out for a new member to catch up" )
     public static final Setting<Duration> join_catch_up_timeout =
             setting( "causal_clustering.join_catch_up_timeout", DURATION, "10m" );
@@ -85,15 +86,6 @@ public class CausalClusteringSettings implements LoadableConfig
             "availability for the cluster." )
     public static final Setting<Boolean> refuse_to_be_leader =
             setting( "causal_clustering.refuse_to_be_leader", BOOLEAN, FALSE );
-
-    @Description( "The name of the database being hosted by this server instance. This configuration setting may be safely ignored " +
-            "unless deploying a multicluster. Instances may be allocated to distinct sub-clusters by assigning them distinct database " +
-            "names using this setting. For instance if you had 6 instances you could form 2 sub-clusters by assigning half " +
-            "the database name \"foo\", half the name \"bar\". The setting value must match exactly between members of the same sub-cluster. " +
-            "This setting is a one-off: once an instance is configured with a database name it may not be changed in future without using " +
-            "neo4j-admin unbind." )
-    public static final Setting<String> database =
-            setting( "causal_clustering.database", STRING, "default" );
 
     @Description( "Enable pre-voting extension to the Raft protocol (this is breaking and must match between the core cluster members)" )
     public static final Setting<Boolean> enable_pre_voting =
@@ -245,12 +237,6 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<DiscoveryType> discovery_type =
             setting( "causal_clustering.discovery_type", optionsIgnoreCase( DiscoveryType.class ), DiscoveryType.LIST.name() );
 
-    @Internal
-    @Description( "Select the middleware used for cluster topology discovery" )
-    public static final Setting<DiscoveryImplementation> discovery_implementation =
-            setting( "causal_clustering.discovery_implementation", optionsIgnoreCase( DiscoveryImplementation.class ),
-                    DiscoveryServiceFactorySelector.DEFAULT.name() );
-
     @Description( "Prevents the network middleware from dumping its own logs. Defaults to true." )
     public static final Setting<Boolean> disable_middleware_logging =
             setting( "causal_clustering.disable_middleware_logging", BOOLEAN, TRUE );
@@ -258,11 +244,6 @@ public class CausalClusteringSettings implements LoadableConfig
     @Description( "The level of middleware logging" )
     public static final Setting<Integer> middleware_logging_level =
             setting( "causal_clustering.middleware_logging.level", INTEGER, Integer.toString( Level.FINE.intValue() ) );
-
-    @Internal // not supported yet
-    @Description( "Hazelcast license key" )
-    public static final Setting<String> hazelcast_license_key =
-            setting( "hazelcast.license_key", STRING, NO_DEFAULT );
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
@@ -435,10 +416,6 @@ public class CausalClusteringSettings implements LoadableConfig
     @Internal
     public static final Setting<Integer> read_replica_transaction_applier_batch_size =
             setting( "causal_clustering.read_replica_transaction_applier_batch_size", INTEGER, "64" );
-
-    @Description( "Time To Live before read replica is considered unavailable" )
-    public static final Setting<Duration> read_replica_time_to_live =
-            buildSetting( "causal_clustering.read_replica_time_to_live", DURATION, "1m" ).constraint( min( Duration.ofSeconds( 60 ) ) ).build();
 
     @Description( "Configure if the `dbms.routing.getRoutingTable()` procedure should include followers as read " +
                   "endpoints or return only read replicas. Note: if there are no read replicas in the cluster, followers " +

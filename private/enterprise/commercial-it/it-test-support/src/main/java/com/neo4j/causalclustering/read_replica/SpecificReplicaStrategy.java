@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import java.util.Optional;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.kernel.database.DatabaseId;
 
 @ServiceProvider
 public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
@@ -25,7 +26,7 @@ public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
     }
 
     @Override
-    public Optional<MemberId> upstreamDatabase()
+    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
     {
         ReadReplica current = upstreamFactory.current();
         if ( current == null )

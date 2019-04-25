@@ -24,7 +24,6 @@ import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -33,9 +32,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.IntFunction;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.test.rule.RandomRule;
 
 import static java.lang.Long.max;
@@ -184,7 +182,7 @@ public class NativeAllEntriesLabelScanReaderTest
         return highest;
     }
 
-    private static IntFunction<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> store( Labels... labels )
+    private static IntFunction<Seeker<LabelScanKey,LabelScanValue>> store( Labels... labels )
     {
         final MutableIntObjectMap<Labels> labelsMap = new IntObjectHashMap<>( labels.length );
         for ( Labels item : labels )
@@ -238,18 +236,22 @@ public class NativeAllEntriesLabelScanReaderTest
             this.entries = entries;
         }
 
-        RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor()
+        Seeker<LabelScanKey,LabelScanValue> cursor()
         {
-            return new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+            return new Seeker<>()
             {
                 int cursor = -1;
 
                 @Override
-                public Hit<LabelScanKey,LabelScanValue> get()
+                public LabelScanKey key()
                 {
-                    assert cursor >= 0;
-                    Pair<LabelScanKey,LabelScanValue> entry = entries.get( cursor );
-                    return new MutableHit<>( entry.first(), entry.other() );
+                    return entries.get( cursor ).first();
+                }
+
+                @Override
+                public LabelScanValue value()
+                {
+                    return entries.get( cursor ).other();
                 }
 
                 @Override
@@ -271,15 +273,8 @@ public class NativeAllEntriesLabelScanReaderTest
         }
     }
 
-    private static final RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> EMPTY_CURSOR =
-            new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+    private static final Seeker<LabelScanKey,LabelScanValue> EMPTY_CURSOR = new Seeker<>()
     {
-        @Override
-        public Hit<LabelScanKey,LabelScanValue> get()
-        {
-            throw new IllegalStateException();
-        }
-
         @Override
         public boolean next()
         {
@@ -289,6 +284,18 @@ public class NativeAllEntriesLabelScanReaderTest
         @Override
         public void close()
         {   // Nothing to close
+        }
+
+        @Override
+        public LabelScanKey key()
+        {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public LabelScanValue value()
+        {
+            throw new IllegalStateException();
         }
     };
 }

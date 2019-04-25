@@ -7,18 +7,20 @@ package com.neo4j.causalclustering.discovery.akka.directory;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Sent from this Neo4J instance into discovery service
  */
 public class LeaderInfoSettingMessage
 {
     private final LeaderInfo leaderInfo;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
-    public LeaderInfoSettingMessage( LeaderInfo leaderInfo, String databaseName )
+    public LeaderInfoSettingMessage( LeaderInfo leaderInfo, DatabaseId databaseId )
     {
         this.leaderInfo = leaderInfo;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     public LeaderInfo leaderInfo()
@@ -26,8 +28,8 @@ public class LeaderInfoSettingMessage
         return leaderInfo;
     }
 
-    public String database()
+    public DatabaseId database()
     {
-        return databaseName;
+        return databaseId;
     }
 }

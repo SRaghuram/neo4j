@@ -47,6 +47,7 @@ import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.diagnostics.providers.DbmsDiagnosticsManager;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
@@ -78,12 +79,11 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.monitoring.DatabaseEventHandlers;
+import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
@@ -152,7 +152,7 @@ public class DatabaseRule extends ExternalResource
                 deps -> new DatabaseTransactionStats() );
         dependency( mutableDependencies, DbmsDiagnosticsManager.class, deps -> mock( DbmsDiagnosticsManager.class ) );
         StorageEngineFactory storageEngineFactory = dependency( mutableDependencies, StorageEngineFactory.class,
-                deps -> StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ) );
+                deps -> StorageEngineFactory.selectStorageEngine() );
 
         database = new Database( new TestDatabaseCreationContext( databaseName, databaseLayout, config, idGeneratorFactory, logService,
                 mock( JobScheduler.class, RETURNS_MOCKS ), mock( TokenNameLookup.class ), mutableDependencies, mockedTokenHolders(), locksFactory,
@@ -172,7 +172,7 @@ public class DatabaseRule extends ExternalResource
     private static DatabaseMigratorFactory mockedDatabaseMigratorFactory()
     {
         DatabaseMigratorFactory factory = mock( DatabaseMigratorFactory.class );
-        when( factory.createDatabaseMigrator( any(), any() ) ).thenReturn( mock( DatabaseMigrator.class ) );
+        when( factory.createDatabaseMigrator( any(), any(), any() ) ).thenReturn( mock( DatabaseMigrator.class ) );
         return factory;
     }
 
@@ -204,7 +204,7 @@ public class DatabaseRule extends ExternalResource
 
     private static class TestDatabaseCreationContext implements DatabaseCreationContext
     {
-        private final String databaseName;
+        private final DatabaseId databaseId;
         private final DatabaseLayout databaseLayout;
         private final Config config;
         private final DatabaseConfig databaseConfig;
@@ -238,7 +238,7 @@ public class DatabaseRule extends ExternalResource
         private final Function<DatabaseLayout,DatabaseLayoutWatcher> watcherServiceFactory;
         private final GraphDatabaseFacade facade;
         private final Iterable<QueryEngineProvider> engineProviders;
-        private final DatabaseEventHandlers eventHandlers;
+        private final DatabaseEventListeners eventHandlers;
         private final DatabaseMigratorFactory databaseMigratorFactory;
         private final StorageEngineFactory storageEngineFactory;
 
@@ -255,10 +255,10 @@ public class DatabaseRule extends ExternalResource
                 GraphDatabaseFacade facade, Iterable<QueryEngineProvider> engineProviders, DatabaseMigratorFactory databaseMigratorFactory,
                 StorageEngineFactory storageEngineFactory )
         {
-            this.databaseName = databaseName;
+            this.databaseId = new DatabaseId( databaseName );
             this.databaseLayout = databaseLayout;
             this.config = config;
-            this.databaseConfig = DatabaseConfig.from( config, databaseName );
+            this.databaseConfig = DatabaseConfig.from( config, databaseId );
             this.idGeneratorFactory = idGeneratorFactory;
             this.logService = logService;
             this.scheduler = scheduler;
@@ -289,15 +289,15 @@ public class DatabaseRule extends ExternalResource
             this.watcherServiceFactory = watcherServiceFactory;
             this.facade = facade;
             this.engineProviders = engineProviders;
-            this.eventHandlers = mock( DatabaseEventHandlers.class );
+            this.eventHandlers = mock( DatabaseEventListeners.class );
             this.databaseMigratorFactory = databaseMigratorFactory;
             this.storageEngineFactory = storageEngineFactory;
         }
 
         @Override
-        public String getDatabaseName()
+        public DatabaseId getDatabaseId()
         {
-            return databaseName;
+            return databaseId;
         }
 
         @Override
@@ -445,7 +445,11 @@ public class DatabaseRule extends ExternalResource
         @Override
         public Factory<DatabaseAvailabilityGuard> getDatabaseAvailabilityGuardFactory()
         {
-            return () -> new DatabaseAvailabilityGuard( databaseName, clock, NullLog.getInstance(), mock( CompositeDatabaseAvailabilityGuard.class ) );
+            return () -> new DatabaseAvailabilityGuard(
+                    databaseId,
+                    clock,
+                    NullLog.getInstance(),
+                    mock( CompositeDatabaseAvailabilityGuard.class ) );
         }
 
         @Override
@@ -515,7 +519,7 @@ public class DatabaseRule extends ExternalResource
         }
 
         @Override
-        public DatabaseEventHandlers getEventHandlers()
+        public DatabaseEventListeners getDatabaseEventListeners()
         {
             return eventHandlers;
         }

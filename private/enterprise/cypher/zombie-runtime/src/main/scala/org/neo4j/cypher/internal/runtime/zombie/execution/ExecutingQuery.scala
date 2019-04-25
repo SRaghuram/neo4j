@@ -8,20 +8,20 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.QueryState
 import org.neo4j.cypher.internal.runtime.scheduling.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, ExecutionState}
+import org.neo4j.cypher.internal.runtime.zombie.ExecutionState
+import org.neo4j.cypher.internal.runtime.zombie.state.PipelineExecutions
 
-class ExecutingQuery(val executablePipelines: IndexedSeq[ExecutablePipeline],
+class ExecutingQuery(val pipelineExecutions: PipelineExecutions,
                      val executionState: ExecutionState,
                      val queryContext: QueryContext,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer) extends QueryExecutionHandle {
 
-  override def await(): Option[Throwable] = {
+  override def await(): Unit = {
     try{
       executionState.awaitCompletion()
     } finally {
       queryExecutionTracer.stopQuery()
     }
-    None
   }
 }

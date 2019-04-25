@@ -18,13 +18,14 @@ import java.util.stream.Stream;
 
 import org.neo4j.com.storecopy.FileMoveAction;
 import org.neo4j.com.storecopy.FileMoveProvider;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -39,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 
 @PageCacheExtension
@@ -90,19 +92,23 @@ class BackupCopyServiceTest
     @Test
     void shouldDeletePreExistingBrokenBackupWhenItHasSameStoreIdAsNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
-        fs.copyRecursively( oldDir, newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() );
+        fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
 
-        assertFalse( fs.fileExists( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+
+        assertFalse( fs.fileExists( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
@@ -126,46 +132,54 @@ class BackupCopyServiceTest
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItsStoreIdIsUnreadable() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        fs.deleteFileOrThrow( DatabaseLayout.of( oldDir ).metadataStore() );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() );
+        fs.deleteFileOrThrow( oldLayout.metadataStore() );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
     void shouldThrowWhenUnableToReadStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        File oldDir = testDirectory.storeDir( "old" );
+        File newDir = testDirectory.storeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
 
-        fs.deleteFileOrThrow( DatabaseLayout.of( newDir ).metadataStore() );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+
+        fs.deleteFileOrThrow( newLayout.metadataStore() );
 
         IOException error = assertThrows( IOException.class,
-                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() ) );
+                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(),
+                        newLayout.databaseDirectory().toPath() ) );
 
         assertThat( error.getMessage(), containsString( "Unable to read store ID from the new successful backup" ) );
     }
 
-    private void startAndStopDb( File databaseDir )
+    private static void startAndStopDb( File databaseDir )
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().newDatabaseManagementService( databaseDir );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( label( "Cat" ) ).setProperty( "name", "Tom" );
@@ -173,7 +187,7 @@ class BackupCopyServiceTest
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 }

@@ -20,7 +20,6 @@
 package org.neo4j.test.rule;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +28,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -41,12 +41,10 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.StringSearchMode;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.event.DatabaseEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceInternalBuilder;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
@@ -61,17 +59,19 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public abstract class DbmsRule extends ExternalResource implements GraphDatabaseAPI
 {
-    private GraphDatabaseBuilder databaseBuilder;
+    private DatabaseManagementServiceInternalBuilder databaseBuilder;
     private GraphDatabaseAPI database;
     private DatabaseLayout databaseLayout;
     private Supplier<Statement> statementSupplier;
     private boolean startEagerly = true;
     private final Map<Setting<?>, String> globalConfig = new HashMap<>();
     private final Monitors monitors = new Monitors();
+    private DatabaseManagementService managementService;
 
     /**
      * Means the database will be started on first {@link #getGraphDatabaseAPI()}}
@@ -118,25 +118,23 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
 
     private <T> T transaction( Function<? super GraphDatabaseService, T> function, boolean commit )
     {
-        return tx( getGraphDatabaseAPI(), commit, RetryHandler.NO_RETRY, function );
+        return tx( getGraphDatabaseAPI(), commit, function );
     }
 
     /**
      * Perform a transaction, with the option to automatically retry on failure.
      *
      * @param db {@link GraphDatabaseService} to apply the transaction on.
-     * @param retry {@link RetryHandler} deciding what type of failures to retry on.
      * @param transaction {@link Consumer} containing the transaction logic.
      */
-    public static void tx( GraphDatabaseService db, RetryHandler retry,
-            Consumer<? super GraphDatabaseService> transaction )
+    public static void tx( GraphDatabaseService db, Consumer<? super GraphDatabaseService> transaction )
     {
         Function<? super GraphDatabaseService,Void> voidFunction = _db ->
         {
             transaction.accept( _db );
             return null;
         };
-        tx( db, true, retry, voidFunction );
+        tx( db, true, voidFunction );
     }
 
     /**
@@ -145,32 +143,19 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
      *
      * @param db {@link GraphDatabaseService} to apply the transaction on.
      * @param commit whether or not to call {@link Transaction#success()} in the end.
-     * @param retry {@link RetryHandler} deciding what type of failures to retry on.
      * @param transaction {@link Function} containing the transaction logic and returning a result.
      * @return result from transaction {@link Function}.
      */
-    public static <T> T tx( GraphDatabaseService db, boolean commit,
-            RetryHandler retry, Function<? super GraphDatabaseService, T> transaction )
+    public static <T> T tx( GraphDatabaseService db, boolean commit, Function<? super GraphDatabaseService,T> transaction )
     {
-        while ( true )
+        try ( Transaction tx = db.beginTx() )
         {
-            try ( Transaction tx = db.beginTx() )
+            T result = transaction.apply( db );
+            if ( commit )
             {
-                T result = transaction.apply( db );
-                if ( commit )
-                {
-                    tx.success();
-                }
-                return result;
+                tx.success();
             }
-            catch ( Throwable t )
-            {
-                if ( !retry.retryOn( t ) )
-                {
-                    throw t;
-                }
-                // else continue one more time
-            }
+            return result;
         }
     }
 
@@ -269,7 +254,7 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
         createResources();
         try
         {
-            GraphDatabaseFactory factory = newFactory();
+            DatabaseManagementServiceBuilder factory = newFactory();
             factory.setMonitors( monitors );
             configure( factory );
             databaseBuilder = newBuilder( factory );
@@ -298,11 +283,11 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
     {
     }
 
-    protected abstract GraphDatabaseFactory newFactory();
+    protected abstract DatabaseManagementServiceBuilder newFactory();
 
-    protected abstract GraphDatabaseBuilder newBuilder( GraphDatabaseFactory factory );
+    protected abstract DatabaseManagementServiceInternalBuilder newBuilder( DatabaseManagementServiceBuilder factory );
 
-    protected void configure( GraphDatabaseFactory databaseFactory )
+    protected void configure( DatabaseManagementServiceBuilder databaseFactory )
     {
         // Override to configure the database factory
     }
@@ -317,11 +302,17 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
         return database;
     }
 
+    public DatabaseManagementService getManagementService()
+    {
+        return managementService;
+    }
+
     public synchronized void ensureStarted()
     {
         if ( database == null )
         {
-            database = (GraphDatabaseAPI) databaseBuilder.newGraphDatabase();
+            managementService = databaseBuilder.newDatabaseManagementService();
+            database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             databaseLayout = database.databaseLayout();
             statementSupplier = resolveDependency( ThreadToStatementContextBridge.class );
         }
@@ -388,7 +379,7 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
     public GraphDatabaseAPI restartDatabase( RestartAction action, String... configChanges ) throws IOException
     {
         FileSystemAbstraction fs = resolveDependency( FileSystemAbstraction.class );
-        database.shutdown();
+        managementService.shutdown();
         action.run( fs, databaseLayout );
         database = null;
         // This DatabaseBuilder has already been configured with the global settings as well as any test-specific settings,
@@ -397,7 +388,6 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
         return getGraphDatabaseAPI();
     }
 
-    @Override
     public void shutdown()
     {
         shutdown( true );
@@ -408,9 +398,9 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
         statementSupplier = null;
         try
         {
-            if ( database != null )
+            if ( managementService != null )
             {
-                database.shutdown();
+                managementService.shutdown();
             }
         }
         finally
@@ -419,6 +409,7 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
             {
                 deleteResources();
             }
+            managementService = null;
             database = null;
         }
     }
@@ -467,12 +458,6 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
     public String getDatabaseDirAbsolutePath()
     {
         return databaseLayout().databaseDirectory().getAbsolutePath();
-    }
-
-    @Override
-    public URL validateURLAccess( URL url ) throws URLAccessValidationError
-    {
-        return database.validateURLAccess( url );
     }
 
     @Override
@@ -588,18 +573,6 @@ public abstract class DbmsRule extends ExternalResource implements GraphDatabase
     public <T> TransactionEventHandler<T> unregisterTransactionEventHandler( TransactionEventHandler<T> handler )
     {
         return database.unregisterTransactionEventHandler( handler );
-    }
-
-    @Override
-    public DatabaseEventHandler registerDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        return database.registerDatabaseEventHandler( handler );
-    }
-
-    @Override
-    public DatabaseEventHandler unregisterDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        return database.unregisterDatabaseEventHandler( handler );
     }
 
     @Override

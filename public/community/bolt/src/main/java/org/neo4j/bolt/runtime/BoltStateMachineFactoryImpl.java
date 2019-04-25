@@ -35,29 +35,27 @@ import org.neo4j.bolt.v4.BoltStateMachineV4;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.udc.UsageData;
 
 public class BoltStateMachineFactoryImpl implements BoltStateMachineFactory
 {
-    private final DatabaseManager databaseManager;
-    private final UsageData usageData;
+    private final DatabaseManager<?> databaseManager;
     private final LogService logging;
     private final Authentication authentication;
     private final Config config;
     private final Clock clock;
-    private final String defaultDatabaseName;
+    private final DatabaseId defaultDatabaseId;
 
-    public BoltStateMachineFactoryImpl( DatabaseManager databaseManager, UsageData usageData,
-            Authentication authentication, Clock clock, Config config, LogService logging )
+    public BoltStateMachineFactoryImpl( DatabaseManager<?> databaseManager, Authentication authentication,
+            Clock clock, Config config, LogService logging )
     {
         this.databaseManager = databaseManager;
-        this.usageData = usageData;
         this.logging = logging;
         this.authentication = authentication;
         this.config = config;
         this.clock = clock;
-        this.defaultDatabaseName = config.get( GraphDatabaseSettings.default_database );
+        this.defaultDatabaseId = new DatabaseId( config.get( GraphDatabaseSettings.default_database ) );
     }
 
     @Override
@@ -84,24 +82,24 @@ public class BoltStateMachineFactoryImpl implements BoltStateMachineFactory
     private BoltStateMachine newStateMachineV1( BoltChannel boltChannel )
     {
         TransactionStateMachineSPIProvider transactionSpiProvider =
-                new TransactionStateMachineSPIProviderV1( databaseManager, defaultDatabaseName, boltChannel, getAwaitDuration(), clock );
-        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( usageData, logging, authentication, transactionSpiProvider );
+                new TransactionStateMachineSPIProviderV1( databaseManager, defaultDatabaseId, boltChannel, getAwaitDuration(), clock );
+        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( logging, authentication, transactionSpiProvider );
         return new BoltStateMachineV1( boltSPI, boltChannel, clock );
     }
 
     private BoltStateMachine newStateMachineV3( BoltChannel boltChannel )
     {
         TransactionStateMachineSPIProvider transactionSpiProvider =
-                new TransactionStateMachineSPIProviderV3( databaseManager, defaultDatabaseName, boltChannel, getAwaitDuration(), clock );
-        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( usageData, logging, authentication, transactionSpiProvider );
+                new TransactionStateMachineSPIProviderV3( databaseManager, defaultDatabaseId, boltChannel, getAwaitDuration(), clock );
+        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( logging, authentication, transactionSpiProvider );
         return new BoltStateMachineV3( boltSPI, boltChannel, clock );
     }
 
     private BoltStateMachine newStateMachineV4( BoltChannel boltChannel )
     {
         TransactionStateMachineSPIProvider transactionSpiProvider =
-                new TransactionStateMachineSPIProviderV4( databaseManager, defaultDatabaseName, boltChannel, getAwaitDuration(), clock );
-        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( usageData, logging, authentication, transactionSpiProvider );
+                new TransactionStateMachineSPIProviderV4( databaseManager, defaultDatabaseId, boltChannel, getAwaitDuration(), clock );
+        BoltStateMachineSPI boltSPI = new BoltStateMachineV1SPI( logging, authentication, transactionSpiProvider );
         return new BoltStateMachineV4( boltSPI, boltChannel, clock );
     }
 

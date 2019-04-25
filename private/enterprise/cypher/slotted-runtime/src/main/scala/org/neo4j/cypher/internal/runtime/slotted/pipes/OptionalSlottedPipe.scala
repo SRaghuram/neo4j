@@ -9,8 +9,8 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, Slot
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.values.storable.Values
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.values.storable.Values
 
 case class OptionalSlottedPipe(source: Pipe,
                                nullableSlots: Seq[Slot],
@@ -46,7 +46,7 @@ case class OptionalSlottedPipe(source: Pipe,
   }
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
-    if (input.isEmpty) {
+    if (!input.hasNext) {
       Iterator(notFoundExecutionContext(state))
     } else {
       input

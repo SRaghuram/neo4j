@@ -16,6 +16,7 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload
 import com.neo4j.bench.client.model.Neo4jConfig;
 
 import java.io.File;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
@@ -99,7 +100,11 @@ class ResultReportingUtil
 
     static void assertDisallowFormatMigration( File neo4jConfigFile )
     {
-        assertSettingProvided( neo4jConfigFile, allow_upgrade.name() );
+        Map<String,String> neo4jConfigMap = assertSettingProvided( neo4jConfigFile, allow_upgrade.name() );
+        if ( neo4jConfigMap.get( allow_upgrade.name() ).equals( "true" ) )
+        {
+            throw new RuntimeException( allow_upgrade.name() + " must be disabled" );
+        }
     }
 
     static void assertStoreFormatIsSet( File neo4jConfigFile )
@@ -107,16 +112,16 @@ class ResultReportingUtil
         assertSettingProvided( neo4jConfigFile, record_format.name() );
     }
 
-    private static void assertSettingProvided( File neo4jConfigFile, String setting )
+    private static Map<String,String> assertSettingProvided( File neo4jConfigFile, String setting )
     {
         try
         {
-            Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
-            if ( !neo4jConfig.toMap().containsKey( setting ) ||
-                 neo4jConfig.toMap().get( setting ).equals( "true" ) )
+            Map<String,String> neo4jConfigMap = Neo4jConfig.fromFile( neo4jConfigFile ).toMap();
+            if ( !neo4jConfigMap.containsKey( setting ) )
             {
-                throw new RuntimeException( setting + " must be disabled" );
+                throw new RuntimeException( setting + " must be provided" );
             }
+            return neo4jConfigMap;
         }
         catch ( Exception e )
         {

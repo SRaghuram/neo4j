@@ -32,7 +32,7 @@ class SelectOrSemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
     val lhsData = List(Map("a" -> 1), Map("a" -> 2))
     val lhs = new FakePipe(lhsData.iterator)
 
-    val rhs = pipeWithResults((state) => {
+    val rhs = pipeWithResults(state => {
       val initialContext = state.initialContext.get
       if (initialContext.getByName("a") == intValue(1)) Iterator(initialContext) else Iterator.empty
     })
@@ -48,7 +48,7 @@ class SelectOrSemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
     val lhsData = List(Map("a" -> 1), Map("a" -> 2))
     val lhs = new FakePipe(lhsData.iterator)
 
-    val rhs = pipeWithResults((state) => {
+    val rhs = pipeWithResults(state => {
       val initialContext = state.initialContext.get
       if (initialContext.getByName("a") == intValue(1)) Iterator(initialContext) else Iterator.empty
     })
@@ -85,7 +85,7 @@ class SelectOrSemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
   }
 
   test("if lhs is empty, rhs should not be touched regardless the given expression") {
-    val rhs = pipeWithResults((_) => fail("should not use this"))
+    val rhs = pipeWithResults(_ => fail("should not use this"))
     val lhs = new FakePipe(Iterator.empty)
 
     // Should not throw
@@ -129,5 +129,15 @@ class SelectOrSemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
 
     val result = SelectOrSemiApplyPipe(lhs, rhs, Equals(Variable("a"), Literal(2)), negated = false)().createResults(QueryStateHelper.empty).toList
     result should equal(List.empty)
+  }
+
+  test("should register owning pipe") {
+    val lhs = new FakePipe(Iterator.empty)
+    val rhs = new FakePipe(Iterator.empty)
+    val predicate = Not(True())
+    val pipe = SelectOrSemiApplyPipe(lhs, rhs, predicate, negated = false)()
+
+    pipe.predicate.owningPipe should equal(pipe)
+    predicate.owningPipe should equal(pipe)
   }
 }

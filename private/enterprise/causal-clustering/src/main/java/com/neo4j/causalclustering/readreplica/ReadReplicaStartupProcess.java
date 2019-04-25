@@ -7,39 +7,41 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 class ReadReplicaStartupProcess implements Lifecycle
 {
@@ -51,26 +53,24 @@ class ReadReplicaStartupProcess implements Lifecycle
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final TopologyService topologyService;
 
-    private String lastIssue;
-
     private final CatchupComponentsRepository catchupComponents;
-    private final DatabaseService databaseService;
+    private final ClusteredDatabaseManager clusteredDatabaseManager;
 
-    ReadReplicaStartupProcess( Executor executor, DatabaseService databaseService, Lifecycle catchupProcessManager,
-            UpstreamDatabaseStrategySelector selectionStrategyPipeline, LogProvider debugLogProvider, LogProvider userLogProvider,
-            TopologyService topologyService, CatchupComponentsRepository catchupComponents )
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager clusteredDatabaseManager,
+            Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategyPipeline, LogProvider debugLogProvider,
+            LogProvider userLogProvider, TopologyService topologyService, CatchupComponentsRepository catchupComponents )
     {
-        this( executor, databaseService, catchupProcessManager, selectionStrategyPipeline, debugLogProvider, userLogProvider, topologyService,
+        this( executor, clusteredDatabaseManager, catchupProcessManager, selectionStrategyPipeline, debugLogProvider, userLogProvider, topologyService,
                 catchupComponents, new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS ) );
     }
 
-    ReadReplicaStartupProcess( Executor executor, DatabaseService databaseService, Lifecycle catchupProcessManager,
-            UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider, LogProvider userLogProvider,
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager clusteredDatabaseManager,
+            Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider, LogProvider userLogProvider,
             TopologyService topologyService, CatchupComponentsRepository catchupComponents, TimeoutStrategy syncRetryStrategy )
     {
         this.executor = executor;
         this.catchupComponents = catchupComponents;
-        this.databaseService = databaseService;
+        this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.catchupProcessManager = catchupProcessManager;
         this.selectionStrategy = selectionStrategy;
         this.syncRetryStrategy = syncRetryStrategy;
@@ -82,164 +82,150 @@ class ReadReplicaStartupProcess implements Lifecycle
     @Override
     public void init() throws Exception
     {
-        databaseService.init();
+        clusteredDatabaseManager.init();
         catchupProcessManager.init();
-    }
-
-    private String issueOf( String operation, int attempt )
-    {
-        return format( "Failed attempt %d of %s", attempt, operation );
     }
 
     @Override
     public void start() throws Exception
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
-        Map<String,? extends LocalDatabase> dbsToSync = copyRegisteredDatabases();
-        int attempt = 0;
-        while ( dbsToSync.size() > 0 )
+        var dbsToSync =  new HashMap<>( clusteredDatabaseManager.registeredDatabases() );
+        Set<DatabaseId> syncedDbs = new HashSet<>();
+        while ( !syncedDbs.equals( dbsToSync.keySet() ) )
         {
             try
             {
-
-                attempt++;
-                MemberId source;
-                try
-                {
-                    debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
-                    source = selectionStrategy.bestUpstreamDatabase();
-                    Map<String,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
-                    List<String> successful = results.entrySet().stream().filter( this::isSuccessful ).map( this::getDbName ).collect( toList() );
-                    debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
-                    successful.forEach( dbsToSync::remove );
-                }
-                catch ( UpstreamDatabaseSelectionException e )
-                {
-                    lastIssue = issueOf( "finding upstream member", attempt );
-                    debugLog.warn( lastIssue );
-                }
-                catch ( ExecutionException e )
-                {
-                    debugLog.error( "Unexpected error when syncing stores", e );
-                    throw new RuntimeException( e );
-                }
+                debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
+                Map<DatabaseId,AsyncResult> results = syncStoresWithUpstream( dbsToSync ).get();
+                Set<DatabaseId> successful = findSuccessfullySyncedDatabaseIds( results );
+                debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
+                syncedDbs.addAll( successful );
 
                 Thread.sleep( syncRetryWaitPeriod.getMillis() );
                 syncRetryWaitPeriod.increment();
             }
+            catch ( ExecutionException e )
+            {
+                debugLog.error( "Unexpected error when syncing stores", e );
+                throw new RuntimeException( e );
+            }
             catch ( InterruptedException e )
             {
                 Thread.currentThread().interrupt();
-                lastIssue = "Interrupted while trying to start read replica";
-                debugLog.warn( lastIssue );
-                userLog.error( lastIssue );
+                userLog.error( "Interrupted while trying to start read replica" );
                 throw new RuntimeException( e );
             }
         }
 
-        databaseService.start();
+        clusteredDatabaseManager.start();
         catchupProcessManager.start();
     }
 
-    private HashMap<String,? extends LocalDatabase> copyRegisteredDatabases()
+    private CompletableFuture<Map<DatabaseId,AsyncResult>> syncStoresWithUpstream( Map<DatabaseId,ClusteredDatabaseContext> dbsToSync )
     {
-        return new HashMap<>( databaseService.registeredDatabases() );
-    }
-
-    private String getDbName( Map.Entry<String,AsyncResult> resultEntry )
-    {
-        return resultEntry.getKey();
-    }
-
-    private boolean isSuccessful( Map.Entry<String,AsyncResult> resultEntry )
-    {
-        return resultEntry.getValue() == AsyncResult.SUCCESS;
-    }
-
-    private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<String,? extends LocalDatabase> dbsToSync )
-    {
-        CompletableFuture<Map<String,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
-        for ( Map.Entry<String,? extends LocalDatabase> nameDbEntry : dbsToSync.entrySet() )
+        CompletableFuture<Map<DatabaseId,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
+        for ( var nameDbEntry : dbsToSync.entrySet() )
         {
-            String dbName = nameDbEntry.getKey();
+            DatabaseId databaseId = nameDbEntry.getKey();
             CompletableFuture<AsyncResult> stage =
-                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue(), source ), executor );
-            combinedFuture = combinedFuture.thenCombineAsync( stage, ( stringAsyncResultMap, asyncResult ) ->
+                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue() ), executor );
+            combinedFuture = combinedFuture.thenCombineAsync( stage, ( resultsMap, currentResult ) ->
             {
-                stringAsyncResultMap.put( dbName, asyncResult );
-                return stringAsyncResultMap;
+                resultsMap.put( databaseId, currentResult );
+                return resultsMap;
             }, executor );
         }
         return combinedFuture;
     }
 
-    private AsyncResult doSyncStoreCopyWithUpstream( LocalDatabase localDatabase, MemberId source )
+    private static Set<DatabaseId> findSuccessfullySyncedDatabaseIds( Map<DatabaseId,AsyncResult> results )
     {
+        return results.entrySet()
+                .stream()
+                .filter( entry -> entry.getValue() == AsyncResult.SUCCESS )
+                .map( Map.Entry::getKey )
+                .collect( toSet() );
+    }
+
+    private AsyncResult doSyncStoreCopyWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext )
+    {
+        MemberId source;
         try
         {
-            syncStoreWithUpstream(localDatabase, source );
+            source = selectionStrategy.bestUpstreamMemberForDatabase( clusteredDatabaseContext.databaseId() );
+        }
+        catch ( UpstreamDatabaseSelectionException e )
+        {
+            debugLog.warn( "Unable to find upstream member for database " + clusteredDatabaseContext.databaseId().name() );
+            return AsyncResult.FAIL;
+        }
+
+        try
+        {
+            syncStoreWithUpstream( clusteredDatabaseContext, source );
             return AsyncResult.SUCCESS;
         }
         catch ( TopologyLookupException e )
         {
-            debugLog.warn( "getting address of %s", source );
+            debugLog.warn( "Unable to get address of %s", source );
             return AsyncResult.FAIL;
         }
         catch ( StoreIdDownloadFailedException e )
         {
-            debugLog.warn( "getting store id from %s", source );
+            debugLog.warn( "Unable to get store ID from %s", source );
             return AsyncResult.FAIL;
         }
         catch ( StoreCopyFailedException e )
         {
-            debugLog.warn( "copying store files from %s", source );
+            debugLog.warn( "Unable to copy store files from %s", source );
             return AsyncResult.FAIL;
         }
         catch ( DatabaseShutdownException | IOException e )
         {
-            debugLog.warn( format( "syncing of stores failed unexpectedly from %s", source ), e );
+            debugLog.warn( format( "Syncing of stores failed unexpectedly from %s", source ), e );
             return AsyncResult.FAIL;
         }
     }
 
-    private void syncStoreWithUpstream( LocalDatabase localDatabase, MemberId source ) throws IOException,
+    private void syncStoreWithUpstream( ClusteredDatabaseContext clusteredDatabaseContext, MemberId source ) throws IOException,
             StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
-        PerDatabaseCatchupComponents catchup = catchupComponents.componentsFor( localDatabase.databaseName() )
+        DatabaseCatchupComponents catchup = catchupComponents.componentsFor( clusteredDatabaseContext.databaseId() )
                 .orElseThrow( () -> new IllegalStateException(
-                        String.format( "No per database catchup components exist for database %s.", localDatabase.databaseName() ) ) );
+                        String.format( "No per database catchup components exist for database %s.", clusteredDatabaseContext.databaseId().name() ) ) );
 
-        if ( localDatabase.isEmpty() )
+        if ( clusteredDatabaseContext.isEmpty() )
         {
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
-            debugLog.info( "Finding store id of upstream server %s", source );
+            debugLog.info( "Finding store ID of upstream server %s", source );
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
             StoreId storeId = catchup.remoteStore().getStoreId( fromAddress );
 
             debugLog.info( "Copying store from upstream server %s", source );
-            localDatabase.delete();
+            clusteredDatabaseContext.delete();
             catchup.storeCopyProcess().replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), storeId );
 
             debugLog.info( "Restarting local database after copy.", source );
         }
         else
         {
-            ensureStoreIsPresentAt( localDatabase, catchup.remoteStore(), source );
+            ensureStoreIsPresentAt( clusteredDatabaseContext, catchup.remoteStore(), source );
         }
     }
 
-    private void ensureStoreIsPresentAt( LocalDatabase localDatabase, RemoteStore remoteStore, MemberId upstream )
+    private void ensureStoreIsPresentAt( ClusteredDatabaseContext clusteredDatabaseContext, RemoteStore remoteStore, MemberId upstream )
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
-        StoreId localStoreId = localDatabase.storeId();
+        StoreId localStoreId = clusteredDatabaseContext.storeId();
         AdvertisedSocketAddress advertisedSocketAddress = topologyService.findCatchupAddress( upstream );
         StoreId remoteStoreId = remoteStore.getStoreId( advertisedSocketAddress );
         if ( !localStoreId.equals( remoteStoreId ) )
         {
             throw new IllegalStateException( format( "This read replica cannot join the cluster. " +
                     "The local version of database %s is not empty and has a mismatching storeId: " +
-                    "expected %s actual %s.", localDatabase.databaseName(), remoteStoreId, localStoreId ) );
+                    "expected %s actual %s.", clusteredDatabaseContext.databaseId().name(), remoteStoreId, localStoreId ) );
         }
     }
 
@@ -247,14 +233,14 @@ class ReadReplicaStartupProcess implements Lifecycle
     public void stop() throws Exception
     {
         catchupProcessManager.stop();
-        databaseService.stop();
+        clusteredDatabaseManager.stop();
     }
 
     @Override
     public void shutdown() throws Exception
     {
         catchupProcessManager.shutdown();
-        databaseService.shutdown();
+        clusteredDatabaseManager.shutdown();
     }
 
     private enum AsyncResult

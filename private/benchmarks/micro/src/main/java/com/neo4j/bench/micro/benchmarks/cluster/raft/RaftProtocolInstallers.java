@@ -9,8 +9,6 @@ import com.neo4j.bench.micro.benchmarks.cluster.ProtocolInstallers;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
@@ -39,12 +37,6 @@ public class RaftProtocolInstallers implements ProtocolInstallers
 
     public ProtocolInstaller<ProtocolInstaller.Orientation.Client> clientInstaller()
     {
-        if ( version == ProtocolVersion.V1 )
-        {
-            return new RaftProtocolClientInstallerV1( new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
-                                                      Collections.emptyList(),
-                                                      logProvider );
-        }
         if ( version == ProtocolVersion.V2 )
         {
             return new RaftProtocolClientInstallerV2( new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
@@ -60,14 +52,6 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         RaftMessageNettyHandler raftMessageNettyHandler = new RaftMessageNettyHandler( logProvider );
         raftMessageNettyHandler.registerHandler( handler );
 
-        if ( version == ProtocolVersion.V1 )
-        {
-            return new RaftProtocolServerInstallerV1( raftMessageNettyHandler,
-                                                      new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
-                                                      Collections.emptyList(),
-                                                      "db-name",
-                                                      logProvider );
-        }
         if ( version == ProtocolVersion.V2 )
         {
             return new RaftProtocolServerInstallerV2( raftMessageNettyHandler,

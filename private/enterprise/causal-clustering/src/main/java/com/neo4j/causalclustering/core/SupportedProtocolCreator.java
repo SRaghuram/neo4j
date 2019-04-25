@@ -19,7 +19,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.logging.Log;
@@ -128,7 +127,7 @@ public class SupportedProtocolCreator
                 .map( impl -> Pair.of( impl, finder.apply( impl ) ) )
                 .peek( protocolWithImplementation -> logUnknownProtocol( category, protocolWithImplementation ) )
                 .map( Pair::other )
-                .flatMap( Streams::ofOptional )
+                .flatMap( Optional::stream )
                 .map( Protocol::implementation )
                 .collect( Collectors.toList() );
     }

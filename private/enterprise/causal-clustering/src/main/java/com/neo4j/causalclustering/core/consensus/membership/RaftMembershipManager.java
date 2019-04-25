@@ -32,7 +32,7 @@ import static org.neo4j.helpers.collection.Iterables.first;
 
 /**
  * This class drives raft membership changes by glueing together various components:
- * - target membership from hazelcast
+ * - target membership from discovery service
  * - raft membership state machine
  * - raft log events
  */
@@ -43,7 +43,8 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<MemberId> targetMembers;
 
     private final SendToMyself sendToMyself;
-    private final RaftGroup.Builder<MemberId> memberSetBuilder;
+    private final MemberId myself;
+    private final RaftMembers.Builder<MemberId> memberSetBuilder;
     private final ReadableRaftLog raftLog;
     private final Log log;
     private final StateStorage<RaftMembershipState> storage;
@@ -60,11 +61,12 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<Listener> listeners = new HashSet<>();
     private Set<MemberId> additionalReplicationMembers = new HashSet<>();
 
-    public RaftMembershipManager( SendToMyself sendToMyself, RaftGroup.Builder<MemberId> memberSetBuilder,
+    public RaftMembershipManager( SendToMyself sendToMyself, MemberId myself, RaftMembers.Builder<MemberId> memberSetBuilder,
             ReadableRaftLog raftLog, LogProvider logProvider, int minimumConsensusGroupSize, long electionTimeout,
             Clock clock, long catchupTimeout, StateStorage<RaftMembershipState> membershipStorage )
     {
         this.sendToMyself = sendToMyself;
+        this.myself = myself;
         this.memberSetBuilder = memberSetBuilder;
         this.raftLog = raftLog;
         this.minimumConsensusGroupSize = minimumConsensusGroupSize;
@@ -193,6 +195,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         }
         Set<MemberId> superfluousMembers = new HashSet<>( votingMembers() );
         superfluousMembers.removeAll( targetMembers );
+        superfluousMembers.remove( myself );
 
         return superfluousMembers;
     }
@@ -285,16 +288,16 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
 
         for ( RaftLogEntry entry : entries )
         {
-            if ( entry.content() instanceof RaftGroup )
+            if ( entry.content() instanceof RaftMembers )
             {
-                RaftGroup<MemberId> raftGroup = (RaftGroup<MemberId>) entry.content();
+                RaftMembers<MemberId> raftMembers = (RaftMembers<MemberId>) entry.content();
 
                 if ( state.uncommittedMemberChangeInLog() )
                 {
                     log.warn( "Appending with uncommitted membership change in log" );
                 }
 
-                if ( state.append( baseIndex, new HashSet<>( raftGroup.getMembers() ) ) )
+                if ( state.append( baseIndex, new HashSet<>( raftMembers.getMembers() ) ) )
                 {
                     log.info( "Appending new member set %s", state );
                     storage.persistStoreData( state );
@@ -303,7 +306,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
                 else
                 {
                     log.warn( "Appending member set was ignored. Current state: %s, Appended set: %s, Log index: %d%n",
-                            state, raftGroup, baseIndex );
+                            state, raftMembers, baseIndex );
                 }
             }
             baseIndex++;

@@ -11,19 +11,20 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
-import org.neo4j.procedure.builtin.routing.CommunityRoutingProcedureInstaller;
+import org.neo4j.procedure.builtin.routing.SingleInstanceRoutingProcedureInstaller;
 
-public class ReadReplicaRoutingProcedureInstaller extends CommunityRoutingProcedureInstaller
+public class ReadReplicaRoutingProcedureInstaller extends SingleInstanceRoutingProcedureInstaller
 {
-    public ReadReplicaRoutingProcedureInstaller( ConnectorPortRegister portRegister, Config config )
+    public ReadReplicaRoutingProcedureInstaller( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config )
     {
-        super( portRegister, config );
+        super( databaseManager, portRegister, config );
     }
 
     @Override
     protected CallableProcedure createProcedure( List<String> namespace )
     {
-        return new ReadReplicaGetRoutingTableProcedure( namespace, portRegister, config );
+        return new ReadReplicaGetRoutingTableProcedure( namespace, databaseManager, portRegister, config );
     }
 }

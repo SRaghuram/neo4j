@@ -7,6 +7,7 @@ package com.neo4j.bench.client.profiling;
 
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.process.ProcessWrapper;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JvmVersion;
@@ -23,21 +24,35 @@ public class MpStatTracer implements ExternalProfiler
     private ProcessWrapper mpstat;
 
     @Override
-    public List<String> jvmInvokeArgs( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> invokeArgs( ForkDirectory forkDirectory,
+                                    BenchmarkGroup benchmarkGroup,
+                                    Benchmark benchmark,
+                                    Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public List<String> jvmArgs( JvmVersion jvmVersion,
+                                 ForkDirectory forkDirectory,
+                                 BenchmarkGroup benchmarkGroup,
+                                 Benchmark benchmark,
+                                 Parameters additionalParameters )
     {
         return Collections.emptyList();
     }
 
     @Override
-    public void beforeProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void beforeProcess( ForkDirectory forkDirectory,
+                               BenchmarkGroup benchmarkGroup,
+                               Benchmark benchmark,
+                               Parameters additionalParameters )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor( benchmarkGroup, benchmark, MEASUREMENT, ProfilerType.MP_STAT );
+        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                              benchmark,
+                                                                                              MEASUREMENT,
+                                                                                              ProfilerType.MP_STAT,
+                                                                                              additionalParameters );
 
         Path mpstatLog = forkDirectory.pathFor( recordingDescriptor );
         mpstat = ProcessWrapper.start( new ProcessBuilder()
@@ -47,7 +62,10 @@ public class MpStatTracer implements ExternalProfiler
     }
 
     @Override
-    public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public void afterProcess( ForkDirectory forkDirectory,
+                              BenchmarkGroup benchmarkGroup,
+                              Benchmark benchmark,
+                              Parameters additionalParameters )
     {
         mpstat.stop();
     }

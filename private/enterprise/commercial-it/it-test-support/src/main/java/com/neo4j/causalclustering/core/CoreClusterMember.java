@@ -34,11 +34,15 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.configuration.LayoutConfig.of;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -64,7 +68,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
-    private final String dbName;
     private final File databasesDirectory;
     private final CoreGraphDatabaseFactory dbFactory;
     private volatile boolean hasPanicked;
@@ -115,6 +118,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         config.put( new BoltConnector( "bolt" ).enabled.name(), "true" );
         config.put( new BoltConnector( "bolt" ).listen_address.name(), listenAddress( listenAddress, boltPort ) );
         config.put( new BoltConnector( "bolt" ).advertised_address.name(), boltAdvertisedSocketAddress );
+        config.put( new BoltConnector( "bolt" ).encryption_level.name(), DISABLED.name() );
         config.put( new HttpConnector( "http", Encryption.NONE ).type.name(), "HTTP" );
         config.put( new HttpConnector( "http", Encryption.NONE ).enabled.name(), "true" );
         config.put( new HttpConnector( "http", Encryption.NONE ).listen_address.name(), listenAddress( listenAddress, httpPort ) );
@@ -140,10 +144,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         databasesDirectory = new File( dataDir, "databases" );
         memberConfig = Config.defaults( config );
 
-        this.dbName = memberConfig.get( CausalClusteringSettings.database );
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     @Override
@@ -184,7 +187,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         {
             try
             {
-                database.shutdown();
+                database.getManagementService().shutdown();
             }
             finally
             {
@@ -212,14 +215,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     }
 
     @Override
-    public File databaseDirectory()
+    public DatabaseLayout databaseLayout()
     {
-        return defaultDatabaseLayout.databaseDirectory();
-    }
-
-    protected File storeLayout()
-    {
-        return databasesDirectory;
+        return defaultDatabaseLayout;
     }
 
     public RaftLogPruner raftLogPruner()
@@ -263,9 +261,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return serverId;
     }
 
-    public String dbName()
+    public DatabaseId databaseId()
     {
-        return dbName;
+        return database.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
     }
 
     @Override
@@ -310,13 +308,8 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
     public File raftLogDirectory()
     {
-        String defaultDatabaseName = memberConfig.get( GraphDatabaseSettings.default_database );
-        return clusterStateLayout.raftLogDirectory( defaultDatabaseName );
-    }
-
-    public void disableCatchupServer() throws Throwable
-    {
-        database.disableCatchupServer();
+        DatabaseId defaultDatabaseId = new DatabaseId( memberConfig.get( GraphDatabaseSettings.default_database ) );
+        return clusterStateLayout.raftLogDirectory( defaultDatabaseId );
     }
 
     public int discoveryPort()

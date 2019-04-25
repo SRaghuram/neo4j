@@ -10,7 +10,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -25,17 +24,17 @@ import org.neo4j.logging.LogProvider;
 class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final Class<T> messageType;
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
+    private final DatabaseManager<?> databaseManager;
     private final Function<Database,SimpleChannelInboundHandler<T>> handlerFactory;
     private final CatchupServerProtocol protocol;
     private final LogProvider logProvider;
 
-    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Supplier<DatabaseManager> databaseManagerSupplier,
+    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, DatabaseManager<?> databaseManager,
             Function<Database,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType, LogProvider logProvider )
     {
         super( messageType );
         this.messageType = messageType;
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.databaseManager = databaseManager;
         this.handlerFactory = handlerFactory;
         this.protocol = protocol;
         this.logProvider = logProvider;
@@ -44,11 +43,11 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extend
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, T request ) throws Exception
     {
-        String databaseName = request.databaseName();
+        var databaseId = request.databaseId();
 
-        SimpleChannelInboundHandler<T> handler = databaseManagerSupplier.get()
-                .getDatabaseContext( databaseName )
-                .map( DatabaseContext::getDatabase )
+        SimpleChannelInboundHandler<T> handler = databaseManager
+                .getDatabaseContext( databaseId )
+                .map( DatabaseContext::database )
                 .map( handlerFactory )
                 .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol, logProvider ) );
 

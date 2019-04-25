@@ -66,8 +66,8 @@
     <modules>
         <module>benchmark-results-client</module>
         <module>benchmark-procedures</module>
-        <module>ldbc</module>
         <module>micro</module>
+        <module>ldbc</module>
         <module>macro</module>
         <module>import</module>
     </modules>

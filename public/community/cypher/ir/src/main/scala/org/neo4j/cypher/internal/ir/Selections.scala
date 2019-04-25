@@ -38,6 +38,8 @@ case class Selections(predicates: Set[Predicate] = Set.empty) {
   def patternPredicatesGiven(ids: Set[String]): Seq[Expression] = predicatesGiven(ids).filter(containsPatternPredicates)
 
   private def containsPatternPredicates(e: Expression): Boolean = e match {
+    case _: ExistsSubClause        => true
+    case Not(_: ExistsSubClause)   => true
     case _: PatternExpression      => true
     case Not(_: PatternExpression) => true
     case Ors(exprs)                => exprs.exists(containsPatternPredicates)
@@ -90,10 +92,10 @@ case class Selections(predicates: Set[Predicate] = Set.empty) {
   def ++(other: Selections): Selections = {
     val otherPredicates = other.predicates
     val keptPredicates  = predicates.filter {
-      case pred@Predicate(_, expr: PartialPredicate[_]) =>
+      case Predicate(_, expr: PartialPredicate[_]) =>
         !expr.coveringPredicate.asPredicates.forall(expr => otherPredicates.contains(expr) || predicates.contains(expr))
 
-      case pred =>
+      case _ =>
         true
     }
 

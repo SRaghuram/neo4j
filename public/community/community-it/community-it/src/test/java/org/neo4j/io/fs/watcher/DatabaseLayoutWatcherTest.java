@@ -71,7 +71,7 @@ class DatabaseLayoutWatcherTest
         watcher.start();
 
         verify( fileWatcher ).watch( testDirectory.databaseDir() );
-        verify( fileWatcher ).watch( testDirectory.databaseDir().getParentFile() );
+        verify( fileWatcher ).watch( testDirectory.storeDir() );
         verify( fileWatcher ).addFileWatchEventListener( eventListener );
     }
 
@@ -84,7 +84,7 @@ class DatabaseLayoutWatcherTest
         watcher.stop();
 
         verify( fileWatcher ).removeFileWatchEventListener( eventListener );
-        assertEquals( 2, CountingWatchedResource.counter.get() );
+        assertEquals( 4, CountingWatchedResource.counter.get() );
     }
 
     private static class CountingWatchedResource implements WatchedResource

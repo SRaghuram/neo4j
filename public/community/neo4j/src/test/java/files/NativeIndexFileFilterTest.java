@@ -26,7 +26,8 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
+import org.neo4j.kernel.api.impl.schema.LuceneIndexProvider;
+import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory30;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.index.schema.NumberIndexProvider;
 import org.neo4j.kernel.impl.index.schema.SpatialIndexProvider;
@@ -38,12 +39,12 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory.subProviderDirectoryStructure;
+import static org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory30.subProviderDirectoryStructure;
 import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesByProviderKey;
 
 public class NativeIndexFileFilterTest
 {
-    private static final IndexProviderDescriptor LUCENE_DESCRTIPTOR = LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR;
+    private static final IndexProviderDescriptor LUCENE_DESCRTIPTOR = LuceneIndexProvider.DESCRIPTOR;
 
     @Rule
     public DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -131,6 +132,6 @@ public class NativeIndexFileFilterTest
     private void createFile( File file ) throws IOException
     {
         fs.mkdirs( file.getParentFile() );
-        fs.create( file ).close();
+        fs.write( file ).close();
     }
 }

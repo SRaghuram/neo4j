@@ -378,6 +378,13 @@ public class GraphDatabaseSettings implements LoadableConfig
     public static final Setting<String> cypher_morsel_runtime_scheduler =
             setting( "unsupported.cypher.morsel_runtime_scheduler", STRING, "simple" );
 
+    @Description( "Operator fusing means that multiple operators such as for example " +
+                  "AllNodesScan -> Filter -> ProduceResult can be fused into a single specialized operator. " +
+                  "Disabling this option might cause performance degradations." )
+    @Internal
+    public static final Setting<Boolean> cypher_morsel_fuse_operators =
+            setting( "unsupported.cypher.morsel_fuse_operators", BOOLEAN, "true" );
+
     @Description( "The maximum amount of time to wait for the database to become available, when " +
                   "starting a new transaction." )
     @Internal
@@ -435,7 +442,7 @@ public class GraphDatabaseSettings implements LoadableConfig
     @Internal
     @Dynamic
     public static final Setting<List<String>> store_internal_debug_contexts = setting( "unsupported.dbms.logs.debug.debug_loggers",
-            list( ",", STRING ), "org.neo4j.diagnostics,org.neo4j.cluster.protocol,org.neo4j.kernel.ha" );
+            list( ",", STRING ), "org.neo4j.diagnostics" );
 
     @Description( "Debug log level threshold." )
     @Dynamic
@@ -548,15 +555,14 @@ public class GraphDatabaseSettings implements LoadableConfig
     public enum SchemaIndex
     {
         NATIVE_BTREE10( "native-btree", "1.0", false ),
-        NATIVE20( "lucene+native", "2.0", true ),
-        NATIVE10( "lucene+native", "1.0", true ),
-        LUCENE10( "lucene", "1.0", true );
+        NATIVE30( "lucene+native", "3.0", false );
 
         private final String providerKey;
         private final String providerVersion;
         private final boolean deprecated;
         private final String providerName;
 
+        // NOTE: if any providers are deprecated in the future, go to the git history and bring back IndexingServiceTest.shouldLogDeprecatedIndexesOnStart.
         SchemaIndex( String providerKey, String providerVersion, boolean deprecated )
         {
             this.providerKey = providerKey;
@@ -630,6 +636,11 @@ public class GraphDatabaseSettings implements LoadableConfig
             "the rest, but, the integrity of the database might be compromised." )
     @Internal
     public static final Setting<Boolean> fail_on_corrupted_log_files = setting("unsupported.dbms.tx_log.fail_on_corrupted_log_files", BOOLEAN, TRUE );
+
+    @Description( "If `true`, Neo4j will abort recovery if logical log files are missing. Setting " +
+            "this to `false` will allow Neo4j to create new empty missing files for already existing database, but, " +
+            "the integrity of the database might be compromised." )
+    public static final Setting<Boolean> fail_on_missing_files = setting( "dbms.recovery.fail_on_missing_files", BOOLEAN, TRUE );
 
     @Description( "Use a quick approach for rebuilding the ID generators. This give quicker recovery time, " +
             "but will limit the ability to reuse the space of deleted entities." )
@@ -933,10 +944,6 @@ public class GraphDatabaseSettings implements LoadableConfig
     @Internal
     public static final Setting<Boolean> archive_failed_index = setting(
             "unsupported.dbms.index.archive_failed", BOOLEAN, FALSE );
-
-    @Internal
-    @Description( "Ignore the store lock. Shall only be used by internal code which knows what is safe." )
-    public static final Setting<Boolean> ignore_store_lock = setting( "dbms.ignore_store_lock", BOOLEAN, FALSE );
 
     // Needed to validate config, accessed via reflection
     @SuppressWarnings( "unused" )

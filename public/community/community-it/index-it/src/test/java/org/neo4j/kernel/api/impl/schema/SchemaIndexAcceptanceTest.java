@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -34,10 +35,11 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema.IndexState;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.helpers.collection.Iterators.loop;
@@ -58,6 +60,7 @@ public class SchemaIndexAcceptanceTest
     private GraphDatabaseService db;
     private final Label label = label( "PERSON" );
     private final String propertyKey = "key";
+    private DatabaseManagementService managementService;
 
     @Before
     public void before()
@@ -68,7 +71,7 @@ public class SchemaIndexAcceptanceTest
     @After
     public void after()
     {
-        db.shutdown();
+        managementService.shutdown();
     }
 
     @Test
@@ -175,20 +178,20 @@ public class SchemaIndexAcceptanceTest
 
     private GraphDatabaseService newDb()
     {
-        return new TestGraphDatabaseFactory()
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fsRule.get() ) )
-                .newImpermanentDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fsRule.get() ) ).newImpermanentService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void crashAndRestart() throws Exception
     {
-        fsRule.snapshot( db::shutdown );
+        fsRule.snapshot( managementService::shutdown );
         db = newDb();
     }
 
     private void restart()
     {
-        db.shutdown();
+        managementService.shutdown();
         db = newDb();
     }
 

@@ -19,15 +19,9 @@
  */
 package org.neo4j.graphdb.facade.spi;
 
-import java.net.URL;
-
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.event.DatabaseEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
-import org.neo4j.graphdb.factory.module.DatabaseModule;
-import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -35,6 +29,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -45,23 +40,16 @@ import org.neo4j.values.virtual.MapValue;
 
 public class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
 {
-    private final DatabaseLayout databaseLayout;
-    private final DatabaseModule sourceModule;
-    private final DependencyResolver resolver;
+    private final Database database;
     private final CoreAPIAvailabilityGuard availability;
-    private final ThrowingFunction<URL,URL,URLAccessValidationError> urlValidator;
     private final SecurityContext securityContext;
     private final ThreadToStatementContextBridge threadToTransactionBridge;
 
-    public ProcedureGDBFacadeSPI( DatabaseModule sourceModule, DependencyResolver resolver, CoreAPIAvailabilityGuard availability,
-            ThrowingFunction<URL,URL,URLAccessValidationError> urlValidator, SecurityContext securityContext,
-            ThreadToStatementContextBridge threadToTransactionBridge )
+    public ProcedureGDBFacadeSPI( Database database, CoreAPIAvailabilityGuard availability,
+            SecurityContext securityContext, ThreadToStatementContextBridge threadToTransactionBridge )
     {
-        this.databaseLayout = sourceModule.database.getDatabaseLayout();
-        this.sourceModule = sourceModule;
-        this.resolver = resolver;
+        this.database = database;
         this.availability = availability;
-        this.urlValidator = urlValidator;
         this.securityContext = securityContext;
         this.threadToTransactionBridge = threadToTransactionBridge;
     }
@@ -75,19 +63,19 @@ public class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
     @Override
     public DependencyResolver resolver()
     {
-        return resolver;
+        return database.getDependencyResolver();
     }
 
     @Override
     public StoreId storeId()
     {
-        return sourceModule.storeId.get();
+        return database.getStoreId();
     }
 
     @Override
     public DatabaseLayout databaseLayout()
     {
-        return databaseLayout;
+        return database.getDatabaseLayout();
     }
 
     @Override
@@ -102,24 +90,12 @@ public class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
         try
         {
             availability.assertDatabaseAvailable();
-            return sourceModule.database.getExecutionEngine().executeQuery( query, parameters, tc, false );
+            return database.getExecutionEngine().executeQuery( query, parameters, tc, false );
         }
         catch ( QueryExecutionKernelException e )
         {
             throw e.asUserException();
         }
-    }
-
-    @Override
-    public void registerDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void unregisterDatabaseEventHandler( DatabaseEventHandler handler )
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -135,21 +111,9 @@ public class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
     }
 
     @Override
-    public URL validateURLAccess( URL url ) throws URLAccessValidationError
-    {
-        return urlValidator.apply( url );
-    }
-
-    @Override
     public GraphDatabaseQueryService queryService()
     {
-        return resolver.resolveDependency( GraphDatabaseQueryService.class );
-    }
-
-    @Override
-    public void shutdown()
-    {
-        throw new UnsupportedOperationException();
+        return resolver().resolveDependency( GraphDatabaseQueryService.class );
     }
 
     @Override
@@ -158,7 +122,7 @@ public class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
         try
         {
             availability.assertDatabaseAvailable();
-            KernelTransaction kernelTx = sourceModule.kernelAPI.get().beginTransaction( type, this.securityContext, connectionInfo, timeout );
+            KernelTransaction kernelTx = database.getKernel().beginTransaction( type, this.securityContext, connectionInfo, timeout );
             kernelTx.registerCloseListener(
                     txId -> threadToTransactionBridge.unbindTransactionFromCurrentThread() );
             threadToTransactionBridge.bindTransactionToCurrentThread( kernelTx );

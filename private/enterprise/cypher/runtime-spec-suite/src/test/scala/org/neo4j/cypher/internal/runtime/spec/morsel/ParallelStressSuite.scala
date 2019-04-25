@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 import org.neo4j.graphdb.Node
 
 object ParallelStressSuite {
@@ -22,13 +22,13 @@ object ParallelStressSuite {
   *
   * To use this, implement a StressTest that extends this class and mixes in all the traits that makes sense, while overriding the required methods.
   */
-abstract class ParallelStressSuite()
+abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     ENTERPRISE.PARALLEL.copyWith(
       GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free",
       GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
       GraphDatabaseSettings.cypher_worker_count -> WORKERS.toString),
-    MorselRuntime) {
+    runtime) {
 
   private val morselsPerGraph = 10
   private val graphSize = morselsPerGraph * MORSEL_SIZE
@@ -44,12 +44,43 @@ abstract class ParallelStressSuite()
     }
   }
 
+  // TODO This is to investigate flaky tests
+  def stringify(thread: Thread, elements: Array[StackTraceElement]): Unit = {
+    val builder = new StringBuilder("\"" + thread.getName + "\"" + (if (thread.isDaemon) {
+      " daemon"
+    } else {
+      ""
+    }) + " prio=" + thread.getPriority + " tid=" + thread.getId + " " + thread.getState.name.toLowerCase + "\n")
+    builder.append("   ").append(classOf[Thread.State].getName).append(": ").append(thread.getState.name.toUpperCase).append("\n")
+    for (element <- elements) {
+      builder.append("      at ").append(element.getClassName).append(".").append(element.getMethodName)
+      if (element.isNativeMethod) {
+        builder.append("(Native method)")
+      } else if (element.getFileName == null) {
+        builder.append("(Unknown source)")
+      } else {
+        builder.append("(").append(element.getFileName).append(":").append(element.getLineNumber).append(")")
+      }
+      builder.append("\n")
+    }
+    println(builder.toString)
+  }
+
   def init(): Unit = {
     nodes = nodePropertyGraph(graphSize, {
       case i => Map("prop" -> i, "text" -> i.toString)
     }, "Label")
-    index("Label", "prop")
-    index("Label", "text")
+    try {
+      index("Label", "prop")
+      index("Label", "text")
+    } catch {
+      case e:IllegalStateException =>
+        // TODO This is to investigate flaky tests
+      Thread.getAllStackTraces.forEach {
+        case (thread, trace) => stringify(thread, trace)
+      }
+      throw e
+    }
     val relTuples = (for (i <- nodes.indices) yield {
       Seq(
         (i, (i + 1) % nodes.length, "NEXT"),
@@ -63,7 +94,7 @@ abstract class ParallelStressSuite()
   }
 
   def allNodesNTimes(n: Int): InputValues = {
-    inputSingleColumn(morselsPerGraph * n, MORSEL_SIZE, i => nodes(i % nodes.size))
+    inputColumns(morselsPerGraph * n, MORSEL_SIZE, i => nodes(i % nodes.size))
   }
 
   def singleNodeInput(input: InputValues): Iterable[Array[Node]] = input.flatten.map(_.map(_.asInstanceOf[Node]))
@@ -91,7 +122,7 @@ trait RHSOfApplyLeafStressSuite {
     */
   def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD
 
-  test("should work on RHS of apply with parallelism") {
+  ignore("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -139,7 +170,7 @@ trait RHSOfApplyOneChildStressSuite {
     */
   def rhsOfApplyOperator(variable: String): RHSOfApplyOneChildTD
 
-  test("should work on RHS of apply with parallelism") {
+  ignore("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -191,7 +222,7 @@ trait RHSOfCartesianLeafStressSuite {
     */
   def rhsOfCartesianLeaf(variable: String): RHSOfCartesianLeafTD
 
-  test("should work on RHS of cartesian product with parallelism") {
+  ignore("should work on RHS of cartesian product with parallelism") {
     // given
     init()
 
@@ -244,7 +275,7 @@ trait RHSOfCartesianOneChildStressSuite {
     */
   def rhsOfCartesianOperator(variable: String): RHSOfCartesianOneChildTD
 
-  test("should work on RHS of cartesian product with parallelism") {
+  ignore("should work on RHS of cartesian product with parallelism") {
     // given
     init()
 
@@ -302,7 +333,7 @@ trait OnTopOfParallelInputStressTest {
     */
   def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD
 
-  test("should work on top of input with parallelism") {
+  ignore("should work on top of input with parallelism") {
     // given
     init()
 

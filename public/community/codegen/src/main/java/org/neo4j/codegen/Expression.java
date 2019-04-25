@@ -24,6 +24,8 @@ import java.util.Arrays;
 
 import org.neo4j.values.AnyValue;
 
+import static java.lang.String.format;
+import static java.util.Arrays.stream;
 import static org.neo4j.codegen.TypeReference.BOOLEAN;
 import static org.neo4j.codegen.TypeReference.DOUBLE;
 import static org.neo4j.codegen.TypeReference.INT;
@@ -395,6 +397,20 @@ public abstract class Expression extends ExpressionTemplate
         };
     }
 
+    public static Expression arrayLength( Expression array )
+    {
+        assert array.type().isArray();
+
+        return new Expression( INT )
+        {
+            @Override
+            public void accept( ExpressionVisitor visitor )
+            {
+                visitor.arrayLength( array );
+            }
+        };
+    }
+
     public static Expression arraySet( Expression array, Expression index, Expression value )
     {
         assert array.type().isArray();
@@ -414,7 +430,7 @@ public abstract class Expression extends ExpressionTemplate
         if ( !lhs.type.equals( rhs.type ) )
         {
             throw new IllegalArgumentException(
-                    String.format( "Cannot add variables with different types. LHS %s, RHS %s", lhs.type.simpleName(),
+                    format( "Cannot add variables with different types. LHS %s, RHS %s", lhs.type.simpleName(),
                             rhs.type.simpleName() ) );
         }
 
@@ -433,7 +449,7 @@ public abstract class Expression extends ExpressionTemplate
         if ( !lhs.type.equals( rhs.type ) )
         {
             throw new IllegalArgumentException(
-                    String.format(
+                    format(
                             "Cannot subtract variables with different types. LHS %s, RHS %s",
                             lhs.type.simpleName(),
                             rhs.type.simpleName() ) );
@@ -453,7 +469,7 @@ public abstract class Expression extends ExpressionTemplate
         if ( !lhs.type.equals( rhs.type ) )
         {
             throw new IllegalArgumentException(
-                    String.format(
+                    format(
                             "Cannot multiply variables with different types. LHS %s, RHS %s",
                             lhs.type.simpleName(),
                             rhs.type.simpleName() ) );
@@ -582,7 +598,6 @@ public abstract class Expression extends ExpressionTemplate
     /** box expression */
     public static Expression box( final Expression expression )
     {
-
         return new Expression( toBoxedType( expression.type ) )
         {
             @Override
@@ -690,11 +705,8 @@ public abstract class Expression extends ExpressionTemplate
 
     public static Expression invokeSuper( TypeReference parent, final Expression... parameters )
     {
-        TypeReference[] parameterTypes = new TypeReference[parameters.length];
-        for ( int i = 0; i < parameters.length; i++ )
-        {
-            parameterTypes[i] = parameters[i].type();
-        }
+        TypeReference[] parameterTypes = stream( parameters )
+                .map( ExpressionTemplate::type ).toArray( TypeReference[]::new );
 
         return new Expression( OBJECT )
         {

@@ -19,25 +19,43 @@
  */
 package org.neo4j.monitoring;
 
-import org.neo4j.graphdb.event.ErrorState;
+import java.util.Objects;
+
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 
-public class DatabaseHealth
+public class DatabaseHealth extends LifecycleAdapter implements Health
 {
     private static final String panicMessage = "The database has encountered a critical error, " +
             "and needs to be restarted. Please see database logs for more details.";
     private static final Class<?>[] CRITICAL_EXCEPTIONS = new Class[]{OutOfMemoryError.class};
 
     private volatile boolean healthy = true;
-    private final DatabasePanicEventGenerator dbpe;
+    private final DatabasePanicEventGenerator panicEventGenerator;
     private final Log log;
-    private Throwable causeOfPanic;
+    private volatile Throwable causeOfPanic;
+    private final CompositeDatabaseHealth globalHealth;
 
-    public DatabaseHealth( DatabasePanicEventGenerator dbpe, Log log )
+    public DatabaseHealth( DatabasePanicEventGenerator panicEventGenerator, Log log )
     {
-        this.dbpe = dbpe;
+        this( panicEventGenerator, log, null );
+    }
+
+    public DatabaseHealth( DatabasePanicEventGenerator panicEventGenerator, Log log, CompositeDatabaseHealth globalHealth )
+    {
+        this.panicEventGenerator = panicEventGenerator;
         this.log = log;
+        this.globalHealth = globalHealth;
+    }
+
+    @Override
+    public void stop() throws Exception
+    {
+       if ( globalHealth != null )
+       {
+           globalHealth.removeDatabaseHealth( this );
+       }
     }
 
     /**
@@ -47,62 +65,38 @@ public class DatabaseHealth
      * @param panicDisguise the cause of the unhealthy state wrapped in an exception of this type.
      * @throws EXCEPTION exception type to wrap cause in.
      */
+    @Override
     public <EXCEPTION extends Throwable> void assertHealthy( Class<EXCEPTION> panicDisguise ) throws EXCEPTION
     {
         if ( !healthy )
         {
-            EXCEPTION exception;
-            try
-            {
-                try
-                {
-                    exception = panicDisguise.getConstructor( String.class, Throwable.class )
-                            .newInstance( panicMessage, causeOfPanic );
-                }
-                catch ( NoSuchMethodException e )
-                {
-                    exception = panicDisguise.getConstructor( String.class ).newInstance( panicMessage );
-                    try
-                    {
-                        exception.initCause( causeOfPanic );
-                    }
-                    catch ( IllegalStateException ignored )
-                    {
-                    }
-                }
-            }
-            catch ( Exception e )
-            {
-                throw new Error( panicMessage + ". An exception of type " + panicDisguise.getName() +
-                        " was requested to be thrown but that proved impossible", e );
-            }
-            throw exception;
+            throw Exceptions.disguiseException( panicDisguise, panicMessage, causeOfPanic );
         }
     }
 
-    public void panic( Throwable cause )
+    @Override
+    public synchronized void panic( Throwable cause )
     {
         if ( !healthy )
         {
             return;
         }
 
-        if ( cause == null )
-        {
-            throw new IllegalArgumentException( "Must provide a cause for the database panic" );
-        }
+        Objects.requireNonNull( cause, "Must provide a non null cause for the database panic" );
         this.causeOfPanic = cause;
         this.healthy = false;
         log.error( "Database panic: " + panicMessage, cause );
-        dbpe.generateEvent( ErrorState.TX_MANAGER_NOT_OK, causeOfPanic );
+        panicEventGenerator.panic();
     }
 
+    @Override
     public boolean isHealthy()
     {
         return healthy;
     }
 
-    public boolean healed()
+    @Override
+    public synchronized boolean healed()
     {
         if ( hasCriticalFailure() )
         {
@@ -123,13 +117,10 @@ public class DatabaseHealth
         return !isHealthy() && Exceptions.contains( causeOfPanic, CRITICAL_EXCEPTIONS );
     }
 
+    @Override
     public Throwable cause()
     {
         return causeOfPanic;
     }
 
-    public static DatabaseHealth newDatabaseHealth( Log log )
-    {
-        return new DatabaseHealth( new DatabasePanicEventGenerator( new DatabaseEventHandlers( log ) ), log );
-    }
 }

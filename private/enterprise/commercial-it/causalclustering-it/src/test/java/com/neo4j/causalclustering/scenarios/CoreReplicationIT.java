@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -97,7 +98,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -152,7 +153,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -176,13 +177,15 @@ class CoreReplicationIT
         awaitForDataToBeApplied( leader );
         dataMatchesEventually( leader, cluster.coreMembers() );
 
-        CoreGraphDatabase follower = cluster.getMemberWithRole( Role.FOLLOWER ).database();
+        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
 
         // when
-        try ( Transaction tx = follower.beginTx() )
+        try ( Transaction tx = follower.beginTx();
+              ResourceIterator<Node> allNodes = follower.getAllNodes().iterator()
+        )
         {
             WriteOperationsNotAllowedException ex =
-                    assertThrows( WriteOperationsNotAllowedException.class, () -> follower.getAllNodes().iterator().next().setProperty( "name", "Mark" ) );
+                    assertThrows( WriteOperationsNotAllowedException.class, () -> allNodes.next().setProperty( "name", "Mark" ) );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }

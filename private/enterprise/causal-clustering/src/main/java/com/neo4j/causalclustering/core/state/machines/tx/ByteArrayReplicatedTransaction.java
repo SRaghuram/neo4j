@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.OptionalLong;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
 /**
@@ -22,7 +23,7 @@ import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
 {
     private final byte[] txBytes;
-    private final String databaseName;
+    private final DatabaseId databaseId;
 
     @Override
     public OptionalLong size()
@@ -36,11 +37,11 @@ public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
         contentHandler.handle( this );
     }
 
-    ByteArrayReplicatedTransaction( byte[] txBytes, String databaseName )
+    ByteArrayReplicatedTransaction( byte[] txBytes, DatabaseId databaseId )
     {
-        super( databaseName );
+        super( databaseId );
         this.txBytes = txBytes;
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
     }
 
     public byte[] getTxBytes()
@@ -82,9 +83,9 @@ public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
     }
 
     @Override
-    public String databaseName()
+    public DatabaseId databaseId()
     {
-        return databaseName;
+        return databaseId;
     }
 
     @Override

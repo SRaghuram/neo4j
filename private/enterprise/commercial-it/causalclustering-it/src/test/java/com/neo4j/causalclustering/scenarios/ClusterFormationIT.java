@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -19,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
@@ -29,6 +29,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @ClusterExtension
@@ -84,29 +85,29 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
-    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad()
+    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws TimeoutException
     {
         // given
         ExecutorService executorService = Executors.newSingleThreadExecutor();
+        CoreGraphDatabase leader = cluster.awaitLeader().database();
         executorService.submit( () ->
         {
-            CoreGraphDatabase leader = cluster.getMemberWithRole( Role.LEADER ).database();
             try ( Transaction tx = leader.beginTx() )
             {
                 leader.createNode();
@@ -120,19 +121,19 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         executorService.shutdown();
     }
@@ -141,14 +142,14 @@ public class ClusterFormationIT
     void shouldBeAbleToRestartTheCluster() throws Exception
     {
         // when started then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         cluster.shutdown();
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
 
         // when
         removeCoreMember();
@@ -159,7 +160,7 @@ public class ClusterFormationIT
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
     }
 
     private CoreClusterMember getExistingCoreMember()

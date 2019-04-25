@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.junit.Assert.assertEquals;
 
@@ -22,7 +23,7 @@ public class ReplicatedIdAllocationStateMachineTest
 
     private IdType someType = IdType.NODE;
     private IdType someOtherType = IdType.RELATIONSHIP;
-    private String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
     @Test
     public void shouldNotHaveAnyIdsInitially()
@@ -39,7 +40,7 @@ public class ReplicatedIdAllocationStateMachineTest
     {
         // given
         ReplicatedIdAllocationStateMachine stateMachine = new ReplicatedIdAllocationStateMachine( new InMemoryStateStorage<>( new IdAllocationState() ) );
-        ReplicatedIdAllocationRequest idAllocationRequest = new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName );
+        ReplicatedIdAllocationRequest idAllocationRequest = new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId );
 
         // when
         stateMachine.applyCommand( idAllocationRequest, 0, r -> {} );
@@ -57,9 +58,9 @@ public class ReplicatedIdAllocationStateMachineTest
         long index = 0;
 
         // when
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName ), index++, r -> {} );
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 1024, 1024, databaseName ), index++, r -> {} );
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 2048, 1024, databaseName ), index, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId ), index++, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 1024, 1024, databaseId ), index++, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 2048, 1024, databaseId ), index, r -> {} );
 
         // then
         assertEquals( 3072, stateMachine.firstUnallocated( someType ) );
@@ -72,9 +73,9 @@ public class ReplicatedIdAllocationStateMachineTest
         ReplicatedIdAllocationStateMachine stateMachine = new ReplicatedIdAllocationStateMachine( new InMemoryStateStorage<>( new IdAllocationState() ) );
 
         // when
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName ), 0, r -> {} );
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName ), 0, r -> {} );
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId ), 0, r -> {} );
 
         // then
         assertEquals( 1024, stateMachine.firstUnallocated( someType ) );
@@ -87,9 +88,9 @@ public class ReplicatedIdAllocationStateMachineTest
         ReplicatedIdAllocationStateMachine stateMachine = new ReplicatedIdAllocationStateMachine( new InMemoryStateStorage<>( new IdAllocationState() ) );
 
         // when
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseName ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0, 1024, databaseId ), 0, r -> {} );
         // apply command that doesn't consume ids because the requested range is non-contiguous
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 2048, 1024, databaseName ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 2048, 1024, databaseId ), 0, r -> {} );
 
         // then
         assertEquals( 1024, stateMachine.firstUnallocated( someType ) );
@@ -100,19 +101,19 @@ public class ReplicatedIdAllocationStateMachineTest
     {
         ReplicatedIdAllocationStateMachine stateMachine = new ReplicatedIdAllocationStateMachine( new InMemoryStateStorage<>( new IdAllocationState() ) );
 
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0L, 10, databaseName ), 0L, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 0L, 10, databaseId ), 0L, r -> {} );
         assertEquals( 10L, stateMachine.firstUnallocated( someType ) );
 
         // apply command that doesn't consume ids because the requested range is non-contiguous
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 20L, 10, databaseName ), 1L, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 20L, 10, databaseId ), 1L, r -> {} );
         assertEquals( 10L, stateMachine.firstUnallocated( someType ) );
 
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 10L, 10, databaseName ), 2L, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 10L, 10, databaseId ), 2L, r -> {} );
         assertEquals( 20L, stateMachine.firstUnallocated( someType ) );
 
         // try applying the same command again. The requested range is now contiguous, but the log index
         // has already been exceeded
-        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 20L, 10, databaseName ), 1L, r -> {} );
+        stateMachine.applyCommand( new ReplicatedIdAllocationRequest( me, someType, 20L, 10, databaseId ), 1L, r -> {} );
         assertEquals( 20L, stateMachine.firstUnallocated( someType ) );
     }
 }

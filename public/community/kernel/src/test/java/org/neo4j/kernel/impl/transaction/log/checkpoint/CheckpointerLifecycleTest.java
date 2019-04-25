@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.when;
 class CheckpointerLifecycleTest
 {
     private final CheckPointer checkPointer = mock( CheckPointer.class );
-    private final DatabaseHealth databaseHealth = mock( DatabaseHealth.class );
+    private final Health databaseHealth = mock( DatabaseHealth.class );
     private CheckpointerLifecycle checkpointLifecycle = new CheckpointerLifecycle( checkPointer, databaseHealth );
 
     @BeforeEach

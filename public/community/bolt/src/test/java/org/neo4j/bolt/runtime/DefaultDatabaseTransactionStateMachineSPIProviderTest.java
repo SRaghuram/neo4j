@@ -29,6 +29,8 @@ import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.v1.runtime.StatementProcessorReleaseManager;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,41 +38,43 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_ID;
 
 class DefaultDatabaseTransactionStateMachineSPIProviderTest
 {
     @Test
     void shouldReturnDefaultTransactionStateMachineSPIWithEmptyDatabaseName() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManagerWithDatabase( "neo4j" );
+        DatabaseManager<?> databaseManager = databaseManagerWithDatabase( new DatabaseId( "neo4j" ) );
         TransactionStateMachineSPIProvider spiProvider = newSpiProvider( databaseManager );
 
-        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( "", mock( StatementProcessorReleaseManager.class ) );
+        TransactionStateMachineSPI spi = spiProvider.getTransactionStateMachineSPI( ABSENT_DB_ID, mock( StatementProcessorReleaseManager.class ) );
         assertThat( spi, instanceOf( TransactionStateMachineSPI.class ) );
     }
 
     @Test
     void shouldErrorIfDatabaseNotFound() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManagerWithDatabase( "database" );
+        DatabaseManager<?> databaseManager = databaseManagerWithDatabase( new DatabaseId( "database" ) );
         TransactionStateMachineSPIProvider spiProvider = newSpiProvider( databaseManager );
 
         BoltProtocolBreachFatality error = assertThrows( BoltProtocolBreachFatality.class, () ->
-                spiProvider.getTransactionStateMachineSPI( "database", mock( StatementProcessorReleaseManager.class ) ) );
+                spiProvider.getTransactionStateMachineSPI( new DatabaseId( "database" ), mock( StatementProcessorReleaseManager.class ) ) );
         assertThat( error.getMessage(), containsString( "Database selection by name not supported by Bolt protocol version lower than BoltV4." ) );
     }
 
-    private DatabaseManager databaseManagerWithDatabase( String databaseName )
+    private DatabaseManager<StandaloneDatabaseContext> databaseManagerWithDatabase( DatabaseId databaseId )
     {
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
-        DatabaseContext databaseContext = mock( DatabaseContext.class );
-        when( databaseManager.getDatabaseContext( databaseName ) ).thenReturn( Optional.of( databaseContext ) );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = mock( DatabaseManager.class );
+        StandaloneDatabaseContext databaseContext = mock( StandaloneDatabaseContext.class );
+        when( databaseManager.getDatabaseContext( databaseId ) ).thenReturn( Optional.of( databaseContext ) );
         return databaseManager;
     }
 
     private TransactionStateMachineSPIProvider newSpiProvider( DatabaseManager databaseManager )
     {
-        return new DefaultDatabaseTransactionStatementSPIProvider( databaseManager, "neo4j", mock( BoltChannel.class ),
+        return new DefaultDatabaseTransactionStatementSPIProvider( databaseManager, new DatabaseId( "neo4j" ), mock( BoltChannel.class ),
                 Duration.ZERO, mock( Clock.class ) )
         {
             @Override

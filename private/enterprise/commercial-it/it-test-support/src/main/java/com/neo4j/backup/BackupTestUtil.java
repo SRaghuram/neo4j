@@ -26,11 +26,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
 
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.graphdb.Label.label;
@@ -39,26 +40,26 @@ import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
 public class BackupTestUtil
 {
-    public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, String databaseName ) throws Exception
+    public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, DatabaseId databaseId ) throws Exception
     {
-        String[] args = backupArguments( backupAddress( core.database() ), baseBackupDir, databaseName );
+        String[] args = backupArguments( backupAddress( core.database() ), baseBackupDir, databaseId );
         assertThat( runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ), equalTo( 0 ) );
-        return new File( baseBackupDir, databaseName );
+        return new File( baseBackupDir, databaseId.name() );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember<?> clusterMember ) throws IOException, CommandFailed
     {
-        restoreFromBackup( backup, fsa, clusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        restoreFromBackup( backup, fsa, clusterMember, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
-            ClusterMember<?> clusterMember, String database ) throws IOException, CommandFailed
+            ClusterMember<?> clusterMember, DatabaseId databaseId ) throws IOException, CommandFailed
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
-                .withSetting( GraphDatabaseSettings.default_database, database )
+                .withSetting( GraphDatabaseSettings.default_database, databaseId.name() )
                 .withConnectorsDisabled()
                 .build();
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, database, true );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseId, true );
         restoreDatabaseCommand.execute();
     }
 
@@ -72,13 +73,13 @@ public class BackupTestUtil
         } ).database();
     }
 
-    public static String[] backupArguments( String from, File backupsDir, String databaseName )
+    public static String[] backupArguments( String from, File backupsDir, DatabaseId databaseId )
     {
         return new String[]{
                 "--from=" + from,
                 "--cc-report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
-                "--database=" + databaseName
+                "--database=" + databaseId.name()
         };
     }
 

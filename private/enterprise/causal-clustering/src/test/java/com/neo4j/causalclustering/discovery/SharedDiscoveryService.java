@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,137 +21,153 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
+
+import static java.util.Collections.unmodifiableMap;
+import static org.neo4j.helpers.collection.CollectorsUtil.entriesToMap;
 
 public final class SharedDiscoveryService
 {
     private static final int MIN_DISCOVERY_MEMBERS = 2;
 
-    private final ConcurrentMap<MemberId,CoreServerInfo> coreMembers;
-    private final ConcurrentMap<MemberId,ReadReplicaInfo> readReplicas;
-    private final List<SharedDiscoveryCoreClient> listeningClients;
-    private final ConcurrentMap<String,ClusterId> clusterIdDbNames;
-    private final ConcurrentMap<String,LeaderInfo> leaderMap;
-    private final CountDownLatch enoughMembers;
+    private final ConcurrentMap<MemberId,CoreServerInfo> coreMembers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<MemberId,ReadReplicaInfo> readReplicas = new ConcurrentHashMap<>();
+    private final List<SharedDiscoveryCoreClient> listeningClients = new CopyOnWriteArrayList<>();
+    private final ConcurrentMap<DatabaseId,ClusterId> clusterIdDbNames = new ConcurrentHashMap<>();
+    private final ConcurrentMap<DatabaseId,LeaderInfo> leaderMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<DatabaseId,CountDownLatch> enoughMembersByDatabaseName = new ConcurrentHashMap<>();
 
-    SharedDiscoveryService()
+    void waitForClusterFormation( DatabaseId databaseId ) throws InterruptedException
     {
-        coreMembers = new ConcurrentHashMap<>();
-        readReplicas = new ConcurrentHashMap<>();
-        listeningClients = new CopyOnWriteArrayList<>();
-        clusterIdDbNames = new ConcurrentHashMap<>();
-        leaderMap = new ConcurrentHashMap<>();
-        enoughMembers = new CountDownLatch( MIN_DISCOVERY_MEMBERS );
+        enoughMembersLatch( databaseId ).await();
     }
 
-    void waitForClusterFormation() throws InterruptedException
+    CoreTopology getCoreTopology( DatabaseId databaseId, SharedDiscoveryCoreClient client )
     {
-        enoughMembers.await();
+        return getCoreTopology( databaseId, canBeBootstrapped( databaseId, client ) );
     }
 
-    private boolean canBeBootstrapped( SharedDiscoveryCoreClient client )
+    CoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped )
     {
-        Stream<SharedDiscoveryCoreClient> clientsWhoCanLeadForMyDb = listeningClients.stream()
-                .filter( c -> !c.refusesToBeLeader() && c.localDBName().equals( client.localDBName() ) );
+        Map<MemberId,CoreServerInfo> databaseCoreMembers = coreMembers.entrySet()
+                .stream()
+                .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
+                .collect( entriesToMap() );
 
-        Optional<SharedDiscoveryCoreClient> firstAppropriateClient = clientsWhoCanLeadForMyDb.findFirst();
-
-        return firstAppropriateClient.map( c -> c.equals( client ) ).orElse( false );
+        return new CoreTopology( databaseId, clusterIdDbNames.get( databaseId ), canBeBootstrapped, databaseCoreMembers );
     }
 
-    CoreTopology getCoreTopology( SharedDiscoveryCoreClient client )
+    ReadReplicaTopology getReadReplicaTopology( DatabaseId databaseId )
     {
-        //Extract config from client
-        String dbName = client.localDBName();
-        boolean canBeBootstrapped = canBeBootstrapped( client );
-        return getCoreTopology( dbName, canBeBootstrapped );
+        Map<MemberId,ReadReplicaInfo> databaseReadReplicas = readReplicas.entrySet()
+                .stream()
+                .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
+                .collect( entriesToMap() );
+
+        return new ReadReplicaTopology( databaseId, databaseReadReplicas );
     }
 
-    CoreTopology getCoreTopology( String dbName, boolean canBeBootstrapped  )
+    synchronized void registerCoreMember( SharedDiscoveryCoreClient client )
     {
-        return new CoreTopology( clusterIdDbNames.get( dbName ),
-                canBeBootstrapped, Collections.unmodifiableMap( coreMembers )  );
-    }
-
-    ReadReplicaTopology getReadReplicaTopology()
-    {
-        return new ReadReplicaTopology( Collections.unmodifiableMap( readReplicas ) );
-    }
-
-    void registerCoreMember( SharedDiscoveryCoreClient client )
-    {
-        CoreServerInfo previousMember = coreMembers.putIfAbsent( client.getMemberId(), client.getCoreServerInfo() );
+        MemberId memberId = client.myself();
+        CoreServerInfo coreServerInfo = client.getCoreServerInfo();
+        CoreServerInfo previousMember = coreMembers.putIfAbsent( memberId, coreServerInfo );
         if ( previousMember == null )
         {
-
             listeningClients.add( client );
-            enoughMembers.countDown();
-            notifyCoreClients();
-        }
-    }
-
-    void registerReadReplica( SharedDiscoveryReadReplicaClient client )
-    {
-        ReadReplicaInfo previousRR = readReplicas.putIfAbsent( client.getMemberId(), client.getReadReplicainfo() );
-        if ( previousRR == null )
-        {
-            notifyCoreClients();
-        }
-    }
-
-    void unRegisterCoreMember( SharedDiscoveryCoreClient client )
-    {
-        synchronized ( this )
-        {
-            listeningClients.remove( client );
-            coreMembers.remove( client.getMemberId() );
-        }
-        notifyCoreClients();
-    }
-
-    void unRegisterReadReplica( SharedDiscoveryReadReplicaClient client )
-    {
-        readReplicas.remove( client.getMemberId() );
-        notifyCoreClients();
-    }
-
-    void casLeaders( LeaderInfo leaderInfo, String dbName )
-    {
-        synchronized ( leaderMap )
-        {
-            Optional<LeaderInfo> current = Optional.ofNullable( leaderMap.get( dbName ) );
-
-            boolean sameLeader = current.map( LeaderInfo::memberId ).equals( Optional.ofNullable( leaderInfo.memberId() ) );
-
-            int termComparison = current.map( l -> Long.compare( l.term(), leaderInfo.term() ) ).orElse( -1 );
-
-            boolean greaterTermExists = termComparison > 0;
-
-            boolean sameTermButNoStepDown = termComparison == 0 && !leaderInfo.isSteppingDown();
-
-            if ( !( greaterTermExists || sameTermButNoStepDown || sameLeader ) )
+            for ( DatabaseId databaseId : coreServerInfo.getDatabaseIds() )
             {
-                leaderMap.put( dbName, leaderInfo );
+                enoughMembersLatch( databaseId ).countDown();
+                notifyCoreClients( databaseId );
             }
         }
     }
 
-    boolean casClusterId( ClusterId clusterId, String dbName )
+    synchronized void registerReadReplica( SharedDiscoveryReadReplicaClient client )
     {
-        ClusterId previousId = clusterIdDbNames.putIfAbsent( dbName, clusterId );
+        MemberId memberId = client.myself();
+        ReadReplicaInfo readReplicaInfo = client.getReadReplicaInfo();
+        ReadReplicaInfo previousRR = readReplicas.putIfAbsent( memberId, readReplicaInfo );
+        if ( previousRR == null )
+        {
+            for ( DatabaseId databaseId : readReplicaInfo.getDatabaseIds() )
+            {
+                notifyCoreClients( databaseId );
+            }
+        }
+    }
+
+    synchronized void unRegisterCoreMember( SharedDiscoveryCoreClient client )
+    {
+        listeningClients.remove( client );
+        coreMembers.remove( client.myself() );
+        for ( DatabaseId databaseId : client.getDatabaseIds() )
+        {
+            notifyCoreClients( databaseId );
+        }
+    }
+
+    synchronized void unRegisterReadReplica( SharedDiscoveryReadReplicaClient client )
+    {
+        readReplicas.remove( client.myself() );
+        for ( DatabaseId databaseId : client.getDatabaseIds() )
+        {
+            notifyCoreClients( databaseId );
+        }
+    }
+
+    void casLeaders( LeaderInfo newLeader, DatabaseId databaseId )
+    {
+        leaderMap.compute( databaseId, ( ignore, currentLeader ) ->
+        {
+            MemberId currentLeaderId = currentLeader != null ? currentLeader.memberId() : null;
+            boolean sameLeader = Objects.equals( currentLeaderId, newLeader.memberId() );
+
+            long currentLeaderTerm = currentLeader != null ? currentLeader.term() : -1;
+            long newLeaderTerm = newLeader.term();
+            boolean greaterTermExists = currentLeaderTerm > newLeaderTerm;
+
+            boolean sameTermButNoStepDown = currentLeaderTerm == newLeaderTerm && !newLeader.isSteppingDown();
+
+            if ( sameLeader || greaterTermExists || sameTermButNoStepDown )
+            {
+                return currentLeader;
+            }
+            else
+            {
+                return newLeader;
+            }
+        } );
+    }
+
+    boolean casClusterId( ClusterId clusterId, DatabaseId databaseId )
+    {
+        ClusterId previousId = clusterIdDbNames.putIfAbsent( databaseId, clusterId );
 
         boolean success = previousId == null || previousId.equals( clusterId );
 
         if ( success )
         {
-            notifyCoreClients();
+            notifyCoreClients( databaseId );
         }
         return success;
     }
 
+    Map<MemberId,CoreServerInfo> allCoreServers()
+    {
+        return unmodifiableMap( coreMembers );
+    }
+
+    Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    {
+        return unmodifiableMap( readReplicas );
+    }
+
     Map<MemberId,RoleInfo> getCoreRoles()
     {
-        Set<String> dbNames = clusterIdDbNames.keySet();
+        Set<DatabaseId> dbNames = clusterIdDbNames.keySet();
         Set<MemberId> allLeaders = dbNames.stream()
                 .map( dbName -> Optional.ofNullable( leaderMap.get( dbName ) ) )
                 .filter( Optional::isPresent )
@@ -162,11 +179,38 @@ public final class SharedDiscoveryService
         return coreMembers.keySet().stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
     }
 
-    private synchronized void notifyCoreClients()
+    AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        listeningClients.forEach( c -> {
-            c.onCoreTopologyChange( getCoreTopology( c ) );
-            c.onReadReplicaTopologyChange( getReadReplicaTopology() );
-        } );
+        CoreServerInfo coreServerInfo = coreMembers.get( upstream );
+        if ( coreServerInfo != null )
+        {
+            return coreServerInfo.getCatchupServer();
+        }
+        ReadReplicaInfo readReplicaInfo = readReplicas.get( upstream );
+        if ( readReplicaInfo != null )
+        {
+            return readReplicaInfo.getCatchupServer();
+        }
+        throw new CatchupAddressResolutionException( upstream );
+    }
+
+    private synchronized void notifyCoreClients( DatabaseId databaseId )
+    {
+        listeningClients.forEach( client -> client.onCoreTopologyChange( getCoreTopology( databaseId, client ) ) );
+    }
+
+    private CountDownLatch enoughMembersLatch( DatabaseId databaseId )
+    {
+        return enoughMembersByDatabaseName.computeIfAbsent( databaseId, ignore -> new CountDownLatch( MIN_DISCOVERY_MEMBERS ) );
+    }
+
+    private boolean canBeBootstrapped( DatabaseId databaseId, SharedDiscoveryCoreClient client )
+    {
+        Optional<SharedDiscoveryCoreClient> firstAppropriateClient = listeningClients.stream()
+                .filter( c -> !c.refusesToBeLeader() )
+                .filter( c -> c.getDatabaseIds().contains( databaseId ) )
+                .findFirst();
+
+        return firstAppropriateClient.map( c -> c.equals( client ) ).orElse( false );
     }
 }

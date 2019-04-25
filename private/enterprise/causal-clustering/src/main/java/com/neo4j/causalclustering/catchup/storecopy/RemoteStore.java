@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
 
@@ -20,10 +19,12 @@ import org.neo4j.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
@@ -46,9 +47,11 @@ public class RemoteStore
     private final CommitStateHelper commitStateHelper;
     private final StoreCopyClientMonitor storeCopyClientMonitor;
     private final StorageEngineFactory storageEngineFactory;
+    private final DatabaseId databaseId;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory )
+            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
+            DatabaseId databaseId )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -61,6 +64,7 @@ public class RemoteStore
         this.monitors = monitors;
         this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         this.storageEngineFactory = storageEngineFactory;
+        this.databaseId = databaseId;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
@@ -103,7 +107,7 @@ public class RemoteStore
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
-            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config );
+            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, databaseId );
 
             txPuller.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );

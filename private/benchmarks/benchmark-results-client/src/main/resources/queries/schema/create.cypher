@@ -2,10 +2,6 @@
 CREATE CONSTRAINT ON ( annoation:Annoation ) ASSERT annoation.event_id IS UNIQUE
 CREATE CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS UNIQUE
 CREATE CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
-CREATE CONSTRAINT ON ( profile:Profile ) ASSERT profile.async IS UNIQUE
-CREATE CONSTRAINT ON ( profile:Profile ) ASSERT profile.async_flamegraph IS UNIQUE
-CREATE CONSTRAINT ON ( profile:Profile ) ASSERT profile.jfr IS UNIQUE
-CREATE CONSTRAINT ON ( profile:Profile ) ASSERT profile.jfr_flamegraph IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
 // Exists

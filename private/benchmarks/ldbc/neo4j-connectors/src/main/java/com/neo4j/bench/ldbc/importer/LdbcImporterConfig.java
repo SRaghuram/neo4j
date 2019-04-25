@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.ldbc.importer;
 
-import org.neo4j.unsafe.impl.batchimport.Configuration;
+import org.neo4j.internal.batchimport.Configuration;
 
 public class LdbcImporterConfig implements Configuration
 {

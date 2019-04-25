@@ -31,11 +31,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.ToIntFunction;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -44,6 +46,17 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.TimeUtil;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.GeneratingInputIterator;
+import org.neo4j.internal.batchimport.InputIterable;
+import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.RandomsStates;
+import org.neo4j.internal.batchimport.input.BadCollector;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.ReadableGroups;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator;
 import org.neo4j.kernel.impl.api.index.MultipleIndexPopulator;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -51,24 +64,13 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator;
-import org.neo4j.unsafe.impl.batchimport.InputIterable;
-import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.RandomsStates;
-import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 import org.neo4j.util.FeatureToggles;
 import org.neo4j.values.storable.RandomValues;
 import org.neo4j.values.storable.Value;
@@ -77,12 +79,14 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.multi_threaded_schema_index_population_enabled;
 import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
-import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator.EMPTY_ITERABLE;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
-import static org.neo4j.unsafe.impl.batchimport.input.Input.knownEstimates;
+import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
+import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
+import static org.neo4j.internal.batchimport.GeneratingInputIterator.EMPTY_ITERABLE;
+import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
 
 /**
  * Idea is to test a {@link MultipleIndexPopulator} and {@link BatchingMultipleIndexPopulator} with a bunch of indexes,
@@ -173,10 +177,10 @@ public class MultipleIndexPopulationStressIT
 
     private void populateDbAndIndexes( int nodeCount, boolean multiThreaded ) throws InterruptedException
     {
-        final GraphDatabaseService db = new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                .setConfig( GraphDatabaseSettings.multi_threaded_schema_index_population_enabled, multiThreaded + "" )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( directory.storeDir() )
+                .setConfig( multi_threaded_schema_index_population_enabled, multiThreaded + "" ).newDatabaseManagementService();
+        final GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             createIndexes( db );
@@ -204,16 +208,16 @@ public class MultipleIndexPopulationStressIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
     private void dropIndexes()
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                .setConfig( GraphDatabaseSettings.pagecache_memory, "8m" )
-                .newGraphDatabase();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( directory.storeDir() )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, "8m" ).newDatabaseManagementService();
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             for ( IndexDefinition index : db.schema().getIndexes() )
@@ -224,7 +228,7 @@ public class MultipleIndexPopulationStressIT
         }
         finally
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -301,8 +305,9 @@ public class MultipleIndexPopulationStressIT
         try ( RandomDataInput input = new RandomDataInput( count );
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporter importer = new ParallelBatchImporter( directory.databaseLayout(), fileSystemRule.get(), null, DEFAULT, NullLogService.getInstance(),
-                    ExecutionMonitors.invisible(), EMPTY, config, recordFormats, NO_MONITOR, jobScheduler, Collector.EMPTY );
+            BatchImporter importer = new ParallelBatchImporter( directory.databaseLayout(), fileSystemRule.get(), null, DEFAULT,
+                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, config, recordFormats, NO_MONITOR, jobScheduler, Collector.EMPTY,
+                    TransactionLogsInitializer.INSTANCE );
             importer.doImport( input );
         }
     }
@@ -361,7 +366,7 @@ public class MultipleIndexPopulationStressIT
         {
             try
             {
-                return new BadCollector( fileSystemRule.get().openAsOutputStream( new File( directory.databaseDir(), "bad" ), false ), 0, 0 );
+                return new BadCollector( fileSystemRule.get().openAsOutputStream( new File( directory.storeDir(), "bad" ), false ), 0, 0 );
             }
             catch ( IOException e )
             {

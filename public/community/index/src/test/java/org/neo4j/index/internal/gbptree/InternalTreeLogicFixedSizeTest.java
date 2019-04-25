@@ -33,12 +33,13 @@ public class InternalTreeLogicFixedSizeTest extends InternalTreeLogicTestBase<Mu
         return ( existingKey, newKey, base, add ) ->
         {
             base.add( add.longValue() );
-            return base;
+            return ValueMerger.MergeResult.MERGED;
         };
     }
 
     @Override
-    protected TreeNode<MutableLong,MutableLong> getTreeNode( int pageSize, Layout<MutableLong,MutableLong> layout )
+    protected TreeNode<MutableLong,MutableLong> getTreeNode( int pageSize, Layout<MutableLong,MutableLong> layout,
+            OffloadStore<MutableLong,MutableLong> offloadStore )
     {
         return new TreeNodeFixedSize<>( pageSize, layout );
     }

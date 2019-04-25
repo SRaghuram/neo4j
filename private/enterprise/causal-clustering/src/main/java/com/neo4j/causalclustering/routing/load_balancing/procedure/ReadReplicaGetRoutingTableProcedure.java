@@ -9,18 +9,20 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
-public class ReadReplicaGetRoutingTableProcedure extends CommunityGetRoutingTableProcedure
+public class ReadReplicaGetRoutingTableProcedure extends SingleInstanceGetRoutingTableProcedure
 {
-    public ReadReplicaGetRoutingTableProcedure( List<String> namespace, ConnectorPortRegister portRegister, Config config )
+    public ReadReplicaGetRoutingTableProcedure( List<String> namespace, DatabaseManager<?> databaseManager,
+            ConnectorPortRegister portRegister, Config config )
     {
-        super( namespace, portRegister, config );
+        super( namespace, databaseManager, portRegister, config );
     }
 
     @Override

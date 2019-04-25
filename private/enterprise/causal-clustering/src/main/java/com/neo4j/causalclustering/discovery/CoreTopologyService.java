@@ -9,6 +9,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.identity.ClusterId;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Extends upon the topology service with a few extra services, connected to
  * the underlying discovery service.
@@ -25,34 +27,32 @@ public interface CoreTopologyService extends TopologyService
      *
      * @param clusterId The cluster ID to publish.
      *
+     * @param databaseId
      * @return True if the cluster ID was successfully CAS:ed, otherwise false.
      */
-    boolean setClusterId( ClusterId clusterId, String dbName ) throws InterruptedException;
+    boolean setClusterId( ClusterId clusterId, DatabaseId databaseId ) throws InterruptedException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).
      * This is intended for informational purposes **only**, e.g. in {@link ClusterOverviewProcedure}.
      * The leadership information should otherwise be communicated via raft as before.
      * @param leaderInfo Information about the new leader
-     * @param dbName The database name for which memberId is the new leader
+     * @param databaseId The database identifier for which memberId is the new leader
      */
-    void setLeader( LeaderInfo leaderInfo, String dbName );
-
-    /** Fetches info for the current leader */
-    LeaderInfo getLeader();
+    void setLeader( LeaderInfo leaderInfo, DatabaseId databaseId );
 
     /**
      * Set the leader memberId to null for a given database (i.e. Raft consensus group).
      * This is intended to trigger state cleanup for informational procedures like {@link ClusterOverviewProcedure}
-     *
-     * @param term The term for which this topology member should handle a stepdown
-     * @param dbName The database for which this topology member should handle a stepdown
+     *  @param term The term for which this topology member should handle a stepdown
+     * @param databaseId The database for which this topology member should handle a stepdown
      */
-    void handleStepDown( long term, String dbName );
+    void handleStepDown( long term, DatabaseId databaseId );
 
     interface Listener
     {
         void onCoreTopologyChange( CoreTopology coreTopology );
-        String dbName();
+
+        DatabaseId databaseId();
     }
 }

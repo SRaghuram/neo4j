@@ -35,25 +35,30 @@ import java.util.Collections;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreVersionCheck;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
+import static org.neo4j.helpers.Exceptions.rootCause;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.checkNeoStoreHasDefaultFormatVersion;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.prepareSampleLegacyDatabase;
 import static org.neo4j.kernel.impl.storemigration.StoreUpgraderTest.removeCheckPointFromTxLog;
@@ -76,6 +81,7 @@ public class StoreUpgradeOnStartupTest
     private DatabaseLayout workingDatabaseLayout;
     private StoreVersionCheck check;
     private File workingStoreDir;
+    private DatabaseManagementService managementService;
 
     @Parameterized.Parameters( name = "{0}" )
     public static Collection<String> versions()
@@ -100,7 +106,7 @@ public class StoreUpgradeOnStartupTest
     {
         // when
         GraphDatabaseService database = createGraphDatabaseService();
-        database.shutdown();
+        managementService.shutdown();
 
         // then
         assertTrue( "Some store files did not have the correct version",
@@ -113,26 +119,26 @@ public class StoreUpgradeOnStartupTest
     {
         // given
         removeCheckPointFromTxLog( fileSystem, workingDatabaseLayout.databaseDirectory() );
+        GraphDatabaseService database = createGraphDatabaseService();
         try
         {
-            // when
-            GraphDatabaseService database = createGraphDatabaseService();
-            database.shutdown();// shutdown db in case test fails
-            fail( "Should have been unable to start upgrade on old version" );
-        }
-        catch ( RuntimeException e )
-        {
-            // then
-            assertThat( Exceptions.rootCause( e ),
+            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            assertThat( rootCause( databaseContext.failureCause() ),
                     Matchers.instanceOf( StoreUpgrader.UnableToUpgradeException.class ) );
+        }
+        finally
+        {
+            managementService.shutdown();
         }
     }
 
     private GraphDatabaseService createGraphDatabaseService()
     {
-        return new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( workingDatabaseLayout.databaseDirectory() )
-                .setConfig( GraphDatabaseSettings.allow_upgrade, "true" )
-                .newGraphDatabase();
+        managementService = new TestDatabaseManagementServiceBuilder()
+                .newEmbeddedDatabaseBuilder( workingStoreDir )
+                .setConfig( GraphDatabaseSettings.allow_upgrade, "true" ).newDatabaseManagementService();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 }
