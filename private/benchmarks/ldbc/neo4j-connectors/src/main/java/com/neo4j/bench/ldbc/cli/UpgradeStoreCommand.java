@@ -92,7 +92,7 @@ public class UpgradeStoreCommand implements Runnable
                 System.out.println( "Starting store and recreating Indexes..." );
                 Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile, null );
                 DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
-                GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+                GraphDatabaseService db = managementService.database( upgradedStore.graphDbDirectory().getFileName().toString() );
                 LdbcIndexer ldbcIndexer = new LdbcIndexer( neo4jSchema, true, false, true );
                 ldbcIndexer.createTransactional( db );
                 System.out.println( "Shutting down store..." );
