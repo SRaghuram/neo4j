@@ -74,7 +74,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val reversePlans = (headPlan +: middlePlans).reverse
 
     val fusedPipeline =
-      reversePlans.foldLeft(FusionPlan(innerTemplate, Nil, List.empty, NoOutput)) {
+      reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
 
           case plans.AllNodesScan(nodeVariableName, _) =>
