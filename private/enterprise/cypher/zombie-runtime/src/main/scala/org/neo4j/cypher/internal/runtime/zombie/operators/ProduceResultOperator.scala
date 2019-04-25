@@ -24,10 +24,6 @@ import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 /**
   * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
   * can occur both as the start of a pipeline, and as the final operator of a pipeline.
-  *
-  * @param workIdentity
-  * @param slots
-  * @param columns
   */
 class ProduceResultOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
@@ -47,8 +43,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
-  class InputOTask(val inputMorsel: MorselExecutionContext) extends OTask() with ContinuableOperatorTaskWithMorsel {
+  class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
+    override def toString: String = "ProduceResultInputTask"
     override def canContinue: Boolean = false // will be true sometimes for reactive results
 
     override def operate(outputIgnore: MorselExecutionContext,
@@ -72,36 +69,32 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   class OutputOTask(outputMorsel: MorselExecutionContext,
                     context: QueryContext,
                     state: QueryState,
-                    resources: QueryResources) extends OTask() with PreparedOutput {
+                    resources: QueryResources) extends PreparedOutput {
 
+    override def toString: String = "ProduceResultOutputTask"
     override def produce(): Unit = produceOutput(outputMorsel, context, state, resources)
   }
 
   //==========================================================================
 
-  abstract class OTask() {
+  protected def produceOutput(output: MorselExecutionContext,
+                              context: QueryContext,
+                              state: QueryState,
+                              resources: QueryResources): Unit = {
+    val resultFactory = ArrayResultExecutionContextFactory(columns)
+    val queryState = new OldQueryState(context,
+                                       resources = null,
+                                       params = state.params,
+                                       resources.expressionCursors,
+                                       Array.empty[IndexReadSession],
+                                       resources.expressionVariables(state.nExpressionSlots),
+                                       prePopulateResults = state.prepopulateResults)
 
-    override def toString: String = "ProduceResultTask"
-
-    protected def produceOutput(output: MorselExecutionContext,
-                                context: QueryContext,
-                                state: QueryState,
-                                resources: QueryResources): Unit = {
-      val resultFactory = ArrayResultExecutionContextFactory(columns)
-      val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         prePopulateResults = state.prepopulateResults)
-
-      // Loop over the rows of the morsel and call the visitor for each one
-      while (output.isValidRow) {
-        val arrayRow = resultFactory.newResult(output, queryState, queryState.prePopulateResults)
-        state.visitor.visit(arrayRow)
-        output.moveToNextRow()
-      }
+    // Loop over the rows of the morsel and call the visitor for each one
+    while (output.isValidRow) {
+      val arrayRow = resultFactory.newResult(output, queryState, queryState.prePopulateResults)
+      state.visitor.visit(arrayRow)
+      output.moveToNextRow()
     }
   }
 }
