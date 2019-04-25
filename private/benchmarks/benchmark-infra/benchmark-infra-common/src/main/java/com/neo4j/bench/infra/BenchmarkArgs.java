@@ -49,7 +49,7 @@ public class BenchmarkArgs
     {
         return toJobParameters().get("neo4j_version");
     }
-    
+
     public String getDbEdition()
     {
         return toJobParameters().get("db_edition");

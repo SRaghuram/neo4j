@@ -6,9 +6,10 @@
 package com.neo4j.bench.infra.scheduler;
 
 import com.amazonaws.SdkClientException;
-import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.BenchmarkArgs;
 import com.neo4j.bench.infra.InfraCommand;
+import com.neo4j.bench.infra.JobScheduler;
+import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
@@ -16,6 +17,8 @@ import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,9 +26,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 @Command( name = "schedule-macro" )
 public class ScheduleMacro extends InfraCommand
@@ -78,8 +83,16 @@ public class ScheduleMacro extends InfraCommand
 
             // schedule them
             List<String> jobIds = jobScheduler.schedule( workloads, dbs, benchmarkArgs );
+            LOG.info( "jobs are scheduled, with ids\n{}", jobIds.stream().collect( joining( "\n" ) ) );
             // wait until they are done, or fail
-            System.out.println( jobIds );
+            RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
+                    .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
+                    .withDelay( Duration.ofMinutes( 5 ))
+                    .withMaxAttempts( -1 );
+
+            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobScheduler.jobsStatuses(jobIds));
+            LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map(Object::toString).collect( joining( "\n" ) ) );
+
         }
         catch ( SdkClientException | URISyntaxException | IOException e )
         {

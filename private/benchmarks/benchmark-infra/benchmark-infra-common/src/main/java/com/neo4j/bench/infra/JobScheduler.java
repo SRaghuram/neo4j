@@ -14,4 +14,6 @@ public interface JobScheduler
             String workloads,
             String dbs,
             BenchmarkArgs args );
+
+    List<JobStatus> jobsStatuses( List<String> jobIds );
 }

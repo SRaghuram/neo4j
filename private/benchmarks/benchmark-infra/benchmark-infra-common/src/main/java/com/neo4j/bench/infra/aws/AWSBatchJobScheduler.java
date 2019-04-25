@@ -9,15 +9,18 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
+import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.google.common.collect.Streams;
 import com.neo4j.bench.infra.JobScheduler;
+import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.BenchmarkArgs;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -63,6 +66,16 @@ public class AWSBatchJobScheduler implements JobScheduler
         return schedule( toSubmitJobRequest( workloadsAndDbs, args ) );
     }
 
+    @Override
+    public List<JobStatus> jobsStatuses( List<String> jobIds )
+    {
+        return awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIds ) )
+            .getJobs()
+            .stream()
+            .map(JobStatus::from)
+            .collect( Collectors.toList() );
+    }
+
     private List<String> schedule( List<SubmitJobRequest> submitJobRequests )
     {
         return submitJobRequests.stream()
@@ -103,7 +116,5 @@ public class AWSBatchJobScheduler implements JobScheduler
             this.workload = workload;
             this.db = db;
         }
-
     }
-
 }
