@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
-import java.util.logging.Level;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.ConfigurationMigrator;
@@ -25,6 +24,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.logging.Level;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.GZIP;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ4;
@@ -54,6 +54,7 @@ import static org.neo4j.configuration.Settings.listenAddress;
 import static org.neo4j.configuration.Settings.max;
 import static org.neo4j.configuration.Settings.min;
 import static org.neo4j.configuration.Settings.optionsIgnoreCase;
+import static org.neo4j.configuration.Settings.optionsObeyCase;
 import static org.neo4j.configuration.Settings.prefixSetting;
 import static org.neo4j.configuration.Settings.setting;
 
@@ -242,8 +243,8 @@ public class CausalClusteringSettings implements LoadableConfig
             setting( "causal_clustering.disable_middleware_logging", BOOLEAN, TRUE );
 
     @Description( "The level of middleware logging" )
-    public static final Setting<Integer> middleware_logging_level =
-            setting( "causal_clustering.middleware_logging.level", INTEGER, Integer.toString( Level.FINE.intValue() ) );
+    public static final Setting<Level> middleware_logging_level =
+            setting( "causal_clustering.middleware_logging.level", optionsObeyCase( Level.class ), Level.NONE.toString() );
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )

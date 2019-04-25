@@ -28,6 +28,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.logging.Level;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -68,7 +69,7 @@ class SecureClusterIT
 
         Map<String,String> coreParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
-                CausalClusteringSettings.middleware_logging_level.name(), "0",
+                CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.auth_provider.name(), NATIVE_REALM_NAME,
@@ -77,7 +78,7 @@ class SecureClusterIT
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
-                CausalClusteringSettings.middleware_logging_level.name(), "0",
+                CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
                 policyConfig.base_directory.name(), "certificates/cluster",
                 policyConfig.format.name(), PEM.name()

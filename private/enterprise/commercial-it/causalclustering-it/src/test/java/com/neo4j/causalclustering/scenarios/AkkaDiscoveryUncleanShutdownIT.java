@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.logging.Level;
 import org.neo4j.test.Race;
 
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
@@ -56,7 +57,7 @@ public class AkkaDiscoveryUncleanShutdownIT
     @Rule
     public ClusterRule clusterRule = new ClusterRule()
             .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
-            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
+            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withDiscoveryServiceType( DiscoveryServiceType.AKKA_UNCLEAN_SHUTDOWN )
             .withNumberOfCoreMembers( coreMembers )
             .withNumberOfReadReplicas( 0 );

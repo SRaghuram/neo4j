@@ -38,7 +38,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -207,36 +206,21 @@ public final class TypesafeConfigService
     {
         HashMap<String,Object> configMap = new HashMap<>();
         configMap.put( "akka.loggers", Collections.singletonList( LoggingActor.class.getCanonicalName() ) );
-        configMap.put( "akka.loglevel", logLevel( config ) );
+        configMap.put( "akka.loglevel", logLevel( config ).toString() );
         configMap.put( "akka.logging-filter", LoggingFilter.class.getCanonicalName() );
 
         return ConfigFactory.parseMap( configMap );
     }
 
-    private String logLevel( Config config )
+    private static AkkaLoggingLevel logLevel( Config config )
     {
-        Boolean disableLogging = config.get( CausalClusteringSettings.disable_middleware_logging );
-        Integer level = config.get( CausalClusteringSettings.middleware_logging_level );
+        var disableLogging = config.get( CausalClusteringSettings.disable_middleware_logging );
         if ( disableLogging )
         {
-            return "OFF";
+            return AkkaLoggingLevel.OFF;
         }
-        else if ( level <= Level.FINE.intValue() )
-        {
-            return "DEBUG";
-        }
-        else if ( level <= Level.INFO.intValue() )
-        {
-            return "INFO";
-        }
-        else if ( level <= Level.WARNING.intValue() )
-        {
-            return "WARNING";
-        }
-        else
-        {
-            return "ERROR";
-        }
+        var configuredLevel = config.get( CausalClusteringSettings.middleware_logging_level );
+        return AkkaLoggingLevel.fromNeo4jLevel( configuredLevel );
     }
 
 }

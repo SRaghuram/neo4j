@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system
 
-import java.util.logging.Level
-
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.testkit.TestKit
@@ -14,7 +12,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.neo4j.configuration.Config
-import org.neo4j.logging.AssertableLogProvider
+import org.neo4j.logging.{AssertableLogProvider, Level}
 
 
 class LoggingActorIT extends NeoSuite {
@@ -23,7 +21,7 @@ class LoggingActorIT extends NeoSuite {
 
     "level is WARNING" should {
 
-      "pass warning messages on to Neo logProvider" in new Fixture(Level.WARNING) {
+      "pass warning messages on to Neo logProvider" in new Fixture(Level.WARN) {
 
         withLogging {
           logProvider.assertNoLogCallContaining("debug test")
@@ -47,7 +45,7 @@ class LoggingActorIT extends NeoSuite {
 
     "level is DEBUG" should {
 
-      "pass all messages on to Neo logProvider" in new Fixture(Level.ALL) {
+      "pass all messages on to Neo logProvider" in new Fixture(Level.DEBUG) {
 
         withLogging {
           logProvider.assertContainsLogCallContaining("info test")
@@ -62,7 +60,7 @@ class LoggingActorIT extends NeoSuite {
 
     val config = Config.defaults
     config.augment(CausalClusteringSettings.disable_middleware_logging, String.valueOf(false))
-    config.augment(CausalClusteringSettings.middleware_logging_level, String.valueOf(logLevel.intValue))
+    config.augment(CausalClusteringSettings.middleware_logging_level, logLevel.toString)
 
     val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, config).generate())
     val loggingContext = "LoggingActorIT"

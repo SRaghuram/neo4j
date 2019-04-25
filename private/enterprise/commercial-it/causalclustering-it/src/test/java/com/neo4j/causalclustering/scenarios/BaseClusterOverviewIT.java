@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
+import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -50,8 +51,8 @@ public abstract class BaseClusterOverviewIT
             .withSharedReadReplicaParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
             .withSharedReadReplicaParam( CausalClusteringSettings.disable_middleware_logging, "false" )
-            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );
+            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
+            .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 
     protected BaseClusterOverviewIT( DiscoveryServiceType discoveryServiceType )
     {

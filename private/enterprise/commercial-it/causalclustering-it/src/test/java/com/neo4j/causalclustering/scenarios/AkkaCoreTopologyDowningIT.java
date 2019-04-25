@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.ports.PortAuthority;
@@ -224,7 +225,7 @@ public class AkkaCoreTopologyDowningIT
         config.augment( boltConnector.listen_address.name(), boltAddress.toString() );
         config.augment( boltConnector.advertised_address.name(), boltAddress.toString() );
 
-        config.augment( CausalClusteringSettings.middleware_logging_level, "0" );
+        config.augment( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
         config.augment( CausalClusteringSettings.disable_middleware_logging, "false" );
         config.augment( "dbms.logs.debug.level", "DEBUG" );
         LogProvider logProvider = NullLogProvider.getInstance();
