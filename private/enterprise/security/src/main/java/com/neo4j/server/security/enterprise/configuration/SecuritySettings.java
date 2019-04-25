@@ -290,7 +290,7 @@ public class SecuritySettings implements LoadableConfig
 
     @Description( "Security log level threshold." )
     public static final Setting<Level> security_log_level = setting( "dbms.logs.security.level",
-            optionsObeyCase( Level.class ), "INFO" );
+            optionsObeyCase( Level.class ), Level.INFO.toString() );
 
     @Description( "Set to log successful authentication events to the security log. " +
                   "If this is set to `false` only failed authentication events will be logged, which " +
