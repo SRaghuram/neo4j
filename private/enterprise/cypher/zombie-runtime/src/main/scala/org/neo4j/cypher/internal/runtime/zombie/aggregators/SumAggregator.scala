@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.aggregators
 
-import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
+import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.values.AnyValue

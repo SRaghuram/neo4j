@@ -11,8 +11,8 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.{AlarmSink, WorkerWaker}
-import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
-import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.{AccumulatorAndMorsel, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers, Sink}
 import org.neo4j.util.Preconditions
 
