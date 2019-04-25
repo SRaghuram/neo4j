@@ -664,20 +664,24 @@ object SlottedPipeMapper {
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
     val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot {
       case (k, inSlot: LongSlot) =>
-        out.get(k).get match {
-          case l: LongSlot =>
+        out.get(k) match {
+          // The output does not have a slot for this, so we don't need to copy
+          case None => (_, _, _) => ()
+          case Some(l: LongSlot) =>
             (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
-          case r: RefSlot =>
+          case Some(r: RefSlot) =>
             //here we must map the long slot to a reference slot
             val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
             (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
         }
       case (k, inSlot: RefSlot) =>
-        // This means out must be a ref slot as well, otherwise slot allocation was wrong
-        out.get(k).get match {
-          case l: LongSlot =>
+        // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
+        out.get(k) match {
+          // The output does not have a slot for this, so we don't need to copy
+          case None => (_, _, _) => ()
+          case Some(l: LongSlot) =>
             throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
-          case r: RefSlot =>
+          case Some(r: RefSlot) =>
             (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
         }
     }
