@@ -266,6 +266,11 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Duration> akka_bind_timeout =
             setting( "causal_clustering.middleware.akka.bind-timeout", DURATION, "10s");
 
+    @Internal
+    @Description( "Timeout for Akka connection" )
+    public static final Setting<Duration> akka_connection_timeout =
+            setting( "causal_clustering.middleware.akka.connection-timeout", DURATION, "10s");
+
     /*
         Begin akka failure detector
         setting descriptions copied from reference.conf in akka-cluster

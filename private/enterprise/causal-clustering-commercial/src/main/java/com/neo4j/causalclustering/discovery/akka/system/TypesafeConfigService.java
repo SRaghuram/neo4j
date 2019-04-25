@@ -112,6 +112,9 @@ public final class TypesafeConfigService
         Duration bindTimeout = config.get( CausalClusteringSettings.akka_bind_timeout );
         configMap.put( "akka.remote.artery.bind.bind-timeout", bindTimeout.toMillis() + "ms" );
 
+        Duration connectionTimeout = config.get( CausalClusteringSettings.akka_connection_timeout );
+        configMap.put( "akka.remote.artery.advanced.connection-timeout", connectionTimeout.toMillis() + "ms" );
+
         return ConfigFactory.parseMap( configMap );
     }
 
