@@ -14,13 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
@@ -165,18 +162,18 @@ public final class SharedDiscoveryService
         return unmodifiableMap( readReplicas );
     }
 
-    Map<MemberId,RoleInfo> getCoreRoles()
+    RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        Set<DatabaseId> dbNames = clusterIdDbNames.keySet();
-        Set<MemberId> allLeaders = dbNames.stream()
-                .map( dbName -> Optional.ofNullable( leaderMap.get( dbName ) ) )
-                .filter( Optional::isPresent )
-                .map( Optional::get )
-                .map( LeaderInfo::memberId )
-                .collect( Collectors.toSet());
-
-        Function<MemberId,RoleInfo> roleMapper = m -> allLeaders.contains( m ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-        return coreMembers.keySet().stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
+        if ( !clusterIdDbNames.containsKey( databaseId ) || !coreMembers.containsKey( memberId ) )
+        {
+            return RoleInfo.UNKNOWN;
+        }
+        var leaderInfo = leaderMap.getOrDefault( databaseId, LeaderInfo.INITIAL );
+        if ( Objects.equals( memberId, leaderInfo.memberId() ) )
+        {
+            return RoleInfo.LEADER;
+        }
+        return RoleInfo.FOLLOWER;
     }
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException

@@ -17,30 +17,59 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
+import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
+import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
+import static com.neo4j.causalclustering.discovery.RoleInfo.valueOf;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.procs.FieldSignature.outputField;
 import static org.neo4j.values.storable.Values.stringValue;
 
 class ClusterOverviewProcedureTest
 {
+    @Test
+    void shouldHaveCorrectSignature()
+    {
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService );
+
+        ProcedureSignature signature = procedure.signature();
+
+        assertEquals( "dbms.cluster.overview", signature.name().toString() );
+        assertEquals( List.of(), signature.inputSignature() );
+        assertEquals(
+                List.of( outputField( "id", Neo4jTypes.NTString ),
+                        outputField( "addresses", Neo4jTypes.NTList( Neo4jTypes.NTString ) ),
+                        outputField( "databases", Neo4jTypes.NTMap ),
+                        outputField( "groups", Neo4jTypes.NTList( Neo4jTypes.NTString ) ) ),
+                signature.outputSignature() );
+    }
+
     @Test
     void shouldProvideOverviewOfCoreServersAndReadReplicas() throws Exception
     {
@@ -48,9 +77,9 @@ class ClusterOverviewProcedureTest
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
-        MemberId theLeader = new MemberId( UUID.randomUUID() );
-        MemberId follower1 = new MemberId( UUID.randomUUID() );
-        MemberId follower2 = new MemberId( UUID.randomUUID() );
+        MemberId theLeader = new MemberId( new UUID( 1, 0 ) );
+        MemberId follower1 = new MemberId( new UUID( 2, 0 ) );
+        MemberId follower2 = new MemberId( new UUID( 3, 0 ) );
 
         Set<DatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
         Set<DatabaseId> follower1Databases = databaseIds( "system", "orders" );
@@ -60,39 +89,40 @@ class ClusterOverviewProcedureTest
         coreMembers.put( follower2, addressesForCore( 2, false, follower2Databases ) );
 
         Map<MemberId,ReadReplicaInfo> replicaMembers = new HashMap<>();
-        MemberId replica4 = new MemberId( UUID.randomUUID() );
-        MemberId replica5 = new MemberId( UUID.randomUUID() );
+        MemberId replica4 = new MemberId( new UUID( 4, 0 ) );
+        MemberId replica5 = new MemberId( new UUID( 5, 0 ) );
 
         Set<DatabaseId> replica1Databases = databaseIds( "system", "orders" );
         Set<DatabaseId> replica2Databases = databaseIds( "system", "customers" );
         replicaMembers.put( replica4, addressesForReadReplica( 4, replica1Databases ) );
         replicaMembers.put( replica5, addressesForReadReplica( 5, replica2Databases ) );
 
-        Map<MemberId,RoleInfo> roleMap = new HashMap<>();
-        roleMap.put( theLeader, RoleInfo.LEADER );
-        roleMap.put( follower1, RoleInfo.FOLLOWER );
-        roleMap.put( follower2, RoleInfo.FOLLOWER );
-
         when( topologyService.allCoreServers() ).thenReturn( coreMembers );
         when( topologyService.allReadReplicas() ).thenReturn( replicaMembers );
-        when( topologyService.allCoreRoles() ).thenReturn( roleMap );
+        for ( DatabaseId databaseId : leaderDatabases )
+        {
+            when( topologyService.coreRole( databaseId, theLeader ) ).thenReturn( LEADER );
+        }
+        for ( DatabaseId databaseId : follower1Databases )
+        {
+            when( topologyService.coreRole( databaseId, follower1 ) ).thenReturn( FOLLOWER );
+        }
+        for ( DatabaseId databaseId : follower2Databases )
+        {
+            when( topologyService.coreRole( databaseId, follower2 ) ).thenReturn( FOLLOWER );
+        }
 
-        ClusterOverviewProcedure procedure =
-                new ClusterOverviewProcedure( topologyService, NullLogProvider.getInstance() );
+        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService );
 
         // when
         final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
 
-        assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, Set.of( "core", "core0" ), leaderDatabases ) );
-        assertThat( members.next(),
-                new IsRecord( follower1.getUuid(), 5001, RoleInfo.FOLLOWER, Set.of( "core", "core1" ), follower1Databases ) );
-        assertThat( members.next(),
-                new IsRecord( follower2.getUuid(), 5002, RoleInfo.FOLLOWER, Set.of( "core", "core2" ), follower2Databases ) );
+        assertThat( members.next(), new IsRecord( theLeader, 5000, databasesWithRole( leaderDatabases, LEADER ), Set.of( "core", "core0" ) ) );
+        assertThat( members.next(), new IsRecord( follower1, 5001, databasesWithRole( follower1Databases, FOLLOWER ), Set.of( "core", "core1" ) ) );
+        assertThat( members.next(), new IsRecord( follower2, 5002, databasesWithRole( follower2Databases, FOLLOWER ), Set.of( "core", "core2" ) ) );
 
-        assertThat( members.next(),
-                new IsRecord( replica4.getUuid(), 6004, RoleInfo.READ_REPLICA, Set.of( "replica", "replica4" ), replica1Databases ) );
-        assertThat( members.next(),
-                new IsRecord( replica5.getUuid(), 6005, RoleInfo.READ_REPLICA, Set.of( "replica", "replica5" ), replica2Databases ) );
+        assertThat( members.next(), new IsRecord( replica4, 6004, databasesWithRole( replica1Databases, READ_REPLICA ), Set.of( "replica", "replica4" ) ) );
+        assertThat( members.next(), new IsRecord( replica5, 6005, databasesWithRole( replica2Databases, READ_REPLICA ), Set.of( "replica", "replica5" ) ) );
 
         assertFalse( members.hasNext() );
     }
@@ -104,27 +134,31 @@ class ClusterOverviewProcedureTest
                 .collect( toSet() );
     }
 
+    private static Map<DatabaseId,RoleInfo> databasesWithRole( Set<DatabaseId> databaseIds, RoleInfo role )
+    {
+        return databaseIds.stream()
+                .collect( toMap( identity(), ignore -> role ) );
+    }
+
     private static class IsRecord extends TypeSafeMatcher<AnyValue[]>
     {
         private final UUID memberId;
         private final int boltPort;
-        private final RoleInfo role;
+        private final Map<DatabaseId,RoleInfo> databases;
         private final Set<String> groups;
-        private final Set<DatabaseId> databaseIds;
 
-        IsRecord( UUID memberId, int boltPort, RoleInfo role, Set<String> groups, Set<DatabaseId> databaseIds )
+        private IsRecord( MemberId memberId, int boltPort, Map<DatabaseId,RoleInfo> databases, Set<String> groups )
         {
-            this.memberId = memberId;
+            this.memberId = memberId.getUuid();
             this.boltPort = boltPort;
-            this.role = role;
+            this.databases = databases;
             this.groups = groups;
-            this.databaseIds = databaseIds;
         }
 
         @Override
         protected boolean matchesSafely( AnyValue[] record )
         {
-            if ( record.length != 5 )
+            if ( record.length != 4 )
             {
                 return false;
             }
@@ -141,7 +175,14 @@ class ClusterOverviewProcedureTest
                 return false;
             }
 
-            if ( !stringValue( role.name() ).equals( record[2] ) )
+            Map<DatabaseId,RoleInfo> recordDatabases = new HashMap<>();
+            MapValue mapValue = (MapValue) record[2];
+            for ( String key : mapValue.keySet() )
+            {
+                TextValue value = (TextValue) mapValue.get( key );
+                recordDatabases.put( new DatabaseId( key ), valueOf( value.stringValue() ) );
+            }
+            if ( !recordDatabases.equals( databases ) )
             {
                 return false;
             }
@@ -156,16 +197,6 @@ class ClusterOverviewProcedureTest
                 return false;
             }
 
-            Set<DatabaseId> recordDatabaseNames = new HashSet<>();
-            for ( AnyValue value : (ListValue) record[4] )
-            {
-                recordDatabaseNames.add( new DatabaseId( ((TextValue) value).stringValue() ) );
-            }
-            if ( !databaseIds.equals( recordDatabaseNames ) )
-            {
-                return false;
-            }
-
             return true;
         }
 
@@ -175,9 +206,8 @@ class ClusterOverviewProcedureTest
             description.appendText(
                     "memberId=" + memberId +
                     ", boltPort=" + boltPort +
-                    ", role=" + role +
+                    ", databases=" + databases +
                     ", groups=" + groups +
-                    ", databaseIds=" + databaseIds +
                     '}' );
         }
     }

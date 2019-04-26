@@ -29,7 +29,7 @@ public interface TopologyService extends Lifecycle
 
     AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
-    Map<MemberId,RoleInfo> allCoreRoles();
+    RoleInfo coreRole( DatabaseId databaseId, MemberId memberId );
 
     MemberId memberId();
 }

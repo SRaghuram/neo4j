@@ -12,24 +12,24 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -43,15 +43,17 @@ import org.neo4j.time.FakeClock;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class ReadReplicaStatusTest
+class ReadReplicaStatusTest
 {
     private CausalClusteringStatus status;
 
@@ -64,8 +66,8 @@ public class ReadReplicaStatusTest
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SystemNanoClock clock = new FakeClock();
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void setup() throws Exception
     {
         OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
         ReadReplicaGraphDatabase db = mock( ReadReplicaGraphDatabase.class );
@@ -81,11 +83,15 @@ public class ReadReplicaStatusTest
         dependencyResolver.satisfyDependency(
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
+        Database database = mock( Database.class );
+        when( database.getDatabaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        dependencyResolver.satisfyDependency( database );
+
         status = CausalClusteringStatusFactory.build( output, db );
     }
 
     @Test
-    public void testAnswers()
+    void testAnswers()
     {
         // when
         Response available = status.available();
@@ -104,7 +110,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void statusIncludesAppliedRaftLogIndex() throws IOException
+    void statusIncludesAppliedRaftLogIndex() throws IOException
     {
         // given
         commandIndexTracker.setAppliedCommandIndex( 321 );
@@ -118,16 +124,16 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void responseIncludesAllCores() throws IOException
+    void responseIncludesAllCores() throws IOException
     {
         Response description = status.description();
 
         assertEquals( Response.Status.OK.getStatusCode(), description.getStatus() );
-        ArrayList<String> expectedVotingMembers = topologyService.allCoreServers()
+        List<String> expectedVotingMembers = topologyService.allCoreServers()
                 .keySet()
                 .stream()
                 .map( memberId -> memberId.getUuid().toString() )
-                .collect( Collectors.toCollection( ArrayList::new ) );
+                .collect( toList() );
         Map<String,Object> responseJson = responseAsMap( description );
         List<String> actualVotingMembers = (List<String>) responseJson.get( "votingMembers" );
         Collections.sort( expectedVotingMembers );
@@ -136,7 +142,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void dbHealthIsIncludedInResponse() throws IOException
+    void dbHealthIsIncludedInResponse() throws IOException
     {
         Response description = status.description();
         assertEquals( true, responseAsMap( description ).get( "healthy" ) );
@@ -147,14 +153,14 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void includesMemberId() throws IOException
+    void includesMemberId() throws IOException
     {
         Response description = status.description();
         assertEquals( myself.getUuid().toString(), responseAsMap( description ).get( "memberId" ) );
     }
 
     @Test
-    public void leaderIsNullWhenUnknown() throws IOException
+    void leaderIsNullWhenUnknown() throws IOException
     {
         Response description = status.description();
         assertNull( responseAsMap( description ).get( "leader" ) );
@@ -170,7 +176,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void isNotCore() throws IOException
+    void isNotCore() throws IOException
     {
         Response description = status.description();
         assertTrue( responseAsMap( description ).containsKey( "core" ) );
@@ -178,7 +184,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void throughputNullWhenUnknown() throws IOException
+    void throughputNullWhenUnknown() throws IOException
     {
         ThroughputMonitor throughputMonitor = mock( ThroughputMonitor.class );
         when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
@@ -195,15 +201,14 @@ public class ReadReplicaStatusTest
         return IntStream.range( 0, size )
                 .mapToObj( i -> UUID.randomUUID() )
                 .map( MemberId::new )
-                .collect( Collectors.toList());
+                .collect( toList() );
     }
 
     static Map<String,Object> responseAsMap( Response response ) throws IOException
     {
         ObjectMapper objectMapper = new ObjectMapper();
-        Map<String,Object> responseJson = objectMapper.readValue( response.getEntity().toString(), new TypeReference<Map<String,Object>>()
+        return objectMapper.readValue( response.getEntity().toString(), new TypeReference<Map<String,Object>>()
         {
         } );
-        return responseJson;
     }
 }

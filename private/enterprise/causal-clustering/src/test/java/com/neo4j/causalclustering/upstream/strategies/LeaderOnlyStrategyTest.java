@@ -10,8 +10,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,12 +35,9 @@ class LeaderOnlyStrategyTest
         TopologyServiceThatPrioritisesItself topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
         {
             @Override
-            public Map<MemberId,RoleInfo> allCoreRoles()
+            public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
             {
-                Map<MemberId,RoleInfo> roles = new HashMap<>();
-                roles.put( myself, RoleInfo.LEADER );
-                roles.put( coreNotSelf, RoleInfo.LEADER );
-                return roles;
+                return RoleInfo.LEADER;
             }
         };
         leaderOnlyStrategy.inject( topologyServiceNoRetriesStrategy, Config.defaults(), NullLogProvider.getInstance(), myself );

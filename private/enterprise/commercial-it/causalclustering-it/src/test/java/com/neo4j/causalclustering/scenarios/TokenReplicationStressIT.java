@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -204,16 +203,6 @@ class TokenReplicationStressIT
         {
             throw new IllegalStateException( "No leader found", e );
         }
-    }
-
-    private static CoreClusterMember randomClusterMember( Cluster cluster, CoreClusterMember except )
-    {
-        CoreClusterMember[] members = cluster.coreMembers()
-                .stream()
-                .filter( member -> !member.id().equals( except.id() ) )
-                .toArray( CoreClusterMember[]::new );
-
-        return members[ThreadLocalRandom.current().nextInt( members.length )];
     }
 
     private void verifyTokens( Cluster cluster )

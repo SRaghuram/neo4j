@@ -18,11 +18,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
@@ -88,15 +85,19 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         }
     }
 
-    public Map<MemberId,RoleInfo> allCoreRoles()
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        Set<MemberId> leaders = remoteDbLeaderMap.values().stream().map( LeaderInfo::memberId ).collect( Collectors.toSet() );
-        Set<MemberId> allCoreMembers = coreTopologiesByDatabase.values().stream()
-                .flatMap( topology -> topology.members().keySet().stream() )
-                .collect( Collectors.toSet() );
-
-        Function<MemberId,RoleInfo> roleMapper = m -> leaders.contains( m ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-        return allCoreMembers.stream().collect( Collectors.toMap( Function.identity(), roleMapper ) );
+        var coreTopology = coreTopologiesByDatabase.get( databaseId );
+        if ( coreTopology == null || !coreTopology.members().containsKey( memberId ) )
+        {
+            return RoleInfo.UNKNOWN;
+        }
+        var leaderInfo = remoteDbLeaderMap.getOrDefault( databaseId, LeaderInfo.INITIAL );
+        if ( Objects.equals( memberId, leaderInfo.memberId() ) )
+        {
+            return RoleInfo.LEADER;
+        }
+        return RoleInfo.FOLLOWER;
     }
 
     public Map<MemberId,CoreServerInfo> allCoreServers()

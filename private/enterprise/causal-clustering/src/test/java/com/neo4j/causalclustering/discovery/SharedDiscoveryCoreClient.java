@@ -59,12 +59,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     }
 
     @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
-    {
-        return sharedDiscoveryService.getCoreRoles();
-    }
-
-    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return sharedDiscoveryService.allCoreServers();
@@ -104,6 +98,12 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
     {
         sharedDiscoveryService.casLeaders( steppingDown, databaseId );
+    }
+
+    @Override
+    protected RoleInfo coreRole0( DatabaseId databaseId, MemberId memberId )
+    {
+        return sharedDiscoveryService.coreRole( databaseId, memberId );
     }
 
     Set<DatabaseId> getDatabaseIds()

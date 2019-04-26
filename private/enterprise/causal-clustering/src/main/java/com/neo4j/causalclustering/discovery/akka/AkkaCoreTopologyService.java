@@ -200,6 +200,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
+    protected RoleInfo coreRole0( DatabaseId databaseId, MemberId memberId )
+    {
+        return globalTopologyState.coreRole( databaseId, memberId );
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();
@@ -234,12 +240,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         {
             throw new CatchupAddressResolutionException( upstream );
         }
-    }
-
-    @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
-    {
-        return globalTopologyState.allCoreRoles();
     }
 
     @VisibleForTesting

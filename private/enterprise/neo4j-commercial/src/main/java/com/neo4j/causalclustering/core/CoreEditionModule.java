@@ -255,7 +255,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
         globalProcedures.register( new CoreRoleProcedure( raftGroup.raftMachine() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );

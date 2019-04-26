@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.File;
 
@@ -17,6 +18,8 @@ import org.neo4j.monitoring.Monitors;
 
 public interface ClusterMember<T extends GraphDatabaseAPI>
 {
+    MemberId id();
+
     void start();
 
     void shutdown();

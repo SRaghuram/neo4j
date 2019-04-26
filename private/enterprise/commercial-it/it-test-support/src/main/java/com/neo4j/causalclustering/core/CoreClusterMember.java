@@ -39,7 +39,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -171,6 +170,12 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     }
 
     @Override
+    public MemberId id()
+    {
+        return database.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
+    }
+
+    @Override
     public void start()
     {
         database = dbFactory.create( databasesDirectory, memberConfig,
@@ -230,11 +235,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return database.getDependencyResolver().resolveDependency( RaftMachine.class );
     }
 
-    public MemberId id()
-    {
-        return database.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
-    }
-
     public SortedMap<Long, File> getLogFileNames() throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
@@ -252,7 +252,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     @Override
     public String toString()
     {
-        return format( "CoreClusterMember{serverId=%d}", serverId );
+        return "CoreClusterMember{serverId=" + serverId + ", memberId=" + (database == null ? null : id()) + "}";
     }
 
     @Override

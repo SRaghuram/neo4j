@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -32,16 +31,15 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
     public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
     {
         Set<MemberId> coreMemberIds = topologyService.coreTopologyForDatabase( databaseId ).members().keySet();
-        Map<MemberId,RoleInfo> coreMemberRoles = topologyService.allCoreRoles();
 
-        if ( coreMemberIds.isEmpty() || coreMemberRoles.isEmpty() )
+        if ( coreMemberIds.isEmpty() )
         {
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
         for ( MemberId memberId : coreMemberIds )
         {
-            RoleInfo role = coreMemberRoles.getOrDefault( memberId, RoleInfo.UNKNOWN );
+            RoleInfo role = topologyService.coreRole( databaseId, memberId );
 
             if ( role == RoleInfo.LEADER && !Objects.equals( myself, memberId ) )
             {

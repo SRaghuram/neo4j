@@ -33,8 +33,8 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     private final MemberId memberId;
     private final String matchingGroupName;
 
-    MemberId coreNotSelf = new MemberId( new UUID( 321, 654 ) );
-    MemberId readReplicaNotSelf = new MemberId( new UUID( 432, 543 ) );
+    private final MemberId coreNotSelf = new MemberId( new UUID( 321, 654 ) );
+    private final MemberId readReplicaNotSelf = new MemberId( new UUID( 432, 543 ) );
 
     TopologyServiceThatPrioritisesItself( MemberId memberId, String matchingGroupName )
     {
@@ -75,9 +75,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        throw new RuntimeException( "Unimplemented" );
+        return RoleInfo.UNKNOWN;
     }
 
     @Override

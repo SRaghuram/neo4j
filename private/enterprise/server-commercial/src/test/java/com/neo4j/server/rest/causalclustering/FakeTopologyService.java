@@ -125,14 +125,9 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        Map<MemberId,RoleInfo> roles = new HashMap<>();
-        for ( MemberId memberId : coreMembers.keySet() )
-        {
-            roles.put( memberId, this.roles.get( memberId ) );
-        }
-        return roles;
+        return roles.get( memberId );
     }
 
     @Override

@@ -154,7 +154,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure() );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
     }
 
     @Override

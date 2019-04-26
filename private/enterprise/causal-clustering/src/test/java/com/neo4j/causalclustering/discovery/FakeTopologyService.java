@@ -65,9 +65,9 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        return Map.of();
+        return RoleInfo.UNKNOWN;
     }
 
     @Override

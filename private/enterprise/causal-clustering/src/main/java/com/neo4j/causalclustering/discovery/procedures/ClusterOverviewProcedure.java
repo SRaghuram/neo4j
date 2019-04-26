@@ -14,12 +14,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -29,16 +27,14 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
-import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValueBuilder;
 
-import static java.util.Comparator.comparing;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.neo4j.helpers.collection.Iterators.asRawIterator;
-import static org.neo4j.helpers.collection.Iterators.map;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.virtual.VirtualValues.fromList;
@@ -50,109 +46,125 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 {
     private static final String[] PROCEDURE_NAMESPACE = {"dbms", "cluster"};
     public static final String PROCEDURE_NAME = "overview";
-    private final TopologyService topologyService;
-    private final Log log;
 
-    public ClusterOverviewProcedure( TopologyService topologyService, LogProvider logProvider )
+    private final TopologyService topologyService;
+
+    public ClusterOverviewProcedure( TopologyService topologyService )
     {
         super( procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )
                 .out( "id", Neo4jTypes.NTString )
                 .out( "addresses", Neo4jTypes.NTList( Neo4jTypes.NTString ) )
-                .out( "role", Neo4jTypes.NTString )
+                .out( "databases", Neo4jTypes.NTMap )
                 .out( "groups", Neo4jTypes.NTList( Neo4jTypes.NTString ) )
-                .out( "database", Neo4jTypes.NTString )
-                .description( "Overview of all currently accessible cluster members and their roles." )
+                .description( "Overview of all currently accessible cluster members, their databases and roles." )
                 .build() );
         this.topologyService = topologyService;
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
-    public RawIterator<AnyValue[],ProcedureException> apply(
-            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        Map<MemberId,RoleInfo> roleMap = topologyService.allCoreRoles();
-        List<ReadWriteEndPoint> endpoints = new ArrayList<>();
+        var resultRows = new ArrayList<ResultRow>();
 
-        for ( Map.Entry<MemberId,CoreServerInfo> entry : topologyService.allCoreServers().entrySet() )
+        for ( var entry : topologyService.allCoreServers().entrySet() )
         {
-            MemberId id = entry.getKey();
-            CoreServerInfo info = entry.getValue();
-
-            RoleInfo role = roleMap.getOrDefault( id, RoleInfo.UNKNOWN );
-            endpoints.add( new ReadWriteEndPoint( info.connectors(), role, id.getUuid(), info.groups(), info.getDatabaseIds() ) );
+            var row = buildResultRowForCore( entry.getKey(), entry.getValue() );
+            resultRows.add( row );
         }
 
-        for ( Map.Entry<MemberId,ReadReplicaInfo> readReplica : topologyService.allReadReplicas().entrySet() )
+        for ( var entry : topologyService.allReadReplicas().entrySet() )
         {
-            ReadReplicaInfo readReplicaInfo = readReplica.getValue();
-            endpoints.add( new ReadWriteEndPoint( readReplicaInfo.connectors(), RoleInfo.READ_REPLICA,
-                    readReplica.getKey().getUuid(), readReplicaInfo.groups(), readReplicaInfo.getDatabaseIds() ) );
+            var row = buildResultRowForReadReplica( entry.getKey(), entry.getValue() );
+            resultRows.add( row );
         }
 
-        endpoints.sort( comparing( o -> o.addresses().toString() ) );
+        var resultStream = resultRows.stream()
+                .sorted()
+                .map( ClusterOverviewProcedure::formatResultRow );
 
-        return map( endpoint -> new AnyValue[]
-                        {
-                                stringValue( endpoint.memberId().toString() ),
-                                asListOfStringsValue( endpoint.addresses().uriList(), URI::toString ),
-                                stringValue( endpoint.role().name() ),
-                                asListOfStringsValue( endpoint.groups(), Function.identity() ),
-                                asListOfStringsValue( endpoint.databaseIds(), DatabaseId::name ),
-                        },
-                asRawIterator( endpoints.iterator() ) );
+        return asRawIterator( resultStream );
     }
 
-    private static <T> ListValue asListOfStringsValue( Collection<T> values, Function<T,String> toString )
+    private ResultRow buildResultRowForCore( MemberId memberId, CoreServerInfo coreInfo )
     {
-        List<AnyValue> stringValues = values.stream()
-                .map( toString )
+        var databases = coreInfo.getDatabaseIds()
+                .stream()
+                .collect( toMap( identity(), databaseId -> topologyService.coreRole( databaseId, memberId ) ) );
+
+        return new ResultRow( memberId.getUuid(), coreInfo.connectors(), databases, coreInfo.groups() );
+    }
+
+    private static ResultRow buildResultRowForReadReplica( MemberId memberId, ReadReplicaInfo readReplicaInfo )
+    {
+        var databases = readReplicaInfo.getDatabaseIds()
+                .stream()
+                .collect( toMap( identity(), ignore -> RoleInfo.READ_REPLICA ) );
+
+        return new ResultRow( memberId.getUuid(), readReplicaInfo.connectors(), databases, readReplicaInfo.groups() );
+    }
+
+    private static AnyValue[] formatResultRow( ResultRow row )
+    {
+        return new AnyValue[]{
+                stringValue( row.memberId.toString() ),
+                formatAddresses( row ),
+                formatDatabases( row ),
+                formatGroups( row ),
+        };
+    }
+
+    private static AnyValue formatAddresses( ResultRow row )
+    {
+        List<AnyValue> stringValues = row.addresses.uriList()
+                .stream()
+                .map( URI::toString )
                 .map( Values::stringValue )
                 .collect( toList() );
 
         return fromList( stringValues );
     }
 
-    static class ReadWriteEndPoint
+    private static AnyValue formatDatabases( ResultRow row )
     {
-        private final ClientConnectorAddresses clientConnectorAddresses;
-        private final RoleInfo role;
-        private final UUID memberId;
-        private final Set<String> groups;
-        private final Set<DatabaseId> databaseIds;
-
-        public ClientConnectorAddresses addresses()
+        var builder = new MapValueBuilder();
+        for ( var entry : row.databases.entrySet() )
         {
-            return clientConnectorAddresses;
+            var databaseId = entry.getKey();
+            var roleString = entry.getValue().toString();
+            builder.add( databaseId.name(), stringValue( roleString ) );
         }
+        return builder.build();
+    }
 
-        public RoleInfo role()
-        {
-            return role;
-        }
+    private static AnyValue formatGroups( ResultRow row )
+    {
+        List<AnyValue> stringValues = row.groups.stream()
+                .sorted()
+                .map( Values::stringValue )
+                .collect( toList() );
 
-        UUID memberId()
-        {
-            return memberId;
-        }
+        return fromList( stringValues );
+    }
 
-        Set<String> groups()
-        {
-            return groups;
-        }
+    static class ResultRow implements Comparable<ResultRow>
+    {
+        final UUID memberId;
+        final ClientConnectorAddresses addresses;
+        final Map<DatabaseId,RoleInfo> databases;
+        final Set<String> groups;
 
-        Set<DatabaseId> databaseIds()
+        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<DatabaseId,RoleInfo> databases, Set<String> groups )
         {
-            return databaseIds;
-        }
-
-        ReadWriteEndPoint( ClientConnectorAddresses clientConnectorAddresses, RoleInfo role, UUID memberId, Set<String> groups, Set<DatabaseId> databaseIds )
-        {
-            this.clientConnectorAddresses = clientConnectorAddresses;
-            this.role = role;
             this.memberId = memberId;
+            this.addresses = addresses;
+            this.databases = databases;
             this.groups = groups;
-            this.databaseIds = databaseIds;
+        }
+
+        @Override
+        public int compareTo( ResultRow other )
+        {
+            return memberId.compareTo( other.memberId );
         }
     }
 }

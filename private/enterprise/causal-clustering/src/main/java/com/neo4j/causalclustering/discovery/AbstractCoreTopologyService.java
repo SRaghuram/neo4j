@@ -18,8 +18,6 @@ import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static java.util.Collections.unmodifiableMap;
-
 public abstract class AbstractCoreTopologyService extends SafeLifecycle implements CoreTopologyService
 {
     protected final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
@@ -87,14 +85,22 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     protected abstract void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId );
 
     @Override
+    public final RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
+    {
+        var leaderInfo = localLeadersByDatabaseName.get( databaseId );
+        if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
+        {
+            return RoleInfo.LEADER;
+        }
+        return coreRole0( databaseId, memberId );
+    }
+
+    protected abstract RoleInfo coreRole0( DatabaseId databaseId, MemberId memberId );
+
+    @Override
     public MemberId memberId()
     {
         return myself.id();
-    }
-
-    final Map<DatabaseId,LeaderInfo> getLocalLeadersByDatabaseName()
-    {
-        return unmodifiableMap( localLeadersByDatabaseName );
     }
 
     private LeaderInfo getLeader( DatabaseId databaseId )

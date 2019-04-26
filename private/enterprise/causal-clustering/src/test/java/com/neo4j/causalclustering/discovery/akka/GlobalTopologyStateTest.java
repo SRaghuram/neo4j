@@ -61,12 +61,13 @@ class GlobalTopologyStateTest
     @Test
     void shouldWorkWhenEmpty()
     {
-        assertEquals( Map.of(), state.allCoreRoles() );
         assertEquals( Map.of(), state.allCoreServers() );
         assertEquals( Map.of(), state.allReadReplicas() );
         assertEquals( DatabaseCoreTopology.EMPTY, state.coreTopologyForDatabase( databaseId1 ) );
         assertEquals( DatabaseReadReplicaTopology.EMPTY, state.readReplicaTopologyForDatabase( databaseId1 ) );
         assertNull( state.retrieveCatchupServerAddress( coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId2 ) );
     }
 
     @Test
@@ -142,9 +143,64 @@ class GlobalTopologyStateTest
 
         state.onDbLeaderUpdate( leaderInfos );
 
-        assertEquals( RoleInfo.LEADER, state.allCoreRoles().get( coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.allCoreRoles().get( coreId2 ) );
-        assertEquals( RoleInfo.LEADER, state.allCoreRoles().get( coreId3 ) );
+        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId3 ) );
+
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId2, coreId3 ) );
+
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, readReplicaId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, readReplicaId2 ) );
+    }
+
+    @Test
+    void shouldReturnCoreRoleForUnknownDatabase()
+    {
+        var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
+        state.onTopologyUpdate( coreTopology );
+
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId3 ) );
+    }
+
+    @Test
+    void shouldReturnCoreRoleForUnknownMember()
+    {
+        var coreMembers = Map.of( coreId1, coreInfo1 );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers );
+        state.onTopologyUpdate( coreTopology );
+
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId3 ) );
+    }
+
+    @Test
+    void shouldReturnCoreRoles()
+    {
+        var coreMembers1 = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, coreMembers1 );
+
+        var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, clusterId, false, coreMembers2 );
+
+        state.onTopologyUpdate( coreTopology1 );
+        state.onTopologyUpdate( coreTopology2 );
+
+        state.onDbLeaderUpdate( Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 42 ) ) );
+
+        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId3 ) );
+
+        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId2, coreId3 ) );
     }
 
     @Test

@@ -32,7 +32,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
@@ -127,10 +126,16 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     }
 
     @Override
+    public MemberId id()
+    {
+        return memberId;
+    }
+
+    @Override
     public void start()
     {
         database = dbFactory.create( databasesDirectory, memberConfig,
-                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId()  );
+                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId );
 
         PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
@@ -205,9 +210,10 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         return defaultDatabaseLayout;
     }
 
+    @Override
     public String toString()
     {
-        return format( "ReadReplica{serverId=%d}", serverId );
+        return "ReadReplica{serverId=" + serverId + ", memberId=" + memberId + "}";
     }
 
     public String directURI()
@@ -224,11 +230,6 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     public void setUpstreamDatabaseSelectionStrategy( String key )
     {
         updateConfig( CausalClusteringSettings.upstream_selection_strategy, key );
-    }
-
-    MemberId memberId()
-    {
-        return memberId;
     }
 
     @Override

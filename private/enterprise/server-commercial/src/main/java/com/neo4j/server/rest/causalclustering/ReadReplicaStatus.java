@@ -17,6 +17,8 @@ import java.util.Collection;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -30,6 +32,7 @@ class ReadReplicaStatus extends BaseStatus
     private final ThroughputMonitor throughputMonitor;
 
     // Dependency resolved
+    private final DatabaseId databaseId;
     private final TopologyService topologyService;
     private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
@@ -40,6 +43,7 @@ class ReadReplicaStatus extends BaseStatus
         this.output = output;
 
         DependencyResolver dependencyResolver = db.getDependencyResolver();
+        this.databaseId = dependencyResolver.resolveDependency( Database.class ).getDatabaseId();
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
@@ -73,13 +77,11 @@ class ReadReplicaStatus extends BaseStatus
     @Override
     public Response description()
     {
-        Collection<MemberId> votingMembers = topologyService.allCoreRoles().keySet();
+        Collection<MemberId> votingMembers = topologyService.allCoreServers().keySet();
         boolean isHealthy = dbHealth.isHealthy();
         MemberId myId = topologyService.memberId();
-        MemberId leaderId = topologyService.allCoreRoles()
-                .keySet()
-                .stream()
-                .filter( member -> RoleInfo.LEADER.equals( topologyService.allCoreRoles().get( member ) ) )
+        MemberId leaderId = votingMembers.stream()
+                .filter( memberId -> topologyService.coreRole( databaseId, memberId ) == RoleInfo.LEADER )
                 .findFirst()
                 .orElse( null );
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();

@@ -122,9 +122,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Map<MemberId,RoleInfo> allCoreRoles()
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        return globalTopologyState.allCoreRoles();
+        return globalTopologyState.coreRole( databaseId, memberId );
     }
 
     @Override

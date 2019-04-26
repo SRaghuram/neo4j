@@ -5,27 +5,38 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import akka.actor.Address;
-import akka.remote.ThisActorSystemQuarantinedEvent;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import org.junit.Test;
+import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.MemberId;
+import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
 import org.mockito.InOrder;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
@@ -34,7 +45,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
-public class AkkaCoreTopologyServiceTest
+class AkkaCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
     private DiscoveryMember myself = new TestDiscoveryMember();
@@ -49,11 +60,8 @@ public class AkkaCoreTopologyServiceTest
     private AkkaCoreTopologyService service =
             new AkkaCoreTopologyService( config, myself, system, logProvider, userLogProvider, retryStrategy, executor, clock );
 
-    private ThisActorSystemQuarantinedEvent event = ThisActorSystemQuarantinedEvent.apply(
-            new Address( "protocol", "system", "host1", 1 ),
-            new Address( "protocol", "system", "host2",2 ) );
     @Test
-    public void shouldLifecycle() throws Throwable
+    void shouldLifecycle() throws Throwable
     {
         service.init();
         service.start();
@@ -69,7 +77,7 @@ public class AkkaCoreTopologyServiceTest
     }
 
     @Test
-    public void shouldNotRestartIfPre()
+    void shouldNotRestartIfPre()
     {
         service.restart();
 
@@ -77,7 +85,7 @@ public class AkkaCoreTopologyServiceTest
     }
 
     @Test
-    public void shouldNotRestartIfIdle() throws Throwable
+    void shouldNotRestartIfIdle() throws Throwable
     {
         service.init();
         reset( system );
@@ -88,7 +96,7 @@ public class AkkaCoreTopologyServiceTest
     }
 
     @Test
-    public void shouldNotRestartIfHalt() throws Throwable
+    void shouldNotRestartIfHalt() throws Throwable
     {
         service.init();
         service.start();
@@ -102,7 +110,7 @@ public class AkkaCoreTopologyServiceTest
     }
 
     @Test
-    public void shouldRestartIfRun() throws Throwable
+    void shouldRestartIfRun() throws Throwable
     {
         service.init();
         service.start();
@@ -113,5 +121,102 @@ public class AkkaCoreTopologyServiceTest
         InOrder inOrder = inOrder( system );
         inOrder.verify( system ).shutdown();
         inOrder.verify( system ).createClusterActorSystem();
+    }
+
+    @Test
+    void shouldReturnRoleForLocalLeader()
+    {
+        var databaseId1 = new DatabaseId( "customers" );
+        var databaseId2 = new DatabaseId( "orders" );
+
+        var memberId1 = new MemberId( UUID.randomUUID() );
+        var memberId2 = new MemberId( UUID.randomUUID() );
+
+        var leaderInfo1 = new LeaderInfo( memberId1, 1 );
+        var leaderInfo2 = new LeaderInfo( memberId2, 2 );
+
+        service.setLeader( leaderInfo1, databaseId1 );
+        service.setLeader( leaderInfo2, databaseId2 );
+
+        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId1, memberId1 ) );
+        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId2, memberId2 ) );
+    }
+
+    @Test
+    void shouldReturnRoleForRemoteLeader()
+    {
+        var databaseId = new DatabaseId( "customers" );
+        var leaderId = new MemberId( UUID.randomUUID() );
+
+        setupGlobalTopologyState( databaseId, leaderId );
+
+        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
+    }
+
+    @Test
+    void shouldReturnRoleForFollower()
+    {
+        var databaseId = new DatabaseId( "customers" );
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId1 = new MemberId( UUID.randomUUID() );
+        var followerId2 = new MemberId( UUID.randomUUID() );
+
+        setupGlobalTopologyState( databaseId, leaderId, followerId1, followerId2 );
+
+        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
+        assertEquals( RoleInfo.FOLLOWER, service.coreRole( databaseId, followerId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, service.coreRole( databaseId, followerId2 ) );
+    }
+
+    @Test
+    void shouldReturnRoleForUnknownDatabase()
+    {
+        var knownDatabaseId = new DatabaseId( "customers" );
+        var unknownDatabaseId = new DatabaseId( "orders" );
+
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId = new MemberId( UUID.randomUUID() );
+
+        setupGlobalTopologyState( knownDatabaseId, leaderId, followerId );
+
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, leaderId ) );
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, followerId ) );
+    }
+
+    @Test
+    void shouldReturnRoleForUnknownMemberId()
+    {
+        var databaseId = new DatabaseId( "customers" );
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId = new MemberId( UUID.randomUUID() );
+        var unknownId = new MemberId( UUID.randomUUID() );
+
+        setupGlobalTopologyState( databaseId, leaderId, followerId );
+
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, unknownId ) );
+    }
+
+    private void setupGlobalTopologyState( DatabaseId databaseId, MemberId leaderId, MemberId... followerIds )
+    {
+        var topologyState = service.topologyState();
+
+        var coreMembers = new HashMap<MemberId,CoreServerInfo>();
+
+        if ( leaderId != null )
+        {
+            coreMembers.put( leaderId, addressesForCore( 0, false, Set.of( databaseId ) ) );
+            topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( leaderId, 42 ) ) );
+        }
+
+        if ( followerIds != null )
+        {
+            for ( int i = 0; i < followerIds.length; i++ )
+            {
+                coreMembers.put( followerIds[i], addressesForCore( i + 1, false, Set.of( databaseId ) ) );
+            }
+        }
+
+        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, coreMembers );
+        topologyState.onTopologyUpdate( coreTopology );
     }
 }
