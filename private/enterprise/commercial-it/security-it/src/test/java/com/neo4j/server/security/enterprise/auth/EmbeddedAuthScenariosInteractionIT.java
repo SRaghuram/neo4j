@@ -6,15 +6,18 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -52,7 +55,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         userManager.grantPrivilegeToRole( "CustomRead", dbPriv );
 
         // Then
@@ -78,8 +81,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
-        dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         userManager.grantPrivilegeToRole( roleName, dbPriv );
 
         // Then
@@ -88,7 +91,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         userManager.revokePrivilegeFromRole( roleName, dbPriv );
 
         // Then
@@ -116,7 +119,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldNotAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
         DatabasePrivilege privilege = new DatabasePrivilege( "*" );
-        privilege.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
+        privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
 
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )
@@ -133,7 +136,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
         assertSuccess( adminSubject, "MATCH (n) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3, 4 ) );
@@ -149,7 +152,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         assertEmpty( adminSubject, "CREATE (n:A)" );
         assertEmpty( adminSubject, "CREATE (n:Node:A)" );
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 5 ) );
         assertSuccess( subject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 5 ) );
@@ -163,7 +166,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "", "" ) ) );
 
         assertSuccess( subject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
         assertSuccess( subject, "MATCH (n) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3, 4 ) );
@@ -175,9 +178,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "read", "label", "A" ),
-                new ResourcePrivilege( "read", "label", "B" ),
-                new ResourcePrivilege( "read", "label", "C" ) );
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "C", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (a:A)-[]->(n)-[]->(c:C) RETURN a.number AS a, n.number AS n, c.number AS c", r ->
         {
@@ -216,8 +219,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "read", "label", "A" ),
-                new ResourcePrivilege( "read", "label", "B" ) );
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (a:A)-[]->(n1:D)-[]->(c:C) RETURN a.number AS a, n1.number AS n1, c.number AS c", r ->
         {
@@ -235,7 +238,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldOnlyShowWhitelistedLabelsForNode() throws Throwable
     {
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:Node) WHERE n.number = 3 return labels(n)",
                 r -> assertKeyIs( r, "labels(n)", listOf( "A", "Node" ) ) );
@@ -250,7 +253,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
@@ -264,7 +267,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
@@ -278,7 +281,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
@@ -292,7 +295,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "read", "label", "Node" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.READ, new Resource.LabelResource( "Node", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
@@ -307,7 +310,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "write", "graph" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
         assertFail( subject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -320,7 +323,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT a.number IS UNIQUE" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
-        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( "write", "graph" ) );
+        CommercialLoginContext subject = setupUserAndLogin( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
 
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
         assertFail( subject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
@@ -355,8 +358,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A {number: 0}) MERGE (n)-[:R]->(:B {number: 1}) MERGE (n)-[:R]->(:C {number: 2})" );
         assertEmpty( adminSubject, "CREATE (n:A {number: 3})" );
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "read", "label", "A" ),
-                new ResourcePrivilege( "read", "label", "B" ) );
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) ) );
 
         assertSuccess( adminSubject, "MATCH ()-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
         assertSuccess( adminSubject, "MATCH (:A)-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
@@ -371,8 +374,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "read", "label", "A" ),
-                new ResourcePrivilege( "read", "label", "B" ) );
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) ) );
 
         String varlenBasic = "MATCH (:A)-[:R*3]-(n:B) return n.number";
         String varlenMinMax = "MATCH (:A)-[:R*..3]-(n:B) return n.number";
@@ -391,9 +394,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "read", "label", "A" ),
-                new ResourcePrivilege( "read", "label", "B" ),
-                new ResourcePrivilege( "read", "label", "C" ) );
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "C", "" ) ) );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
         String shortestWithProperty =
@@ -410,9 +413,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldReadBackNodeCreatedInSameTransaction() throws Throwable
     {
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "write", "graph" ),
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ),
                 // without this it fails early since we aren't allowed to get Read operations
-                new ResourcePrivilege( "read", "label", "B" )
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) )
         );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
@@ -426,9 +429,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldReadBackIndexedNodeCreatedInSameTransaction() throws Throwable
     {
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( "write", "graph" ),
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ),
                 // without this it fails early since we aren't allowed to get Read operations
-                new ResourcePrivilege( "read", "label", "B" )
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "B", "" ) )
         );
 
         setupGraph();

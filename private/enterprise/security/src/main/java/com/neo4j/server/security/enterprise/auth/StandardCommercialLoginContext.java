@@ -292,6 +292,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         case PROCEDURE:
                             break;
                         case GRAPH:
+                        case LABEL:
+                        case PROPERTY:
                             read = true;
                             if ( resource instanceof Resource.LabelResource )
                             {
@@ -323,6 +325,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         switch ( resource.type() )
                         {
                         case GRAPH:
+                        case LABEL:
+                        case PROPERTY:
                             write = true;
                             break;
                         case TOKEN:
@@ -343,6 +347,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         switch ( resource.type() )
                         {
                         case GRAPH:
+                        case LABEL:
+                        case PROPERTY:
                         case TOKEN:
                         case SCHEMA:
                         case SYSTEM:

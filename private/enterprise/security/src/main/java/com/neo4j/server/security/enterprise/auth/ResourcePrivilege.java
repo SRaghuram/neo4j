@@ -19,30 +19,6 @@ public class ResourcePrivilege
         resource.assertValidCombination( action );
     }
 
-    public ResourcePrivilege( String action, String resource ) throws InvalidArgumentsException
-    {
-        this( action, resource, null, null );
-    }
-
-    public ResourcePrivilege( String action, String resource, String arg1 ) throws InvalidArgumentsException
-    {
-        this( action, resource, arg1, null );
-    }
-
-    public ResourcePrivilege( String action, String resource, String arg1, String arg2 ) throws InvalidArgumentsException
-    {
-        try
-        {
-            this.action = Action.valueOf( action.toUpperCase() );
-            this.resource = com.neo4j.server.security.enterprise.auth.Resource.parse( resource, arg1, arg2 );
-            this.resource.assertValidCombination( this.action );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
-        }
-    }
-
     public Resource getResource()
     {
         return resource;

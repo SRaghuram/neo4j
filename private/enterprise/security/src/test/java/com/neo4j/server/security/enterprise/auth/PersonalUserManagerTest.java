@@ -75,7 +75,7 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) );
+        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) );
         log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, "graph", "*", ROLE_NAME ) );
     }
 
@@ -86,7 +86,7 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
+        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
         log.assertExactly( error( "[Alice]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
                 Action.READ, "graph", "*", ROLE_NAME, "assignPrivilegeToRoleException" )
         );
@@ -98,7 +98,7 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
+        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
         log.assertExactly( error( "[Bob]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
                 Action.READ, "graph", "*", ROLE_NAME, "Permission denied." ) );
     }
@@ -110,7 +110,7 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) );
+        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) );
         log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, "graph", "*", ROLE_NAME ) );
     }
 
@@ -121,7 +121,7 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
+        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
         log.assertExactly( error( "[Alice]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
                 Action.READ, "graph", "*", ROLE_NAME, "revokePrivilegeFromRoleException" )
         );
@@ -133,7 +133,7 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
+        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
         log.assertExactly( error( "[Bob]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
                 Action.READ, "graph", "*", ROLE_NAME, "Permission denied." ) );
     }
@@ -192,7 +192,7 @@ class PersonalUserManagerTest
                 error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
     }
 
-    private DatabasePrivilege createPrivilege( String action, String resource ) throws InvalidArgumentsException
+    private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
         dbPriv.addPrivilege( new ResourcePrivilege( action, resource ) );

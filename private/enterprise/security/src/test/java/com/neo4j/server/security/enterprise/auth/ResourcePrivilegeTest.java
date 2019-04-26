@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -16,29 +17,29 @@ class ResourcePrivilegeTest
     @Test
     void shouldConstructValidPrivileges() throws InvalidArgumentsException
     {
-        new ResourcePrivilege( "read", "graph" );
+        new ResourcePrivilege( Action.READ, new Resource.GraphResource() );
 
-        new ResourcePrivilege( "write", "graph" );
-        new ResourcePrivilege( "write", "token" );
-        new ResourcePrivilege( "write", "schema" );
-        new ResourcePrivilege( "write", "system" );
+        new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() );
+        new ResourcePrivilege( Action.WRITE, new Resource.TokenResource() );
+        new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource() );
+        new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() );
 
-        new ResourcePrivilege( "execute", "procedure" );
+        new ResourcePrivilege( Action.EXECUTE, new Resource.ProcedureResource( "", "" ) );
     }
 
     @Test
     void shouldNotAcceptInvalidPrivileges()
     {
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "read", "token" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "read", "schema" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "read", "system" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "read", "procedure" ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.TokenResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SchemaResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SystemResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ) ) );
 
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "write", "procedure" ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ) ) );
 
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "execute", "graph" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "execute", "token" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "execute", "schema" ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( "execute", "system" ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.GraphResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.TokenResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SchemaResource() ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SystemResource() ) );
     }
 }

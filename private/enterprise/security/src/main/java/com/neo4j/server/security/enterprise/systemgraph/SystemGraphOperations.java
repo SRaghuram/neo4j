@@ -28,6 +28,7 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.virtual.NodeValue;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -190,7 +191,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         Map<String,Object> params = map(
                 "roleName", roleName,
                 "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.cypherType(),
+                "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
                 "dbName", dbName
@@ -217,7 +218,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         Map<String,Object> params = map(
                 "roleName", roleName,
                 "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.cypherType(),
+                "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
                 "dbName", dbName
@@ -246,10 +247,10 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
     Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
         String query =
-                "MATCH (r:Role)-[:GRANTED]->(p:Privilege)-[:SCOPE]->(db:Database) " +
+                "MATCH (r:Role)-[:GRANTED]->(a:Privilege)-[:SCOPE]->(db:Database), " +
+                "(a)-[:APPLIES_TO]->(res) " +
                 "WHERE r.name IN $roles " +
-                "OPTIONAL MATCH (p)-[:APPLIES_TO]->(res) " +
-                "RETURN db.name AS dbname, p.action AS action, res.type AS resource, res.arg1 AS arg1, res.arg2 AS arg2 ORDER BY resource";
+                "RETURN db.name, a.action, res";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
@@ -264,25 +265,18 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
             DatabasePrivilege dbpriv = results.getOrDefault( dbName, new DatabasePrivilege( dbName ) );
 
-            AnyValue actionValue = row.fields()[1];
-            AnyValue resourceTypeValue = row.fields()[2];
-            AnyValue resourceArg1Value = row.fields()[3];
-            AnyValue resourceArg2Value = row.fields()[4];
-            if ( actionValue != NO_VALUE && resourceTypeValue != NO_VALUE )
+            String actionValue = ((TextValue) row.fields()[1]).stringValue();
+            NodeValue resource = (NodeValue) row.fields()[2];
+            try
             {
-                String action = ((TextValue) actionValue).stringValue();
-                String resource = ((TextValue) resourceTypeValue).stringValue();
-                String arg1 = resourceArg1Value == NO_VALUE ? null : ((TextValue) resourceArg1Value).stringValue();
-                String arg2 = resourceArg2Value == NO_VALUE ? null : ((TextValue) resourceArg2Value).stringValue();
-                try
-                {
-                    ResourcePrivilege privilege = new ResourcePrivilege( action, resource, arg1, arg2 );
-                    dbpriv.addPrivilege( privilege );
-                    results.put( dbName, dbpriv );
-                }
-                catch ( InvalidArgumentsException ignored )
-                {
-                }
+                dbpriv.addPrivilege( PrivilegeBuilder.grant( queryExecutor, actionValue )
+                        .onResource( resource )
+                        .build()
+                );
+                results.put( dbName, dbpriv );
+            }
+            catch ( InvalidArgumentsException ignored )
+            {
             }
             return true;
         };

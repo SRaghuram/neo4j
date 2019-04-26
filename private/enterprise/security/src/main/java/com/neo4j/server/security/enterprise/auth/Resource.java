@@ -46,8 +46,6 @@ public interface Resource
 
     Type type();
 
-    String cypherType();
-
     class GraphResource implements Resource
     {
         @Override
@@ -82,12 +80,6 @@ public interface Resource
         {
             return obj instanceof GraphResource;
         }
-
-        @Override
-        public String cypherType()
-        {
-            return "GRAPH";
-        }
     }
 
     class LabelResource implements Resource
@@ -95,7 +87,7 @@ public interface Resource
         private final String label;
         private final String property;
 
-        LabelResource( String label, String property )
+        public LabelResource( String label, String property )
         {
             this.label = label;
             this.property = property;
@@ -125,19 +117,13 @@ public interface Resource
         @Override
         public Type type()
         {
-            return Type.GRAPH;
+            return Type.LABEL;
         }
 
         @Override
         public String toString()
         {
             return "label " + label;
-        }
-
-        @Override
-        public String cypherType()
-        {
-            return "LABEL";
         }
 
         @Override
@@ -188,12 +174,6 @@ public interface Resource
         }
 
         @Override
-        public String cypherType()
-        {
-            return "TOKEN";
-        }
-
-        @Override
         public int hashCode()
         {
             return Type.TOKEN.hashCode();
@@ -227,12 +207,6 @@ public interface Resource
         public String toString()
         {
             return "schema";
-        }
-
-        @Override
-        public String cypherType()
-        {
-            return "SCHEMA";
         }
 
         @Override
@@ -272,12 +246,6 @@ public interface Resource
         }
 
         @Override
-        public String cypherType()
-        {
-            return "SYSTEM";
-        }
-
-        @Override
         public int hashCode()
         {
             return Type.SYSTEM.hashCode();
@@ -295,7 +263,7 @@ public interface Resource
         private final String nameSpace;
         private final String procedure;
 
-        ProcedureResource( String nameSpace, String procedure )
+        public ProcedureResource( String nameSpace, String procedure )
         {
             this.nameSpace = nameSpace;
             this.procedure = procedure;
@@ -335,12 +303,6 @@ public interface Resource
         }
 
         @Override
-        public String cypherType()
-        {
-            return "PROCEDURE";
-        }
-
-        @Override
         public int hashCode()
         {
             return Type.PROCEDURE.hashCode();
@@ -355,10 +317,18 @@ public interface Resource
 
     enum Type
     {
+        PROPERTY,
+        LABEL,
         GRAPH,
         TOKEN,
         SCHEMA,
         SYSTEM,
-        PROCEDURE
+        PROCEDURE;
+
+        @Override
+        public String toString()
+        {
+            return super.toString().toLowerCase();
+        }
     }
 }

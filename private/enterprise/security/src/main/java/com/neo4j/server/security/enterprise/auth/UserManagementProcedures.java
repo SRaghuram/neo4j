@@ -177,9 +177,19 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege( database );
-        privilege.addPrivilege( new ResourcePrivilege( action, resource ) );
-        userManager.grantPrivilegeToRole( roleName, privilege );
+        try
+        {
+            DatabasePrivilege privilege = new DatabasePrivilege( database );
+            privilege.addPrivilege( new ResourcePrivilege(
+                    ResourcePrivilege.Action.valueOf( action.toUpperCase() ),
+                    Resource.parse( resource, null, null ) )
+            );
+            userManager.grantPrivilegeToRole( roleName, privilege );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
+        }
     }
 
     @Admin
@@ -191,8 +201,18 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege( database );
-        privilege.addPrivilege( new ResourcePrivilege( action, resource ) );
-        userManager.revokePrivilegeFromRole( roleName, privilege );
+        try
+        {
+            DatabasePrivilege privilege = new DatabasePrivilege( database );
+            privilege.addPrivilege( new ResourcePrivilege(
+                    ResourcePrivilege.Action.valueOf( action.toUpperCase() ),
+                    Resource.parse( resource, null, null ) )
+            );
+            userManager.revokePrivilegeFromRole( roleName, privilege );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
+        }
     }
 }
