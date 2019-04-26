@@ -260,6 +260,46 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     result2.toSet should be(defaultRoles ++ Set.empty)
   }
 
+  test("should list default user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW USERS")
+
+    // THEN
+    result.toSet should be(Set(Map("user" -> "neo4j", "roles" -> Seq("admin"))))
+  }
+
+  test("should list all users") {
+    // GIVEN
+    // User  : Roles
+    // neo4j : admin
+    // Bar   : dragon, fairy
+    // Baz   :
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    // TODO update to use actual DDL when available for creating users and assigning to roles
+    systemGraphInnerQueryExecutor.executeQueryLong(
+      """
+        |CREATE (r1:Role {name:'dragon'})
+        |CREATE (r2:Role {name:'fairy'})
+        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})
+        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})
+        |CREATE (u1)-[:HAS_ROLE]->(r1)
+        |CREATE (u1)-[:HAS_ROLE]->(r2)
+      """.stripMargin)
+
+    // WHEN
+    val result = execute("SHOW USERS")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "Bar", "roles" -> Seq("fairy", "dragon")),
+      Map("user" -> "Baz", "roles" -> Seq.empty)
+    ))
+  }
+
   // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
   // But it can't be initialized until after super.initTest()
   private var systemGraphInnerQueryExecutor: ContextSwitchingSystemGraphQueryExecutor = _
