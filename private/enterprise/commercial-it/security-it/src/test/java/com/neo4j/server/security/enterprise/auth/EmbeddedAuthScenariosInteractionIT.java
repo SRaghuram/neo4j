@@ -444,4 +444,33 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, query, Collections.singletonMap("param", 2L), r -> assertKeyIs( r, "a.foo", 1, 2 ) );
         assertSuccess( subject, query, Collections.singletonMap("param", 3L), r -> assertKeyIs( r, "a.foo", 3 ) );
     }
+
+    @Test
+    void shouldOnlyShowWhitelistedLabels() throws Throwable
+    {
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) )
+        );
+
+        assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
+        assertEmpty( adminSubject, "CREATE (:A), (:B), (:A:B), ()" );
+
+        List<String> aList = Collections.singletonList( "A" );
+        assertSuccess( subject, "MATCH (n) RETURN labels(n)",
+                r -> assertKeyIs( r, "labels(n)", aList, emptyList(), aList, emptyList() ) );
+    }
+
+    @Test
+    void shouldOnlyShowLabelsForScope() throws Throwable
+    {
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.READ, new Resource.LabelResource( "A", "" ) )
+        );
+
+        assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
+        assertEmpty( adminSubject, "CREATE (:A), (:B), (:A:B), ()" );
+
+        assertSuccess( subject, "MATCH (n) RETURN labels(n)",
+                r -> assertKeyIs( r, "labels(n)", Collections.singletonList( "A" ), emptyList(), emptyList(), emptyList() ) );
+    }
 }

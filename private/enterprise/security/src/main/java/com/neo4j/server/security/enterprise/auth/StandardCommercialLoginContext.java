@@ -12,6 +12,7 @@ import org.apache.shiro.authz.AuthorizationInfo;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
@@ -245,6 +246,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private IntPredicate propertyPermissions;
             private boolean allowReadAllNodes;
             private Set<Integer> allowedLabels;
+            private Map<Integer, Set<Integer>> allowedPropertyInSegment;
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -307,6 +309,13 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                                     allowedLabels.add( resolver.getOrCreateLabelId( label ) );
                                 }
                             }
+                            else if ( resource instanceof Resource.PropertyResource )
+                            {
+                                int propertyId = resolvePropertyId( resource.getArg1() );
+                                int labelId = resolveLabelSegment( privilege.getSegment() );
+                                Set<Integer> allowedProperties = allowedPropertyInSegment.putIfAbsent( labelId, new HashSet<>() );
+                                allowedProperties.add( propertyId );
+                            }
                             else
                             {
                                 allowReadAllNodes = true;
@@ -356,6 +365,39 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     default:
                     }
                 }
+            }
+
+            private int resolveLabelSegment( Segment segment )
+            {
+                if ( !segment.equals( Segment.ALL ) )
+                {
+                    try
+                    {
+                        return resolver.getOrCreateLabelId( segment.getLabel() );
+                    }
+                    catch ( KernelException ignored )
+                    {
+                        // TODO couldn't get or create id for label...
+                    }
+                }
+                return -1; // TODO what should represent the "FULL" segment
+            }
+
+            private int resolvePropertyId( String property )
+            {
+                if ( !property.isEmpty() )
+                {
+                    try
+                    {
+                        return resolver.getOrCreatePropertyKeyId( property );
+                    }
+                    catch ( KernelException ignored )
+                    {
+                        // TODO couldn't get or create id for property...
+                    }
+
+                }
+                return -1;
             }
         }
     }

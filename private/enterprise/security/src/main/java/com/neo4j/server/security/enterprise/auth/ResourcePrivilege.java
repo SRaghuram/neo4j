@@ -11,11 +11,19 @@ public class ResourcePrivilege
 {
     private final Action action;
     private final Resource resource;
+    private final Segment segment;
 
+    // Used for testing only
     public ResourcePrivilege( Action action, Resource resource ) throws InvalidArgumentsException
+    {
+        this( action, resource, Segment.ALL );
+    }
+
+    public ResourcePrivilege( Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
     {
         this.action = action;
         this.resource = resource;
+        this.segment = segment;
         resource.assertValidCombination( action );
     }
 
@@ -27,6 +35,11 @@ public class ResourcePrivilege
     public Action getAction()
     {
         return action;
+    }
+
+    public Segment getSegment()
+    {
+        return segment;
     }
 
     @Override
@@ -52,11 +65,27 @@ public class ResourcePrivilege
         return false;
     }
 
-    // Actions that can be assigned to a privilege for a role
     public enum Action
     {
+        /** MATCH element and read labels */
+        FIND,
+
+        /** Create new element and properties */
+        CREATE,
+
+        /** Read properties of element */
         READ,
+
+        /** Change value of existing property (later on change label) */
+        UPDATE,
+
+        /** Delete property/element */
+        DELETE,
+
+        /** CREATE + UPDATE + DELETE */
         WRITE,
+
+        /** Execute procedure/view with elevated access */
         EXECUTE;
 
         @Override

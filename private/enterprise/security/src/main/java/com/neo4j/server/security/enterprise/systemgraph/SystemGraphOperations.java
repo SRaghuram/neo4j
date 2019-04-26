@@ -8,7 +8,6 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -22,6 +21,7 @@ import java.util.TreeSet;
 
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.values.AnyValue;
@@ -199,8 +199,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String query =
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}) " +
-                "CREATE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
-                "RETURN 0";
+                "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
+                "CREATE (p)-[:SCOPE]->(segment:Segment) RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -225,8 +225,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String query =
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
-                "CREATE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
-                "CREATE (p)-[:SCOPE]->(db) RETURN 0";
+                "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
+                "CREATE (p)-[:SCOPE]->(segment:Segment)-[:NAME_ME]->(db) RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -247,11 +247,12 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "arg2", resource.getArg2()
         );
         String query =
-                "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource) " +
+                "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), " +
+                "(p)-[:SCOPE]->(segment:Segment) " +
                 "WHERE role.name = $roleName AND p.action = $action AND " +
                 "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "AND NOT (p)-[:SCOPE]->(:Database) " +
-                "DETACH DELETE p RETURN 0";
+                "AND NOT (segment)-[:NAME_ME]->(:Database) " +
+                "DETACH DELETE p, segment RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -273,10 +274,11 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "dbName", dbName
         );
         String query =
-                "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]->(db:Database) " +
+                "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), " +
+                "(p)-[:SCOPE]->(segment:Segment)-[:NAME_ME]->(db:Database) " +
                 "WHERE role.name = $roleName AND p.action = $action AND db.name = $dbName AND " +
                 "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "DETACH DELETE p RETURN 0";
+                "DETACH DELETE p, segment RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -295,11 +297,13 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
     Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
+        // TODO add existenceConstraint on :Action(action)
         String query =
-                "MATCH (r:Role)-[:GRANTED]->(a:Privilege)-[:APPLIES_TO]->(res) " +
+                "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment)," +
+                "(a)-[:APPLIES_TO]->(res) " +
                 "WHERE r.name IN $roles " +
-                "OPTIONAL MATCH (a)-[:SCOPE]->(db:Database) " +
-                "RETURN db.name, a.action, res";
+                "OPTIONAL MATCH (segment)-[:NAME_ME]->(db:Database) " +
+                "RETURN db.name, a.action, res, segment";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
@@ -319,9 +323,11 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
             String actionValue = ((TextValue) row.fields()[1]).stringValue();
             NodeValue resource = (NodeValue) row.fields()[2];
+            NodeValue segment = (NodeValue) row.fields()[3];
             try
             {
                 dbpriv.addPrivilege( PrivilegeBuilder.grant( queryExecutor, actionValue )
+                        .withinScope( segment )
                         .onResource( resource )
                         .build()
                 );

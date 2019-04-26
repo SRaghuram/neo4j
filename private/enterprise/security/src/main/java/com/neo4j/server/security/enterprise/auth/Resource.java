@@ -158,6 +158,65 @@ public interface Resource
         }
     }
 
+    class PropertyResource implements Resource
+    {
+        private final String property;
+
+        PropertyResource( String property )
+        {
+            this.property = property;
+        }
+
+        @Override
+        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
+            }
+        }
+
+        @Override
+        public String getArg1()
+        {
+            return property == null ? "" : property;
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.PROPERTY;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "property " + property;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return property == null ? 0 : 7 * property.hashCode() + 13 * Type.GRAPH.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if ( obj == this )
+            {
+                return true;
+            }
+
+            if ( obj instanceof LabelResource )
+            {
+                LabelResource other = (LabelResource) obj;
+                return this.property == null && other.property == null || this.property != null && this.property.equals( other.property );
+            }
+            return false;
+        }
+    }
+
     class TokenResource implements Resource
     {
         @Override

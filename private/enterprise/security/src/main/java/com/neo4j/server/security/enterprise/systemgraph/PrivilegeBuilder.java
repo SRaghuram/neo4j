@@ -8,15 +8,21 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.NodeValue;
 
+import static org.neo4j.helpers.collection.MapUtil.map;
+
 class PrivilegeBuilder
 {
     private final boolean allowed;
     private QueryExecutor queryExecutor;
+    private Set<String> labels = new HashSet<>();
     private ResourcePrivilege.Action action;
     private Resource resource;
 
@@ -32,8 +38,30 @@ class PrivilegeBuilder
         return new PrivilegeBuilder( true, queryExecutor, action );
     }
 
+    PrivilegeBuilder withinScope( NodeValue segment )
+    {
+        queryExecutor.executeQuery( "MATCH (s:Segment)-[:QUALIFIED]->(q) WHERE id(s) = $nodeId RETURN q",
+                map( "nodeId", segment.id() ), row ->
+                {
+                    NodeValue qualifier = (NodeValue) row.fields()[0];
+                    switch ( qualifier.labels().stringValue( 0 ) )
+                    {
+                    case "LabelQualifier":
+                        this.labels.add( ((TextValue) qualifier.properties().get( "label" )).stringValue() );
+                        break;
+                    default:
+                        throw new IllegalStateException( "Unknown privilege qualifier type: " + qualifier.labels().stringValue( 0 ) );
+                    }
+                    return true;
+                } );
+        return this;
+    }
+
     PrivilegeBuilder onResource( NodeValue resource ) throws InvalidArgumentsException
     {
+//        TextArray labels = resource.labels();
+//        assert (labels.length() == 1);
+//        String type = labels.stringValue( 0 );
         String type = ((TextValue) resource.properties().get( "type" )).stringValue();
         Resource.Type resourceType = asResourceType( type );
         switch ( resourceType )
