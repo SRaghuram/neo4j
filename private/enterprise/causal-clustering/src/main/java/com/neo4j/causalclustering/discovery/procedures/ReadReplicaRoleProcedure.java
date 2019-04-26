@@ -7,15 +7,12 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.RoleInfo;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public class ReadReplicaRoleProcedure extends RoleProcedure
 {
-    public ReadReplicaRoleProcedure()
-    {
-        super();
-    }
-
     @Override
-    RoleInfo role()
+    RoleInfo role( DatabaseId databaseId )
     {
         return RoleInfo.READ_REPLICA;
     }

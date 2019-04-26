@@ -7,6 +7,8 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.RoleInfo;
 
+import java.util.Arrays;
+
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
@@ -14,7 +16,9 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
 
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -24,21 +28,38 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
     private static final String PROCEDURE_NAME = "role";
     private static final String[] PROCEDURE_NAMESPACE = {"dbms", "cluster"};
     private static final String OUTPUT_NAME = "role";
+    private static final String PARAMETER_NAME = "database";
 
     RoleProcedure()
     {
         super( procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )
+                .in( PARAMETER_NAME, Neo4jTypes.NTString )
                 .out( OUTPUT_NAME, Neo4jTypes.NTString )
-                .description( "The role of a specific instance in the cluster." )
+                .description( "The role of this instance in the cluster for the specified database." )
                 .build() );
     }
 
     @Override
-    public RawIterator<AnyValue[],ProcedureException> apply(
-            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue(role().name())} );
+        var databaseId = extractDatabaseId( input );
+        var role = role( databaseId );
+        return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue( role.toString() )} );
     }
 
-    abstract RoleInfo role();
+    abstract RoleInfo role( DatabaseId databaseId );
+
+    private static DatabaseId extractDatabaseId( AnyValue[] input )
+    {
+        if ( input.length != 1 )
+        {
+            throw new IllegalArgumentException( "Illegal input: " + Arrays.toString( input ) );
+        }
+        var value = input[0];
+        if ( value instanceof TextValue )
+        {
+            return new DatabaseId( ((TextValue) value).stringValue() );
+        }
+        throw new IllegalArgumentException( "Parameter '" + PARAMETER_NAME + "' value should be a string: " + value );
+    }
 }

@@ -5,22 +5,27 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.TopologyService;
+
+import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreRoleProcedure extends RoleProcedure
 {
-    private final RaftMachine raft;
+    private final IdentityModule identityModule;
+    private final TopologyService topologyService;
 
-    public CoreRoleProcedure( RaftMachine raft )
+    public CoreRoleProcedure( IdentityModule identityModule, TopologyService topologyService )
     {
-        super();
-        this.raft = raft;
+        this.identityModule = identityModule;
+        this.topologyService = topologyService;
     }
 
     @Override
-    RoleInfo role()
+    RoleInfo role( DatabaseId databaseId )
     {
-        return raft.isLeader() ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
+        var myId = identityModule.myself();
+        return topologyService.coreRole( databaseId, myId );
     }
 }

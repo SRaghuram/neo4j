@@ -7,33 +7,39 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
+import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 class CausalClusteringProceduresIT
 {
     private static final String[] PROCEDURES_WITHOUT_PARAMS = {
-            "dbms.cluster.role",
             "dbms.cluster.overview",
             "dbms.procedures",
             "dbms.listQueries"
@@ -52,7 +58,12 @@ class CausalClusteringProceduresIT
     @BeforeAll
     void setup() throws Exception
     {
-        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
+        var clusterConfig = clusterConfig()
+                .withDiscoveryServiceType( AKKA )
+                .withNumberOfCoreMembers( 2 )
+                .withNumberOfReadReplicas( 1 );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
     }
 
@@ -80,19 +91,35 @@ class CausalClusteringProceduresIT
         testProcedureExistence( PROCEDURES_WITH_CONTEXT_PARAM, cluster.readReplicas(), true );
     }
 
+    @Test
+    void clusterRoleProcedure() throws Exception
+    {
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var leader = cluster.awaitLeader();
+
+        for ( var member : cluster.coreMembers() )
+        {
+            var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
+            assertEventually( roleReportedByProcedure( member, databaseId.name() ), equalTo( expectedRole ), 2, MINUTES );
+        }
+
+        for ( var member : cluster.readReplicas() )
+        {
+            var expectedRole = RoleInfo.READ_REPLICA;
+            assertEventually( roleReportedByProcedure( member, databaseId.name() ), equalTo( expectedRole ), 2, MINUTES );
+        }
+    }
+
     private static void testProcedureExistence( String[] procedures, Collection<? extends ClusterMember<?>> members, boolean withContextParameter )
     {
-        for ( String procedure : procedures )
+        for ( var procedure : procedures )
         {
-            for ( ClusterMember<?> member : members )
+            for ( var member : members )
             {
-                GraphDatabaseService db = member.database();
-                try ( Transaction tx = db.beginTx();
-                      Result result = invokeProcedure( db, procedure, withContextParameter ) )
+                try ( var result = invokeProcedure( member.database(), procedure, withContextParameter ) )
                 {
-                    List<Map<String,Object>> records = Iterators.asList( result );
+                    var records = Iterators.asList( result );
                     assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
-                    tx.success();
                 }
             }
         }
@@ -108,5 +135,17 @@ class CausalClusteringProceduresIT
         {
             return db.execute( "CALL " + name + "()" );
         }
+    }
+
+    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember<?> member, String databaseName )
+    {
+        return () ->
+        {
+            var db = member.database();
+            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseName ) ) )
+            {
+                return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
+            }
+        };
     }
 }
