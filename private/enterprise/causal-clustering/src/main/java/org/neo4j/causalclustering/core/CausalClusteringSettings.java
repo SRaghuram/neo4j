@@ -262,6 +262,21 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Integer> middleware_akka_sink_parallelism_level =
             setting( "causal_clustering.middleware.akka.sink-parallelism", INTEGER, Integer.toString( 2 ) );
 
+    @Internal
+    @Description( "Timeout for Akka socket binding" )
+    public static final Setting<Duration> akka_bind_timeout =
+            setting( "causal_clustering.middleware.akka.bind-timeout", DURATION, "10s");
+
+    @Internal
+    @Description( "Timeout for Akka connection" )
+    public static final Setting<Duration> akka_connection_timeout =
+            setting( "causal_clustering.middleware.akka.connection-timeout", DURATION, "10s");
+
+    @Internal
+    @Description( "Timeout for Akka handshake" )
+    public static final Setting<Duration> akka_handshake_timeout =
+            setting( "causal_clustering.middleware.akka.handshake-timeout", DURATION, "30s");
+
     /*
         Begin akka failure detector
         setting descriptions copied from reference.conf in akka-cluster

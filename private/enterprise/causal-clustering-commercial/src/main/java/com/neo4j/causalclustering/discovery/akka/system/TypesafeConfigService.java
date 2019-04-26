@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.typesafe.config.ConfigFactory;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -107,6 +108,15 @@ public final class TypesafeConfigService
 
         configMap.put( "akka.remote.artery.bind.hostname", hostname( listenAddress ) );
         configMap.put( "akka.remote.artery.bind.port", listenAddress.getPort() );
+
+        Duration bindTimeout = config.get( CausalClusteringSettings.akka_bind_timeout );
+        configMap.put( "akka.remote.artery.bind.bind-timeout", bindTimeout.toMillis() + "ms" );
+
+        Duration connectionTimeout = config.get( CausalClusteringSettings.akka_connection_timeout );
+        configMap.put( "akka.remote.artery.advanced.connection-timeout", connectionTimeout.toMillis() + "ms" );
+
+        Duration handshakeTimeout = config.get( CausalClusteringSettings.akka_handshake_timeout );
+        configMap.put( "akka.remote.artery.advanced.handshake-timeout", handshakeTimeout.toMillis() + "ms" );
 
         return ConfigFactory.parseMap( configMap );
     }
