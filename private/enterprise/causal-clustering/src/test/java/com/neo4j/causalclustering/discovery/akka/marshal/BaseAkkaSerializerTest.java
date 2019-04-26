@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForM
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -67,8 +67,8 @@ public class BaseAkkaSerializerTest
         return Arrays.asList(
                 new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ),
                         new LeaderInfoSerializer()},
-                new Object[]{new ClusterId( UUID.randomUUID() ),
-                        new ClusterIdSerializer()},
+                new Object[]{new RaftId( UUID.randomUUID() ),
+                        new RaftIdSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ),
                         new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
@@ -85,7 +85,7 @@ public class BaseAkkaSerializerTest
                         new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                         new ReadReplicaInfoSerializer()},
-                new Object[]{new DatabaseCoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new ClusterId( UUID.randomUUID() ),
+                new Object[]{new DatabaseCoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new RaftId( UUID.randomUUID() ),
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
                 new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                         new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},

@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.File;
@@ -47,9 +47,9 @@ public class CoreStateStorageFactory
         return createSimpleStorage( layout.clusterStateVersionFile(), CoreStateFiles.VERSION );
     }
 
-    public SimpleStorage<ClusterId> createClusterIdStorage()
+    public SimpleStorage<RaftId> createRaftIdStorage( DatabaseId databaseId )
     {
-        return createSimpleStorage( layout.clusterIdStateFile(), CoreStateFiles.CLUSTER_ID );
+        return createSimpleStorage( layout.raftIdStateFile( databaseId ), CoreStateFiles.RAFT_ID );
     }
 
     public SimpleStorage<MemberId> createMemberIdStorage()
@@ -102,5 +102,10 @@ public class CoreStateStorageFactory
         DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider );
         life.add( storage );
         return storage;
+    }
+
+    public ClusterStateLayout layout()
+    {
+        return layout;
     }
 }

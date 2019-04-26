@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -55,7 +55,7 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, new RaftId( UUID.randomUUID() ), Map.of() );
         Listener listener = mock( Listener.class );
         when( listener.databaseId() ).thenReturn( databaseId );
         service.addLocalCoreTopologyListener( listener );

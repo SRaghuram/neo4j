@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
@@ -52,7 +52,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), allCoreServers() );
+        return new DatabaseCoreTopology( DATABASE_ID, new RaftId( new UUID( 99, 88 ) ), allCoreServers() );
     }
 
     @Override

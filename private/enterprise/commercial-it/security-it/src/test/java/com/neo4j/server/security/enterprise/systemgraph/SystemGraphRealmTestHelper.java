@@ -50,7 +50,7 @@ class SystemGraphRealmTestHelper
             {
                 DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
                 Database database = dependencyResolver.resolveDependency( Database.class );
-                return Optional.of( new StandaloneDatabaseContext( database, testSystemDb ) );
+                return Optional.of( new StandaloneDatabaseContext( database ) );
             }
             return Optional.empty();
         }

@@ -5,36 +5,31 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.core.CoreState;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.io.IOException;
-import java.util.Map;
-
-import org.neo4j.kernel.database.DatabaseId;
-
-import static java.util.Comparator.comparingLong;
 
 public class CoreSnapshotService
 {
     private static final String OPERATION_NAME = "snapshot request";
 
     private final CommandApplicationProcess applicationProcess;
-    private final CoreStateRepository coreStateRepository;
+    private final CoreState coreState;
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
 
-    public CoreSnapshotService( CommandApplicationProcess applicationProcess, CoreStateRepository coreStateRepository, RaftLog raftLog,
-            RaftMachine raftMachine )
+    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState, RaftMachine raftMachine )
     {
         this.applicationProcess = applicationProcess;
-        this.coreStateRepository = coreStateRepository;
+        this.coreState = coreState;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
     }
 
-    public synchronized CoreSnapshot snapshot( DatabaseId databaseId ) throws Exception
+    public synchronized CoreSnapshot snapshot() throws Exception
     {
         applicationProcess.pauseApplier( OPERATION_NAME );
         try
@@ -44,7 +39,7 @@ public class CoreSnapshotService
             long prevTerm = raftLog.readEntryTerm( lastApplied );
             CoreSnapshot coreSnapshot = new CoreSnapshot( lastApplied, prevTerm );
 
-            coreStateRepository.augmentSnapshot( databaseId, coreSnapshot );
+            coreState.augmentSnapshot( coreSnapshot );
             coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftMachine.coreState() );
 
             return coreSnapshot;
@@ -55,19 +50,16 @@ public class CoreSnapshotService
         }
     }
 
-    public synchronized void installSnapshots( Map<DatabaseId,CoreSnapshot> coreSnapshots ) throws IOException
+    public synchronized void installSnapshot( CoreSnapshot coreSnapshot ) throws IOException
     {
-        CoreSnapshot earliestSnapshot = coreSnapshots.values().stream().min( comparingLong( CoreSnapshot::prevIndex ) ).orElseThrow();
+        long snapshotPrevIndex = coreSnapshot.prevIndex();
+        raftLog.skip( snapshotPrevIndex, coreSnapshot.prevTerm() );
+        raftMachine.installCoreState( coreSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
 
-        long snapshotPrevIndex = earliestSnapshot.prevIndex();
-        raftLog.skip( snapshotPrevIndex, earliestSnapshot.prevTerm() );
-        raftMachine.installCoreState( earliestSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
+        coreState.installSnapshot( coreSnapshot );
+        coreState.flush( snapshotPrevIndex );
 
-        coreSnapshots.forEach( coreStateRepository::installSnapshotForDatabase );
-        coreStateRepository.installSnapshotForRaftGroup( earliestSnapshot );
-        coreStateRepository.flush( snapshotPrevIndex );
-
-        applicationProcess.installSnapshot( earliestSnapshot );
+        applicationProcess.installSnapshot( coreSnapshot );
         notifyAll();
     }
 

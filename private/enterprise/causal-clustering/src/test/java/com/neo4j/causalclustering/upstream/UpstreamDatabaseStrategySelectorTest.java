@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ public class UpstreamDatabaseStrategySelectorTest
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
         when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
-                new DatabaseCoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+                new DatabaseCoreTopology( DATABASE_ID, new RaftId( UUID.randomUUID() ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
         defaultStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
@@ -84,7 +84,7 @@ public class UpstreamDatabaseStrategySelectorTest
         TopologyService topologyService = mock( TopologyService.class );
         MemberId memberId = new MemberId( UUID.randomUUID() );
         when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn(
-                new DatabaseCoreTopology( DATABASE_ID, new ClusterId( UUID.randomUUID() ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+                new DatabaseCoreTopology( DATABASE_ID, new RaftId( UUID.randomUUID() ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy shouldNotUse = mock( ConnectToRandomCoreServerStrategy.class );
 

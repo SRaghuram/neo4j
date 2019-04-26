@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
@@ -21,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import org.neo4j.configuration.Config;
@@ -34,7 +32,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -94,17 +91,15 @@ public class DatabaseBootstrapper
     private final RaftCoreState raftCoreState;
     private final GlobalSessionTrackerState sessionTrackerState;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
-    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers;
+    private final DatabaseInitializer databaseInitializer;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Log log;
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    public DatabaseBootstrapper( Set<MemberId> members, TemporaryDatabaseFactory tempDatabaseFactory,
-            Function<DatabaseId,DatabaseInitializer> databaseInitializers,
-            PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider,
-            StorageEngineFactory storageEngineFactory, Config config )
+    DatabaseBootstrapper( Set<MemberId> members, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer, PageCache pageCache,
+            FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config )
     {
         // member IDs are a field temporarily because all databases live in a single Raft group;
         // set of member IDs will become a parameter to #bootstrap() once we move to multiple Raft groups
@@ -116,7 +111,7 @@ public class DatabaseBootstrapper
         this.sessionTrackerState = new GlobalSessionTrackerState();
 
         this.tempDatabaseFactory = tempDatabaseFactory;
-        this.databaseInitializers = databaseInitializers;
+        this.databaseInitializer = databaseInitializer;
         this.pageCache = pageCache;
         this.fs = fs;
         this.log = logProvider.getLog( getClass() );
@@ -127,40 +122,41 @@ public class DatabaseBootstrapper
     /**
      * Bootstrap the database described by the given context.
      *
-     * @param dbContext the context of a database to bootstrap.
+     * @param bootstrapContext the context of a database to bootstrap.
      * @return a snapshot which represents the initial state.
      */
-    public CoreSnapshot bootstrap( ClusteredDatabaseContext dbContext )
+    public CoreSnapshot bootstrap( BootstrapContext bootstrapContext )
     {
         try
         {
-            log.info( "Bootstrapping database " + dbContext.databaseId().name() + " for members " + members );
-            ensureRecoveredOrThrow( dbContext, config );
-            initializeStoreIfNeeded( dbContext );
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( dbContext );
-            CoreSnapshot snapshot = buildCoreSnapshot( dbContext );
-            log.info( "Bootstrapping of the database " + dbContext.databaseId().name() + " completed " + snapshot );
+            log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
+            ensureRecoveredOrThrow( bootstrapContext, config );
+            initializeStoreIfNeeded( bootstrapContext );
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext );
+            CoreSnapshot snapshot = buildCoreSnapshot( bootstrapContext );
+            log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
         }
         catch ( Exception e )
         {
-            throw new BootstrapException( dbContext.databaseId(), e );
+            throw new BootstrapException( bootstrapContext.databaseId(), e );
         }
     }
 
-    private void initializeStoreIfNeeded( ClusteredDatabaseContext dbContext ) throws IOException
+    private void initializeStoreIfNeeded( BootstrapContext bootstrapContext ) throws IOException
     {
-        if ( !isStorePresent( dbContext ) )
+        if ( !isStorePresent( bootstrapContext ) )
         {
-            File bootstrapRootDir = new File( dbContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
+            File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
             fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
             try
             {
-                log.info( "Initializing the store for database " + dbContext.databaseId().name() + " using a temporary database in " + bootstrapRootDir );
-                File bootstrapDbDir = initializeStoreUsingTempDatabase( dbContext, bootstrapRootDir );
+                String databaseName = bootstrapContext.databaseId().name();
+                log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
+                File bootstrapDbDir = initializeStoreUsingTempDatabase( bootstrapRootDir );
 
-                log.info( "Moving created store files from " + bootstrapDbDir + " to " + dbContext.databaseLayout() );
-                dbContext.replaceWith( bootstrapDbDir );
+                log.info( "Moving created store files from " + bootstrapDbDir + " to " + bootstrapContext.databaseLayout() );
+                bootstrapContext.replaceWith( bootstrapDbDir );
             }
             finally
             {
@@ -169,26 +165,25 @@ public class DatabaseBootstrapper
         }
     }
 
-    private File initializeStoreUsingTempDatabase( ClusteredDatabaseContext dbContext, File bootstrapRootDir )
+    private File initializeStoreUsingTempDatabase( File bootstrapRootDir )
     {
         try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config ) )
         {
-            DatabaseInitializer initializer = databaseInitializers.apply( dbContext.databaseId() );
-            initializer.initialize( tempDatabase.graphDatabaseService() );
+            databaseInitializer.initialize( tempDatabase.graphDatabaseService() );
             return tempDatabase.defaultDatabaseDirectory();
         }
     }
 
-    private boolean isStorePresent( ClusteredDatabaseContext dbContext )
+    private boolean isStorePresent( BootstrapContext bootstrapContext )
     {
-        return storageEngineFactory.storageExists( fs, dbContext.databaseLayout(), pageCache );
+        return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
     }
 
-    private void ensureRecoveredOrThrow( ClusteredDatabaseContext dbContext, Config config ) throws Exception
+    private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config ) throws Exception
     {
-        if ( Recovery.isRecoveryRequired( fs, dbContext.databaseLayout(), config ) )
+        if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config ) )
         {
-            String message = "Cannot bootstrap database " + dbContext.databaseId().name() + ". " +
+            String message = "Cannot bootstrap database " + bootstrapContext.databaseId().name() + ". " +
                              "Recovery is required. " +
                              "Please ensure that the store being seeded comes from a cleanly shutdown instance of Neo4j or a Neo4j backup";
             log.error( message );
@@ -196,12 +191,12 @@ public class DatabaseBootstrapper
         }
     }
 
-    private CoreSnapshot buildCoreSnapshot( ClusteredDatabaseContext dbContext )
+    private CoreSnapshot buildCoreSnapshot( BootstrapContext bootstrapContext )
     {
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTrackerState );
-        IdAllocationState idAllocation = deriveIdAllocationState( dbContext.databaseLayout() );
+        IdAllocationState idAllocation = deriveIdAllocationState( bootstrapContext.databaseLayout() );
         coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocation );
         coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
         return coreSnapshot;
@@ -213,9 +208,9 @@ public class DatabaseBootstrapper
      * the beginning of time (Raft log index -1) is created. This is used during recovery by the Raft machinery to pick up
      * where it left off. It is also highly useful for debugging.
      */
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( ClusteredDatabaseContext dbContext ) throws IOException
+    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( BootstrapContext bootstrapContext ) throws IOException
     {
-        DatabaseLayout layout = dbContext.databaseLayout();
+        DatabaseLayout layout = bootstrapContext.databaseLayout();
         try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
             TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( layout, databasePageCache );

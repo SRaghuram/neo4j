@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,6 +13,7 @@ import java.io.IOException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -41,7 +42,6 @@ public interface ClusteredDatabaseContext extends DatabaseContext
 
     /**
      * Delete the store files for this database
-     * @throws IOException
      */
     void delete() throws IOException;
 
@@ -58,7 +58,6 @@ public interface ClusteredDatabaseContext extends DatabaseContext
     /**
      * Replace the store files for this database
      * @param sourceDir the store files to replace this databases's current files with
-     * @throws IOException
      */
     void replaceWith( File sourceDir ) throws IOException;
 
@@ -68,7 +67,9 @@ public interface ClusteredDatabaseContext extends DatabaseContext
     DatabaseId databaseId();
 
     /**
-     * @return the {@link CatchupComponentsRepository.DatabaseCatchupComponents} for this clustered database
+     * @return the {@link CatchupComponents} for this clustered database
      */
-    CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents();
+    CatchupComponents catchupComponents();
+
+    LifeSupport clusterDatabaseLife();
 }

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.SessionTracker;
+import com.neo4j.causalclustering.core.CoreState;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -68,20 +69,20 @@ public class CommandApplicationProcessTest
 
     private InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
     private final Monitors monitors = new Monitors();
-    private CoreStateRepository CoreStateRepository = mock( CoreStateRepository.class );
+    private CoreState coreState = mock( CoreState.class );
     private SinglePanic panicker = new SinglePanic();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
-                    sessionTracker, CoreStateRepository, inFlightCache, monitors, panicker );
+                    sessionTracker, coreState, inFlightCache, monitors, panicker );
 
     private ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
     private final CommandDispatcher commandDispatcher = mock( CommandDispatcher.class );
 
     {
-        when( CoreStateRepository.commandDispatcher() ).thenReturn( commandDispatcher );
-        when( CoreStateRepository.getLastAppliedIndex() ).thenReturn( -1L );
-        when( CoreStateRepository.getLastFlushed() ).thenReturn( -1L );
+        when( coreState.commandDispatcher() ).thenReturn( commandDispatcher );
+        when( coreState.getLastAppliedIndex() ).thenReturn( -1L );
+        when( coreState.getLastFlushed() ).thenReturn( -1L );
     }
 
     private ReplicatedTransaction tx( byte dataValue )
@@ -105,7 +106,7 @@ public class CommandApplicationProcessTest
         RaftLogCommitIndexMonitor listener = mock( RaftLogCommitIndexMonitor.class );
         monitors.addMonitorListener( listener );
 
-        InOrder inOrder = inOrder( CoreStateRepository, commandDispatcher );
+        InOrder inOrder = inOrder( coreState, commandDispatcher );
 
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -116,7 +117,7 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        inOrder.verify( CoreStateRepository ).commandDispatcher();
+        inOrder.verify( coreState ).commandDispatcher();
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 0L ), anyCallback() );
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 2L ), anyCallback() );
@@ -152,8 +153,8 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        InOrder inOrder = inOrder( CoreStateRepository, commandDispatcher );
-        inOrder.verify( CoreStateRepository ).commandDispatcher();
+        InOrder inOrder = inOrder( coreState, commandDispatcher );
+        inOrder.verify( coreState ).commandDispatcher();
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
         inOrder.verify( commandDispatcher ).close();
     }
@@ -173,8 +174,8 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        InOrder inOrder = inOrder( CoreStateRepository, commandDispatcher );
-        inOrder.verify( CoreStateRepository ).commandDispatcher();
+        InOrder inOrder = inOrder( coreState, commandDispatcher );
+        inOrder.verify( coreState ).commandDispatcher();
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
         // duplicate not dispatched
         inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 3L ), anyCallback() );
@@ -201,8 +202,8 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        InOrder inOrder = inOrder( CoreStateRepository, commandDispatcher );
-        inOrder.verify( CoreStateRepository ).commandDispatcher();
+        InOrder inOrder = inOrder( coreState, commandDispatcher );
+        inOrder.verify( coreState ).commandDispatcher();
         inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 100 ) ), eq( 0L ), anyCallback() );
         inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 101 ) ), eq( 1L ), anyCallback() );
         inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 102 ) ), eq( 2L ), anyCallback() );
@@ -231,9 +232,9 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        verify( CoreStateRepository ).flush( batchSize - 1 );
-        verify( CoreStateRepository ).flush( 2 * batchSize - 1 );
-        verify( CoreStateRepository ).flush( 3 * batchSize - 1 );
+        verify( coreState ).flush( batchSize - 1 );
+        verify( coreState ).flush( 2 * batchSize - 1 );
+        verify( coreState ).flush( 3 * batchSize - 1 );
     }
 
     @Test

@@ -16,10 +16,10 @@ import org.neo4j.logging.LogProvider;
 import static java.lang.String.format;
 
 @ChannelHandler.Sharable
-public class RaftMessageNettyHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
-        implements Inbound<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
+public class RaftMessageNettyHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+        implements Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> actual;
+    private Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> actual;
     private Log log;
 
     public RaftMessageNettyHandler( LogProvider logProvider )
@@ -28,13 +28,13 @@ public class RaftMessageNettyHandler extends SimpleChannelInboundHandler<RaftMes
     }
 
     @Override
-    public void registerHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> actual )
+    public void registerHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> actual )
     {
         this.actual = actual;
     }
 
     @Override
-    protected void channelRead0( ChannelHandlerContext channelHandlerContext, RaftMessages.ReceivedInstantClusterIdAwareMessage<?> incomingMessage )
+    protected void channelRead0( ChannelHandlerContext channelHandlerContext, RaftMessages.ReceivedInstantRaftIdAwareMessage<?> incomingMessage )
     {
         try
         {

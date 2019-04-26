@@ -52,7 +52,6 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
@@ -60,7 +59,6 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -94,7 +92,6 @@ public class CommercialSecurityModule extends SecurityModule
     private Config config;
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
-    private AccessCapability accessCapability;
     private CommercialAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
     private ThreadToStatementContextBridge threadToStatementContextBridge;
@@ -115,7 +112,6 @@ public class CommercialSecurityModule extends SecurityModule
         this.config = dependencies.config();
         this.logProvider = dependencies.logService().getUserLogProvider();
         this.fileSystem = dependencies.fileSystem();
-        this.accessCapability = dependencies.accessCapability();
 
         initSystemGraphOnStart = config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.CORE &&
                 config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.READ_REPLICA;
@@ -126,7 +122,7 @@ public class CommercialSecurityModule extends SecurityModule
         SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, accessCapability );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
@@ -201,7 +197,7 @@ public class CommercialSecurityModule extends SecurityModule
 
             SecureHasher secureHasher = new SecureHasher();
             SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
-            SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem, accessCapability );
+            SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
             Log log = logProvider.getLog( getClass() );
             SystemGraphInitializer initializer =
                     new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, log, config );
@@ -227,15 +223,14 @@ public class CommercialSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + CommercialSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
-            AccessCapability accessCapability )
+    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
+        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
         realms.add( (Realm) internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -285,8 +280,7 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
-            AccessCapability accessCapability )
+    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
                 new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
@@ -295,7 +289,7 @@ public class CommercialSecurityModule extends SecurityModule
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
         SystemGraphInitializer systemGraphInitializer = initSystemGraphOnStart ? new SystemGraphInitializer( queryExecutor, systemGraphOperations,
-                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog, config ) : null;
+                configureImportOptions( config, logProvider, fileSystem ), secureHasher, securityLog, config ) : null;
 
         return new SystemGraphRealm(
                 systemGraphOperations,
@@ -309,15 +303,14 @@ public class CommercialSecurityModule extends SecurityModule
         );
     }
 
-    private static SystemGraphImportOptions configureImportOptions( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
-            AccessCapability accessCapability )
+    private static SystemGraphImportOptions configureImportOptions( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
         File parentFile = CommunitySecurityModule.getUserRepositoryFile( config ).getParentFile();
         File userImportFile = new File( parentFile, USER_IMPORT_FILENAME );
         File roleImportFile = new File( parentFile, ROLE_IMPORT_FILENAME );
 
         boolean shouldPerformImport = fileSystem.fileExists( userImportFile ) || fileSystem.fileExists( roleImportFile );
-        boolean mayPerformMigration = !shouldPerformImport && mayPerformMigration( accessCapability );
+        boolean mayPerformMigration = !shouldPerformImport;
         boolean shouldPurgeImportRepositoriesAfterSuccessfulImport = shouldPerformImport;
         boolean shouldResetSystemGraphAuthBeforeImport = false;
 
@@ -364,28 +357,6 @@ public class CommercialSecurityModule extends SecurityModule
                 /* initialUserRepositorySupplier = */ null,
                 /* defaultAdminRepositorySupplier = */ null
         );
-    }
-
-    private static boolean mayPerformMigration( AccessCapability accessCapability )
-    {
-        boolean mayPerformMigration = false;
-
-        // TBD: Should we protect this with a dedicated setting?
-        // The argument against using GraphDatabaseSettings.allow_upgrade is that it will also force a potential store upgrade
-        //if ( config.get( SecuritySettings.allow_migration ) )
-        {
-            try
-            {
-                // Only perform migration if this neo4j instance can write (In a cluster, only the leader can write)
-                accessCapability.assertCanWrite();
-                mayPerformMigration = true;
-            }
-            catch ( WriteOperationsNotAllowedException e )
-            {
-                // Do nothing
-            }
-        }
-        return mayPerformMigration;
     }
 
     private static CacheManager createCacheManager( Config config )

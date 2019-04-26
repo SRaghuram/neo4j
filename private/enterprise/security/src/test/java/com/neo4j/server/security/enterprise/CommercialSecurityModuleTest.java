@@ -35,7 +35,6 @@ class CommercialSecurityModuleTest
     private Config config;
     private LogProvider mockLogProvider;
     private FileSystemAbstraction mockFileSystem;
-    private AccessCapability mockAccessCapability;
 
     @BeforeEach
     void setup()
@@ -44,7 +43,6 @@ class CommercialSecurityModuleTest
         mockLogProvider = mock( LogProvider.class );
         Log mockLog = mock( Log.class );
         mockFileSystem = mock( FileSystemAbstraction.class );
-        mockAccessCapability = mock( AccessCapability.class );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
@@ -260,14 +258,13 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, mockAccessCapability );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem,
-                        mockAccessCapability ) );
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem ) );
         assertEquals( e.getMessage(), errorMsg );
     }
 }

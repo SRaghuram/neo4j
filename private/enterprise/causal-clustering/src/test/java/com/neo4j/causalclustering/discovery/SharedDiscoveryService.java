@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.List;
@@ -32,7 +32,7 @@ final class SharedDiscoveryService
     private final ConcurrentMap<MemberId,CoreServerInfo> coreMembers = new ConcurrentHashMap<>();
     private final ConcurrentMap<MemberId,ReadReplicaInfo> readReplicas = new ConcurrentHashMap<>();
     private final List<SharedDiscoveryCoreClient> listeningClients = new CopyOnWriteArrayList<>();
-    private final ConcurrentMap<DatabaseId,ClusterId> clusterIdDbNames = new ConcurrentHashMap<>();
+    private final ConcurrentMap<DatabaseId,RaftId> raftIdDbNames = new ConcurrentHashMap<>();
     private final ConcurrentMap<DatabaseId,LeaderInfo> leaderMap = new ConcurrentHashMap<>();
     private final ConcurrentMap<DatabaseId,CountDownLatch> enoughMembersByDatabaseName = new ConcurrentHashMap<>();
 
@@ -48,7 +48,7 @@ final class SharedDiscoveryService
                 .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
                 .collect( entriesToMap() );
 
-        return new DatabaseCoreTopology( databaseId, clusterIdDbNames.get( databaseId ), databaseCoreMembers );
+        return new DatabaseCoreTopology( databaseId, raftIdDbNames.get( databaseId ), databaseCoreMembers );
     }
 
     DatabaseReadReplicaTopology getReadReplicaTopology( DatabaseId databaseId )
@@ -107,7 +107,7 @@ final class SharedDiscoveryService
         coreMembers.remove( client.memberId() );
         if ( listeningClients.isEmpty() )
         {
-            clusterIdDbNames.clear();
+            raftIdDbNames.clear();
             leaderMap.clear();
             enoughMembersByDatabaseName.clear();
         }
@@ -150,11 +150,11 @@ final class SharedDiscoveryService
         } );
     }
 
-    boolean casClusterId( ClusterId clusterId, DatabaseId databaseId )
+    boolean casRaftId( RaftId raftId, DatabaseId databaseId )
     {
-        ClusterId previousId = clusterIdDbNames.putIfAbsent( databaseId, clusterId );
+        RaftId previousId = raftIdDbNames.putIfAbsent( databaseId, raftId );
 
-        boolean success = previousId == null || previousId.equals( clusterId );
+        boolean success = previousId == null || previousId.equals( raftId );
 
         if ( success )
         {
@@ -175,7 +175,7 @@ final class SharedDiscoveryService
 
     RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        if ( !clusterIdDbNames.containsKey( databaseId ) || !coreMembers.containsKey( memberId ) )
+        if ( !raftIdDbNames.containsKey( databaseId ) || !coreMembers.containsKey( memberId ) )
         {
             return RoleInfo.UNKNOWN;
         }

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -38,8 +38,8 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.addCoreTopologyListener( listener3 );
 
-        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), Map.of() );
-        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, new ClusterId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, new RaftId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, new RaftId( UUID.randomUUID() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology1 );
         listenerService.notifyListeners( coreTopology2 );
@@ -63,7 +63,7 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.removeCoreTopologyListener( listener1 );
 
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, new RaftId( UUID.randomUUID() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology );
 

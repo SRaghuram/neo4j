@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
@@ -123,7 +123,7 @@ class ServerShufflingTest
         when( leaderService.getLeaderId( databaseId ) ).thenReturn( Optional.of( leaderId ) );
         when( leaderService.getLeaderBoltAddress( databaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, new RaftId( UUID.randomUUID() ), coreMembers );
         when( coreTopologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( coreTopology );
         when( coreTopologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, emptyMap() ) );
 

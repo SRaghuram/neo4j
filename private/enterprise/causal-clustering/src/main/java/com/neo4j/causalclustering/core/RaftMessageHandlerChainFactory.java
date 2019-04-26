@@ -6,14 +6,15 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider;
-import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
+import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessageTimerResetMonitor;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
-import com.neo4j.causalclustering.core.server.CoreServerModule;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
+import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.RaftMessageApplier;
+import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
@@ -21,7 +22,6 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
@@ -31,7 +31,7 @@ import org.neo4j.scheduler.JobScheduler;
  * Factory to create a chain of {@link LifecycleMessageHandler handlers}.
  * This factory is constructed using global components and can be then used to create a chain of database-specific handlers.
  */
-public class RaftMessageHandlerChainFactory
+class RaftMessageHandlerChainFactory
 {
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
@@ -42,25 +42,25 @@ public class RaftMessageHandlerChainFactory
     private final Monitors monitors;
     private final Config config;
 
-    public RaftMessageHandlerChainFactory( GlobalModule globalModule, RaftMessageDispatcher raftMessageDispatcher,
-            LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider, Panicker panicker )
+    RaftMessageHandlerChainFactory( JobScheduler jobScheduler, Clock clock, LogProvider logProvider, Monitors monitors, Config config,
+            RaftMessageDispatcher raftMessageDispatcher, LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider, Panicker panicker )
     {
+        this.jobScheduler = jobScheduler;
+        this.clock = clock;
+        this.logProvider = logProvider;
+        this.monitors = monitors;
+        this.config = config;
+
         this.raftMessageDispatcher = raftMessageDispatcher;
         this.catchupAddressProvider = catchupAddressProvider;
         this.panicker = panicker;
-        this.jobScheduler = globalModule.getJobScheduler();
-        this.clock = globalModule.getGlobalClock();
-        this.logProvider = globalModule.getLogService().getInternalLogProvider();
-        this.monitors = globalModule.getGlobalMonitors();
-        this.config = globalModule.getGlobalConfig();
     }
 
-    public LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> createMessageHandlerChain( RaftGroup raftGroup,
-            CoreServerModule coreServerModule )
+    LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> createMessageHandlerChain( RaftGroup raftGroup, CoreDownloaderService downloaderService,
+            CommandApplicationProcess commandApplicationProcess )
     {
-        RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider,
-                raftGroup.raftMachine(), coreServerModule.downloadService(),
-                coreServerModule.commandApplicationProcess(), catchupAddressProvider, panicker );
+        RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider, raftGroup.raftMachine(), downloaderService, commandApplicationProcess,
+                catchupAddressProvider, panicker );
 
         ComposableMessageHandler monitoringHandler = RaftMessageMonitoringHandler.composable( clock, monitors );
         ComposableMessageHandler batchingMessageHandler = createBatchingHandler();

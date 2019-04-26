@@ -57,10 +57,10 @@ class ClusterStateIT
             File defaultDatabaseStateDir = new File( databaseStateDir, DEFAULT_DATABASE_NAME );
 
             // global simple storage
-            File clusterIdStateDir = new File( clusterStateDirectory, "cluster-id-state" );
             File coreMemberIdStateDir = new File( clusterStateDirectory, "core-member-id-state" );
 
             // database specific durable storage (a/b)
+            File raftIdStateDir = new File( defaultDatabaseStateDir, "raft-id-state" );
             File lastFlushedStateDir = new File( defaultDatabaseStateDir, "last-flushed-state" );
             File membershipStateDir = new File( defaultDatabaseStateDir, "membership-state" );
             File sessionTrackerStateDir = new File( defaultDatabaseStateDir, "session-tracker-state" );
@@ -72,7 +72,7 @@ class ClusterStateIT
             // database specific raft log
             File raftLogDir = new File( defaultDatabaseStateDir, "raft-log" );
 
-            assertTrue( clusterIdStateDir.isDirectory() );
+            assertTrue( raftIdStateDir.isDirectory() );
             assertTrue( coreMemberIdStateDir.isDirectory() );
             assertTrue( lastFlushedStateDir.isDirectory() );
             assertTrue( membershipStateDir.isDirectory() );
@@ -83,7 +83,7 @@ class ClusterStateIT
             assertTrue( lockTokenStateDir.isDirectory() );
             assertTrue( idAllocationStateDir.isDirectory() );
 
-            assertTrue( new File( clusterIdStateDir, "cluster-id" ).isFile() );
+            assertTrue( new File( raftIdStateDir, "raft-id" ).isFile() );
             assertTrue( new File( coreMemberIdStateDir, "core-member-id" ).isFile() );
 
             assertTrue( new File( lastFlushedStateDir, "last-flushed.a" ).isFile() );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -15,13 +15,13 @@ import java.time.Instant;
 
 import org.neo4j.monitoring.Monitors;
 
-public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
+public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandler;
+    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> raftMessageHandler;
     private final Clock clock;
     private final RaftMessageProcessingMonitor raftMessageDelayMonitor;
 
-    public RaftMessageMonitoringHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandler,
+    public RaftMessageMonitoringHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> raftMessageHandler,
             Clock clock, Monitors monitors )
     {
         this.raftMessageHandler = raftMessageHandler;
@@ -35,7 +35,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
     }
 
     @Override
-    public synchronized void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> incomingMessage )
+    public synchronized void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> incomingMessage )
     {
         Instant start = clock.instant();
 
@@ -44,7 +44,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
         timeHandle( incomingMessage, start );
     }
 
-    private void timeHandle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> incomingMessage, Instant start )
+    private void timeHandle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> incomingMessage, Instant start )
     {
         try
         {
@@ -57,7 +57,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
         }
     }
 
-    private void logDelay( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> incomingMessage, Instant start )
+    private void logDelay( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> incomingMessage, Instant start )
     {
         Duration delay = Duration.between( incomingMessage.receivedAt(), start );
 
@@ -65,9 +65,9 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Exception
+    public void start( RaftId raftId ) throws Exception
     {
-        raftMessageHandler.start( clusterId );
+        raftMessageHandler.start( raftId );
     }
 
     @Override

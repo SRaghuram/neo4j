@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 
 import java.io.File;
@@ -22,7 +23,7 @@ public class CoreGraphDatabase
 
     public interface CoreEditionModuleFactory
     {
-        AbstractCoreEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
+        ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
     }
 
     public CoreGraphDatabase( File storeDir, Config config,

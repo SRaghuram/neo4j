@@ -15,8 +15,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 
 import java.io.IOException;
@@ -25,12 +23,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
@@ -53,11 +49,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         CANCELLED
     }
 
-    private final DatabaseId databaseId;
-    private final ClusteredDatabaseContext clusteredDatabaseContext;
-    //TODO: It makes no sense to take both clusteredDatabaseContext and clusteredDatabaseManager here.
-    // When clusteredDatabaseContext objects can stop and start it won't be needed
-    private final ClusteredDatabaseManager clusteredDatabaseManager;
+    private final ReadReplicaDatabaseContext databaseContext;
     private final CatchupAddressProvider catchupAddressProvider;
     private final Log log;
     private final StoreCopyProcess storeCopyProcess;
@@ -71,18 +63,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    public CatchupPollingProcess( Executor executor, DatabaseId databaseId, ClusteredDatabaseManager clusteredDatabaseManager,
-            CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
+    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
             StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
-        this.databaseId = databaseId;
-        this.clusteredDatabaseManager = clusteredDatabaseManager;
+        this.databaseContext = databaseContext;
         this.catchupAddressProvider = catchupAddressProvider;
-        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new );
         this.catchUpClient = catchUpClient;
         this.applier = applier;
-        this.pullRequestMonitor = monitors.newMonitor( PullRequestMonitor.class );
+        this.pullRequestMonitor = databaseContext.monitors().newMonitor( PullRequestMonitor.class );
         this.storeCopyProcess = storeCopyProcess;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
@@ -145,7 +134,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
             {
                 throw new CompletionException( e );
             }
-
         }, executor ).exceptionally( e ->
         {
             panic( e );
@@ -165,7 +153,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         AdvertisedSocketAddress address;
         try
         {
-            address = catchupAddressProvider.primary( databaseId );
+            address = catchupAddressProvider.primary( databaseContext.databaseId() );
         }
         catch ( CatchupAddressResolutionException e )
         {
@@ -173,7 +161,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             return;
         }
 
-        StoreId localStoreId = clusteredDatabaseContext.storeId();
+        StoreId localStoreId = databaseContext.storeId();
 
         boolean moreToPull = true;
         int batchCount = 1;
@@ -224,7 +212,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", address, lastQueuedTxId, batchCount );
 
-        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
+        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()
         {
             @Override
             public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
@@ -243,8 +231,9 @@ public class CatchupPollingProcess extends LifecycleAdapter
         TxStreamFinishedResponse result;
         try
         {
-            result = catchUpClient.getClient( address, log )
-                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseId ) )
+            result = catchUpClient
+                    .getClient( address, log )
+                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }
@@ -277,7 +266,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            clusteredDatabaseManager.stopForStoreCopy();
+            databaseContext.stopForStoreCopy();
         }
         catch ( Throwable throwable )
         {
@@ -291,7 +280,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            clusteredDatabaseManager.start();
+            databaseContext.start();
         }
         catch ( Throwable throwable )
         {
@@ -308,7 +297,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, clusteredDatabaseContext.storeId() );
+            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, databaseContext.storeId() );
             transitionToTxPulling();
         }
         catch ( IOException | StoreCopyFailedException e )
@@ -321,15 +310,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    public String describeState()
+    String describeState()
     {
         if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
         {
-            return format( "%s is %s (%d of %d)", databaseId, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+            return format( "%s is %s (%d of %d)", databaseContext.databaseId(), TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
         }
         else
         {
-            return String.format( "%s is %s", databaseId, state.name() );
+            return String.format( "%s is %s", databaseContext.databaseId(), state.name() );
         }
     }
 }

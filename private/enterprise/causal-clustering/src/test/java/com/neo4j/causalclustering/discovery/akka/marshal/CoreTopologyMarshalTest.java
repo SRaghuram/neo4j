@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -35,8 +35,8 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
     public static Collection<DatabaseCoreTopology> data()
     {
         return Arrays.asList(
-                new DatabaseCoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "orders" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "customers" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
                 new DatabaseCoreTopology( new DatabaseId( "cars" ), null, coreServerInfos( 4 ) )
         );
     }

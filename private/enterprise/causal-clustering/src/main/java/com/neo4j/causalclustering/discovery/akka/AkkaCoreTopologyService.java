@@ -22,7 +22,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
-import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
@@ -31,7 +31,7 @@ import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
@@ -152,12 +152,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
+    public boolean setRaftId( RaftId raftId, DatabaseId databaseId )
     {
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdSettingMessage( clusterId, databaseId ), noSender() );
+            actor.tell( new RaftIdSettingMessage( raftId, databaseId ), noSender() );
             return true;
         }
         else
@@ -167,9 +167,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean canBootstrapCluster( DatabaseId databaseId )
+    public boolean canBootstrapRaftGroup( DatabaseId databaseId )
     {
-        return globalTopologyState.bootstrapState().canBootstrapCluster( databaseId );
+        return globalTopologyState.bootstrapState().canBootstrapRaft( databaseId );
     }
 
     @VisibleForTesting

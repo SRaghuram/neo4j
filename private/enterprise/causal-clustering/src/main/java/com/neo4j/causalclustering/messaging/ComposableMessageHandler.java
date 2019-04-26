@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.messaging;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 
 import java.util.function.Function;
 
 @FunctionalInterface
 public interface ComposableMessageHandler
-        extends Function<LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>>, LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>>>
+        extends Function<LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>>, LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>>>
 {
     @Override
-    LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> apply( LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> messageHandler );
+    LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> apply( LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> messageHandler );
 }

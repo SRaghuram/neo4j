@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 
 import java.time.Clock;
@@ -17,21 +17,21 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
 
-public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>
+public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private final Map<ClusterId,MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>> handlersById = new ConcurrentHashMap<>();
+    private final Map<RaftId,MessageHandler<ReceivedInstantRaftIdAwareMessage<?>>> handlersById = new ConcurrentHashMap<>();
     private final CappedLogger log;
 
-    public RaftMessageDispatcher( LogProvider logProvider, Clock clock )
+    RaftMessageDispatcher( LogProvider logProvider, Clock clock )
     {
         this.log = createCappedLogger( logProvider, clock );
     }
 
     @Override
-    public void handle( ReceivedInstantClusterIdAwareMessage<?> message )
+    public void handle( ReceivedInstantRaftIdAwareMessage<?> message )
     {
-        ClusterId id = message.clusterId();
-        MessageHandler<ReceivedInstantClusterIdAwareMessage<?>> head = handlersById.get( id );
+        RaftId id = message.raftId();
+        MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> head = handlersById.get( id );
         if ( head == null )
         {
             log.warn( "Unable to process message " + message + " because handler for Raft ID " + id + " is not installed" );
@@ -42,16 +42,16 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClus
         }
     }
 
-    void registerHandlerChain( ClusterId id, MessageHandler<ReceivedInstantClusterIdAwareMessage<?>> head )
+    void registerHandlerChain( RaftId id, MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> head )
     {
-        MessageHandler<ReceivedInstantClusterIdAwareMessage<?>> existingHead = handlersById.putIfAbsent( id, head );
+        MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> existingHead = handlersById.putIfAbsent( id, head );
         if ( existingHead != null )
         {
-            throw new IllegalArgumentException( "Handler chain for cluster ID " + id + " is already registered" );
+            throw new IllegalArgumentException( "Handler chain for raft ID " + id + " is already registered" );
         }
     }
 
-    void deregisterHandlerChain( ClusterId id )
+    void deregisterHandlerChain( RaftId id )
     {
         handlersById.remove( id );
     }

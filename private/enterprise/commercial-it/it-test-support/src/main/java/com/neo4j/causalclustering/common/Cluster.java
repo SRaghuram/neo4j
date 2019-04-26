@@ -52,6 +52,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
@@ -75,6 +76,7 @@ import org.neo4j.test.ports.PortAuthority;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.function.Predicates.notNull;
@@ -174,9 +176,8 @@ public class Cluster
             String recordFormat )
     {
         List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        CoreClusterMember coreClusterMember =
-                createCoreClusterMember( memberId, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat, extraParams,
-                        instanceExtraParams );
+        CoreClusterMember coreClusterMember = createCoreClusterMember( memberId, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat,
+                extraParams, instanceExtraParams );
 
         coreMembers.put( memberId, coreClusterMember );
         return coreClusterMember;
@@ -364,13 +365,13 @@ public class Cluster
 
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         return getMemberWithAnyRole( databaseId, roles );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
     {
-        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
         return getAllMembersWithAnyRole( databaseId, roles );
     }
 
@@ -386,18 +387,24 @@ public class Cluster
         List<CoreClusterMember> list = new ArrayList<>();
         for ( CoreClusterMember m : coreMembers.values() )
         {
-            GraphDatabaseFacade database = m.defaultDatabase();
-            if ( database == null )
+            var managementService = m.managementService();
+
+            if ( managementService == null )
             {
                 continue;
             }
 
-            if ( m.databaseId().equals( databaseId ) )
+            try
             {
+                var database = (GraphDatabaseFacade) managementService.database( databaseId.name() );
                 if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
                 {
                     list.add( m );
                 }
+            }
+            catch ( DatabaseNotFoundException e )
+            {
+                // ignored
             }
         }
         return list;
@@ -478,7 +485,16 @@ public class Cluster
      */
     public CoreClusterMember coreTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        return coreTx( databaseId, op );
+    }
+
+    /**
+     * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
+     */
+    public CoreClusterMember systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
+    {
+        var databaseId = new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         return coreTx( databaseId, op );
     }
 

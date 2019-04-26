@@ -15,11 +15,9 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
-import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import io.netty.channel.ChannelHandler;
-
-import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -34,20 +32,12 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private final DatabaseManager<?> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
-    private final CoreSnapshotService snapshotService;
 
     public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
-    {
-        this( databaseManager, logProvider, fs, null );
-    }
-
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs,
-            CoreSnapshotService snapshotService )
     {
         this.databaseManager = databaseManager;
         this.logProvider = logProvider;
         this.fs = fs;
-        this.snapshotService = snapshotService;
     }
 
     @Override
@@ -79,9 +69,10 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     }
 
     @Override
-    public Optional<ChannelHandler> snapshotHandler( CatchupServerProtocol catchupServerProtocol )
+    public ChannelHandler snapshotHandler( CatchupServerProtocol protocol )
     {
-        return Optional.ofNullable( snapshotService ).map( svc -> new CoreSnapshotRequestHandler( catchupServerProtocol, svc ) );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildCoreSnapshotRequestRequestHandler( db, protocol ),
+                CoreSnapshotRequest.class, logProvider );
     }
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
@@ -102,5 +93,10 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
+    }
+
+    private CoreSnapshotRequestHandler buildCoreSnapshotRequestRequestHandler( Database db, CatchupServerProtocol protocol )
+    {
+        return new CoreSnapshotRequestHandler( protocol, db );
     }
 }

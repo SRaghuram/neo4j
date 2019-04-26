@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -127,10 +127,10 @@ class RaftSenderIT
         // when
         AdvertisedSocketAddress to = new AdvertisedSocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
         MemberId memberId = new MemberId( UUID.randomUUID() );
-        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+        RaftId raftId = new RaftId( UUID.randomUUID() );
 
         RaftMessages.NewEntry.Request newEntryMessage = new RaftMessages.NewEntry.Request( memberId, new MemberIdSet( asSet( memberId ) ) );
-        RaftMessages.ClusterIdAwareMessage<?> message = RaftMessages.ClusterIdAwareMessage.of( clusterId, newEntryMessage );
+        RaftMessages.RaftIdAwareMessage<?> message = RaftMessages.RaftIdAwareMessage.of( raftId, newEntryMessage );
 
         sender.send( to, message, blocking );
 

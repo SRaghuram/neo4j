@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
@@ -53,13 +53,13 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     }
 
     @Override
-    public boolean setClusterId( ClusterId clusterId, DatabaseId databaseId )
+    public boolean setRaftId( RaftId raftId, DatabaseId databaseId )
     {
-        return sharedDiscoveryService.casClusterId( clusterId, databaseId );
+        return sharedDiscoveryService.casRaftId( raftId, databaseId );
     }
 
     @Override
-    public boolean canBootstrapCluster( DatabaseId databaseId )
+    public boolean canBootstrapRaftGroup( DatabaseId databaseId )
     {
         return sharedDiscoveryService.canBeBootstrapped( databaseId, this );
     }

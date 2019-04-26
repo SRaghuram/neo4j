@@ -21,23 +21,22 @@ public class RaftGroupFactory
 {
     private final MemberId myself;
     private final GlobalModule globalModule;
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
     private final ClusterStateLayout clusterState;
     private final CoreTopologyService topologyService;
     private final CoreStateStorageFactory storageFactory;
 
-    public RaftGroupFactory( MemberId myself, final GlobalModule globalModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout clusterState, CoreTopologyService topologyService, CoreStateStorageFactory storageFactory )
+    public RaftGroupFactory( MemberId myself, GlobalModule globalModule, ClusterStateLayout clusterState,
+            CoreTopologyService topologyService, CoreStateStorageFactory storageFactory )
     {
         this.myself = myself;
         this.globalModule = globalModule;
-        this.outbound = outbound;
         this.clusterState = clusterState;
         this.topologyService = topologyService;
         this.storageFactory = storageFactory;
     }
 
-    public RaftGroup create( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies )
+    public RaftGroup create( DatabaseId databaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
+            Dependencies dependencies )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), globalModule.getLogService(), globalModule.getFileSystem(), globalModule.getJobScheduler(),

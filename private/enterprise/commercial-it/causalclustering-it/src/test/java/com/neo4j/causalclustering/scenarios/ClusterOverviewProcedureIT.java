@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -104,7 +105,7 @@ class ClusterOverviewProcedureIT
 
         var expectedDatabases = sortedMemberIds.stream()
                 .map( membersById::get )
-                .map( member -> expectedDatabases( member, leader ) )
+                .map( ClusterOverviewProcedureIT::expectedDatabases )
                 .collect( toList() );
 
         var expectedGroups = sortedMemberIds.stream()
@@ -124,18 +125,16 @@ class ClusterOverviewProcedureIT
                 .collect( toList() );
     }
 
-    private static Map<String,String> expectedDatabases( ClusterMember member, ClusterMember leader )
+    private static Map<String,String> expectedDatabases( ClusterMember member )
     {
         return Map.of(
-                SYSTEM_DB.name(), expectedRole( member, SYSTEM_DB, leader ).toString(),
-                DEFAULT_DB.name(), expectedRole( member, DEFAULT_DB, leader ).toString() );
+                SYSTEM_DB.name(), expectedRole( member, SYSTEM_DB ).toString(),
+                DEFAULT_DB.name(), expectedRole( member, DEFAULT_DB ).toString() );
     }
 
-    private static RoleInfo expectedRole( ClusterMember member, DatabaseId databaseId, ClusterMember leader )
+    private static RoleInfo expectedRole( ClusterMember member, DatabaseId databaseId )
     {
-        // todo: temporarily system db does not report its leader because it is in the same raft group with the default db
-        //  that's why we have to check database ID here; check needs to be removed once system runs in a separate raft group
-        if ( Objects.equals( member, leader ) && databaseId.equals( DEFAULT_DB ) )
+        if ( isLeader( member, databaseId ) )
         {
             return RoleInfo.LEADER;
         }
@@ -161,6 +160,12 @@ class ClusterOverviewProcedureIT
             return List.of( "replica", "us-" + member.serverId() );
         }
         throw new IllegalArgumentException( "Unable to find groups for " + member );
+    }
+
+    private static boolean isLeader( ClusterMember member, DatabaseId databaseId )
+    {
+        CoreClusterMember leader = cluster.getMemberWithAnyRole( databaseId, Role.LEADER );
+        return Objects.equals( member, leader );
     }
 
     private static boolean isCore( ClusterMember member )

@@ -193,7 +193,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         SecurityProvider securityProvider;
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
         {
-            SecurityModule securityModule = setupSecurityModule( globalModule, editionModule,
+            SecurityModule securityModule = setupSecurityModule( globalModule,
                     globalModule.getLogService().getUserLog( CommercialEditionModule.class ), globalProcedures, "commercial-security-module" );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;

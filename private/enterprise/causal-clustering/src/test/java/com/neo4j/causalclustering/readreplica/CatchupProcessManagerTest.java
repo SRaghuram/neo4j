@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
@@ -21,13 +21,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -39,8 +33,6 @@ import org.neo4j.monitoring.Health;
 import org.neo4j.test.FakeClockJobScheduler;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
-import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -59,7 +51,8 @@ class CatchupProcessManagerTest
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
-    private final List<DatabaseId> databaseIds = asList( new DatabaseId( "db1" ), new DatabaseId( "db2" ) );
+    private final DatabaseId databaseId = new DatabaseId( "db1" );
+    private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );
 
@@ -69,14 +62,14 @@ class CatchupProcessManagerTest
     void before()
     {
         //Mock the components of CatchupComponentsRepository
-        databaseIds.forEach( name -> databaseService.registerDatabase( name, getMockDatabase( name ) ) );
-        DatabaseCatchupComponents components = new DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
+        databaseService.registerDatabase( databaseId, getMockDatabase( databaseId ) );
+        CatchupComponents components = new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
 
         //Wire these mocked components to the ServerModule mock
         when( catchupComponents.componentsFor( any( DatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
 
         //Construct the manager under test
-        catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
+        catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseContext,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults() ) );
     }
@@ -90,53 +83,28 @@ class CatchupProcessManagerTest
     }
 
     @Test
-    void shouldTickAllCatchupProcessesOnTimeout()
+    void shouldTickCatchupProcessOnTimeout()
     {
         // given
-        Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()
-                .collect( Collectors.toMap( Function.identity(), ignored -> mock( CatchupPollingProcess.class ) ) );
-        catchupProcessManager.setCatchupProcesses( catchupProcesses );
+        CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+        catchupProcessManager.setCatchupProcess( catchupProcess );
         catchupProcessManager.initTimer();
 
         // when
         timerService.invoke( TX_PULLER_TIMER );
 
         // then
-        catchupProcesses.values().forEach( client -> verify( client ).tick() );
-    }
-
-    @Test
-    void shouldCreateCatchupProcessComponentsForEachDatabaseOnStart() throws Throwable
-    {
-        // given
-        List<DatabaseId> startedCatchupProcs = new ArrayList<>();
-        CatchupProcessManager.CatchupProcessFactory factory = db ->
-        {
-            startedCatchupProcs.add( db.databaseId() );
-            CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-            when( catchupProcess.upToDateFuture() ).thenReturn( CompletableFuture.completedFuture( true ) );
-            return catchupProcess;
-        };
-        catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
-                databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                factory, NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults() );
-        // when
-        catchupProcessManager.init();
-        catchupProcessManager.start();
-
-        // then
-        assertEquals( startedCatchupProcs, databaseIds );
+        verify( catchupProcess ).tick();
     }
 
     @Test
     void shouldNotRenewTheTimeoutOnPanic()
     {
         // given
-        Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()
-                .collect( Collectors.toMap( Function.identity(), ignored -> mock( CatchupPollingProcess.class ) ) );
+        CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
 
         catchupProcessManager.initTimer();
-        catchupProcessManager.setCatchupProcesses( catchupProcesses );
+        catchupProcessManager.setCatchupProcess( catchupProcess );
         catchupProcessManager.panic( new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
 
         Timer timer = spy( single( timerService.getTimers( TX_PULLER_TIMER ) ) );

@@ -5,18 +5,17 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.state.CoreStateService;
-import com.neo4j.causalclustering.core.state.DatabaseCoreStateComponents;
+import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 
 import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.AccessCapability;
@@ -29,32 +28,30 @@ import org.neo4j.token.TokenHolders;
 
 public class CoreDatabaseComponents implements EditionDatabaseComponents
 {
-    private final CoreEditionModule editionModule;
-    private final DatabaseCoreStateComponents databaseState;
+    private final AbstractEditionModule editionModule;
+    private final CoreEditionKernelComponents kernelComponents;
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseTransactionStats transactionMonitor;
 
-    CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, DatabaseId databaseId )
+    CoreDatabaseComponents( GlobalModule globalModule, AbstractEditionModule editionModule, CoreEditionKernelComponents kernelComponents )
     {
         this.editionModule = editionModule;
-        CoreStateService coreStateService = editionModule.coreStateService();
-        databaseState = coreStateService.getDatabaseState( databaseId )
-                .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId.name() ) ) );
-        statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), globalModule.getGlobalConfig(),
+        this.kernelComponents = kernelComponents;
+        this.statementLocksFactory = new StatementLocksFactorySelector( kernelComponents.lockManager(), globalModule.getGlobalConfig(),
                 globalModule.getLogService() ).select();
-        transactionMonitor = editionModule.createTransactionMonitor();
+        this.transactionMonitor = editionModule.createTransactionMonitor();
     }
 
     @Override
     public DatabaseIdContext getIdContext()
     {
-        return databaseState.idContext();
+        return kernelComponents.idContext();
     }
 
     @Override
     public TokenHolders getTokenHolders()
     {
-        return databaseState.tokenHolders();
+        return kernelComponents.tokenHolders();
     }
 
     @Override
@@ -66,7 +63,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     @Override
     public AccessCapability getAccessCapability()
     {
-        return editionModule.getAccessCapability();
+        return kernelComponents.accessCapability();
     }
 
     @Override
@@ -84,7 +81,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     @Override
     public CommitProcessFactory getCommitProcessFactory()
     {
-        return databaseState.commitProcessFactory();
+        return kernelComponents.commitProcessFactory();
     }
 
     @Override
@@ -96,7 +93,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     @Override
     public Locks getLocks()
     {
-        return databaseState.lockManager();
+        return kernelComponents.lockManager();
     }
 
     @Override

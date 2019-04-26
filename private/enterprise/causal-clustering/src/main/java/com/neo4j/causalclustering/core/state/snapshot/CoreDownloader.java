@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -58,23 +57,23 @@ public class CoreDownloader
      * @throws IOException An issue with I/O.
      * @throws DatabaseShutdownException The database is shutting down.
      */
-    Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
+    Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( db.databaseId(), addressProvider );
+        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( context.databaseId(), addressProvider );
         if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
         }
         AdvertisedSocketAddress primaryAddress = primaryOpt.get();
 
-        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseId(), primaryAddress );
+        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( context.databaseId(), primaryAddress );
         if ( coreSnapshot.isEmpty() )
         {
             return Optional.empty();
         }
 
-        if ( !storeDownloader.bringUpToDate( db, primaryAddress, addressProvider ) )
+        if ( !storeDownloader.bringUpToDate( context, primaryAddress, addressProvider ) )
         {
             return Optional.empty();
         }

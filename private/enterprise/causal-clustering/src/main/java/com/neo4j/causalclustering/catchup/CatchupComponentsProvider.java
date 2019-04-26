@@ -46,7 +46,6 @@ import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig
  */
 public final class CatchupComponentsProvider
 {
-
     private static final String CATCHUP_SERVER_NAME = "catchup-server";
     private final PipelineBuilders pipelineBuilders;
     private final LogProvider logProvider;
@@ -56,14 +55,13 @@ public final class CatchupComponentsProvider
     private final LogProvider userLogProvider;
     private final JobScheduler scheduler;
     private final LifeSupport globalLife;
-    private final CatchupClientFactory catchupClient;
+    private final CatchupClientFactory catchupClientFactory;
     private final ConnectorPortRegister portRegister;
     private final CopiedStoreRecovery copiedStoreRecovery;
     private final PageCache pageCache;
     private final FileSystemAbstraction fileSystem;
     private final StorageEngineFactory storageEngineFactory;
     private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
-    private final Monitors monitors;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -78,19 +76,15 @@ public final class CatchupComponentsProvider
         this.pageCache = globalModule.getPageCache();
         this.globalLife = globalModule.getGlobalLife();
         this.fileSystem = globalModule.getFileSystem();
-        this.catchupClient = createCatchupClient();
+        this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
-        this.monitors = globalModule.getGlobalMonitors();
         this.copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( pageCache, fileSystem, globalModule.getStorageEngineFactory() ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }
 
-    /**
-     * @return a catchup client factory
-     */
-    public CatchupClientFactory createCatchupClient()
+    private CatchupClientFactory createCatchupClientFactory()
     {
         CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
                 .catchupProtocols( supportedCatchupProtocols )
@@ -156,13 +150,13 @@ public final class CatchupComponentsProvider
      * @param clusteredDatabaseContext the clustered database for which to produce catchup components
      * @return catchup protocol components for the provided clustered database
      */
-    public CatchupComponentsRepository.DatabaseCatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext )
+    public CatchupComponentsRepository.CatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext )
     {
-        //TODO: Use per Db Monitors here shortly
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, clusteredDatabaseContext.databaseId(), () -> monitors,
+        Monitors monitors = clusteredDatabaseContext.monitors();
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors,
                 logProvider, storeCopyBackoffStrategy );
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
-        TxPullClient txPullClient = new TxPullClient( catchupClient, clusteredDatabaseContext.databaseId(), () -> monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
                 storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory, clusteredDatabaseContext.databaseId() );
@@ -170,6 +164,11 @@ public final class CatchupComponentsProvider
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, logProvider );
 
-        return new CatchupComponentsRepository.DatabaseCatchupComponents( remoteStore, storeCopy );
+        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy );
+    }
+
+    public CatchupClientFactory catchupClientFactory()
+    {
+        return catchupClientFactory;
     }
 }

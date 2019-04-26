@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.outcome.SnapshotRequirement;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.Optional;
@@ -23,7 +23,7 @@ import org.neo4j.scheduler.JobHandle;
 
 import static java.lang.String.format;
 
-public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
+public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
     private final Log log;
     private final RaftMachine raftMachine;
@@ -46,7 +46,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     }
 
     @Override
-    public synchronized void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> wrappedMessage )
+    public synchronized void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> wrappedMessage )
     {
         if ( stopped )
         {
@@ -83,7 +83,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     }
 
     @Override
-    public synchronized void start( ClusterId clusterId )
+    public synchronized void start( RaftId raftId )
     {
         stopped = false;
     }

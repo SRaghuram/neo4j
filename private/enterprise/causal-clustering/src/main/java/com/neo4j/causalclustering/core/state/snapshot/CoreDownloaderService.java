@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -14,7 +13,6 @@ import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
 import java.util.Optional;
 
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -22,11 +20,10 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-public class CoreDownloaderService extends LifecycleAdapter
+public class CoreDownloaderService
 {
     private final JobScheduler jobScheduler;
     private final CoreDownloader downloader;
-    private final ClusteredDatabaseManager databaseManager;
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
@@ -37,16 +34,15 @@ public class CoreDownloaderService extends LifecycleAdapter
     private JobHandle jobHandle;
     private boolean stopped;
     private Panicker panicker;
+    private StoreDownloadContext context;
 
-    public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, CoreSnapshotService snapshotService,
-            ClusteredDatabaseManager databaseManager, CommandApplicationProcess applicationProcess,
-            LogProvider logProvider, TimeoutStrategy backoffStrategy,
-            Panicker panicker, Monitors monitors )
+    public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
+            CommandApplicationProcess applicationProcess, LogProvider logProvider, TimeoutStrategy backoffStrategy, Panicker panicker, Monitors monitors )
     {
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;
+        this.context = context;
         this.snapshotService = snapshotService;
-        this.databaseManager = databaseManager;
         this.applicationProcess = applicationProcess;
         this.log = logProvider.getLog( getClass() );
         this.backoffStrategy = backoffStrategy;
@@ -63,15 +59,14 @@ public class CoreDownloaderService extends LifecycleAdapter
 
         if ( currentJob == null || currentJob.hasCompleted() )
         {
-            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, databaseManager, downloader,
-                    snapshotService, log, backoffStrategy, panicker, monitors );
+            currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, downloader, snapshotService, context, log, backoffStrategy,
+                    panicker, monitors );
             jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, currentJob );
             return Optional.of( jobHandle );
         }
         return Optional.of( jobHandle );
     }
 
-    @Override
     public synchronized void stop() throws Exception
     {
         stopped = true;

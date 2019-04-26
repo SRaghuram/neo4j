@@ -21,7 +21,7 @@ public class LeaderCanWrite implements AccessCapability
             "No write operations are allowed directly on this database. Writes must pass through the leader. " +
                     "The role of this server is: %s";
 
-    LeaderCanWrite( RaftMachine raftMachine )
+    public LeaderCanWrite( RaftMachine raftMachine )
     {
         this.raftMachine = raftMachine;
     }

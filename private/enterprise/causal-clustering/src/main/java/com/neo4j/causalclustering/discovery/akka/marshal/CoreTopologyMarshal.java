@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
@@ -26,13 +26,13 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
 {
     private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
     private final ChannelMarshal<CoreServerInfo> coreServerInfoChannelMarshal = new CoreServerInfoMarshal();
-    private final ChannelMarshal<ClusterId> clusterIdMarshal = new ClusterId.Marshal();
+    private final ChannelMarshal<RaftId> raftIdMarshal = new RaftId.Marshal();
 
     @Override
     protected DatabaseCoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
-        ClusterId clusterId = clusterIdMarshal.unmarshal( channel );
+        RaftId raftId = raftIdMarshal.unmarshal( channel );
 
         int memberCount = channel.getInt();
         HashMap<MemberId,CoreServerInfo> members = new HashMap<>( memberCount );
@@ -43,14 +43,14 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
             members.put( memberId, coreServerInfo );
         }
 
-        return new DatabaseCoreTopology( databaseId, clusterId, members );
+        return new DatabaseCoreTopology( databaseId, raftId, members );
     }
 
     @Override
     public void marshal( DatabaseCoreTopology coreTopology, WritableChannel channel ) throws IOException
     {
         DatabaseIdMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
-        clusterIdMarshal.marshal( coreTopology.clusterId(), channel );
+        raftIdMarshal.marshal( coreTopology.raftId(), channel );
 
         channel.putInt( coreTopology.members().size() );
         for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.members().entrySet() )

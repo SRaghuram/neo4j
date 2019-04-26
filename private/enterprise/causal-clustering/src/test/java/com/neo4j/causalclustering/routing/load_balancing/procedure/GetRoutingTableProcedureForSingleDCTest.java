@@ -12,9 +12,10 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -78,10 +80,11 @@ import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
+// TODO: Better tests for LeaderLocator function.
 class GetRoutingTableProcedureForSingleDCTest
 {
     private final DatabaseId databaseId = new DatabaseId( "my_test_database" );
-    private final ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+    private final RaftId raftId = new RaftId( UUID.randomUUID() );
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -105,15 +108,12 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
 
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
-
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
+        LeaderService leaderService = new DefaultLeaderService( noLeaderAvailable(), coreTopologyService );
 
         // set the TTL in minutes
         config.augment( routing_ttl, "10m" );
@@ -148,10 +148,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
+        LeaderService leaderService = new DefaultLeaderService( noLeaderAvailable(), coreTopologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
@@ -176,11 +173,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( member( 0 ) );
-
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
@@ -211,10 +204,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( member( 0 ) );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
@@ -240,16 +230,13 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
         setupCoreTopologyService( topologyService, coreMembers, readReplicaInfoMap( 1 ) );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( theLeader );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
 
         CallableProcedure procedure = newProcedure( topologyService, leaderService, config );
 
@@ -278,16 +265,13 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         MemberId theLeader = member( 0 );
         coreMembers.put( theLeader, addressesForCore( 0, false ) );
 
         setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( theLeader );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
 
         CallableProcedure procedure = newProcedure( topologyService, leaderService, config );
 
@@ -308,15 +292,12 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderService leaderService = new DefaultLeaderService( noLeaderAvailable(), topologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
 
         CallableProcedure procedure = newProcedure( topologyService, leaderService, config );
 
@@ -336,15 +317,12 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 1 ), topologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( member( 1 ) );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
 
         CallableProcedure procedure = newProcedure( topologyService, leaderService, config );
 
@@ -366,10 +344,7 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         Config config = Config.defaults();
         CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( member( 0 ) );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, coreTopologyService );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
         coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
@@ -401,12 +376,11 @@ class GetRoutingTableProcedureForSingleDCTest
     }
 
     @Test
-    void shouldHaveCorrectSignature()
+    void shouldHaveCorrectSignature() throws Exception
     {
         // given
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
+        LeaderService leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         CallableProcedure proc = newProcedure( topologyService, leaderService, Config.defaults() );
 
@@ -425,7 +399,9 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        LeaderService leaderService = new DefaultLeaderService( leaderLocator, topologyService );
+        LeaderLocatorForDatabase leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
+        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService );
         Config config = Config.defaults();
 
         CallableProcedure proc = newProcedure( topologyService, leaderService, config );
@@ -435,6 +411,26 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         assertEquals( new QualifiedName( new String[]{"dbms", "routing"}, "getRoutingTable" ), name );
+    }
+
+    private LeaderLocatorForDatabase noLeaderAvailable() throws NoLeaderFoundException
+    {
+        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        LeaderLocatorForDatabase leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
+
+        when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
+        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        return leaderLocatorForDatabase;
+    }
+
+    private LeaderLocatorForDatabase leaderIsMemberId( int memberId ) throws NoLeaderFoundException
+    {
+        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        LeaderLocatorForDatabase leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
+
+        when( leaderLocator.getLeader() ).thenReturn( member( memberId ) );
+        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        return leaderLocatorForDatabase;
     }
 
     private Object[] getEndpoints( CallableProcedure proc ) throws ProcedureException
@@ -468,7 +464,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         when( topologyService.allCoreServers() ).thenReturn( cores );
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
-        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, cores ) );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, raftId, cores ) );
         when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, readReplicas ) );
     }
 

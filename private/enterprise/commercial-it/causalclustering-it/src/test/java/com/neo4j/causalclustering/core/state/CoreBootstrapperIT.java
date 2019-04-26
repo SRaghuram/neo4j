@@ -83,7 +83,7 @@ class CoreBootstrapperIT
     private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
-    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
+    private final DatabaseInitializer databaseInitializer = DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
@@ -115,19 +115,15 @@ class CoreBootstrapperIT
     {
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( databaseLayout )
-                .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
-                .withLogFiles( buildLogFiles( databaseLayout ) )
-                .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( databaseLayout );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -139,20 +135,15 @@ class CoreBootstrapperIT
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( databaseLayout );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( databaseLayout )
-                .withStoreFiles( new StoreFiles( fileSystem, pageCache ) )
-                .withLogFiles( buildLogFiles( databaseLayout ) )
-                .register();
-
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -169,17 +160,15 @@ class CoreBootstrapperIT
                 .amountOfNodes( nodeCount )
                 .build();
 
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( database.layout() )
-                .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( database.layout() );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
@@ -202,17 +191,15 @@ class CoreBootstrapperIT
                               .withSetting( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
                               .build();
 
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( database.layout() )
-                .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( database.layout() );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, config, logProvider, pageCache, storageEngineFactory );
 
         // when
-        Map<DatabaseId,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
-        CoreSnapshot snapshot = snapshots.get( DATABASE_ID );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
         verifySnapshot( snapshot, membership, config, nodeCount );
@@ -231,12 +218,11 @@ class CoreBootstrapperIT
 
         IdFilesDeleter.deleteIdFiles( database.layout(), fileSystem );
 
-        databaseManager.givenDatabaseWithConfig()
-                       .withDatabaseId( DATABASE_ID )
-                       .withDatabaseLayout( database.layout() )
-                       .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( database.layout() );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
@@ -259,13 +245,12 @@ class CoreBootstrapperIT
                 .needToRecover()
                 .build();
 
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( database.layout() )
-                .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( database.layout() );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers, fileSystem,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, fileSystem,
                 defaultConfig, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when
@@ -289,10 +274,9 @@ class CoreBootstrapperIT
                 .needToRecover()
                 .build();
 
-        databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DATABASE_ID )
-                .withDatabaseLayout( database.layout() )
-                .register();
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( database.layout() );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         Config config = Config
                 .builder()
@@ -301,7 +285,7 @@ class CoreBootstrapperIT
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseManager, temporaryDatabaseFactory, databaseInitializers,
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 fileSystem, config, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when

@@ -31,18 +31,18 @@ public class CatchupComponentsRepository
         this.clusteredDatabaseManager = clusteredDatabaseManager;
     }
 
-    public Optional<DatabaseCatchupComponents> componentsFor( DatabaseId databaseId )
+    public Optional<CatchupComponents> componentsFor( DatabaseId databaseId )
     {
         return clusteredDatabaseManager.getDatabaseContext( databaseId ).map( ClusteredDatabaseContext::catchupComponents );
     }
 
     /** Simple struct to make working with various per database catchup components a bit easier */
-    public static class DatabaseCatchupComponents
+    public static class CatchupComponents
     {
         final RemoteStore remoteStore;
         final StoreCopyProcess storeCopy;
 
-        public DatabaseCatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy )
+        public CatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy )
         {
             this.remoteStore = remoteStore;
             this.storeCopy = storeCopy;

@@ -9,7 +9,7 @@ import com.neo4j.bench.micro.benchmarks.cluster.EditionModuleBackedAbstractBench
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import io.netty.channel.Channel;
@@ -31,10 +31,10 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
     private static final boolean DEBUG = false;
 
     static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
-    static final ClusterId CLUSTER_ID = new ClusterId( UUID.randomUUID() );
+    static final RaftId RAFT_ID = new RaftId( UUID.randomUUID() );
     private final LocalNetworkPlatform platform = new LocalNetworkPlatform();
-    private Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler;
-    private RaftMessages.ClusterIdAwareMessage<RaftMessages.RaftMessage> message;
+    private Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler;
+    private RaftMessages.RaftIdAwareMessage<RaftMessages.RaftMessage> message;
     private Log log = logProvider().getLog( AbstractRaftBenchmark.class );
 
     @Override
@@ -62,7 +62,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
         return platform.channel();
     }
 
-    private void setHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler )
+    private void setHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler )
     {
         this.handler = handler;
     }
@@ -75,7 +75,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
 
     abstract ProtocolVersion protocolVersion();
 
-    abstract RaftMessages.ClusterIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage();
+    abstract RaftMessages.RaftIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage();
 
     static int nbrOfBytes( String size )
     {

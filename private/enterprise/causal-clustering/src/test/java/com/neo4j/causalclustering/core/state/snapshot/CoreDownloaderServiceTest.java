@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
@@ -50,6 +49,7 @@ public class CoreDownloaderServiceTest
 
     private JobScheduler centralJobScheduler;
     private final Panicker panicker = mock( Panicker.class );
+    private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
 
     @Before
     public void create()
@@ -62,7 +62,7 @@ public class CoreDownloaderServiceTest
 
     private CoreDownloaderService createDownloader()
     {
-        return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, databaseService, applicationProcess,
+        return new CoreDownloaderService( centralJobScheduler, coreDownloader, downloadContext, snapshotService, applicationProcess,
                 logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
     }
 
@@ -94,8 +94,8 @@ public class CoreDownloaderServiceTest
         Semaphore blockDownloader = new Semaphore( 0 );
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
-        CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, snapshotService,
-                databaseService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
+        CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, downloadContext,
+                snapshotService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         Thread.sleep( 50 );
@@ -118,7 +118,7 @@ public class CoreDownloaderServiceTest
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
         {
             semaphore.acquireUninterruptibly();
             return Optional.of( mock( CoreSnapshot.class ) );

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.SessionTracker;
+import com.neo4j.causalclustering.core.CoreState;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
@@ -36,9 +37,9 @@ public class CommandApplicationProcess implements PanicEventHandler
     private final int flushEvery;
     private final ProgressTracker progressTracker;
     private final SessionTracker sessionTracker;
+    private final CoreState coreState;
     private final InFlightCache inFlightCache;
     private final Log log;
-    private final CoreStateRepository coreStateRepository;
     private final RaftLogCommitIndexMonitor commitIndexMonitor;
     private final CommandBatcher batcher;
     private final Panicker panicker;
@@ -50,14 +51,14 @@ public class CommandApplicationProcess implements PanicEventHandler
     private final ApplierState applierState = new ApplierState();
 
     public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
-            SessionTracker sessionTracker, CoreStateRepository coreStateRepository, InFlightCache inFlightCache, Monitors monitors, Panicker panicker )
+            SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors, Panicker panicker )
     {
         this.raftLog = raftLog;
         this.flushEvery = flushEvery;
         this.progressTracker = progressTracker;
         this.sessionTracker = sessionTracker;
         this.log = logProvider.getLog( getClass() );
-        this.coreStateRepository = coreStateRepository;
+        this.coreState = coreState;
         this.inFlightCache = inFlightCache;
         this.commitIndexMonitor = monitors.newMonitor( RaftLogCommitIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
@@ -175,7 +176,7 @@ public class CommandApplicationProcess implements PanicEventHandler
         }
     }
 
-    public long lastApplied()
+    long lastApplied()
     {
         return applierState.lastApplied;
     }
@@ -215,7 +216,7 @@ public class CommandApplicationProcess implements PanicEventHandler
 
     private long handleOperations( long commandIndex, List<DistributedOperation> operations )
     {
-        try ( CommandDispatcher dispatcher = coreStateRepository.commandDispatcher() )
+        try ( CommandDispatcher dispatcher = coreState.commandDispatcher() )
         {
             for ( DistributedOperation operation : operations )
             {
@@ -244,7 +245,7 @@ public class CommandApplicationProcess implements PanicEventHandler
     {
         if ( (applierState.lastApplied - lastFlushed) > flushEvery )
         {
-            coreStateRepository.flush( applierState.lastApplied );
+            coreState.flush( applierState.lastApplied );
             lastFlushed = applierState.lastApplied;
         }
     }
@@ -256,7 +257,7 @@ public class CommandApplicationProcess implements PanicEventHandler
 
         if ( lastFlushed == NOTHING )
         {
-            lastFlushed = coreStateRepository.getLastFlushed();
+            lastFlushed = coreState.getLastFlushed();
         }
         applierState.lastApplied = lastFlushed;
 
@@ -266,7 +267,7 @@ public class CommandApplicationProcess implements PanicEventHandler
         /* Considering the order in which state is flushed, the state machines will
          * always be furthest ahead and indicate the furthest possible state to
          * which we must replay to reach a consistent state. */
-        long lastPossiblyApplying = max( coreStateRepository.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
+        long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
 
         if ( lastPossiblyApplying > applierState.lastApplied )
         {
@@ -280,7 +281,7 @@ public class CommandApplicationProcess implements PanicEventHandler
     public synchronized void stop() throws IOException
     {
         pauseApplier( "shutdown" );
-        coreStateRepository.flush( applierState.lastApplied );
+        coreState.flush( applierState.lastApplied );
     }
 
     private void spawnApplierThread()

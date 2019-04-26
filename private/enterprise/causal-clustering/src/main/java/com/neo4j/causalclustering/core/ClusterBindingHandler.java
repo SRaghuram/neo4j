@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -15,16 +15,16 @@ import java.util.Objects;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
+public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler;
+    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler;
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final Log log;
 
-    private volatile ClusterId boundClusterId;
+    private volatile RaftId boundRaftId;
 
     public ClusterBindingHandler( RaftMessageDispatcher raftMessageDispatcher,
-            LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler,
+            LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler,
             LogProvider logProvider )
     {
         this.delegateHandler = delegateHandler;
@@ -38,11 +38,11 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Exception
+    public void start( RaftId raftId ) throws Exception
     {
-        boundClusterId = clusterId;
-        delegateHandler.start( clusterId );
-        raftMessageDispatcher.registerHandlerChain( boundClusterId, this );
+        boundRaftId = raftId;
+        delegateHandler.start( raftId );
+        raftMessageDispatcher.registerHandlerChain( boundRaftId, this );
     }
 
     @Override
@@ -54,22 +54,22 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
         }
         finally
         {
-            raftMessageDispatcher.deregisterHandlerChain( boundClusterId );
-            boundClusterId = null;
+            raftMessageDispatcher.deregisterHandlerChain( boundRaftId );
+            boundRaftId = null;
         }
     }
 
     @Override
-    public void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> message )
+    public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
     {
-        if ( Objects.isNull( boundClusterId ) )
+        if ( Objects.isNull( boundRaftId ) )
         {
             log.debug( "Message handling has been stopped, dropping the message: %s", message.message() );
         }
-        else if ( !Objects.equals( boundClusterId, message.clusterId() ) )
+        else if ( !Objects.equals( boundRaftId, message.raftId() ) )
         {
-            log.info( "Discarding message[%s] owing to mismatched clusterId. Expected: %s, Encountered: %s",
-                    message.message(), boundClusterId, message.clusterId() );
+            log.info( "Discarding message[%s] owing to mismatched raftId. Expected: %s, Encountered: %s",
+                    message.message(), boundRaftId, message.raftId() );
         }
         else
         {

@@ -46,15 +46,15 @@ class ClusterStateLayoutTest
     }
 
     @Test
-    void shouldExposeClusterIdStateFile()
-    {
-        assertEquals( path( dataDir, "cluster-state", "cluster-id-state", "cluster-id" ), layout.clusterIdStateFile() );
-    }
-
-    @Test
     void shouldExposeMemberIdStateFile()
     {
         assertEquals( path( dataDir, "cluster-state", "core-member-id-state", "core-member-id" ), layout.memberIdStateFile() );
+    }
+
+    @Test
+    void shouldExposeRaftIdStateFile()
+    {
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "raft-id-state", "raft-id" ), layout.raftIdStateFile( DATABASE_ID ) );
     }
 
     @Test
@@ -110,15 +110,15 @@ class ClusterStateLayoutTest
     void shouldListGlobalAndDatabaseEntriesEntries()
     {
         Set<CoreStateFiles<?>> types = set(
-                CoreStateFiles.CLUSTER_ID,
+                CoreStateFiles.RAFT_ID,
                 CoreStateFiles.CORE_MEMBER_ID,
                 CoreStateFiles.SESSION_TRACKER,
                 CoreStateFiles.RAFT_TERM,
                 CoreStateFiles.RAFT_LOG );
 
         Set<File> expected = set(
-                path( dataDir, "cluster-state", "cluster-id-state" ),
                 path( dataDir, "cluster-state", "core-member-id-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_ID.name(),"raft-id-state" ),
                 path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "session-tracker-state" ),
                 path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "session-tracker-state" ),
                 path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "term-state" ),

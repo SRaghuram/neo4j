@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -94,8 +94,8 @@ class NettyInstalledProtocolsIT
 
         // given
         RaftMessages.Heartbeat raftMessage = new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 1, 2, 3 );
-        RaftMessages.ClusterIdAwareMessage<RaftMessages.Heartbeat> networkMessage =
-                RaftMessages.ClusterIdAwareMessage.of( new ClusterId( UUID.randomUUID() ), raftMessage );
+        RaftMessages.RaftIdAwareMessage<RaftMessages.Heartbeat> networkMessage =
+                RaftMessages.RaftIdAwareMessage.of( new RaftId( UUID.randomUUID() ), raftMessage );
 
         // when
         client.send( networkMessage ).syncUninterruptibly();
@@ -258,16 +258,16 @@ class NettyInstalledProtocolsIT
         }
     }
 
-    private Matcher<Object> messageMatches( RaftMessages.ClusterIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
+    private Matcher<Object> messageMatches( RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
     {
         return new MessageMatcher( expected );
     }
 
     class MessageMatcher extends BaseMatcher<Object>
     {
-        private final RaftMessages.ClusterIdAwareMessage<? extends RaftMessages.RaftMessage> expected;
+        private final RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected;
 
-        MessageMatcher( RaftMessages.ClusterIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
+        MessageMatcher( RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
         {
             this.expected = expected;
         }
@@ -275,10 +275,10 @@ class NettyInstalledProtocolsIT
         @Override
         public boolean matches( Object item )
         {
-            if ( item instanceof RaftMessages.ClusterIdAwareMessage<?> )
+            if ( item instanceof RaftMessages.RaftIdAwareMessage<?> )
             {
-                RaftMessages.ClusterIdAwareMessage<?> message = (RaftMessages.ClusterIdAwareMessage<?>) item;
-                return message.clusterId().equals( expected.clusterId() ) && message.message().equals( expected.message() );
+                RaftMessages.RaftIdAwareMessage<?> message = (RaftMessages.RaftIdAwareMessage<?>) item;
+                return message.raftId().equals( expected.raftId() ) && message.message().equals( expected.message() );
             }
             else
             {
@@ -289,7 +289,7 @@ class NettyInstalledProtocolsIT
         @Override
         public void describeTo( Description description )
         {
-            description.appendText( "Cluster ID " ).appendValue( expected.clusterId() ).appendText( " message " ).appendValue( expected.message() );
+            description.appendText( "Raft ID " ).appendValue( expected.raftId() ).appendText( " message " ).appendValue( expected.message() );
         }
     }
 }

@@ -114,9 +114,7 @@ public class RaftGroup
         dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
         life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, databaseId ) );
-
         life.add( logShipping );
-
     }
 
     private static LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging.marshalling.v2.encoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
@@ -14,18 +14,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.ClusterIdAwareMessage>
+public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.RaftIdAwareMessage>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, RaftMessages.ClusterIdAwareMessage decoratedMessage, ByteBuf out ) throws Exception
+    protected void encode( ChannelHandlerContext ctx, RaftMessages.RaftIdAwareMessage decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
-        ClusterId clusterId = decoratedMessage.clusterId();
+        RaftId raftId = decoratedMessage.raftId();
         MemberId.Marshal memberMarshal = new MemberId.Marshal();
 
         NetworkWritableChannel channel = new NetworkWritableChannel( out );
         channel.put( ContentType.Message.get() );
-        ClusterId.Marshal.INSTANCE.marshal( clusterId, channel );
+        RaftId.Marshal.INSTANCE.marshal( raftId, channel );
         channel.putInt( message.type().ordinal() );
         memberMarshal.marshal( message.from(), channel );
 

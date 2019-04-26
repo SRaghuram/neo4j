@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.junit.jupiter.api.Test;
@@ -84,7 +84,7 @@ class ConnectToRandomCoreServerStrategyTest
     {
         assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
 
-        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+        RaftId raftId = new RaftId( UUID.randomUUID() );
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
 
         int offset = 0;
@@ -95,6 +95,6 @@ class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new DatabaseCoreTopology( DATABASE_ID, clusterId, coreMembers );
+        return new DatabaseCoreTopology( DATABASE_ID, raftId, coreMembers );
     }
 }

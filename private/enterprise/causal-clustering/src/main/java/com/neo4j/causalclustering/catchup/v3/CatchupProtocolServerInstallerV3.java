@@ -38,14 +38,11 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static java.util.Collections.emptyList;
 
 public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orientation.Server>
 {
@@ -107,7 +104,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )
                 .add( "hnd_req_store_listing", catchupServerHandler.storeListingRequestHandler( state ) )
                 .add( "hnd_req_store_file", catchupServerHandler.getStoreFileRequestHandler( state ) )
-                .add( "hnd_req_snapshot", catchupServerHandler.snapshotHandler( state ).map( Collections::singletonList ).orElse( emptyList() ) )
+                .add( "hnd_req_snapshot", catchupServerHandler.snapshotHandler( state ) )
                 .install();
     }
 

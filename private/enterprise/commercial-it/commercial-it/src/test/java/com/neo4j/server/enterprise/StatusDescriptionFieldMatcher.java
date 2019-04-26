@@ -30,7 +30,12 @@ class StatusDescriptionFieldMatcher<T> extends TypeSafeMatcher<Map<String,Object
     @Override
     protected boolean matchesSafely( Map<String,Object> item )
     {
-        T value = converter.apply( item.get( fieldName ) );
+        Object field = item.get( fieldName );
+        if ( field == null )
+        {
+            return false;
+        }
+        T value = converter.apply( field );
         return matcher.matches( value );
     }
 

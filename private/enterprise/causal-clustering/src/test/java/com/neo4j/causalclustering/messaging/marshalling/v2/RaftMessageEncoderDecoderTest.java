@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -125,9 +125,9 @@ class RaftMessageEncoderDecoderTest
     {
         setupChannels( raftProtocol );
 
-        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
-        RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage> idAwareMessage =
-                RaftMessages.ReceivedInstantClusterIdAwareMessage.of( Instant.now(), clusterId, raftMessage );
+        RaftId raftId = new RaftId( UUID.randomUUID() );
+        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> idAwareMessage =
+                RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId, raftMessage );
 
         outbound.writeOutbound( idAwareMessage );
 
@@ -136,8 +136,8 @@ class RaftMessageEncoderDecoderTest
         {
             inbound.writeInbound( o );
         }
-        RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage> message = handler.getRaftMessage();
-        assertEquals( clusterId, message.clusterId() );
+        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> message = handler.getRaftMessage();
+        assertEquals( raftId, message.raftId() );
         raftMessageEquals( raftMessage, message.message() );
         assertNull( inbound.readInbound() );
         ReferenceCountUtil.release( handler.msg );
@@ -217,18 +217,18 @@ class RaftMessageEncoderDecoderTest
         }
     }
 
-    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage>>
+    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage>>
     {
 
-        private RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage> msg;
+        private RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> msg;
 
         @Override
-        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage> msg )
+        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> msg )
         {
             this.msg = msg;
         }
 
-        RaftMessages.ReceivedInstantClusterIdAwareMessage<RaftMessage> getRaftMessage()
+        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> getRaftMessage()
         {
             return msg;
         }

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.net.Server;
 
 import java.util.Optional;
 
+// TODO: Move everything in this module to edition module?
 public class ReadReplicaServerModule
 {
     private final Server catchupServer;
@@ -27,12 +28,15 @@ public class ReadReplicaServerModule
     ReadReplicaServerModule( ClusteredDatabaseManager databaseManager, CatchupComponentsProvider catchupComponentsProvider,
             CatchupHandlerFactory handlerFactory )
     {
-        CatchupServerHandler catchupServerHandler = handlerFactory.create( null );
+        CatchupServerHandler catchupServerHandler = handlerFactory.create();
         InstalledProtocolHandler installedProtocolsHandler = new InstalledProtocolHandler();
+
         this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
         this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
+
+        // TODO: Weird place to instantiate these two components. Move to top level?
         this.catchupComponents = new CatchupComponentsRepository( databaseManager );
-        this.catchupClientFactory = catchupComponentsProvider.createCatchupClient();
+        this.catchupClientFactory = catchupComponentsProvider.catchupClientFactory();
     }
 
     public Server catchupServer()

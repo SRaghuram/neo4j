@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteRequestBuilder;
 import com.neo4j.causalclustering.core.consensus.vote.VoteResponseBuilder;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageEncoder;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
 
 public class RaftMessageEncodingDecodingTest
 {
-    private ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+    private RaftId raftId = new RaftId( UUID.randomUUID() );
 
     @Test
     public void shouldSerializeAppendRequestWithMultipleEntries() throws Exception
@@ -93,7 +93,7 @@ public class RaftMessageEncodingDecodingTest
 
         // When
         MemberId sender = new MemberId( UUID.randomUUID() );
-        RaftMessages.ClusterIdAwareMessage<?> message = RaftMessages.ReceivedInstantClusterIdAwareMessage.of( now, clusterId,
+        RaftMessages.RaftIdAwareMessage<?> message = RaftMessages.ReceivedInstantRaftIdAwareMessage.of( now, raftId,
         new RaftMessages.Heartbeat( sender, 1, 2, 3 ) );
         ChannelHandlerContext ctx = setupContext();
         ByteBuf buffer = null;
@@ -156,8 +156,8 @@ public class RaftMessageEncodingDecodingTest
         ArrayList<Object> thingsRead = new ArrayList<>( 1 );
 
         // When
-        RaftMessages.ClusterIdAwareMessage<?> decoratedMessage =
-                RaftMessages.ReceivedInstantClusterIdAwareMessage.of( now, clusterId, message );
+        RaftMessages.RaftIdAwareMessage<?> decoratedMessage =
+                RaftMessages.ReceivedInstantRaftIdAwareMessage.of( now, raftId, message );
         ChannelHandlerContext ctx = setupContext();
         ByteBuf buffer = null;
         try

@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,8 +64,8 @@ class DumpClusterStateTest
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
-        ClusterId nonDefaultClusterId = new ClusterId( UUID.randomUUID() );
-        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultTermState );
+        RaftId nonDefaultRaftId = new RaftId( UUID.randomUUID() );
+        createStates( nonDefaultMember, nonDefaultRaftId, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DATABASE_ID );
 
@@ -76,17 +76,17 @@ class DumpClusterStateTest
         String outStr = out.toString();
         assertThat( outStr, allOf(
                 containsString( nonDefaultMember.toString() ),
-                containsString( nonDefaultClusterId.toString() ),
+                containsString( nonDefaultRaftId.toString() ),
                 containsString( nonDefaultTermState.toString() ) ) );
         int lineCount = outStr.split( System.lineSeparator() ).length;
         assertEquals( numClusterStateItems, lineCount );
     }
 
-    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId, TermState nonDefaultTermState ) throws IOException
+    private void createStates( MemberId nonDefaultMember, RaftId nonDefaultRaftId, TermState nonDefaultTermState ) throws IOException
     {
         // We're writing to 4 pieces of cluster state
         SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
-        SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( DATABASE_ID );
 
         StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life );
 
@@ -100,6 +100,6 @@ class DumpClusterStateTest
 
         memberIdStorage.writeState( nonDefaultMember );
         termStateStateStorage.writeState( nonDefaultTermState );
-        clusterIdStorage.writeState( nonDefaultClusterId );
+        raftIdStorage.writeState( nonDefaultRaftId );
     }
 }

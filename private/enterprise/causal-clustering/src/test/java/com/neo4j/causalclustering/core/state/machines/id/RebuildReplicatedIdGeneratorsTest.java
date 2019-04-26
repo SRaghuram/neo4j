@@ -14,13 +14,11 @@ import java.io.File;
 
 import org.neo4j.collection.PrimitiveLongCollections;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -83,7 +81,7 @@ public class RebuildReplicatedIdGeneratorsTest
         ReplicatedIdRangeAcquirer idRangeAcquirer = mock( ReplicatedIdRangeAcquirer.class );
         when( idRangeAcquirer.acquireIds( IdType.NODE ) ).thenReturn( new IdAllocation( new IdRange(
                 PrimitiveLongCollections.EMPTY_LONG_ARRAY, 0, 10000 ), 0, 0 ) );
-        return new ReplicatedIdGeneratorFactory( fileSystemAbstraction, ignoredDBName -> idRangeAcquirer, NullLogProvider.getInstance(),
-                new CommercialIdTypeConfigurationProvider( Config.defaults() ),new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ), panicker );
+        return new ReplicatedIdGeneratorFactory( fileSystemAbstraction, idRangeAcquirer, NullLogProvider.getInstance(),
+                new CommercialIdTypeConfigurationProvider( Config.defaults() ), panicker );
     }
 }

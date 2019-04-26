@@ -24,7 +24,7 @@ public abstract class BaseAkkaSerializer<T> extends JSerializer
 {
     // Serializer identifiers. Must be unique, not change across versions, be above 40.
     static final int LEADER_INFO = 1000;
-    static final int CLUSTER_ID = 1001;
+    static final int RAFT_ID = 1001;
     static final int UNIQUE_ADDRESS = 1002;
     static final int CORE_SERVER_INFO_FOR_MEMBER_ID = 1003;
     static final int READ_REPLICA_INFO_FOR_MEMBER_ID = 1004;

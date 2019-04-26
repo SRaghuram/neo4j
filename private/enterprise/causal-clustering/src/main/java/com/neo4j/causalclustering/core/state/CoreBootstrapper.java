@@ -5,43 +5,36 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class CoreBootstrapper
 {
-    private final ClusteredDatabaseManager databaseManager;
+    private final BootstrapContext bootstrapContext;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
-    private final Function<DatabaseId,DatabaseInitializer> databaseInitializers;
+    private final DatabaseInitializer databaseInitializer;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final LogProvider logProvider;
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    CoreBootstrapper( ClusteredDatabaseManager databaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
-            Function<DatabaseId,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider,
-            PageCache pageCache, StorageEngineFactory storageEngineFactory )
+    public CoreBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
+            FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache, StorageEngineFactory storageEngineFactory )
     {
-        this.databaseManager = databaseManager;
+        this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
-        this.databaseInitializers = databaseInitializers;
+        this.databaseInitializer = databaseInitializer;
         this.fs = fs;
         this.pageCache = pageCache;
         this.logProvider = logProvider;
@@ -55,17 +48,9 @@ public class CoreBootstrapper
      * @param members the members to bootstrap with (this comes from the discovery service).
      * @return a snapshot which represents the initial state.
      */
-    public Map<DatabaseId,CoreSnapshot> bootstrap( Set<MemberId> members )
+    public CoreSnapshot bootstrap( Set<MemberId> members )
     {
-        DatabaseBootstrapper dbBootstrapper = new DatabaseBootstrapper( members, tempDatabaseFactory, databaseInitializers,
-                pageCache, fs, logProvider, storageEngineFactory, config );
-
-        Map<DatabaseId,CoreSnapshot> coreSnapshots = new HashMap<>();
-        for ( ClusteredDatabaseContext dbContext : databaseManager.registeredDatabases().values() )
-        {
-            coreSnapshots.put( dbContext.databaseId(), dbBootstrapper.bootstrap( dbContext ) );
-        }
-
-        return coreSnapshots;
+        return new DatabaseBootstrapper( members, tempDatabaseFactory, databaseInitializer, pageCache, fs, logProvider, storageEngineFactory,
+                config ).bootstrap( bootstrapContext );
     }
 }

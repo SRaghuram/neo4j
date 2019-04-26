@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
-import com.neo4j.causalclustering.logging.BetterMessageLogger;
-import com.neo4j.causalclustering.logging.MessageLogger;
+import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
+import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
@@ -55,12 +55,11 @@ public class RaftTestFixture
             fixtureMember.raftLog = new InMemoryRaftLog();
             fixtureMember.member = id;
 
-            MessageLogger<MemberId> messageLogger =
-                    new BetterMessageLogger<>( id, new PrintWriter( writer ), Clocks.systemClock() );
+            RaftMessageLogger<MemberId> raftMessageLogger =
+                    new BetterRaftMessageLogger<>( id, new PrintWriter( writer ), Clocks.systemClock() );
             Inbound<RaftMessages.RaftMessage> inbound =
-                    new LoggingInbound<>( net.new Inbound<>( fixtureMember.member ), messageLogger, fixtureMember.member );
-            Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member,
-                    messageLogger );
+                    new LoggingInbound<>( net.new Inbound<>( fixtureMember.member ), raftMessageLogger, fixtureMember.member );
+            Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member, raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize,
                     RaftTestMemberSetBuilder.INSTANCE )

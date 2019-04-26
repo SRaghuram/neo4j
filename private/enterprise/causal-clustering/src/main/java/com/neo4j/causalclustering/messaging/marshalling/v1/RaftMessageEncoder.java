@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.messaging.marshalling.v1;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
@@ -19,7 +19,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 import org.neo4j.io.ByteUnit;
 
-public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.ClusterIdAwareMessage>
+public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.RaftIdAwareMessage>
 {
     private final ChannelMarshal<ReplicatedContent> marshal;
 
@@ -30,15 +30,15 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Cluste
 
     @Override
     public synchronized void encode( ChannelHandlerContext ctx,
-            RaftMessages.ClusterIdAwareMessage decoratedMessage,
+            RaftMessages.RaftIdAwareMessage decoratedMessage,
             ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
-        ClusterId clusterId = decoratedMessage.clusterId();
+        RaftId raftId = decoratedMessage.raftId();
         MemberId.Marshal memberMarshal = new MemberId.Marshal();
 
         NetworkWritableChannel channel = new NetworkWritableChannel( out );
-        ClusterId.Marshal.INSTANCE.marshal( clusterId, channel );
+        RaftId.Marshal.INSTANCE.marshal( raftId, channel );
         channel.putInt( message.type().ordinal() );
         memberMarshal.marshal( message.from(), channel );
 

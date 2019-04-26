@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
@@ -33,7 +33,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
-    private final ClusterId clusterId;
+    private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
@@ -42,7 +42,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     FakeTopologyService( Collection<MemberId> cores, Collection<MemberId> replicas, MemberId myself, RoleInfo myselfRole )
     {
         this.myself = myself;
-        clusterId = new ClusterId( UUID.randomUUID() );
+        raftId = new RaftId( UUID.randomUUID() );
         roles = new HashMap<>();
         coreMembers = new HashMap<>();
 
@@ -103,7 +103,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( databaseId, clusterId, coreMembers );
+        return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
     }
 
     @Override

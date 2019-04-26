@@ -23,7 +23,6 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 
 public class ReadReplicaGraphDatabase
 {
-
     private final DatabaseManagementService managementService;
 
     public interface ReadReplicaEditionModuleFactory

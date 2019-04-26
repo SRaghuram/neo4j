@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.logging.MessageLogger;
+import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -47,19 +47,19 @@ public class RaftServerFactory
     private final GlobalModule globalModule;
     private final IdentityModule identityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
-    private final MessageLogger<MemberId> messageLogger;
+    private final RaftMessageLogger<MemberId> raftMessageLogger;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
     RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
-            MessageLogger<MemberId> messageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
+            RaftMessageLogger<MemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols )
     {
         this.globalModule = globalModule;
         this.identityModule = identityModule;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
-        this.messageLogger = messageLogger;
+        this.raftMessageLogger = raftMessageLogger;
         this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.supportedModifierProtocols = supportedModifierProtocols;
@@ -91,8 +91,8 @@ public class RaftServerFactory
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
-                new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
+        LoggingInbound<ReceivedInstantRaftIdAwareMessage<?>> loggingRaftInbound =
+                new LoggingInbound<>( nettyHandler, raftMessageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

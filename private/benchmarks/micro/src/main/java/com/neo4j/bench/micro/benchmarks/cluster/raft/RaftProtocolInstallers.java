@@ -23,11 +23,11 @@ import org.neo4j.logging.LogProvider;
 public class RaftProtocolInstallers implements ProtocolInstallers
 {
     private final ProtocolVersion version;
-    private final Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler;
+    private final Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler;
     private final LogProvider logProvider;
 
     RaftProtocolInstallers( ProtocolVersion version,
-                            Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler,
+                            Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler,
                             LogProvider logProvider )
     {
         this.version = version;

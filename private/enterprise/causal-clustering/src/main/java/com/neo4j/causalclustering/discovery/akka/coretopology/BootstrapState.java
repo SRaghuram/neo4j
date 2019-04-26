@@ -34,7 +34,7 @@ public class BootstrapState
         this.config = config;
     }
 
-    public boolean canBootstrapCluster( DatabaseId databaseId )
+    public boolean canBootstrapRaft( DatabaseId databaseId )
     {
         boolean iDoNotRefuseToBeLeader = config != null && !config.get( refuse_to_be_leader );
         boolean clusterHasConverged = clusterView.converged();

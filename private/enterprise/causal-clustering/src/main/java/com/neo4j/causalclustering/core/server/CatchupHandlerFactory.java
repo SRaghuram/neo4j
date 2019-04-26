@@ -11,5 +11,5 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 @FunctionalInterface
 public interface CatchupHandlerFactory
 {
-    CatchupServerHandler create( CoreSnapshotService snapshotService );
+    CatchupServerHandler create();
 }

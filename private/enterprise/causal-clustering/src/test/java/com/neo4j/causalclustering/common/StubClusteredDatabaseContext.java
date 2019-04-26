@@ -13,11 +13,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -31,7 +33,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Database database;
     private final GraphDatabaseFacade facade;
     private final LogProvider logProvider;
-    private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
+    private final CatchupComponentsRepository.CatchupComponents catchupComponents;
     private boolean isEmpty;
     private StoreId storeId;
     private final Monitors monitors;
@@ -39,7 +41,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final LogFiles logFiles;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory, LifeSupport life )
     {
         this.database = database;
         this.facade = facade;
@@ -136,8 +138,14 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     }
 
     @Override
-    public CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents()
+    public CatchupComponentsRepository.CatchupComponents catchupComponents()
     {
         return catchupComponents;
+    }
+
+    @Override
+    public LifeSupport clusterDatabaseLife()
+    {
+        return null;
     }
 }

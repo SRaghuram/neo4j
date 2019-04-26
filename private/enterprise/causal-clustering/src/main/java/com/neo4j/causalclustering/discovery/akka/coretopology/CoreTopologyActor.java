@@ -52,12 +52,12 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private Set<DatabaseId> knownDatabaseIds = emptySet();
 
-    private final ActorRef clusterIdActor;
+    private final ActorRef raftIdActor;
     private final ActorRef readReplicaTopologyActor;
 
     // Topology component data
     private MetadataMessage memberData;
-    private ClusterIdDirectoryMessage clusterIdPerDb;
+    private RaftIdDirectoryMessage raftIdPerDb;
     private ClusterViewMessage clusterView;
 
     private CoreTopologyActor( DiscoveryMember myself,
@@ -75,7 +75,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
-        this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
+        this.raftIdPerDb = RaftIdDirectoryMessage.EMPTY;
         this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
         this.myClusterAddress = cluster.selfUniqueAddress();
@@ -85,7 +85,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, metadataActor, logProvider ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, config, logProvider ) );
-        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider ) );
+        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), logProvider ) );
     }
 
     @Override
@@ -94,8 +94,8 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         return receiveBuilder()
                 .match( ClusterViewMessage.class,        this::handleClusterViewMessage)
                 .match( MetadataMessage.class,           this::handleMetadataMessage )
-                .match( ClusterIdDirectoryMessage.class, this::handleClusterIdDirectoryMessage )
-                .match( ClusterIdSettingMessage.class,   this::handleClusterIdSettingMessage )
+                .match( RaftIdDirectoryMessage.class,    this::handleRaftIdDirectoryMessage )
+                .match( RaftIdSettingMessage.class,      this::handleRaftIdSettingMessage )
                 .build();
     }
 
@@ -111,15 +111,15 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         buildTopologies();
     }
 
-    private void handleClusterIdDirectoryMessage( ClusterIdDirectoryMessage message )
+    private void handleRaftIdDirectoryMessage( RaftIdDirectoryMessage message )
     {
-        clusterIdPerDb = message;
+        raftIdPerDb = message;
         buildTopologies();
     }
 
-    private void handleClusterIdSettingMessage( ClusterIdSettingMessage message )
+    private void handleRaftIdSettingMessage( RaftIdSettingMessage message )
     {
-        clusterIdActor.forward( message, context() );
+        raftIdActor.forward( message, context() );
     }
 
     private void buildTopologies()
@@ -143,7 +143,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopology( DatabaseId databaseId )
     {
-        DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, clusterIdPerDb.get( databaseId ), clusterView, memberData );
+        DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, raftIdPerDb.get( databaseId ), clusterView, memberData );
 
         Collection<Address> akkaMemberAddresses = clusterView.members()
                 .stream()

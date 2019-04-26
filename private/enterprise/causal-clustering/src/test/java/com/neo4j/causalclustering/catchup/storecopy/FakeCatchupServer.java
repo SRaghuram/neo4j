@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -51,7 +50,7 @@ class FakeCatchupServer implements CatchupServerHandler
         filesystem.add( fakeFile );
     }
 
-    public int getRequestCount( String file )
+    int getRequestCount( String file )
     {
         return pathToRequestCountMapping.getOrDefault( file, 0 );
     }
@@ -165,9 +164,9 @@ class FakeCatchupServer implements CatchupServerHandler
     }
 
     @Override
-    public Optional<ChannelHandler> snapshotHandler( CatchupServerProtocol catchupServerProtocol )
+    public ChannelHandler snapshotHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return Optional.empty();
+        return new ChannelInboundHandlerAdapter();
     }
 
     public StoreId getStoreId()

@@ -89,7 +89,7 @@ public class DumpClusterState
         try
         {
             dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
-            dumpSimpleState( CoreStateFiles.CLUSTER_ID, storageFactory.createClusterIdStorage() );
+            dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump ) );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life ) );
             dumpState( CoreStateFiles.LOCK_TOKEN, storageFactory.createLockTokenStorage( databaseToDump, life ) );

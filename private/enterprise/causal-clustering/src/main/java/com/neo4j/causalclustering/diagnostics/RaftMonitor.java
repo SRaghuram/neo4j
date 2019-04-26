@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.diagnostics;
+
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.helper.Limiters;
+import com.neo4j.causalclustering.identity.RaftBinder;
+import com.neo4j.causalclustering.identity.RaftId;
+
+import java.time.Duration;
+import java.util.function.Consumer;
+
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
+
+import static java.lang.String.format;
+
+/**
+ * Monitors major raft events and logs them appropriately. The main intention
+ * is for this class to make sure that the neo4j.log gets the most important events
+ * logged in a way that is useful for end users and aligned across components.
+ * <p>
+ * In particular the startup should be logged in a way as to aid in debugging
+ * common issues; e.g. around network connectivity.
+ * <p>
+ * This pattern also de-clutters implementing classes from specifics of logging (e.g.
+ * formatting, dual-logging, rate limiting, ...) and encourages a structured interface.
+ */
+public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownloader.Monitor
+{
+    private final Log debug;
+    private final Log user;
+
+    private final Consumer<Runnable> binderLimit = Limiters.rateLimiter( Duration.ofSeconds( 10 ) );
+
+    public static void register( LogProvider debugLogProvider, LogProvider userLogProvider, Monitors monitors )
+    {
+        new RaftMonitor( debugLogProvider, userLogProvider, monitors );
+    }
+
+    private RaftMonitor( LogProvider debugLogProvider, LogProvider userLogProvider, Monitors monitors )
+    {
+        this.debug = debugLogProvider.getLog( getClass() );
+        this.user = userLogProvider.getLog( getClass() );
+
+        monitors.addMonitorListener( this );
+    }
+
+    @Override
+    public void waitingForCoreMembers( int minimumCount )
+    {
+        binderLimit.accept( () -> {
+            String message = "Waiting for a total of %d core members...";
+            user.info( format( message, minimumCount ) );
+        } );
+    }
+
+    @Override
+    public void waitingForBootstrap()
+    {
+        binderLimit.accept( () -> user.info( "Waiting for bootstrap by other instance..." ) );
+    }
+
+    @Override
+    public void bootstrapped( CoreSnapshot snapshot, DatabaseId databaseId, RaftId raftId )
+    {
+        user.info( format( "This instance bootstrapped a raft for database '%s'.", databaseId.name() ) );
+        debug.info( format( "Bootstrapped %s with %s using %s", databaseId, raftId, snapshot ) );
+    }
+
+    @Override
+    public void boundToRaft( DatabaseId databaseId, RaftId raftId )
+    {
+        user.info( format( "Bound database '%s' to raft with id '%s'.", databaseId.name(), raftId.uuid() ) );
+    }
+
+    @Override
+    public void startedDownloadingSnapshot()
+    {
+        user.info( "Started downloading snapshot..." );
+    }
+
+    @Override
+    public void downloadSnapshotComplete()
+    {
+        user.info( "Download of snapshot complete." );
+    }
+}

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
@@ -26,14 +26,14 @@ import static org.mockito.Mockito.verify;
 
 class ClusterBindingHandlerTest
 {
-    private ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+    private RaftId raftId = new RaftId( UUID.randomUUID() );
 
-    private RaftMessages.ReceivedInstantClusterIdAwareMessage<?> heartbeat =
-            RaftMessages.ReceivedInstantClusterIdAwareMessage.of( Instant.now(), clusterId,
+    private RaftMessages.ReceivedInstantRaftIdAwareMessage<?> heartbeat =
+            RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId,
                     new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 ) );
 
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
+    private LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
 
     private RaftMessageDispatcher messageDispatcher = Mockito.mock( RaftMessageDispatcher.class );
     private ClusterBindingHandler handler = new ClusterBindingHandler( messageDispatcher, delegate, NullLogProvider.getInstance() );
@@ -52,7 +52,7 @@ class ClusterBindingHandlerTest
     void shouldDropMessagesIfHasBeenStopped() throws Throwable
     {
         // given
-        handler.start( clusterId );
+        handler.start( raftId );
         handler.stop();
 
         // when
@@ -63,26 +63,26 @@ class ClusterBindingHandlerTest
     }
 
     @Test
-    void shouldDropMessagesIfForDifferentClusterId() throws Throwable
+    void shouldDropMessagesIfForDifferentRaftId() throws Throwable
     {
         // given
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // when
-        handler.handle( RaftMessages.ReceivedInstantClusterIdAwareMessage.of(
-                Instant.now(), new ClusterId( UUID.randomUUID() ),
+        handler.handle( RaftMessages.ReceivedInstantRaftIdAwareMessage.of(
+                Instant.now(), new RaftId( UUID.randomUUID() ),
                 new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 )
         ) );
 
         // then
-        verify( delegate, Mockito.never() ).handle( ArgumentMatchers.any( RaftMessages.ReceivedInstantClusterIdAwareMessage.class ) );
+        verify( delegate, Mockito.never() ).handle( ArgumentMatchers.any( RaftMessages.ReceivedInstantRaftIdAwareMessage.class ) );
     }
 
     @Test
     void shouldDelegateMessages() throws Throwable
     {
         // given
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // when
         handler.handle( heartbeat );
@@ -95,10 +95,10 @@ class ClusterBindingHandlerTest
     void shouldDelegateStartCalls() throws Throwable
     {
         // when
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // then
-        verify( delegate ).start( clusterId );
+        verify( delegate ).start( raftId );
     }
 
     @Test
@@ -115,25 +115,25 @@ class ClusterBindingHandlerTest
     void shouldRegisterInRaftMessageDispatcherWhenStarted() throws Throwable
     {
         // when
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // then
-        verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
+        verify( messageDispatcher ).registerHandlerChain( raftId, handler );
     }
 
     @Test
     void shouldDeregisterInRaftMessageDispatcherWhenStopped() throws Throwable
     {
         // given
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // when
         handler.stop();
 
         // then
         InOrder inOrder = inOrder( messageDispatcher );
-        inOrder.verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
-        inOrder.verify( messageDispatcher ).deregisterHandlerChain( clusterId );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( raftId, handler );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
     }
 
     @Test
@@ -142,7 +142,7 @@ class ClusterBindingHandlerTest
         // given
         RuntimeException error = new RuntimeException( "Unable to stop" );
         Mockito.doThrow( error ).when( delegate ).stop();
-        handler.start( clusterId );
+        handler.start( raftId );
 
         // when
         RuntimeException thrownError = assertThrows( RuntimeException.class, handler::stop );
@@ -150,9 +150,9 @@ class ClusterBindingHandlerTest
 
         // then
         InOrder inOrder = inOrder( messageDispatcher, delegate );
-        inOrder.verify( delegate ).start( clusterId );
-        inOrder.verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
+        inOrder.verify( delegate ).start( raftId );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( raftId, handler );
         inOrder.verify( delegate ).stop();
-        inOrder.verify( messageDispatcher ).deregisterHandlerChain( clusterId );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
     }
 }

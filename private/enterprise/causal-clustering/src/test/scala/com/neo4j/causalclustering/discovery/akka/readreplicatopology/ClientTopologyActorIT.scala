@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
-import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
+import com.neo4j.causalclustering.identity.{RaftId, MemberId}
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.kernel.database.DatabaseId
@@ -51,7 +51,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         Given("new topology")
         val newCoreTopology = new DatabaseCoreTopology(
           new DatabaseId(DEFAULT_DATABASE_NAME),
-          new ClusterId(UUID.randomUUID()),
+          new RaftId(UUID.randomUUID()),
           Map(
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
@@ -63,7 +63,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
         Then("topology fed to sink")
         awaitCond(
-          actualCoreTopology == newCoreTopology && actualCoreTopology.clusterId() == newCoreTopology.clusterId(),
+          actualCoreTopology == newCoreTopology && actualCoreTopology.raftId() == newCoreTopology.raftId(),
           max = defaultWaitTime,
           message = s"Expected $newCoreTopology but was $actualCoreTopology"
         )

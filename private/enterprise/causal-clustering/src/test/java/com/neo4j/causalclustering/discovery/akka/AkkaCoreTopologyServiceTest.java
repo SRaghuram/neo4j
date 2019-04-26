@@ -17,8 +17,8 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
 import org.mockito.InOrder;
@@ -225,10 +225,10 @@ public class AkkaCoreTopologyServiceTest
     @Test
     void shouldNotBootstrapWhenEmpty()
     {
-        assertFalse( service.canBootstrapCluster( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
-        assertFalse( service.canBootstrapCluster( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
-        assertFalse( service.canBootstrapCluster( new DatabaseId( "customers" ) ) );
-        assertFalse( service.canBootstrapCluster( new DatabaseId( "orders" ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( "customers" ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( "orders" ) ) );
     }
 
     @Test
@@ -237,14 +237,14 @@ public class AkkaCoreTopologyServiceTest
         var databaseId = new DatabaseId( "cars" );
 
         var bootstrapState = mock( BootstrapState.class );
-        when( bootstrapState.canBootstrapCluster( databaseId ) ).thenReturn( true );
+        when( bootstrapState.canBootstrapRaft( databaseId ) ).thenReturn( true );
         service.topologyState().onBootstrapStateUpdate( bootstrapState );
 
-        assertTrue( service.canBootstrapCluster( databaseId ) );
+        assertTrue( service.canBootstrapRaftGroup( databaseId ) );
 
-        assertFalse( service.canBootstrapCluster( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
-        assertFalse( service.canBootstrapCluster( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
-        assertFalse( service.canBootstrapCluster( new DatabaseId( "customers" ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapRaftGroup( new DatabaseId( "customers" ) ) );
     }
 
     private void setupGlobalTopologyState( DatabaseId databaseId, MemberId leaderId, MemberId... followerIds )
@@ -267,7 +267,7 @@ public class AkkaCoreTopologyServiceTest
             }
         }
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, new RaftId( UUID.randomUUID() ), coreMembers );
         topologyState.onTopologyUpdate( coreTopology );
     }
 

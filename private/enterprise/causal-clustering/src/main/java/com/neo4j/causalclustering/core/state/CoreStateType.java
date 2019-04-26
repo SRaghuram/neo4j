@@ -14,7 +14,7 @@ public enum CoreStateType
     ID_ALLOCATION( 3 ),
     RAFT_CORE_STATE( 4 ),
     DB_NAME( 5 ),
-    CLUSTER_ID( 6 ),
+    RAFT_ID( 6 ),
     CORE_MEMBER_ID( 7 ),
     RAFT_LOG( 8 ),
     RAFT_TERM( 9 ),

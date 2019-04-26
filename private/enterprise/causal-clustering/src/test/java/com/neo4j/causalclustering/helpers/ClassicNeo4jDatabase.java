@@ -41,11 +41,6 @@ public class ClassicNeo4jDatabase
         this.databaseLayout = databaseLayout;
     }
 
-    public DatabaseLayout databaseLayout()
-    {
-        return databaseLayout;
-    }
-
     /**
      * @param baseDir generally corresponds to $NEO4J_HOME/data/ in tests.
      */

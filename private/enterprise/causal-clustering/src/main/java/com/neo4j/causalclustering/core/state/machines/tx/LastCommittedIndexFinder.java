@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
+import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -46,6 +47,15 @@ public class LastCommittedIndexFinder
             {
                 lastTx = transactions.get();
             }
+        }
+        catch ( NoSuchTransactionException e )
+        {
+            if ( lastTx != null )
+            {
+                // we found some transactions, but iterator gave up?
+                throw new IllegalStateException( e );
+            }
+            // let case be handled below
         }
         catch ( Exception e )
         {

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
@@ -20,13 +20,13 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     public static final DatabaseCoreTopology EMPTY = new DatabaseCoreTopology( null, null, emptyMap() );
 
     private final DatabaseId databaseId;
-    private final ClusterId clusterId;
+    private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
 
-    public DatabaseCoreTopology( DatabaseId databaseId, ClusterId clusterId, Map<MemberId,CoreServerInfo> coreMembers )
+    public DatabaseCoreTopology( DatabaseId databaseId, RaftId raftId, Map<MemberId,CoreServerInfo> coreMembers )
     {
         this.databaseId = databaseId;
-        this.clusterId = clusterId;
+        this.raftId = raftId;
         this.coreMembers = Map.copyOf( coreMembers );
     }
 
@@ -42,9 +42,9 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         return databaseId;
     }
 
-    public ClusterId clusterId()
+    public RaftId raftId()
     {
-        return clusterId;
+        return raftId;
     }
 
     @Override
@@ -60,14 +60,14 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         }
         var that = (DatabaseCoreTopology) o;
         return Objects.equals( databaseId, that.databaseId ) &&
-               Objects.equals( clusterId, that.clusterId ) &&
+               Objects.equals( raftId, that.raftId ) &&
                Objects.equals( coreMembers, that.coreMembers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, clusterId, coreMembers );
+        return Objects.hash( databaseId, raftId, coreMembers );
     }
 
     @Override
@@ -75,7 +75,7 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     {
         return "DatabaseCoreTopology{" +
                "databaseId=" + databaseId +
-               ", clusterId=" + clusterId +
+               ", raftId=" + raftId +
                ", coreMembers=" + coreMembers +
                '}';
     }

@@ -21,24 +21,24 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class DefaultLeaderService implements LeaderService
 {
-    private final LeaderLocator leaderLocator;
+    private final LeaderLocatorForDatabase leaderLocatorForDatabase;
     private final TopologyService topologyService;
 
-    public DefaultLeaderService( LeaderLocator leaderLocator, TopologyService topologyService )
+    public DefaultLeaderService( LeaderLocatorForDatabase leaderLocatorForDatabase, TopologyService topologyService )
     {
-        this.leaderLocator = leaderLocator;
+        this.leaderLocatorForDatabase = leaderLocatorForDatabase;
         this.topologyService = topologyService;
     }
 
     @Override
     public Optional<MemberId> getLeaderId( DatabaseId databaseId )
     {
-        var leaderLocator = leaderLocatorForDatabase( databaseId );
-        if ( leaderLocator != null )
+        var leaderLocator = leaderLocatorForDatabase.getLeader( databaseId );
+        if ( leaderLocator.isPresent() )
         {
             // this cluster member is part of the Raft group for the specified database
             // leader can be located from the Raft state machine
-            return getLeaderIdFromLeaderLocator( leaderLocator );
+            return getLeaderIdFromLeaderLocator( leaderLocator.get() );
         }
         else
         {
@@ -80,11 +80,5 @@ public class DefaultLeaderService implements LeaderService
     {
         Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
         return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );
-    }
-
-    private LeaderLocator leaderLocatorForDatabase( DatabaseId databaseId )
-    {
-        // todo: lookup the correct LeaderLocator for the given database name (maybe use DatabaseManager for this)
-        return leaderLocator;
     }
 }

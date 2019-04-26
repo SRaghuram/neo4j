@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.ContinuousJob;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.After;
@@ -51,8 +51,8 @@ public class BatchingMessageHandlerTest
     private static final BatchingMessageHandler.Config BATCH_CONFIG = new BatchingMessageHandler.Config( 16, 256 );
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
-    private ClusterId localClusterId = new ClusterId( UUID.randomUUID() );
+    private LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
+    private RaftId localRaftId = new RaftId( UUID.randomUUID() );
     private ContinuousJob mockJob = mock( ContinuousJob.class );
     private Function<Runnable,ContinuousJob> jobSchedulerFactory = ignored -> mockJob;
 
@@ -366,7 +366,7 @@ public class BatchingMessageHandlerTest
 
         // then
         verify( downstreamHandler, never() ).handle(
-                ArgumentMatchers.any( ReceivedInstantClusterIdAwareMessage.class ) );
+                ArgumentMatchers.any( ReceivedInstantRaftIdAwareMessage.class ) );
         logProvider.assertAtLeastOnce( AssertableLogProvider.inLog( BatchingMessageHandler.class )
                 .debug( "This handler has been stopped, dropping the message: %s", wrap( message ) ) );
     }
@@ -406,13 +406,13 @@ public class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
-        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+        RaftId raftId = new RaftId( UUID.randomUUID() );
 
         // when
-        batchHandler.start( clusterId );
+        batchHandler.start( raftId );
 
         // then
-        Mockito.verify( downstreamHandler ).start( clusterId );
+        Mockito.verify( downstreamHandler ).start( raftId );
     }
 
     @Test
@@ -435,10 +435,10 @@ public class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
-        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+        RaftId raftId = new RaftId( UUID.randomUUID() );
 
         // when
-        batchHandler.start( clusterId );
+        batchHandler.start( raftId );
 
         // then
         Mockito.verify( mockJob ).start();
@@ -458,14 +458,14 @@ public class BatchingMessageHandlerTest
         Mockito.verify( mockJob ).stop();
     }
 
-    private ReceivedInstantClusterIdAwareMessage wrap( RaftMessage message )
+    private ReceivedInstantRaftIdAwareMessage wrap( RaftMessage message )
     {
         return wrap( now, message );
     }
 
-    private ReceivedInstantClusterIdAwareMessage<?> wrap( Instant instant, RaftMessage message )
+    private ReceivedInstantRaftIdAwareMessage<?> wrap( Instant instant, RaftMessage message )
     {
-        return ReceivedInstantClusterIdAwareMessage.of( instant, localClusterId, message );
+        return ReceivedInstantRaftIdAwareMessage.of( instant, localRaftId, message );
     }
 
     private ReplicatedContent content( String content )

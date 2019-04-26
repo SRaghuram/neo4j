@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -35,7 +33,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -52,20 +49,18 @@ class PersistentSnapshotDownloaderTest
     private CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
 
-    private final StubClusteredDatabaseManager clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
+    private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
 
     private PersistentSnapshotDownloader createDownloader()
     {
-        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, clusteredDatabaseManager,
-                coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
+        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess,
+                coreDownloader, snapshotService, downloadContext, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
     @BeforeEach
     void setUp()
     {
-        clusteredDatabaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .register();
+        when( downloadContext.databaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -79,14 +74,14 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        InOrder inOrder = inOrder( applicationProcess, clusteredDatabaseManager, coreDownloader );
+        InOrder inOrder = inOrder( applicationProcess, downloadContext, coreDownloader );
 
         inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        inOrder.verify( clusteredDatabaseManager ).stopForStoreCopy();
+        inOrder.verify( downloadContext ).stopForStoreCopy();
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
-        inOrder.verify( clusteredDatabaseManager ).start();
+        inOrder.verify( downloadContext ).start();
         inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
@@ -153,7 +148,6 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        ClusteredDatabaseContext defaultDatabase = clusteredDatabaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
@@ -163,7 +157,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( coreDownloader ).downloadSnapshotAndStore( defaultDatabase, catchupAddressProvider );
+        verify( coreDownloader ).downloadSnapshotAndStore( downloadContext, catchupAddressProvider );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }
@@ -189,12 +183,11 @@ class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    void shoulPanicOnUnknonExcpetion() throws IOException, DatabaseShutdownException
+    void shouldPanicOnUnknownException() throws IOException, DatabaseShutdownException
     {
         // given
         RuntimeException runtimeException = new RuntimeException();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( runtimeException );
-        final Log log = mock( Log.class );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         // when
         persistentSnapshotDownloader.run();
@@ -215,8 +208,8 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.stop();
         thread.join();
 
-        verify( clusteredDatabaseManager ).stopForStoreCopy();
-        verify( clusteredDatabaseManager, never() ).start();
+        verify( downloadContext ).stopForStoreCopy();
+        verify( downloadContext, never() ).start();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
@@ -235,7 +228,7 @@ class PersistentSnapshotDownloaderTest
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
         {
             return after-- <= 0 ? Optional.of( snapshot ) : Optional.empty();
         }

@@ -7,34 +7,31 @@ package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
-import java.util.Collections;
-import java.util.Map;
-
-import org.neo4j.kernel.database.DatabaseId;
+import java.util.Optional;
 
 public class BoundState
 {
-    private final ClusterId clusterId;
-    private final Map<DatabaseId,CoreSnapshot> coreSnapshotsByDatabaseId;
+    private final RaftId raftId;
+    private final CoreSnapshot coreSnapshot;
 
-    BoundState( ClusterId clusterId )
+    BoundState( RaftId raftId )
     {
-        this( clusterId, Collections.emptyMap() );
+        this( raftId, null );
     }
 
-    BoundState( ClusterId clusterId, Map<DatabaseId,CoreSnapshot> coreSnapshotsByDatabaseId )
+    BoundState( RaftId raftId, CoreSnapshot coreSnapshot )
     {
-        this.clusterId = clusterId;
-        this.coreSnapshotsByDatabaseId = coreSnapshotsByDatabaseId;
+        this.raftId = raftId;
+        this.coreSnapshot = coreSnapshot;
     }
 
-    public ClusterId clusterId()
+    public RaftId raftId()
     {
-        return clusterId;
+        return raftId;
     }
 
-    public Map<DatabaseId,CoreSnapshot> snapshots()
+    public Optional<CoreSnapshot> snapshot()
     {
-        return coreSnapshotsByDatabaseId;
+        return Optional.ofNullable( coreSnapshot );
     }
 }

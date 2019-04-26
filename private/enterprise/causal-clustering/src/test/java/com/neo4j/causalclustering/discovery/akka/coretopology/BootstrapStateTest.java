@@ -58,7 +58,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertFalse( bootstrapState.canBootstrapCluster( unknownDatabaseId ) );
+        assertFalse( bootstrapState.canBootstrapRaft( unknownDatabaseId ) );
     }
 
     @Test
@@ -71,7 +71,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertFalse( bootstrapState.canBootstrapCluster( databaseId ) );
+        assertFalse( bootstrapState.canBootstrapRaft( databaseId ) );
     }
 
     @Test
@@ -84,7 +84,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertFalse( bootstrapState.canBootstrapCluster( databaseId ) );
+        assertFalse( bootstrapState.canBootstrapRaft( databaseId ) );
     }
 
     @Test
@@ -97,7 +97,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertFalse( bootstrapState.canBootstrapCluster( databaseId ) );
+        assertFalse( bootstrapState.canBootstrapRaft( databaseId ) );
     }
 
     @Test
@@ -110,7 +110,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertTrue( bootstrapState.canBootstrapCluster( databaseId ) );
+        assertTrue( bootstrapState.canBootstrapRaft( databaseId ) );
     }
 
     @Test
@@ -124,7 +124,7 @@ class BootstrapStateTest
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
 
-        assertTrue( bootstrapState.canBootstrapCluster( databaseId ) );
+        assertTrue( bootstrapState.canBootstrapRaft( databaseId ) );
     }
 
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage, MetadataMessage metadataMessage,

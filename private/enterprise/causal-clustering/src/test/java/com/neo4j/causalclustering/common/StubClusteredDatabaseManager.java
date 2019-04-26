@@ -37,23 +37,11 @@ import static org.mockito.Mockito.when;
 public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
-    private boolean isStoppedForSomeReason;
     private CompositeDatabaseHealth globalDatabaseHealth;
 
     public StubClusteredDatabaseManager()
     {
         this.globalDatabaseHealth = new CompositeDatabaseHealth();
-    }
-
-    @Override
-    public void stopForStoreCopy()
-    {
-        isStoppedForSomeReason = true;
-    }
-
-    private boolean globalAvailability()
-    {
-        return !isStoppedForSomeReason;
     }
 
     @Override
@@ -124,13 +112,11 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
     @Override
     public void start()
     {
-        isStoppedForSomeReason = false;
     }
 
     @Override
     public void stop()
     {
-        isStoppedForSomeReason = true;
     }
 
     @Override
@@ -147,7 +133,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
-                config.logProvider, config.catchupComponentsFactory );
+                config.logProvider, config.catchupComponentsFactory, null );
 
         if ( config.storeId != null )
         {
@@ -166,7 +152,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         private DatabaseId databaseId;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
-        private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.DatabaseCatchupComponents.class );
+        private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.CatchupComponents.class );
         private StoreId storeId;
         private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();

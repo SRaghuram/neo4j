@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -56,12 +57,12 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.api.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -74,18 +75,17 @@ import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
@@ -98,7 +98,8 @@ public class ReadReplicaReplicationIT
     private static final int NR_READ_REPLICAS = 1;
 
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( NR_CORE_MEMBERS )
+    public final ClusterRule clusterRule = new ClusterRule()
+            .withNumberOfCoreMembers( NR_CORE_MEMBERS )
             .withNumberOfReadReplicas( NR_READ_REPLICAS )
             .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA );
@@ -227,18 +228,8 @@ public class ReadReplicaReplicationIT
         changeStoreId( readReplica );
         readReplica.shutdown();
 
-        try
-        {
-            readReplica.start();
-            fail( "Should have failed to start" );
-        }
-        catch ( RuntimeException required )
-        {
-            // Lifecycle should throw exception, server should not start.
-            assertThat( required.getCause(), instanceOf( LifecycleException.class ) );
-            assertThat( required.getCause().getCause(), instanceOf( Exception.class ) );
-            assertThat( required.getCause().getCause().getMessage(), containsString( "This read replica cannot join the cluster." ) );
-        }
+        readReplica.start();
+        assertFailedToStart( readReplica, DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -462,17 +453,10 @@ public class ReadReplicaReplicationIT
         // when
         createDataInOneTransaction( cluster, 10 );
 
-        try
-        {
-            String format = Standard.LATEST_NAME;
-            cluster.addReadReplicaWithIdAndRecordFormat( 0, format ).start();
-            fail( "starting read replica with '" + format + "' format should have failed" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e.getCause().getCause().getMessage(),
-                    containsString( "Failed to start database with copied store" ) );
-        }
+        String format = Standard.LATEST_NAME;
+        ReadReplica readReplica = cluster.addReadReplicaWithIdAndRecordFormat( 0, format );
+        readReplica.start();
+        assertFailedToStart( readReplica, DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -570,5 +554,16 @@ public class ReadReplicaReplicationIT
             }
             return membersWithIncreasedPinCount;
         }, Matchers.is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    private static void assertFailedToStart( ReadReplica readReplica, String databaseName )
+    {
+        ClusteredDatabaseContext defaultDatabase = readReplica
+                .databaseManager()
+                .getDatabaseContext( new DatabaseId( databaseName ) )
+                .orElseThrow();
+
+        assertTrue( defaultDatabase.isFailed() );
     }
 }

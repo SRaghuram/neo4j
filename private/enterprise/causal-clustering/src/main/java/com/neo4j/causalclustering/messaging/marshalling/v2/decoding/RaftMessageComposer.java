@@ -21,7 +21,7 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
 {
     private final Queue<ReplicatedContent> replicatedContents = new LinkedList<>();
     private final Queue<Long> raftLogEntryTerms = new LinkedList<>();
-    private RaftMessageDecoder.ClusterIdAwareMessageComposer messageComposer;
+    private RaftMessageDecoder.RaftIdAwareMessageComposer messageComposer;
     private final Clock clock;
 
     public RaftMessageComposer( Clock clock )
@@ -43,13 +43,13 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
                 raftLogEntryTerms.add( term );
             }
         }
-        else if ( msg instanceof RaftMessageDecoder.ClusterIdAwareMessageComposer )
+        else if ( msg instanceof RaftMessageDecoder.RaftIdAwareMessageComposer )
         {
             if ( messageComposer != null )
             {
                 throw new IllegalStateException( "Received raft message header. Pipeline already contains message header waiting to build." );
             }
-            messageComposer = (RaftMessageDecoder.ClusterIdAwareMessageComposer) msg;
+            messageComposer = (RaftMessageDecoder.RaftIdAwareMessageComposer) msg;
         }
         else
         {
@@ -57,8 +57,8 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
         if ( messageComposer != null )
         {
-            Optional<RaftMessages.ClusterIdAwareMessage> clusterIdAwareMessage = messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
-            clusterIdAwareMessage.ifPresent( message ->
+            Optional<RaftMessages.RaftIdAwareMessage> raftIdAwareMessage = messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
+            raftIdAwareMessage.ifPresent( message ->
             {
                 clear( message );
                 out.add( message );
@@ -66,7 +66,7 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
     }
 
-    private void clear( RaftMessages.ClusterIdAwareMessage message )
+    private void clear( RaftMessages.RaftIdAwareMessage message )
     {
         messageComposer = null;
         if ( !replicatedContents.isEmpty() || !raftLogEntryTerms.isEmpty() )

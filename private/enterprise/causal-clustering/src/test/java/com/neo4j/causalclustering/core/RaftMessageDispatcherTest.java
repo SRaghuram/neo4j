@@ -5,10 +5,9 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import org.junit.jupiter.api.Test;
 
@@ -25,17 +24,17 @@ import static org.mockito.Mockito.verify;
 class RaftMessageDispatcherTest
 {
     private final RaftMessageDispatcher dispatcher = new RaftMessageDispatcher( NullLogProvider.getInstance(), Clock.systemUTC() );
-    private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler = newHandlerMock();
-    private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> otherHandler = newHandlerMock();
+    private final MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> handler = newHandlerMock();
+    private final MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> otherHandler = newHandlerMock();
 
     @Test
     void shouldDispatchToCorrectHandler()
     {
-        ClusterId id1 = newId();
-        ReceivedInstantClusterIdAwareMessage<RaftMessage> message1 = newMessage( id1 );
+        RaftId id1 = newId();
+        ReceivedInstantRaftIdAwareMessage<RaftMessage> message1 = newMessage( id1 );
 
-        ClusterId id2 = newId();
-        ReceivedInstantClusterIdAwareMessage<RaftMessage> message2 = newMessage( id2 );
+        RaftId id2 = newId();
+        ReceivedInstantRaftIdAwareMessage<RaftMessage> message2 = newMessage( id2 );
 
         dispatcher.registerHandlerChain( id1, handler );
         dispatcher.registerHandlerChain( id2, otherHandler );
@@ -52,10 +51,10 @@ class RaftMessageDispatcherTest
     @Test
     void shouldNotDispatchWhenHandlerNotRegistered()
     {
-        ClusterId knownId = newId();
-        ClusterId unknownId = newId();
+        RaftId knownId = newId();
+        RaftId unknownId = newId();
         dispatcher.registerHandlerChain( knownId, handler );
-        ReceivedInstantClusterIdAwareMessage<RaftMessage> message = newMessage( unknownId );
+        ReceivedInstantRaftIdAwareMessage<RaftMessage> message = newMessage( unknownId );
 
         dispatcher.handle( message );
 
@@ -65,9 +64,9 @@ class RaftMessageDispatcherTest
     @Test
     void shouldNotDispatchAfterHandlerDeregistered()
     {
-        ClusterId id = newId();
+        RaftId id = newId();
         dispatcher.registerHandlerChain( id, handler );
-        ReceivedInstantClusterIdAwareMessage<RaftMessage> message = newMessage( id );
+        ReceivedInstantRaftIdAwareMessage<RaftMessage> message = newMessage( id );
 
         dispatcher.deregisterHandlerChain( id );
         dispatcher.handle( message );
@@ -76,18 +75,18 @@ class RaftMessageDispatcherTest
     }
 
     @SuppressWarnings( "unchecked" )
-    private static MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> newHandlerMock()
+    private static MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> newHandlerMock()
     {
         return mock( MessageHandler.class );
     }
 
-    private static ClusterId newId()
+    private static RaftId newId()
     {
-        return new ClusterId( UUID.randomUUID() );
+        return new RaftId( UUID.randomUUID() );
     }
 
-    private static ReceivedInstantClusterIdAwareMessage<RaftMessage> newMessage( ClusterId id )
+    private static ReceivedInstantRaftIdAwareMessage<RaftMessage> newMessage( RaftId id )
     {
-        return ReceivedInstantClusterIdAwareMessage.of( Instant.now(), id, mock( RaftMessage.class ) );
+        return ReceivedInstantRaftIdAwareMessage.of( Instant.now(), id, mock( RaftMessage.class ) );
     }
 }

@@ -10,10 +10,10 @@ import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.AppendEntries;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.NewEntry;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -37,7 +37,7 @@ import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
  * This class gets Raft messages as input and queues them up for processing. Some messages are
  * batched together before they are forwarded to the Raft machine, for reasons of efficiency.
  */
-class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>>
+class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>>
 {
     public static class Config
     {
@@ -51,9 +51,9 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
         }
     }
 
-    private final LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> handler;
+    private final LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> handler;
     private final Log log;
-    private final BoundedPriorityQueue<ReceivedInstantClusterIdAwareMessage<?>> inQueue;
+    private final BoundedPriorityQueue<ReceivedInstantRaftIdAwareMessage<?>> inQueue;
     private final ContinuousJob job;
     private final List<ReplicatedContent> contentBatch; // reused for efficiency
     private final List<RaftLogEntry> entryBatch; // reused for efficiency
@@ -63,7 +63,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     private volatile BoundedPriorityQueue.Result lastResult = OK;
     private AtomicLong droppedCount = new AtomicLong();
 
-    BatchingMessageHandler( LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> handler,
+    BatchingMessageHandler( LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> handler,
             BoundedPriorityQueue.Config inQueueConfig, Config batchConfig, Function<Runnable,ContinuousJob> jobFactory,
             LogProvider logProvider )
     {
@@ -83,9 +83,9 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Exception
+    public void start( RaftId raftId ) throws Exception
     {
-        handler.start( clusterId );
+        handler.start( raftId );
         job.start();
     }
 
@@ -98,7 +98,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     }
 
     @Override
-    public void handle( ReceivedInstantClusterIdAwareMessage<?> message )
+    public void handle( ReceivedInstantRaftIdAwareMessage<?> message )
     {
         if ( stopped )
         {
@@ -135,7 +135,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     @Override
     public void run()
     {
-        Optional<ReceivedInstantClusterIdAwareMessage<?>> baseMessage;
+        Optional<ReceivedInstantRaftIdAwareMessage<?>> baseMessage;
         try
         {
             baseMessage = inQueue.poll( 1, SECONDS );
@@ -151,7 +151,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
             return;
         }
 
-        ReceivedInstantClusterIdAwareMessage batchedMessage = baseMessage.get().message().dispatch(
+        ReceivedInstantRaftIdAwareMessage batchedMessage = baseMessage.get().message().dispatch(
                 new BatchingHandler( baseMessage.get() ) );
 
         handler.handle( batchedMessage == null ? baseMessage.get() : batchedMessage );
@@ -290,7 +290,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
         {
         }
 
-        static long of( ReceivedInstantClusterIdAwareMessage<?> message )
+        static long of( ReceivedInstantRaftIdAwareMessage<?> message )
         {
             Long dispatch = message.dispatch( INSTANCE );
             return dispatch == null ? 0L : dispatch;
@@ -318,7 +318,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     }
 
     private class MessagePriority extends RaftMessages.HandlerAdaptor<Integer,RuntimeException>
-            implements Comparator<ReceivedInstantClusterIdAwareMessage<?>>
+            implements Comparator<ReceivedInstantRaftIdAwareMessage<?>>
     {
         private final Integer BASE_PRIORITY = 10; // lower number means higher priority
 
@@ -337,8 +337,8 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
         }
 
         @Override
-        public int compare( ReceivedInstantClusterIdAwareMessage<?> messageA,
-                ReceivedInstantClusterIdAwareMessage<?> messageB )
+        public int compare( ReceivedInstantRaftIdAwareMessage<?> messageA,
+                ReceivedInstantRaftIdAwareMessage<?> messageB )
         {
             int priorityA = getPriority( messageA );
             int priorityB = getPriority( messageB );
@@ -346,31 +346,31 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
             return Integer.compare( priorityA, priorityB );
         }
 
-        private int getPriority( ReceivedInstantClusterIdAwareMessage<?> message )
+        private int getPriority( ReceivedInstantRaftIdAwareMessage<?> message )
         {
             Integer priority = message.dispatch( this );
             return priority == null ? BASE_PRIORITY : priority;
         }
     }
 
-    private class BatchingHandler extends RaftMessages.HandlerAdaptor<ReceivedInstantClusterIdAwareMessage,RuntimeException>
+    private class BatchingHandler extends RaftMessages.HandlerAdaptor<ReceivedInstantRaftIdAwareMessage,RuntimeException>
     {
-        private final ReceivedInstantClusterIdAwareMessage<?> baseMessage;
+        private final ReceivedInstantRaftIdAwareMessage<?> baseMessage;
 
-        BatchingHandler( ReceivedInstantClusterIdAwareMessage<?> baseMessage )
+        BatchingHandler( ReceivedInstantRaftIdAwareMessage<?> baseMessage )
         {
             this.baseMessage = baseMessage;
         }
 
         @Override
-        public ReceivedInstantClusterIdAwareMessage handle( NewEntry.Request request ) throws RuntimeException
+        public ReceivedInstantRaftIdAwareMessage handle( NewEntry.Request request ) throws RuntimeException
         {
             NewEntry.BatchRequest newEntryBatch = batchNewEntries( request );
-            return ReceivedInstantClusterIdAwareMessage.of( baseMessage.receivedAt(), baseMessage.clusterId(), newEntryBatch );
+            return ReceivedInstantRaftIdAwareMessage.of( baseMessage.receivedAt(), baseMessage.raftId(), newEntryBatch );
         }
 
         @Override
-        public ReceivedInstantClusterIdAwareMessage handle( AppendEntries.Request request ) throws
+        public ReceivedInstantRaftIdAwareMessage handle( AppendEntries.Request request ) throws
                 RuntimeException
         {
             if ( request.entries().length == 0 )
@@ -380,7 +380,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
             }
 
             AppendEntries.Request appendEntriesBatch = batchAppendEntries( request );
-            return ReceivedInstantClusterIdAwareMessage.of( baseMessage.receivedAt(), baseMessage.clusterId(), appendEntriesBatch );
+            return ReceivedInstantRaftIdAwareMessage.of( baseMessage.receivedAt(), baseMessage.raftId(), appendEntriesBatch );
         }
     }
 }

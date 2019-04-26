@@ -13,9 +13,9 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
@@ -26,10 +26,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
@@ -49,6 +51,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class CatchupPollingProcessTest
@@ -59,7 +62,6 @@ class CatchupPollingProcessTest
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
-    private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
     private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
@@ -69,13 +71,23 @@ class CatchupPollingProcessTest
     private final Panicker panicker = mock( Panicker.class );
     private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 
+    private ReadReplicaDatabaseContext databaseContext;
     private CatchupPollingProcess txPuller;
     private MockCatchupClient catchupClient;
 
     @BeforeEach
     void before() throws Throwable
     {
-        databaseService.registerDatabase( databaseId, clusteredDatabaseContext );
+        Database kernelDatabase = mock( Database.class );
+        when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getStoreId() ).thenReturn( storeId );
+
+        StoreFiles storeFiles = mock( StoreFiles.class );
+        when( storeFiles.readStoreId( any() )).thenReturn( storeId );
+
+        databaseContext = spy(
+                new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ), nullLogProvider() ) );
+
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
@@ -83,8 +95,8 @@ class CatchupPollingProcessTest
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseId, databaseService, catchupClientFactory, txApplier, new Monitors(),
-                storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
+        txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier,
+                storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }
 
     @Test
@@ -171,9 +183,9 @@ class CatchupPollingProcessTest
         txPuller.tick().get();
 
         // then
-        verify( databaseService ).stopForStoreCopy();
+        verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( databaseService, atLeast( 1 ) ).start();
+        verify( databaseContext, atLeast( 1 ) ).start();
         verify( txApplier ).refreshFromNewStore();
 
         // then
@@ -195,9 +207,9 @@ class CatchupPollingProcessTest
         txPuller.tick().get();
 
         // then
-        verify( databaseService ).stopForStoreCopy();
+        verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( databaseService ).start();
+        verify( databaseContext ).start();
         verify( txApplier ).refreshFromNewStore();
 
         // then
@@ -270,5 +282,4 @@ class CatchupPollingProcessTest
         // then
         assertEquals( TX_PULLING, txPuller.state() );
     }
-
 }

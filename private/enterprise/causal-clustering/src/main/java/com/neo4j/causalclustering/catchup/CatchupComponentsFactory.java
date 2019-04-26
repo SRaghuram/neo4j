@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 
 @FunctionalInterface
 public interface CatchupComponentsFactory
 {
-    DatabaseCatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext );
+    CatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext );
 }

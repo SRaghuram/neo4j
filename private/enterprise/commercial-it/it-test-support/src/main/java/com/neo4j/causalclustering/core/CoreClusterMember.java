@@ -24,12 +24,14 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -41,6 +43,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.internal.helpers.AdvertisedSocketAddress.advertisedAddress;
@@ -184,7 +187,13 @@ public class CoreClusterMember implements ClusterMember
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
         defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
-        PanicService panicService = defaultDatabase.getDependencyResolver().resolveDependency( PanicService.class );
+        // TODO: We currently require system database to start correctly and can't really test scenarios where it doesn't.
+        GraphDatabaseFacade systemFacade = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( SYSTEM_DATABASE_NAME );
+
+        DependencyResolver dependencyResolver = systemFacade.getDependencyResolver();
+
+        // TODO: This is a global dependency, but we look it up through the system database, which will bubble up to the parent.
+        PanicService panicService = dependencyResolver.resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
@@ -215,6 +224,15 @@ public class CoreClusterMember implements ClusterMember
     public boolean hasPanicked()
     {
         return hasPanicked;
+    }
+
+    public DatabaseManagementService managementService()
+    {
+        if ( coreGraphDatabase == null )
+        {
+            return null;
+        }
+        return coreGraphDatabase.getManagementService();
     }
 
     @Override

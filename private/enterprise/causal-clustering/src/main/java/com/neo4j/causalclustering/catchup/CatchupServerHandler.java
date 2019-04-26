@@ -19,5 +19,5 @@ public interface CatchupServerHandler
 
     ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol catchupServerProtocol );
 
-    Optional<ChannelHandler> snapshotHandler( CatchupServerProtocol catchupServerProtocol );
+    ChannelHandler snapshotHandler( CatchupServerProtocol catchupServerProtocol );
 }

@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.ReadReplicaDatabaseManager;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -21,11 +22,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -35,6 +38,7 @@ import org.neo4j.monitoring.Monitors;
 
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.internal.helpers.AdvertisedSocketAddress.advertisedAddress;
@@ -58,6 +62,7 @@ public class ReadReplica implements ClusterMember
     private final Config memberConfig;
     private ReadReplicaGraphDatabase readDatabase;
     private GraphDatabaseFacade defaultDatabase;
+    private ReadReplicaDatabaseManager databaseManager;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
     private final File databasesDirectory;
@@ -139,8 +144,16 @@ public class ReadReplica implements ClusterMember
         readDatabase =  dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId );
         defaultDatabase = (GraphDatabaseFacade) readDatabase.getManagementService().database( DEFAULT_DATABASE_NAME );
-        PanicService panicService = defaultDatabase.getDependencyResolver().resolveDependency( PanicService.class );
+
+        // TODO: We currently require system database to start correctly and can't really test scenarios where it doesn't.
+        GraphDatabaseFacade systemFacade = (GraphDatabaseFacade) readDatabase.getManagementService().database( SYSTEM_DATABASE_NAME );
+        DependencyResolver dependencyResolver = systemFacade.getDependencyResolver();
+
+        // TODO: This is a global dependency, but we look it up through the system database, which will bubble up to the parent.
+        PanicService panicService = dependencyResolver.resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
+
+        this.databaseManager = dependencyResolver.resolveDependency( ReadReplicaDatabaseManager.class );
     }
 
     @Override
@@ -155,6 +168,7 @@ public class ReadReplica implements ClusterMember
             finally
             {
                 readDatabase = null;
+                databaseManager = null;
             }
         }
     }
@@ -180,6 +194,11 @@ public class ReadReplica implements ClusterMember
     public GraphDatabaseFacade defaultDatabase()
     {
         return defaultDatabase;
+    }
+
+    public ReadReplicaDatabaseManager databaseManager()
+    {
+        return databaseManager;
     }
 
     @Override

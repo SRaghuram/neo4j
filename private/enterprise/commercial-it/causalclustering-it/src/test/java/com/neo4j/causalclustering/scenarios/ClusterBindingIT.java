@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -27,10 +27,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.database.UnableToStartDatabaseException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.NullLogProvider;
@@ -43,6 +45,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 
 public class ClusterBindingIT
@@ -163,7 +166,8 @@ public class ClusterBindingIT
 
         CoreClusterMember coreMember = cluster.getCoreMemberById( 0 );
         cluster.removeCoreMemberWithServerId( 0 );
-        changeClusterId( coreMember );
+        DatabaseId systemDatabase = new DatabaseId( SYSTEM_DATABASE_NAME );
+        changeRaftId( coreMember, systemDatabase );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
@@ -180,7 +184,7 @@ public class ClusterBindingIT
         }
         catch ( RuntimeException e )
         {
-            assertThat( e.getCause(), instanceOf( LifecycleException.class ) );
+            assertThat( e.getCause(), instanceOf( UnableToStartDatabaseException.class ) );
         }
     }
 
@@ -213,12 +217,12 @@ public class ClusterBindingIT
         return dbs.stream().map( CoreClusterMember::databaseLayout ).collect( Collectors.toList() );
     }
 
-    private void changeClusterId( CoreClusterMember coreMember ) throws IOException
+    private void changeRaftId( CoreClusterMember coreMember, DatabaseId databaseId ) throws IOException
     {
         ClusterStateLayout layout = coreMember.clusterStateLayout();
         CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
-        SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
-        clusterIdStorage.writeState( new ClusterId( UUID.randomUUID() ) );
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId );
+        raftIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
     }
 
     private void changeStoreId( DatabaseLayout databaseLayout ) throws Exception

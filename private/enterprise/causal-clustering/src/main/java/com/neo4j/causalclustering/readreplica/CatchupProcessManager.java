@@ -8,9 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrategyBasedAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -18,18 +16,14 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
@@ -50,11 +44,11 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 /**
  * This class is responsible for aggregating a number of {@link CatchupPollingProcess} instances and pulling transactions for
  * each database present on this machine. These pull operations are issued on a fixed interval and take place in parallel.
- * <p>
+ *
  * If the necessary transactions are not remotely available then a fresh copy of the
  * entire store will be pulled down.
- *
  */
+// TODO: Get rid of this aggregation, since we no longer have any need to aggregate.
 public class CatchupProcessManager extends SafeLifecycle
 {
     public enum Timers implements TimerService.TimerName
@@ -71,35 +65,21 @@ public class CatchupProcessManager extends SafeLifecycle
     private final CommandIndexTracker commandIndexTracker;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Executor executor;
+    private final ReadReplicaDatabaseContext databaseContext;
     private final LogProvider logProvider;
     private final Log log;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
-    private final ClusteredDatabaseManager clusteredDatabaseManager;
-    private final CatchupProcessFactory catchupProcessFactory;
     private final Health databaseHealth;
 
-    private Map<DatabaseId,CatchupPollingProcess> catchupProcesses;
+    private CatchupPollingProcess catchupProcess;
     private volatile boolean isPanicked;
     private Timer timer;
 
-    CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager clusteredDatabaseManager,
-            Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
-            UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
-    {
-        this( executor, catchupComponents, clusteredDatabaseManager, databaseHealth, topologyService,
-                catchUpClient, selectionStrategyPipeline, timerService, commandIndexTracker, null, logProvider,
-                pageCursorTracerSupplier, config );
-    }
-
-    CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager clusteredDatabaseManager,
-            Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
-            UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            CatchupProcessFactory catchupProcessFactory, LogProvider logProvider,
-            PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
+    CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext, Health databaseHealth,
+            TopologyService topologyService, CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline,
+            TimerService timerService, CommandIndexTracker commandIndexTracker, LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier,
+            Config config )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
@@ -110,14 +90,13 @@ public class CatchupProcessManager extends SafeLifecycle
         this.timerService = timerService;
         this.executor = executor;
         this.catchupComponents = catchupComponents;
-        this.clusteredDatabaseManager = clusteredDatabaseManager;
+        this.databaseContext = databaseContext;
         this.databaseHealth = databaseHealth;
         this.topologyService = topologyService;
         this.catchupClient = catchUpClient;
         this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
         this.txPulling = new LifeSupport();
-        this.catchupProcessFactory = catchupProcessFactory == null ? this::createCatchupProcess : catchupProcessFactory;
         this.isPanicked = false;
     }
 
@@ -125,15 +104,11 @@ public class CatchupProcessManager extends SafeLifecycle
     public void start0() throws Exception
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
-        catchupProcesses = clusteredDatabaseManager.registeredDatabases().entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );
+        catchupProcess = createCatchupProcess( databaseContext );
         txPulling.start();
         initTimer();
 
-        for ( CatchupPollingProcess catchupProcess : catchupProcesses.values() )
-        {
-            waitForUpToDateStore( catchupProcess );
-        }
+        waitForUpToDateStore( catchupProcess );
     }
 
     private void waitForUpToDateStore( CatchupPollingProcess catchupProcess ) throws InterruptedException, ExecutionException
@@ -168,26 +143,25 @@ public class CatchupProcessManager extends SafeLifecycle
         isPanicked = true;
     }
 
-    private CatchupPollingProcess createCatchupProcess( ClusteredDatabaseContext databaseContext )
+    private CatchupPollingProcess createCatchupProcess( ReadReplicaDatabaseContext databaseContext )
     {
-        DatabaseCatchupComponents dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() )
-                .orElseThrow( () -> new IllegalArgumentException(
-                        String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
+        CatchupComponents dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() ).orElseThrow(
+                () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
 
-        //TODO: We can do better than this. Core already exposes its commit process. Why not RR.
+        // TODO: We can do better than this. Core already exposes its commit process. Why not RR.
         Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
                 databaseContext.database().getDependencyResolver().resolveDependency( TransactionAppender.class ),
                 databaseContext.database().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
-        BatchingTxApplier batchingTxApplier = new BatchingTxApplier(
-                maxBatchSize, () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
-                writableCommitProcess, databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(),
-                commandIndexTracker, logProvider );
+        BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
+                () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
+                databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
+                logProvider );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext.databaseId(), clusteredDatabaseManager,
-                catchupClient, batchingTxApplier, databaseContext.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider,
-                this::panic, new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
+        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient, batchingTxApplier,
+                dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
+                new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         databaseContext.dependencies().satisfyDependencies( catchupProcess );
         txPulling.add( batchingTxApplier );
@@ -200,8 +174,7 @@ public class CatchupProcessManager extends SafeLifecycle
      */
     private void onTimeout() throws Exception
     {
-        CompletableFuture[] catchups = catchupProcesses.values().stream().map( CatchupPollingProcess::tick ).toArray( CompletableFuture[]::new );
-        CompletableFuture.allOf( catchups ).get();
+        catchupProcess.tick().get();
 
         if ( !isPanicked )
         {
@@ -210,9 +183,9 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     @VisibleForTesting
-    void setCatchupProcesses( Map<DatabaseId,CatchupPollingProcess> catchupProcesses )
+    void setCatchupProcess( CatchupPollingProcess catchupProcess )
     {
-        this.catchupProcesses = catchupProcesses;
+        this.catchupProcess = catchupProcess;
     }
 
     void initTimer()
@@ -222,11 +195,5 @@ public class CatchupProcessManager extends SafeLifecycle
             timer = timerService.create( TX_PULLER_TIMER, Group.PULL_UPDATES, timeout -> onTimeout() );
             timer.set( fixedTimeout( txPullIntervalMillis, TimeUnit.MILLISECONDS ) );
         }
-    }
-
-    @FunctionalInterface
-    interface CatchupProcessFactory
-    {
-        CatchupPollingProcess create( ClusteredDatabaseContext clusteredDatabaseContext );
     }
 }

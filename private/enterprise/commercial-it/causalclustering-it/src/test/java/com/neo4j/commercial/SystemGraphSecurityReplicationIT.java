@@ -110,7 +110,7 @@ class SystemGraphSecurityReplicationIT
         String username = "martin";
         String password = "235711";
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.systemTx( ( db, tx ) ->
         {
             newUser( db, username, password );
             tx.success();

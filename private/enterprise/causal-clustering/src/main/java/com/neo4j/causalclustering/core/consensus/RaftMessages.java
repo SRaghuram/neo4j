@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 
@@ -1034,13 +1034,13 @@ public interface RaftMessages
         }
     }
 
-    interface ClusterIdAwareMessage<RM extends RaftMessage> extends EnrichedRaftMessage<RM>
+    interface RaftIdAwareMessage<RM extends RaftMessage> extends EnrichedRaftMessage<RM>
     {
-        ClusterId clusterId();
+        RaftId raftId();
 
-        static <RM extends RaftMessage> ClusterIdAwareMessage<RM> of( ClusterId clusterId, RM message )
+        static <RM extends RaftMessage> RaftIdAwareMessage<RM> of( RaftId raftId, RM message )
         {
-            return new ClusterIdAwareMessageImpl<>( clusterId, message );
+            return new RaftIdAwareMessageImpl<>( raftId, message );
         }
     }
 
@@ -1054,30 +1054,30 @@ public interface RaftMessages
         }
     }
 
-    interface ReceivedInstantClusterIdAwareMessage<RM extends RaftMessage> extends ReceivedInstantAwareMessage<RM>, ClusterIdAwareMessage<RM>
+    interface ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> extends ReceivedInstantAwareMessage<RM>, RaftIdAwareMessage<RM>
     {
-        static <RM extends RaftMessage> ReceivedInstantClusterIdAwareMessage<RM> of( Instant receivedAt, ClusterId clusterId, RM message )
+        static <RM extends RaftMessage> ReceivedInstantRaftIdAwareMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
         {
-            return new ReceivedInstantClusterIdAwareMessageImpl<>( receivedAt, clusterId, message );
+            return new ReceivedInstantRaftIdAwareMessageImpl<>( receivedAt, raftId, message );
         }
     }
 
-    class ClusterIdAwareMessageImpl<RM extends RaftMessage> implements ClusterIdAwareMessage<RM>
+    class RaftIdAwareMessageImpl<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
     {
-        private final ClusterId clusterId;
+        private final RaftId raftId;
         private final RM message;
 
-        private ClusterIdAwareMessageImpl( ClusterId clusterId, RM message )
+        private RaftIdAwareMessageImpl( RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
-            this.clusterId = clusterId;
+            this.raftId = raftId;
             this.message = message;
         }
 
         @Override
-        public ClusterId clusterId()
+        public RaftId raftId()
         {
-            return clusterId;
+            return raftId;
         }
 
         @Override
@@ -1097,20 +1097,20 @@ public interface RaftMessages
             {
                 return false;
             }
-            ClusterIdAwareMessageImpl<?> that = (ClusterIdAwareMessageImpl<?>) o;
-            return Objects.equals( clusterId, that.clusterId ) && Objects.equals( message(), that.message() );
+            RaftIdAwareMessageImpl<?> that = (RaftIdAwareMessageImpl<?>) o;
+            return Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( clusterId, message() );
+            return Objects.hash( raftId, message() );
         }
 
         @Override
         public String toString()
         {
-            return format( "{clusterId: %s, message: %s}", clusterId, message() );
+            return format( "{raftId: %s, message: %s}", raftId, message() );
         }
     }
 
@@ -1166,16 +1166,16 @@ public interface RaftMessages
         }
     }
 
-    class ReceivedInstantClusterIdAwareMessageImpl<RM extends RaftMessage> implements ReceivedInstantClusterIdAwareMessage<RM>
+    class ReceivedInstantRaftIdAwareMessageImpl<RM extends RaftMessage> implements ReceivedInstantRaftIdAwareMessage<RM>
     {
         private final Instant receivedAt;
-        private final ClusterId clusterId;
+        private final RaftId raftId;
         private final RM message;
 
-        private ReceivedInstantClusterIdAwareMessageImpl( Instant receivedAt, ClusterId clusterId, RM message )
+        private ReceivedInstantRaftIdAwareMessageImpl( Instant receivedAt, RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
-            this.clusterId = clusterId;
+            this.raftId = raftId;
             this.receivedAt = receivedAt;
             this.message = message;
         }
@@ -1187,9 +1187,9 @@ public interface RaftMessages
         }
 
         @Override
-        public ClusterId clusterId()
+        public RaftId raftId()
         {
-            return clusterId;
+            return raftId;
         }
 
         @Override
@@ -1209,20 +1209,20 @@ public interface RaftMessages
             {
                 return false;
             }
-            ReceivedInstantClusterIdAwareMessageImpl<?> that = (ReceivedInstantClusterIdAwareMessageImpl<?>) o;
-            return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( clusterId, that.clusterId ) && Objects.equals( message(), that.message() );
+            ReceivedInstantRaftIdAwareMessageImpl<?> that = (ReceivedInstantRaftIdAwareMessageImpl<?>) o;
+            return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( receivedAt, clusterId, message() );
+            return Objects.hash( receivedAt, raftId, message() );
         }
 
         @Override
         public String toString()
         {
-            return format( "{clusterId: %s, receivedAt: %s, message: %s}", clusterId, receivedAt, message() );
+            return format( "{raftId: %s, receivedAt: %s, message: %s}", raftId, receivedAt, message() );
         }
     }
 

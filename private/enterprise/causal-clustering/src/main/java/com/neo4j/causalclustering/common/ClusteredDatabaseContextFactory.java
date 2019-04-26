@@ -11,11 +11,13 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 @FunctionalInterface
 public interface ClusteredDatabaseContextFactory
 {
     ClusteredDatabaseContext create( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
-            LogProvider logProvider, CatchupComponentsFactory factory );
+            LogProvider logProvider, CatchupComponentsFactory factory, LifeSupport clusterDatabaseLife, Monitors clusterDatabaseMonitors );
 }

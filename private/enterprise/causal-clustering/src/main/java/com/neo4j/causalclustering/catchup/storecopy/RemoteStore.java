@@ -68,8 +68,7 @@ public class RemoteStore
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
-    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
-            boolean keepTxLogsInDir,
+    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout, boolean keepTxLogsInDir,
             boolean forceTransactionLogRotation )
             throws StoreCopyFailedException, IOException
     {

@@ -148,8 +148,8 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            CatchupChannelPoolService
-                    catchupChannelPoolService = new CatchupChannelPoolService( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
+            CatchupChannelPoolService catchupChannelPoolService = new CatchupChannelPoolService(
+                    bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
 
             return new CatchupClientFactory( inactivityTimeout, catchupChannelPoolService );
         }

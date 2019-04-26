@@ -7,18 +7,18 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.logging.MessageLogger;
+import com.neo4j.causalclustering.logging.RaftMessageLogger;
 
 public class LoggingInbound<M extends RaftMessages.RaftMessage> implements Inbound<M>
 {
     private final Inbound<M> inbound;
-    private final MessageLogger<MemberId> messageLogger;
+    private final RaftMessageLogger<MemberId> raftMessageLogger;
     private final MemberId me;
 
-    public LoggingInbound( Inbound<M> inbound, MessageLogger<MemberId> messageLogger, MemberId me )
+    public LoggingInbound( Inbound<M> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me )
     {
         this.inbound = inbound;
-        this.messageLogger = messageLogger;
+        this.raftMessageLogger = raftMessageLogger;
         this.me = me;
     }
 
@@ -30,7 +30,7 @@ public class LoggingInbound<M extends RaftMessages.RaftMessage> implements Inbou
             @Override
             public synchronized void handle( M message )
             {
-                messageLogger.logInbound( message.from(), message, me );
+                raftMessageLogger.logInbound( message.from(), message, me );
                 handler.handle( message );
             }
         } );

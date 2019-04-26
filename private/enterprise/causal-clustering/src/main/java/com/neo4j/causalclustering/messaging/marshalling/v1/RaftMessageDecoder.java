@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.messaging.marshalling.v1;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
@@ -38,7 +38,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     public void decode( ChannelHandlerContext ctx, ByteBuf buffer, List<Object> list ) throws Exception
     {
         ReadableChannel channel = new NetworkReadableClosableChannelNetty4( buffer );
-        ClusterId clusterId = ClusterId.Marshal.INSTANCE.unmarshal( channel );
+        RaftId raftId = RaftId.Marshal.INSTANCE.unmarshal( channel );
 
         int messageTypeWire = channel.getInt();
         RaftMessages.Type[] values = RaftMessages.Type.values();
@@ -141,7 +141,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             throw new IllegalArgumentException( "Unknown message type" );
         }
 
-        list.add( RaftMessages.ReceivedInstantClusterIdAwareMessage.of( clock.instant(), clusterId, result ) );
+        list.add( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId, result ) );
     }
 
     private MemberId retrieveMember( ReadableChannel buffer ) throws IOException, EndOfStreamException

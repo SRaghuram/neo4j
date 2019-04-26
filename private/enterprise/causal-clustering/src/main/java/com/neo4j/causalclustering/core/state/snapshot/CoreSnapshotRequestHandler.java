@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import org.neo4j.kernel.database.Database;
+
 import static com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 
 public class CoreSnapshotRequestHandler extends SimpleChannelInboundHandler<CoreSnapshotRequest>
@@ -18,16 +20,16 @@ public class CoreSnapshotRequestHandler extends SimpleChannelInboundHandler<Core
     private final CatchupServerProtocol protocol;
     private final CoreSnapshotService snapshotService;
 
-    public CoreSnapshotRequestHandler( CatchupServerProtocol protocol, CoreSnapshotService snapshotService )
+    public CoreSnapshotRequestHandler( CatchupServerProtocol protocol, Database database )
     {
         this.protocol = protocol;
-        this.snapshotService = snapshotService;
+        this.snapshotService = database.getDependencyResolver().resolveDependency( CoreSnapshotService.class );
     }
 
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, CoreSnapshotRequest msg ) throws Exception
     {
-        sendStates( ctx, snapshotService.snapshot( msg.databaseId() ) );
+        sendStates( ctx, snapshotService.snapshot() );
         protocol.expect( State.MESSAGE_TYPE );
     }
 

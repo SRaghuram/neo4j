@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.messaging;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import com.neo4j.causalclustering.messaging.address.UnknownAddressMonitor;
 
@@ -26,20 +26,20 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
 {
     private final CoreTopologyService coreTopologyService;
     private final Outbound<AdvertisedSocketAddress,Message> outbound;
-    private final Supplier<Optional<ClusterId>> clusterIdentity;
+    private final Supplier<Optional<RaftId>> boundRaftId;
     private final UnknownAddressMonitor unknownAddressMonitor;
     private final Log log;
     private final MemberId myself;
     private final Clock clock;
-    private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler;
+    private final MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler;
 
     public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<AdvertisedSocketAddress,Message> outbound,
-            MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler,
-            Supplier<Optional<ClusterId>> clusterIdentity, LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
+            MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
+            LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
         this.outbound = outbound;
-        this.clusterIdentity = clusterIdentity;
+        this.boundRaftId = boundRaftId;
         this.log = logProvider.getLog( getClass() );
         this.unknownAddressMonitor = new UnknownAddressMonitor( log, Clocks.systemClock(), logThresholdMillis );
         this.myself = myself;
@@ -50,8 +50,8 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     @Override
     public void send( MemberId to, RaftMessages.RaftMessage message, boolean block )
     {
-        Optional<ClusterId> clusterId = clusterIdentity.get();
-        if ( !clusterId.isPresent() )
+        Optional<RaftId> raftId = boundRaftId.get();
+        if ( raftId.isEmpty() )
         {
             log.warn( "Attempting to send a message before bound to a cluster" );
             return;
@@ -59,14 +59,14 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
 
         if ( to.equals( myself ) )
         {
-            localMessageHandler.handle( RaftMessages.ReceivedInstantClusterIdAwareMessage.of( clock.instant(), clusterId.get(), message ) );
+            localMessageHandler.handle( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId.get(), message ) );
         }
         else
         {
             CoreServerInfo targetCoreInfo = coreTopologyService.allCoreServers().get( to );
             if ( targetCoreInfo != null )
             {
-                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.ClusterIdAwareMessage.of( clusterId.get(), message ), block );
+                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.RaftIdAwareMessage.of( raftId.get(), message ), block );
             }
             else
             {

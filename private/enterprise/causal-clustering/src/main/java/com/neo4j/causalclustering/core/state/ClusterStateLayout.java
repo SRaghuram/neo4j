@@ -55,9 +55,9 @@ public class ClusterStateLayout
         return globalClusterStateFile( CoreStateFiles.VERSION );
     }
 
-    public File clusterIdStateFile()
+    public File raftIdStateFile( DatabaseId databaseId )
     {
-        return globalClusterStateFile( CoreStateFiles.CLUSTER_ID );
+        return databaseClusterStateFile( CoreStateFiles.RAFT_ID, databaseId );
     }
 
     public File memberIdStateFile()
@@ -129,6 +129,13 @@ public class ClusterStateLayout
         return new File( directory, coreStateFiles.name() );
     }
 
+    private File databaseClusterStateFile( CoreStateFiles<?> coreStateFiles, DatabaseId databaseId )
+    {
+        checkScope( coreStateFiles, DATABASE );
+        File directory = databaseClusterStateDirectory( coreStateFiles, databaseId );
+        return new File( directory, coreStateFiles.name() );
+    }
+
     private File globalClusterStateDirectory( CoreStateFiles<?> coreStateFiles )
     {
         checkScope( coreStateFiles, GLOBAL );
@@ -157,8 +164,8 @@ public class ClusterStateLayout
         return coreStateFiles.name() + STATE_DIRECTORY_SUFFIX;
     }
 
-    private static void checkScope( CoreStateFiles<?> coreStateFiles, CoreStateFiles.Scope database )
+    private static void checkScope( CoreStateFiles<?> coreStateFiles, CoreStateFiles.Scope scope )
     {
-        checkArgument( coreStateFiles.scope() == database, "Illegal scope: " + coreStateFiles.scope() );
+        checkArgument( coreStateFiles.scope() == scope, "Illegal scope: " + coreStateFiles.scope() );
     }
 }

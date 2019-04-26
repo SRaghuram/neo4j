@@ -7,18 +7,14 @@ package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Optional;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 
@@ -35,9 +31,9 @@ public class PersistentSnapshotDownloader implements Runnable
 
     static final String OPERATION_NAME = "download of snapshot";
 
+    private final StoreDownloadContext context;
     private final CommandApplicationProcess applicationProcess;
     private final CatchupAddressProvider addressProvider;
-    private final ClusteredDatabaseManager databaseManager;
     private final CoreDownloader downloader;
     private final CoreSnapshotService snapshotService;
     private final Log log;
@@ -48,14 +44,14 @@ public class PersistentSnapshotDownloader implements Runnable
     private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess,
-            ClusteredDatabaseManager databaseManager, CoreDownloader downloader, CoreSnapshotService snapshotService,
+            CoreDownloader downloader, CoreSnapshotService snapshotService, StoreDownloadContext context,
             Log log, TimeoutStrategy backoffStrategy, Panicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
-        this.databaseManager = databaseManager;
         this.downloader = downloader;
         this.snapshotService = snapshotService;
+        this.context = context;
         this.log = log;
         this.backoffStrategy = backoffStrategy;
         this.panicker = panicker;
@@ -83,30 +79,23 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.startedDownloadingSnapshot();
             applicationProcess.pauseApplier( OPERATION_NAME );
 
-            databaseManager.stopForStoreCopy();
+            context.stopForStoreCopy();
 
             // iteration over all databases should go away once we have separate database lifecycles
             // each database will then download its snapshot and store independently from others
 
-            var databases = new HashMap<>( databaseManager.registeredDatabases() );
-            var snapshots = new HashMap<DatabaseId,CoreSnapshot>();
-
             boolean incomplete = false;
-            for ( ClusteredDatabaseContext db : databases.values() )
-            {
-                Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( db );
-                var databaseId = db.databaseId();
+            Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( context );
+            var databaseId = context.databaseId();
 
-                if ( snapshot.isPresent() )
-                {
-                    snapshots.put( databaseId, snapshot.get() );
-                    log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() ) );
-                }
-                else
-                {
-                    log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseId.name() ) );
-                    incomplete = true;
-                }
+            if ( snapshot.isPresent() )
+            {
+                log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() ) );
+            }
+            else
+            {
+                log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseId.name() ) );
+                incomplete = true;
             }
 
             if ( incomplete || stopped )
@@ -116,11 +105,11 @@ public class PersistentSnapshotDownloader implements Runnable
             else
             {
                 /* Temporary until raft groups are separated. */
-                snapshotService.installSnapshots( snapshots );
+                snapshotService.installSnapshot( snapshot.get() );
 
                 /* Starting the databases will invoke the commit process factory in the CoreEditionModule, which has important side-effects. */
                 log.info( "Starting local databases" );
-                databaseManager.start();
+                context.start();
             }
         }
         catch ( InterruptedException e )
@@ -153,7 +142,7 @@ public class PersistentSnapshotDownloader implements Runnable
      * @return an optional containing snapshot when it was downloaded and the database is up-to-date.
      * An empty optional when this downloader was stopped.
      */
-    private Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db ) throws IOException, DatabaseShutdownException, InterruptedException
+    private Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context ) throws IOException, DatabaseShutdownException, InterruptedException
     {
         TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
         while ( true )
@@ -165,7 +154,7 @@ public class PersistentSnapshotDownloader implements Runnable
                 return Optional.empty();
             }
 
-            Optional<CoreSnapshot> optionalSnapshot = downloader.downloadSnapshotAndStore( db, addressProvider );
+            Optional<CoreSnapshot> optionalSnapshot = downloader.downloadSnapshotAndStore( context, addressProvider );
 
             if ( optionalSnapshot.isPresent() )
             {

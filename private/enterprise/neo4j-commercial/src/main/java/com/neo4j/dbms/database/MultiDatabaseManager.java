@@ -56,7 +56,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
                 throw new DatabaseManagementException(
                         format( "Reached maximum number of active databases. Fail to create new database `%s`.", databaseId.name() ) );
             }
-            DB databaseContext = createNewDatabaseContext( databaseId );
+            DB databaseContext = createDatabaseContext( databaseId );
             if ( autostart && started )
             {
                 databaseContext.database().start();

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
 import java.io.File;
@@ -18,6 +18,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -40,12 +41,14 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final Database database;
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
-    private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
+    private final CatchupComponents catchupComponents;
+    private final LifeSupport clusterDatabaseLife;
+    private final Monitors clusterDatabaseMonitors;
 
     private volatile StoreId storeId;
 
-    public DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            CatchupComponentsFactory catchupComponentsFactory )
+    DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+            CatchupComponentsFactory catchupComponentsFactory, LifeSupport clusterDatabaseLife, Monitors clusterDatabaseMonitors )
     {
         this.database = database;
         this.facade = facade;
@@ -54,6 +57,8 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         this.txLogs = txLogs;
         this.databaseId = database.getDatabaseId();
         this.log = logProvider.getLog( getClass() );
+        this.clusterDatabaseLife = clusterDatabaseLife;
+        this.clusterDatabaseMonitors = clusterDatabaseMonitors;
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
 
@@ -92,7 +97,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     @Override
     public Monitors monitors()
     {
-        return database().getMonitors();
+        return clusterDatabaseMonitors;
     }
 
     @Override
@@ -103,7 +108,6 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 
     /**
      * Delete the store files for this database
-     * @throws IOException
      */
     @Override
     public void delete() throws IOException
@@ -150,7 +154,6 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     /**
      * Replace the store files for this database
      * @param sourceDir the store files to replace this databases's current files with
-     * @throws IOException
      */
     @Override
     public void replaceWith( File sourceDir ) throws IOException
@@ -181,8 +184,14 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     }
 
     @Override
-    public CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents()
+    public CatchupComponents catchupComponents()
     {
         return catchupComponents;
+    }
+
+    @Override
+    public LifeSupport clusterDatabaseLife()
+    {
+        return clusterDatabaseLife;
     }
 }

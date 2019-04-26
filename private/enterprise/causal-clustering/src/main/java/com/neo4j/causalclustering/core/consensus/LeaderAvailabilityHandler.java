@@ -5,20 +5,20 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.function.LongSupplier;
 
-public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
+public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler;
+    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final ShouldRenewElectionTimeout shouldRenewElectionTimeout;
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
 
-    public LeaderAvailabilityHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler,
+    public LeaderAvailabilityHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler,
             LeaderAvailabilityTimers leaderAvailabilityTimers, RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, LongSupplier term )
     {
         this.delegateHandler = delegateHandler;
@@ -34,9 +34,9 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
     }
 
     @Override
-    public synchronized void start( ClusterId clusterId ) throws Exception
+    public synchronized void start( RaftId raftId ) throws Exception
     {
-        delegateHandler.start( clusterId );
+        delegateHandler.start( raftId );
     }
 
     @Override
@@ -46,13 +46,13 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
     }
 
     @Override
-    public void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> message )
+    public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
     {
         handleTimeouts( message );
         delegateHandler.handle( message );
     }
 
-    private void handleTimeouts( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> message )
+    private void handleTimeouts( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
     {
         if ( message.dispatch( shouldRenewElectionTimeout ) )
         {

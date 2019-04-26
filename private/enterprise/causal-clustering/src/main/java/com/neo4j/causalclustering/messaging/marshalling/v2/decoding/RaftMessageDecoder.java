@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
@@ -39,7 +39,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     public void decode( ChannelHandlerContext ctx, ByteBuf buffer, List<Object> list ) throws Exception
     {
         ReadableChannel channel = new NetworkReadableClosableChannelNetty4( buffer );
-        ClusterId clusterId = ClusterId.Marshal.INSTANCE.unmarshal( channel );
+        RaftId raftId = RaftId.Marshal.INSTANCE.unmarshal( channel );
 
         int messageTypeWire = channel.getInt();
         RaftMessages.Type[] values = RaftMessages.Type.values();
@@ -130,25 +130,25 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             throw new IllegalArgumentException( "Unknown message type" );
         }
 
-        list.add( new ClusterIdAwareMessageComposer( composer, clusterId ) );
+        list.add( new RaftIdAwareMessageComposer( composer, raftId ) );
         protocol.expect( ContentType.ContentType );
     }
 
-    static class ClusterIdAwareMessageComposer
+    static class RaftIdAwareMessageComposer
     {
         private final LazyComposer composer;
-        private final ClusterId clusterId;
+        private final RaftId raftId;
 
-        ClusterIdAwareMessageComposer( LazyComposer composer, ClusterId clusterId )
+        RaftIdAwareMessageComposer( LazyComposer composer, RaftId raftId )
         {
             this.composer = composer;
-            this.clusterId = clusterId;
+            this.raftId = raftId;
         }
 
-        Optional<RaftMessages.ClusterIdAwareMessage> maybeCompose( Clock clock, Queue<Long> terms, Queue<ReplicatedContent> contents )
+        Optional<RaftMessages.RaftIdAwareMessage> maybeCompose( Clock clock, Queue<Long> terms, Queue<ReplicatedContent> contents )
         {
             return composer.maybeComplete( terms, contents )
-                    .map( m -> RaftMessages.ReceivedInstantClusterIdAwareMessage.of( clock.instant(), clusterId, m ) );
+                    .map( m -> RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId, m ) );
         }
     }
 

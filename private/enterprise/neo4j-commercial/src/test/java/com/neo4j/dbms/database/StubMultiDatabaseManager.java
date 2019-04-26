@@ -11,7 +11,6 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLog;
 
 import static org.mockito.Mockito.mock;
@@ -28,17 +27,11 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     }
 
     @Override
-    protected DatabaseContext createNewDatabaseContext( DatabaseId databaseId )
+    protected DatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
         Database db = mock( Database.class );
         when( db.getDatabaseId() ).thenReturn( databaseId );
-        return createDatabaseContext( db, mock( GraphDatabaseFacade.class ) );
-    }
-
-    @Override
-    protected DatabaseContext createDatabaseContext( Database database, GraphDatabaseFacade facade )
-    {
-        return spy( new StandaloneDatabaseContext( database, facade ) );
+        return spy( new StandaloneDatabaseContext( db ) );
     }
 
     private static GlobalModule buildGlobalModuleMock()
