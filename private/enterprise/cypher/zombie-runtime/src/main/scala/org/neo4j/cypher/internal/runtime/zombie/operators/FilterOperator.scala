@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import org.neo4j.codegen.api.IntermediateRepresentation.{condition, equal, trueValue}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheck
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
@@ -64,7 +64,7 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate:
     }
     predicate = generatePredicate()
 
-    condition(equal(nullCheck(predicate)(predicate.ir), trueValue)) (
+    condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       inner.genOperate
     )
   }
