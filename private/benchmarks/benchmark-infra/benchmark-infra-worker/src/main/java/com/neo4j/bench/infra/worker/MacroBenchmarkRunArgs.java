@@ -46,6 +46,7 @@ class MacroBenchmarkRunArgs
     private String runtime;//="${29}"
     private String triggered_by;//="${30}"
     private String error_policy;//="${31}"
+    private String deployment;//="${31}"
 
     static MacroBenchmarkRunArgs from( List<String> arguments )
     {
@@ -89,6 +90,7 @@ class MacroBenchmarkRunArgs
         args.runtime = arguments.get( idx++ );//="${29}"
         args.triggered_by = arguments.get( idx++ );//="${30}"
         args.error_policy = arguments.get( idx++ );//="${31}"
+        args.deployment = arguments.get( idx++ );
         return args;
     }
 
@@ -152,6 +154,7 @@ class MacroBenchmarkRunArgs
         args[idx++] = runtime;//="${29}"
         args[idx++] = triggered_by;//="${30}"
         args[idx++] = error_policy;//="${31}"
+        args[idx++] = deployment;//="{32}"
         return Arrays.asList( args );
     }
 

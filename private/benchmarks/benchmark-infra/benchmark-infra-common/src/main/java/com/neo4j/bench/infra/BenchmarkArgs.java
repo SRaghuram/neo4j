@@ -94,6 +94,8 @@ public class BenchmarkArgs
         jobParameters.put( "runtime", parameters.get( idx++ ) );
         jobParameters.put( "triggered_by", parameters.get( idx++ ) );
         jobParameters.put( "error_policy", parameters.get( idx++ ) );
+        jobParameters.put( "deployment", parameters.get( idx++ ) );
+
         return jobParameters;
     }
 
