@@ -53,6 +53,8 @@ class PrometheusOutputTest
         callback.accept( 20 );
         assertTrue( getResponse( serverAddress ).contains( "my_event 20.0" ) );
         assertTrue( getResponse( serverAddress ).contains( "my_event 20.0" ) );
+
+        dynamicOutput.shutdown();
     }
 
     @Test
@@ -79,6 +81,8 @@ class PrometheusOutputTest
         String response = getResponse( serverAddress );
         assertTrue( response.contains( "my_metric 10.0" ) );
         assertTrue( response.contains( "my_event 20.0" ) );
+
+        dynamicOutput.shutdown();
     }
 
     private static String getResponse( String serverAddress ) throws IOException

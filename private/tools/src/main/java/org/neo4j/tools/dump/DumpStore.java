@@ -36,6 +36,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.PrintStreamLogger;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
 import static java.lang.Long.parseLong;
@@ -84,7 +85,8 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
 
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-              PageCache pageCache = createPageCache( fs, createInitialisedScheduler() ) )
+              JobScheduler scheduler = createInitialisedScheduler();
+              PageCache pageCache = createPageCache( fs, scheduler ) )
         {
             final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs );
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.of( file.getParentFile() ),

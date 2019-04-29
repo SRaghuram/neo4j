@@ -6,6 +6,7 @@
 package org.neo4j.procedure;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,8 @@ public class ProcedureIT
     @Inject
     private TestDirectory plugins;
 
+    private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
+
     private static List<Exception> exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
     private GraphDatabaseService db;
     static boolean[] onCloseCalled;
@@ -108,6 +111,12 @@ public class ProcedureIT
         {
             this.managementService.shutdown();
         }
+    }
+
+    @AfterAll
+    static void cleanUp()
+    {
+        jobs.shutdown();
     }
 
     @Test
@@ -588,7 +597,7 @@ public class ProcedureIT
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider(
+        managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider(
                 logProvider ).impermanent()
                 .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( procedure_unrestricted, "org.neo4j.procedure.*" ).build();
@@ -1907,5 +1916,4 @@ public class ProcedureIT
         }
     }
 
-    private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
 }

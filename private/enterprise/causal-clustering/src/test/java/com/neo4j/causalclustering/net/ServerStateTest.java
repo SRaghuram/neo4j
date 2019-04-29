@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -87,9 +88,9 @@ class ServerStateTest
     }
 
     @AfterAll
-    static void finalTearDown()
+    static void finalTearDown() throws ExecutionException, InterruptedException
     {
-        clientGroup.shutdownGracefully();
+        clientGroup.shutdownGracefully().get();
     }
 
     @Test

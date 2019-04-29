@@ -6,6 +6,7 @@
 package org.neo4j.procedure;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,12 @@ class FunctionIT
 
     private GraphDatabaseService db;
     private DatabaseManagementService managementService;
+
+    @AfterAll
+    static void cleanUp()
+    {
+        jobs.shutdown();
+    }
 
     @Test
     void shouldGiveNiceErrorMessageOnWrongStaticType()

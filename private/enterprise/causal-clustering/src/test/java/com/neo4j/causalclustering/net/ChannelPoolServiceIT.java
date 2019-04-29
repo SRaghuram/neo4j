@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -57,14 +58,17 @@ class ChannelPoolServiceIT
     private AdvertisedSocketAddress to1;
     private AdvertisedSocketAddress to2;
     private final AdvertisedSocketAddress serverlessAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
+    private ExecutorService executor;
     private EventLoopGroup serverEventExecutor;
     private PoolEventsMonitor poolEventsMonitor;
+    private ThreadPoolJobScheduler poolScheduler;
 
     @BeforeEach
     void setUpServers() throws ExecutionException, InterruptedException
     {
         poolEventsMonitor = new PoolEventsMonitor();
-        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), Group.RAFT_CLIENT,
+        poolScheduler = new ThreadPoolJobScheduler();
+        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), poolScheduler, Group.RAFT_CLIENT,
                 poolEventsMonitor );
 
         startServers();
@@ -73,10 +77,11 @@ class ChannelPoolServiceIT
     }
 
     @AfterEach
-    void tearDown()
+    void tearDown() throws ExecutionException, InterruptedException
     {
         closeServers();
         pool.stop();
+        poolScheduler.shutdown();
     }
 
     @Test
@@ -221,7 +226,8 @@ class ChannelPoolServiceIT
     private void startServers() throws InterruptedException, ExecutionException
     {
         BootstrapConfiguration<? extends ServerSocketChannel> serverConfig = BootstrapConfiguration.serverConfig( Config.defaults() );
-        serverEventExecutor = serverConfig.eventLoopGroup( Executors.newCachedThreadPool() );
+        executor = Executors.newCachedThreadPool();
+        serverEventExecutor = serverConfig.eventLoopGroup( executor );
         ServerBootstrap serverBootstrap = new ServerBootstrap().group( serverEventExecutor ).channel( serverConfig.channelClass() );
 
         ChannelFuture server1 = serverBootstrap.clone().childHandler( new EmptyChannelHandler() ).bind( 0 );
@@ -242,9 +248,10 @@ class ChannelPoolServiceIT
         return new AdvertisedSocketAddress( inetSocketAddress.getHostName(), inetSocketAddress.getPort() );
     }
 
-    private void closeServers()
+    private void closeServers() throws ExecutionException, InterruptedException
     {
-        serverEventExecutor.shutdownGracefully();
+        executor.shutdown();
+        serverEventExecutor.shutdownGracefully().get();
     }
 
     @ChannelHandler.Sharable

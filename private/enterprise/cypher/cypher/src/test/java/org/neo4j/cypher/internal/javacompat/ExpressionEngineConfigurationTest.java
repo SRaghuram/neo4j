@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.javacompat;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -22,6 +23,16 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 class ExpressionEngineConfigurationTest
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
+    private DatabaseManagementService managementService;
+
+    @AfterEach
+    void tearDown()
+    {
+        if ( managementService != null )
+        {
+            managementService.shutdown();
+        }
+    }
 
     @Test
     void shouldBeJitCompileOnSecondAccessByDefault()
@@ -100,7 +111,7 @@ class ExpressionEngineConfigurationTest
     private GraphDatabaseService withEngineAndLimit( String engine, int limit )
     {
 
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder()
+        managementService = new TestDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setInternalLogProvider( logProvider )
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )

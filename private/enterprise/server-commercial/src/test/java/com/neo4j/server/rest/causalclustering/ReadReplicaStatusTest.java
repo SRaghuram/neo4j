@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +93,12 @@ class ReadReplicaStatusTest
         dependencyResolver.satisfyDependency( internalDatabase );
 
         status = CausalClusteringStatusFactory.build( output, database );
+    }
+
+    @AfterEach
+    void cleanUp() throws Exception
+    {
+        dependencyResolver.resolveDependency( JobScheduler.class ).shutdown();
     }
 
     @Test
