@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
@@ -15,38 +14,30 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.RawIterator;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.Procedures;
-import org.neo4j.internal.kernel.api.Transaction;
-import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.values.AnyValue;
-import org.neo4j.values.SequenceValue;
-import org.neo4j.values.storable.TextValue;
-import org.neo4j.values.virtual.ListValue;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
-import static org.neo4j.helpers.collection.Iterators.asSet;
-import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewHelper
 {
@@ -95,15 +86,8 @@ public class ClusterOverviewHelper
                     @Override
                     protected boolean matchesSafely( MemberInfo item )
                     {
-                        Set<AnyValue> addresses = asSet( item.addresses.iterator() );
-                        for ( URI uri : coreClusterMember.clientConnectorAddresses().uriList() )
-                        {
-                            if ( !addresses.contains( stringValue( uri.toString() ) ) )
-                            {
-                                return false;
-                            }
-                        }
-                        return true;
+                        var expectedAddresses = Set.copyOf( coreClusterMember.clientConnectorAddresses().uriList() );
+                        return expectedAddresses.equals( item.addresses );
                     }
 
                     @Override
@@ -116,43 +100,30 @@ public class ClusterOverviewHelper
         ).collect( toList() ) );
     }
 
-    public static Matcher<List<MemberInfo>> containsRole( RoleInfo expectedRole, long expectedCount )
+    public static Matcher<List<MemberInfo>> containsRole( RoleInfo expectedRole, DatabaseId databaseId, long expectedCount )
     {
-        return new FeatureMatcher<List<MemberInfo>,Long>( equalTo( expectedCount ), expectedRole.name(), "count" )
+        return new FeatureMatcher<>( equalTo( expectedCount ), expectedRole.toString(), "count" )
         {
             @Override
             protected Long featureValueOf( List<MemberInfo> overview )
             {
-                return overview.stream().filter( info -> info.role == expectedRole ).count();
+                return overview.stream().filter( info -> info.databases.get( databaseId ) == expectedRole ).count();
             }
         };
     }
 
-    public static Matcher<List<MemberInfo>> doesNotContainRole( RoleInfo unexpectedRole )
+    public static Matcher<List<MemberInfo>> doesNotContainRole( RoleInfo unexpectedRole, DatabaseId databaseId )
     {
-       return containsRole( unexpectedRole, 0 );
+        return containsRole( unexpectedRole, databaseId, 0 );
     }
 
-    @SuppressWarnings( "unchecked" )
     public static List<MemberInfo> clusterOverview( GraphDatabaseFacade db )
-            throws TransactionFailureException, ProcedureException
     {
-        Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-
-        List<MemberInfo> infos = new ArrayList<>();
-        try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
+        try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
         {
-            Procedures procedures = tx.procedures();
-            int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", ClusterOverviewProcedure.PROCEDURE_NAME ) ).id();
-            RawIterator<AnyValue[],ProcedureException> itr = procedures.procedureCallRead( procedureId, null );
-
-            while ( itr.hasNext() )
-            {
-                AnyValue[] row = itr.next();
-                ListValue addresses = (ListValue) row[1];
-                infos.add( new MemberInfo( addresses, RoleInfo.valueOf( ((TextValue) row[2]).stringValue() ) ) );
-            }
-            return infos;
+            return result.stream()
+                    .map( ClusterOverviewHelper::createMemberInfo )
+                    .collect( toList() );
         }
     }
 
@@ -162,42 +133,56 @@ public class ClusterOverviewHelper
         return containsMemberAddresses( Stream.of( members).flatMap( Collection::stream ).collect( toList() ) );
     }
 
+    private static MemberInfo createMemberInfo( Map<String,Object> row )
+    {
+        assertThat( row, is( aMapWithSize( 4 ) ) );
+
+        var addresses = extractAddresses( row );
+        var databases = extractDatabases( row );
+
+        return new MemberInfo( addresses, databases );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    private static Set<URI> extractAddresses( Map<String,Object> row )
+    {
+        var addressesObject = row.get( "addresses" );
+        assertThat( addressesObject, instanceOf( List.class ) );
+        return ((List<String>) addressesObject).stream()
+                .map( URI::create )
+                .collect( toSet() );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    private static Map<DatabaseId,RoleInfo> extractDatabases( Map<String,Object> row )
+    {
+        var databasesObject = row.get( "databases" );
+        assertThat( databasesObject, instanceOf( Map.class ) );
+        return ((Map<String,Object>) databasesObject).entrySet()
+                .stream()
+                .collect( toMap(
+                        entry -> new DatabaseId( entry.getKey() ),
+                        entry -> RoleInfo.valueOf( entry.getValue().toString() ) ) );
+    }
+
     public static class MemberInfo
     {
-        private final ListValue addresses;
-        private final RoleInfo role;
+        private final Set<URI> addresses;
+        private final Map<DatabaseId,RoleInfo> databases;
 
-        MemberInfo( ListValue addresses, RoleInfo role )
+        MemberInfo( Set<URI> addresses, Map<DatabaseId,RoleInfo> databases )
         {
             this.addresses = addresses;
-            this.role = role;
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            MemberInfo that = (MemberInfo) o;
-            return addresses.equals( (SequenceValue) that.addresses ) && role == that.role;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash( addresses, role );
+            this.databases = databases;
         }
 
         @Override
         public String toString()
         {
-            return String.format( "MemberInfo{addresses='%s', role=%s}", addresses, role );
+            return "MemberInfo{" +
+                   "addresses=" + addresses +
+                   ", databases=" + databases +
+                   '}';
         }
     }
 }

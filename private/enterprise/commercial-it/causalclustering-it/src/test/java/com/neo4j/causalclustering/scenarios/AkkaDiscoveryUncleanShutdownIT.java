@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.test.Race;
 
@@ -36,6 +37,7 @@ import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
 import static java.util.Collections.emptySet;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assume.assumeThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class AkkaDiscoveryUncleanShutdownIT
@@ -143,11 +145,13 @@ public class AkkaDiscoveryUncleanShutdownIT
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
         int followerCount = runningCores.size() - leaderCount;
 
+        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+
         Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
                 ClusterOverviewHelper.containsMemberAddresses( runningCores ),
-                ClusterOverviewHelper.containsRole( LEADER, leaderCount ),
-                ClusterOverviewHelper.containsRole( FOLLOWER, followerCount ),
-                ClusterOverviewHelper.doesNotContainRole( READ_REPLICA ) );
+                ClusterOverviewHelper.containsRole( LEADER, databaseId, leaderCount ),
+                ClusterOverviewHelper.containsRole( FOLLOWER, databaseId, followerCount ),
+                ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, databaseId ) );
 
         ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected, removedCoreIds, emptySet() );
     }
