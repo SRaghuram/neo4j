@@ -13,7 +13,6 @@ import com.neo4j.bench.micro.data.ValueGeneratorUtil.Range;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
-import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -128,9 +127,9 @@ public class HashCode extends AbstractValuesBenchmark
                 return () -> Values.doubleValue( (double) value );
             case STR_SML:
             case STR_BIG:
-                @SuppressWarnings( "ConstantConditions" )
                 String unhashedString = (String) value;
-                return () -> Values.stringValue( unhashedString );
+                //noinspection StringOperationCanBeSimplified
+                return () -> Values.stringValue( new String( unhashedString ) );
             case POINT:
                 return () -> (PointValue) value;
             case BYTE_ARR:
@@ -147,14 +146,14 @@ public class HashCode extends AbstractValuesBenchmark
                 return () -> Values.doubleArray( (double[]) value );
             case STR_SML_ARR:
             case STR_BIG_ARR:
-                @SuppressWarnings( "ConstantConditions" )
                 String[] unhashedStringArray = (String[]) value;
                 String[] hashingStringArray = new String[unhashedStringArray.length];
                 return () ->
                 {
                     for ( int i = 0; i < unhashedStringArray.length; i++ )
                     {
-                        hashingStringArray[i] = unhashedStringArray[i];
+                        //noinspection StringOperationCanBeSimplified
+                        hashingStringArray[i] = new String( unhashedStringArray[i] );
                     }
                     return Values.stringArray( hashingStringArray );
                 };
@@ -183,7 +182,6 @@ public class HashCode extends AbstractValuesBenchmark
     @Benchmark
     @CompilerControl( CompilerControl.Mode.DONT_INLINE )
     @BenchmarkMode( {Mode.AverageTime} )
-    @Fork( jvmArgsAppend = "-Dorg.neo4j.kernel.impl.locking.ResourceTypes.useStrongHashing=true" )
     public long indexEntryHashCode4xx( ThreadState threadState )
     {
         return ResourceIds.indexEntryResourceId(
