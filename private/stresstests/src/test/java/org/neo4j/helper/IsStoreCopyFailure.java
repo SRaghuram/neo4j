@@ -6,11 +6,16 @@
 package org.neo4j.helper;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class IsStoreCopyFailure implements Predicate<Throwable>
 {
+    private static final Set<Class<? extends Throwable>> STORE_COPY_EXCEPTION_TYPES = Set.of(
+            StoreCopyFailedException.class, StoreIdDownloadFailedException.class );
+
     private final String expectedMessage;
 
     public IsStoreCopyFailure( Enum<?> expectedStatus )
@@ -26,12 +31,17 @@ public class IsStoreCopyFailure implements Predicate<Throwable>
             return false;
         }
 
-        if ( ex instanceof StoreCopyFailedException )
+        if ( isStoreCopyFailure( ex ) )
         {
             String message = ex.getMessage();
             return message != null && message.contains( expectedMessage );
         }
 
         return test( ex.getCause() );
+    }
+
+    private static boolean isStoreCopyFailure( Throwable ex )
+    {
+        return STORE_COPY_EXCEPTION_TYPES.stream().anyMatch( type -> type.isInstance( ex ) );
     }
 }
