@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntPredicate;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -340,7 +341,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         return userManager.getPrivilegesForRoles( roles );
     }
 
-    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup )
+    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup ) throws KernelException
     {
         if ( propertyAuthorization )
         {
@@ -352,15 +353,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                     assert roleToPropertyBlacklist.get( role ) != null : "Blacklist has to contain properties";
                     for ( String propName : roleToPropertyBlacklist.get( role ) )
                     {
-
-                        try
-                        {
-                            blackListed.add( tokenLookup.getOrCreatePropertyKeyId( propName ) );
-                        }
-                        catch ( Exception e )
-                        {
-                            securityLog.error( "Error in setting up property permissions, '" + propName + "' is not a valid property name." );
-                        }
+                        blackListed.add( tokenLookup.getOrCreatePropertyKeyId( propName ) );
                     }
                 }
             }

@@ -11,6 +11,8 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -106,7 +108,14 @@ public class CommercialSecurityContextDescriptionTest
 
     private CommercialSecurityContext context() throws InvalidAuthTokenException
     {
-        return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
-                .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        try
+        {
+            return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
+                    .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        }
+        catch ( KernelException e )
+        {
+            throw new TransactionFailureException( "Failed to start transaction.", e );
+        }
     }
 }

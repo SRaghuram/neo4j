@@ -86,7 +86,7 @@ class LdapCachingTest
     }
 
     @Test
-    void shouldCacheAuthorizationInfo() throws InvalidAuthTokenException
+    void shouldCacheAuthorizationInfo() throws Exception
     {
         // Given
         CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
@@ -101,7 +101,7 @@ class LdapCachingTest
     }
 
     @Test
-    void shouldInvalidateAuthorizationCacheAfterTTL() throws InvalidAuthTokenException
+    void shouldInvalidateAuthorizationCacheAfterTTL() throws Exception
     {
         // Given
         CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );

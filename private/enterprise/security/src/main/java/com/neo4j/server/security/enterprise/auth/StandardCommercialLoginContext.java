@@ -44,7 +44,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( IdLookup resolver, String dbName )
+    private StandardAccessMode mode( IdLookup resolver, String dbName ) throws KernelException
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
@@ -66,7 +66,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( IdLookup idLookup, String dbName )
+    public CommercialSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
     {
         StandardAccessMode mode = mode( idLookup, dbName );
         return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, mode.isAdmin() );
@@ -91,7 +91,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 .collect( Collectors.toSet() );
     }
 
-    private IntPredicate queryForPropertyPermissions( IdLookup resolver )
+    private IntPredicate queryForPropertyPermissions( IdLookup resolver ) throws KernelException
     {
         return authManager.getPropertyPermissions( roles(), resolver );
     }
@@ -276,7 +276,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         allowedLabels );
             }
 
-            void addPrivileges( DatabasePrivilege dbPrivilege )
+            void addPrivileges( DatabasePrivilege dbPrivilege ) throws KernelException
             {
                 for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
                 {
@@ -304,13 +304,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                                 }
                                 else
                                 {
-                                    try
-                                    {
-                                        allowedLabels.add( resolver.getOrCreateLabelId( label ) );
-                                    }
-                                    catch ( KernelException ignored )
-                                    {
-                                    }
+                                    allowedLabels.add( resolver.getOrCreateLabelId( label ) );
                                 }
                             }
                             else
