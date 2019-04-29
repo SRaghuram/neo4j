@@ -127,7 +127,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
             Path absoluteArtifact = baseDir.resolve( relativeArtifact );
             Files.createDirectories( absoluteArtifact.getParent() );
-            LOG.debug( "copying build artifact into {}", absoluteArtifact );
+            LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
             Files.copy( s3Object.getObjectContent(), absoluteArtifact );
         }
 

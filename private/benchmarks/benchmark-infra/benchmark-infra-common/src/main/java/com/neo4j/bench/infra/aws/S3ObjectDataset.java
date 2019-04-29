@@ -5,6 +5,18 @@
  */
 package com.neo4j.bench.infra.aws;
 
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.util.IOUtils;
+import com.neo4j.bench.infra.Dataset;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.compressors.CompressorException;
+import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOError;
@@ -15,18 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static java.lang.String.format;
-
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.compress.archivers.ArchiveInputStream;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.util.IOUtils;
-import com.neo4j.bench.infra.Dataset;
 
 class S3ObjectDataset implements Dataset
 {
@@ -64,7 +64,7 @@ class S3ObjectDataset implements Dataset
             {
                 if ( !archiveInput.canReadEntryData( entry ) )
                 {
-                    // log something?
+                    LOG.error( "can't read data entry {}", entry.getName() );
                     continue;
                 }
                 File f = dir.resolve( entry.getName() ).toFile();
@@ -96,4 +96,5 @@ class S3ObjectDataset implements Dataset
             throw new IOException( format( "failed to create directory %s", f ) );
         }
     }
+
 }

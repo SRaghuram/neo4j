@@ -50,7 +50,7 @@ class MacroBenchmarkRunArgs
 
     static MacroBenchmarkRunArgs from( List<String> arguments )
     {
-        if ( arguments.size() != 29 )
+        if ( arguments.size() != 30 )
         {
             throw new IllegalArgumentException( format( "unexpected number of run report benchmarks arguments, %d", arguments.size() ) );
         }
@@ -119,9 +119,9 @@ class MacroBenchmarkRunArgs
         return db_edition;
     }
 
-    List<String> toArguments( Path neo4jConfig, Path workDir )
+    List<String> toArguments( Path neo4jConfig, Path runDir )
     {
-        String[] args = new String[31];
+        String[] args = new String[32];
         int idx = 0;
         args[idx++] = workload;//="${1}"
         args[idx++] = db;//="${2}"
@@ -130,7 +130,7 @@ class MacroBenchmarkRunArgs
         args[idx++] = db_edition;//="${5}"
         args[idx++] = jvm;//="${6}"
         args[idx++] = neo4jConfig.toAbsolutePath().toString();//="${7}"
-        args[idx++] = workDir.toAbsolutePath().toString();//="${8}"
+        args[idx++] = runDir.toAbsolutePath().toString();//="${8}"
         args[idx++] = profilers;//="${9}"
         args[idx++] = forks;//="${10}"
         args[idx++] = results_path;//="${11}"
