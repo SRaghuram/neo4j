@@ -11,17 +11,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.SuppressOutput;
 
 @ExtendWith( SuppressOutputExtension.class )
 public class RESTUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<RESTSubject>
 {
-    @Inject
-    SuppressOutput suppressOutput;
 
-    public RESTUserManagementProceduresInteractionIT()
+    RESTUserManagementProceduresInteractionIT()
     {
         super();
         CHANGE_PWD_ERR_MSG = "User is required to change their password.";

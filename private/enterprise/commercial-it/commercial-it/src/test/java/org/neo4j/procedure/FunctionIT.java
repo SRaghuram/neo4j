@@ -83,7 +83,7 @@ class FunctionIT
     @Inject
     private TestDirectory plugins;
 
-    private static List<Exception> exceptionsInFunction = Collections.synchronizedList( new ArrayList<>() );
+    private static final List<Exception> exceptionsInFunction = Collections.synchronizedList( new ArrayList<>() );
     private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
 
     private GraphDatabaseService db;

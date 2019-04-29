@@ -933,7 +933,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     private BaseToObjectValueWriter<RuntimeException> writer()
     {
-        return new BaseToObjectValueWriter<RuntimeException>()
+        return new BaseToObjectValueWriter<>()
         {
             @Override
             protected Node newNodeProxyById( long id )
