@@ -188,7 +188,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         }
         catch ( IllegalArgumentException e )
         {
-            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
+            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", action ) );
         }
     }
 
@@ -212,7 +212,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         }
         catch ( IllegalArgumentException e )
         {
-            throw new InvalidArgumentsException( String.format( "`%s` is not a valid action", action ) );
+            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", action ) );
         }
     }
 }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -41,8 +42,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -85,7 +88,7 @@ class PropertyLevelSecurityIT
         userManager.newRole( "Agent", "Smith", "Jones" );
 
         userManager.addRoleToUser( PredefinedRoles.ARCHITECT, "Neo" );
-        userManager.addRoleToUser( PredefinedRoles.READER, "Smith" );
+        userManager.addRoleToUser( PredefinedRoles.EDITOR, "Smith" );
         userManager.addRoleToUser( PredefinedRoles.READER, "Morpheus" );
 
         neo = authManager.login( authToken( "Neo", "eon" ) );
@@ -330,6 +333,27 @@ class PropertyLevelSecurityIT
     }
 
     // INDEX
+
+    @Test
+    void shouldReadBackFromTransactionStateWithIndex()
+    {
+        execute( neo, "CREATE (:A {secret: 1})", Collections.emptyMap() ).close();
+
+        execute( neo, "CREATE INDEX ON :A(secret)", Collections.emptyMap() ).close();
+        execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
+
+        String query = "CREATE (:A {secret: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(secret) WHERE EXISTS(a.secret) RETURN a.secret";
+        execute( neo, query, Collections.singletonMap("param", 2L), r -> {
+            List<Object> results = r.stream().map( s -> s.get( "a.secret" ) ).collect( toList() );
+            assertThat( results.size(), equalTo( 2 ) );
+            assertThat( results, containsInAnyOrder( 1L, 2L ) );
+        } );
+        execute( smith, query, Collections.singletonMap("param", 3L), r -> {
+            List<Object> results = r.stream().map( s -> s.get( "a.secret" ) ).collect( toList() );
+            assertThat( results.size(), equalTo( 1 ) );
+            assertThat( results, containsInAnyOrder( 3L ) );
+        } );
+    }
 
     @Test
     void shouldBehaveLikeDataIsMissingWhenFilteringWithIndex()

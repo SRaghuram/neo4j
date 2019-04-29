@@ -28,7 +28,7 @@ public interface Resource
         case "PROCEDURE":
             return new ProcedureResource( arg1, arg2 );
         default:
-            throw new InvalidArgumentsException( String.format( "`%s` is not a valid resource", type ) );
+            throw new InvalidArgumentsException( String.format( "'%s' is not a valid resource", type ) );
         }
     }
 
@@ -53,7 +53,7 @@ public interface Resource
         {
             if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
             {
-                throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
@@ -98,7 +98,7 @@ public interface Resource
         {
             if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
             {
-                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
@@ -157,7 +157,7 @@ public interface Resource
         {
             if ( !action.equals( Action.WRITE ) )
             {
-                throw new InvalidArgumentsException( String.format( "Token resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Token resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
@@ -193,7 +193,7 @@ public interface Resource
         {
             if ( !action.equals( Action.WRITE ) )
             {
-                throw new InvalidArgumentsException( String.format( "Schema resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Schema resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
@@ -229,7 +229,7 @@ public interface Resource
         {
             if ( !action.equals( Action.WRITE ) )
             {
-                throw new InvalidArgumentsException( String.format( "System resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "System resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
@@ -274,7 +274,7 @@ public interface Resource
         {
             if ( !action.equals( Action.EXECUTE ) )
             {
-                throw new InvalidArgumentsException( String.format( "Procedure resource cannot be combined with action `%s`", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Procedure resource cannot be combined with action '%s'", action.toString() ) );
             }
         }
 
