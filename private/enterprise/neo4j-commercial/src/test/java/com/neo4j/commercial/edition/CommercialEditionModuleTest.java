@@ -19,6 +19,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -30,6 +31,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
 
+@SkipThreadLeakageGuard
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialEditionModuleTest
 {

@@ -25,6 +25,7 @@ import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogTimeZone;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.server.HTTP;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -39,6 +40,7 @@ import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
+@SkipThreadLeakageGuard
 class CommercialNeo4jExtensionRegisterIT
 {
     private static final String REGISTERED_TEMP_PREFIX = "registeredTemp";
