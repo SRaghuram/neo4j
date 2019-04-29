@@ -16,7 +16,6 @@ import java.util.function.Function;
 import org.neo4j.function.ThrowingSupplier;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
