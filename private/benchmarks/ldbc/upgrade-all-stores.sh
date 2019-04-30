@@ -5,9 +5,7 @@
 # This file is part of Neo4j internal tooling.
 #
 
-
-set -e
-set -u
+set -eu
 
 old_neo4j_version="35"
 new_neo4j_version="40"
@@ -46,13 +44,15 @@ for i in "${dbs[@]}"; do
     
     echo "---------------"
     echo "Preparing temporary locations"
-	temp_old_db_path=$(mktemp -d -p "${working_dir}")
-	temp_new_db_path=$(mktemp -d -u -p "${working_dir}")
+	temp_old_db_path="$working_dir/"$(basename $(mktemp -d -u))
+	mkdir -p "$temp_old_db_path/graph.db"
+	
+	temp_new_db_path="$working_dir/"$(basename $(mktemp -d -u))
+	
     echo "Temporary old db path : ${temp_old_db_path}"
     echo "Temporary new db path : ${temp_new_db_path}"
 	
-	mkdir "${temp_old_db_path}"/graph.db
-	mv "${old_db_path}"/* "${temp_old_db_path}"/graph.db
+	mv "${old_db_path}"/* "${temp_old_db_path}/graph.db"
 	
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
@@ -61,7 +61,7 @@ for i in "${dbs[@]}"; do
         --config "${neo4j_config}"
 
 	mkdir "${new_db_path}"
-	mv "${temp_new_db_path}"/graph.db/* "${new_db_path}"
+	mv "${temp_new_db_path}"/* "${new_db_path}"
 
     aws s3 sync "${new_db_path}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}" --no-progress --delete
     rm -rf "${old_db_path}"

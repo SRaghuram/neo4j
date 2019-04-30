@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
@@ -39,10 +38,10 @@ import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromPara
 import static com.ldbc.driver.util.ClassLoaderHelper.loadClass;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
+
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "run",
