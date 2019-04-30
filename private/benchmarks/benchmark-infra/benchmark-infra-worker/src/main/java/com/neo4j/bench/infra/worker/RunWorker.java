@@ -79,12 +79,14 @@ public class RunWorker extends InfraCommand
             List<String> command = new ArrayList<>();
             Files.setPosixFilePermissions( runDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
             command.add( "./run-report-benchmarks.sh" );
-            command.addAll( benchmarkArgs.toArguments( neo4jConfig, runDir ) );
+            command.addAll( benchmarkArgs.toArguments( neo4jConfig, runDir.resolve( "execute_work_dir" ) ) );
 
             LOG.info( "starting run report benchmark process, {}", join( " ", command ) );
-            Process process = new ProcessBuilder( command )
+            ProcessBuilder processBuilder = new ProcessBuilder( command )
                     .directory( runDir.toFile() )
-                    .inheritIO()
+                    .inheritIO();
+//            processBuilder.environment().put( "JAVA_OPTS", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=6666" );
+            Process process = processBuilder
                     .start();
 
             int waitFor = process.waitFor();
