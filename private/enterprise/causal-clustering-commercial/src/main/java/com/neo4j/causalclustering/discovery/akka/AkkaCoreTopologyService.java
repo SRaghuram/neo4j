@@ -12,9 +12,7 @@ import akka.cluster.client.ClusterClientReceptionist;
 import akka.event.EventStream;
 import akka.pattern.AskTimeoutException;
 import akka.pattern.Patterns;
-import akka.pattern.PatternsCS;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdActor.PublishClusterIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
@@ -38,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -159,14 +158,15 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            Duration timeout = Duration.ofSeconds( 20 );
+            Duration timeout = config.get( CausalClusteringSettings.cluster_id_publish_timeout );
             ClusterIdSetRequest clusterIdSetRequest = new ClusterIdSetRequest( clusterId, dbName, timeout );
             CompletionStage<Object> idSet = Patterns.ask( actor, clusterIdSetRequest, timeout );
             CompletableFuture<PublishClusterIdOutcome> idSetJob = idSet.thenApply( response ->
             {
                 if ( !(response instanceof PublishClusterIdOutcome) )
                 {
-                    throw new IllegalArgumentException( format( "Unexpected response when attempting to publish cluster Id. Expected boolean, received %s",
+                    throw new IllegalArgumentException(
+                            format( "Unexpected response when attempting to publish cluster Id. Expected PublishClusterIdOutcome, received %s",
                             response.getClass().getCanonicalName() ) );
                 }
 

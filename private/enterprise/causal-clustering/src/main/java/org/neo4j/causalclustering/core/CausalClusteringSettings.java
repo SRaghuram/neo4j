@@ -73,6 +73,11 @@ public class CausalClusteringSettings implements LoadableConfig
             "A discovery type of DNS/SRV/K8S will be queried again on retry." )
     public static final Setting<Duration> cluster_binding_retry_timeout = setting( "causal_clustering.cluster_binding_retry_timeout", DURATION, "1m" );
 
+    @Internal
+    @Description( "Configures the time taken attempting to publish a cluster id to the discovery service before potentially retrying. " +
+            "Only applies to Akka discovery." )
+    public static final Setting<Duration> cluster_id_publish_timeout = setting( "causal_clustering.cluster_id_publish_timeout", DURATION, "15s" );
+
     @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
             "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
             "availability for the cluster." )
