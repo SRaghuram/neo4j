@@ -25,6 +25,7 @@ import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
+import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.causalclustering.discovery.TestTopology;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.availability.AvailabilityGuard;
@@ -76,7 +77,7 @@ public class ClusterBinderTest
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
 
         when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ) // Cause a retry one
+                .thenThrow( DiscoveryTimeoutException.class ) // Cause a retry one
                 .thenReturn( true ); // Then succeed
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
 
@@ -120,7 +121,7 @@ public class ClusterBinderTest
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
 
         when( topologyService.setClusterId( any(), anyString() ) )
-                .thenThrow( OperationTimeoutException.class ); // Causes a retry
+                .thenThrow( DiscoveryTimeoutException.class ); // Causes a retry
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService, false );

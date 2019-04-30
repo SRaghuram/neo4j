@@ -11,8 +11,11 @@ import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.event.EventStream;
 import akka.pattern.AskTimeoutException;
+import akka.pattern.Patterns;
 import akka.pattern.PatternsCS;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdActor;
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdActor.PublishClusterIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
@@ -51,6 +54,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
+import static java.lang.String.format;
 
 public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 {
@@ -157,20 +161,23 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             ActorRef actor = coreTopologyActorRef.get();
             Duration timeout = Duration.ofSeconds( 20 );
             ClusterIdSetRequest clusterIdSetRequest = new ClusterIdSetRequest( clusterId, dbName, timeout );
-            CompletionStage<Object> idSet = PatternsCS.ask( actor, clusterIdSetRequest, timeout );
-            CompletableFuture<Boolean> idSetJob = idSet.thenApply( response ->
+            CompletionStage<Object> idSet = Patterns.ask( actor, clusterIdSetRequest, timeout );
+            CompletableFuture<PublishClusterIdOutcome> idSetJob = idSet.thenApply( response ->
             {
-                if ( !(response instanceof Boolean) )
+                if ( !(response instanceof PublishClusterIdOutcome) )
                 {
-                    return false;
+                    throw new IllegalArgumentException( format( "Unexpected response when attempting to publish cluster Id. Expected boolean, received %s",
+                            response.getClass().getCanonicalName() ) );
                 }
 
-                return (Boolean) response;
+                return (PublishClusterIdOutcome) response;
             } ).toCompletableFuture();
 
             try
             {
-                return idSetJob.join();
+                PublishClusterIdOutcome outcome = idSetJob.join();
+
+                return outcome == PublishClusterIdOutcome.SUCCESS;
             }
             catch ( CompletionException e )
             {
@@ -178,6 +185,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
                 {
                     throw new DiscoveryTimeoutException( e );
                 }
+                log.error( e.getCause().getMessage() );
                 return false;
             }
         }

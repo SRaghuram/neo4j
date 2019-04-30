@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import akka.actor.Status.Failure;
 import akka.cluster.Cluster;
 import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.LWWMap;
@@ -94,8 +95,9 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                 .ifPresent( m ->
                 {
                     //Replicator.Update operations may return UpdateSuccess even if the merge function means that an update had
-                    // no effect, so in the event of an UpdateSuccess response we must validate the impact by fetching the latest
-                    // contents of the Replicator. We use a read quorum to ensure the update isn't validated against stale data.
+                    // no effect (i.e. there was a pre-existing clusterId). As a result, in the event of an UpdateSuccess response
+                    // we must validate the impact by fetching the latest contents of the Replicator. We use a read quorum to
+                    // ensure the update isn't validated against stale data.
                     Replicator.ReadConsistency readConsistency = new Replicator.ReadFrom( minRuntimeQuorumSize, m.timeout() );
                     Replicator.Get<LWWMap<String,ClusterId>> getOp = new Replicator.Get<>( key, readConsistency, Optional.of( m ) );
                     replicator.tell( getOp, getSelf() );
@@ -114,8 +116,10 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                     // we check that the original request was successful by checking whether the current cluster id for the given database is the
                     // same as that in the request.
                     ClusterId currentClusterId = current.getEntries().get( m.database() );
-                    boolean clusterIdSuccessfullySet = Objects.equals( currentClusterId, m.clusterId() );
-                    m.replyTo().tell( clusterIdSuccessfullySet, getSelf() );
+                    PublishClusterIdOutcome outcome = Objects.equals( currentClusterId, m.clusterId() ) ?
+                                                      PublishClusterIdOutcome.SUCCESS :
+                                                      PublishClusterIdOutcome.FAILURE;
+                    m.replyTo().tell( outcome, getSelf() );
                 } );
     }
 
@@ -128,7 +132,13 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                 {
                     String message = String.format( "Failed to set ClusterId: %s", m );
                     log.warn( message );
-                    m.replyTo().tell( new akka.actor.Status.Failure( new IllegalArgumentException( message ) ), getSelf() );
+                    m.replyTo().tell( new Failure( new IllegalArgumentException( message ) ), getSelf() );
                 } );
+    }
+
+    public enum PublishClusterIdOutcome
+    {
+        SUCCESS,
+        FAILURE
     }
 }

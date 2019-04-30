@@ -197,7 +197,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         }
         catch ( DiscoveryTimeoutException e )
         {
-            //In the event of a timeout we want to retry
+            //In the event of a timeout we want to retry even if we would normally die on failure.
             return false;
         }
     }
