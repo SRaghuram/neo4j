@@ -108,7 +108,7 @@ public class BookmarkIT
     private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
         DatabaseManagementServiceFactory facadeFactory = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        managementService = facadeFactory.newFacade( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
+        managementService = facadeFactory.build( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
         return (GraphDatabaseAPI) managementService.database(
                 GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }

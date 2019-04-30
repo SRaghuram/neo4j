@@ -40,7 +40,7 @@ public class CommercialGraphFactory implements GraphFactory
                     ReadReplicaEditionModule::new ).getManagementService();
         default:
             return new DatabaseManagementServiceFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
-                    .initFacade( storeDir, config, dependencies );
+                    .build( storeDir, config, dependencies );
         }
     }
 

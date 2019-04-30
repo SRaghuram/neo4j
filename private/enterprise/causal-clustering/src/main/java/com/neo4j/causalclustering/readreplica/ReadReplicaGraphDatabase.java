@@ -43,7 +43,7 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
     {
         Function<GlobalModule,AbstractEditionModule> factory =
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId );
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config, dependencies );
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA, factory ).build( storeDir, config, dependencies );
     }
 
     public DatabaseManagementService getManagementService()
