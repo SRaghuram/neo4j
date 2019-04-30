@@ -5,19 +5,44 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import java.util.Collections;
+import java.util.Set;
+
 public class Segment
 {
-    private String label;
+    private final Set<String> labels;
 
-    public Segment( String label )
+    public Segment( Set<String> labels )
     {
-        this.label = label;
+        this.labels = labels;
     }
 
-    public String getLabel()
+    public Set<String> getLabels()
     {
-        return label;
+        return labels;
     }
 
-    static Segment ALL = new Segment( "" );
+    public static Segment ALL = new Segment( Collections.emptySet() );
+
+    @Override
+    public int hashCode()
+    {
+        return labels.hashCode();
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        if ( this == obj )
+        {
+            return true;
+        }
+
+        if ( obj instanceof Segment )
+        {
+            Segment other = (Segment) obj;
+            return other.getLabels().equals( this.labels );
+        }
+        return false;
+    }
 }

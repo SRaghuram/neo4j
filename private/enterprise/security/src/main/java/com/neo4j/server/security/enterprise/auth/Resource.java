@@ -11,6 +11,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 public interface Resource
 {
+    // Only used by procedures, should be removed as soon as the DDL is in place
     static Resource parse( String type, String arg1, String arg2 ) throws InvalidArgumentsException
     {
         try
@@ -20,8 +21,10 @@ public interface Resource
             {
             case GRAPH:
                 return new GraphResource();
-            case LABEL:
-                return new LabelResource( arg1, arg2 );
+            case PROPERTY:
+                return new PropertyResource( arg1 );
+            case ALL_PROPERTIES:
+                return new AllPropertiesResource();
             case TOKEN:
                 return new TokenResource();
             case SCHEMA:
@@ -59,7 +62,7 @@ public interface Resource
         @Override
         public void assertValidCombination( Action action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
+            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ ) || action.equals( Action.FIND )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -90,15 +93,10 @@ public interface Resource
         }
     }
 
-    class LabelResource implements Resource
+    class AllPropertiesResource implements Resource
     {
-        private final String label;
-        private final String property;
-
-        public LabelResource( String label, String property )
+        public AllPropertiesResource( )
         {
-            this.label = label;
-            this.property = property;
         }
 
         @Override
@@ -106,55 +104,32 @@ public interface Resource
         {
             if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
             {
-                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action '%s'", action.toString() ) );
+                throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
             }
-        }
-
-        @Override
-        public String getArg1()
-        {
-            return label == null ? "" : label;
-        }
-
-        @Override
-        public String getArg2()
-        {
-            return property == null ? "" : property;
         }
 
         @Override
         public Type type()
         {
-            return Type.LABEL;
+            return Type.ALL_PROPERTIES;
         }
 
         @Override
         public String toString()
         {
-            return "label " + label;
+            return "all properties ";
         }
 
         @Override
         public int hashCode()
         {
-            return label == null ? 0 : label.hashCode() + (property == null ? 0 : 7 * property.hashCode()) + 13 * Type.GRAPH.hashCode();
+            return Type.ALL_PROPERTIES.hashCode();
         }
 
         @Override
         public boolean equals( Object obj )
         {
-            if ( obj == this )
-            {
-                return true;
-            }
-
-            if ( obj instanceof LabelResource )
-            {
-                LabelResource other = (LabelResource) obj;
-                return (this.label == null && other.label == null || this.label != null && this.label.equals( other.label )) &&
-                       (this.property == null && other.property == null || (this.property != null && this.property.equals( other.property )));
-            }
-            return false;
+            return obj == this || obj instanceof AllPropertiesResource;
         }
     }
 
@@ -162,7 +137,7 @@ public interface Resource
     {
         private final String property;
 
-        PropertyResource( String property )
+        public PropertyResource( String property )
         {
             this.property = property;
         }
@@ -197,7 +172,7 @@ public interface Resource
         @Override
         public int hashCode()
         {
-            return property == null ? 0 : 7 * property.hashCode() + 13 * Type.GRAPH.hashCode();
+            return property == null ? 0 : property.hashCode() + 31 * Type.PROPERTY.hashCode();
         }
 
         @Override
@@ -208,9 +183,9 @@ public interface Resource
                 return true;
             }
 
-            if ( obj instanceof LabelResource )
+            if ( obj instanceof PropertyResource )
             {
-                LabelResource other = (LabelResource) obj;
+                PropertyResource other = (PropertyResource) obj;
                 return this.property == null && other.property == null || this.property != null && this.property.equals( other.property );
             }
             return false;
@@ -372,20 +347,32 @@ public interface Resource
         @Override
         public int hashCode()
         {
-            return Type.PROCEDURE.hashCode();
+            int hash = nameSpace == null ? 0 : nameSpace.hashCode();
+            return hash + 31 * (procedure == null ? 0 : procedure.hashCode());
         }
 
         @Override
         public boolean equals( Object obj )
         {
-            return obj instanceof ProcedureResource;
+            if ( obj == this )
+            {
+                return true;
+            }
+
+            if ( obj instanceof ProcedureResource )
+            {
+                ProcedureResource other = (ProcedureResource) obj;
+                boolean equals = other.nameSpace == null && this.nameSpace == null || other.nameSpace != null && other.nameSpace.equals( this.nameSpace );
+                return equals && (other.procedure == null && this.procedure == null || other.procedure != null && other.procedure.equals( this.procedure ));
+            }
+            return false;
         }
     }
 
     enum Type
     {
+        ALL_PROPERTIES,
         PROPERTY,
-        LABEL,
         GRAPH,
         TOKEN,
         SCHEMA,

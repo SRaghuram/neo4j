@@ -482,7 +482,7 @@ public abstract class ProcedureInteractionTestBase<S>
     private void assertKeyIsArray( ResourceIterator<Map<String,Object>> r, String key, Object[] items )
     {
         List<Object> results = getObjectsAsList( r, key );
-        assertEquals( Arrays.asList( items ).size(), results.size() );
+        assertEquals( "Didn't get expected number of results", Arrays.asList( items ).size(), results.size() );
         assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray() ) );
     }
 

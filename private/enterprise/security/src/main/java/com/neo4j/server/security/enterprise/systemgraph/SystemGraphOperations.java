@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.Segment;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -20,6 +21,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.neo4j.cypher.result.QueryResult;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
@@ -200,12 +202,35 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}) " +
                 "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
-                "CREATE (p)-[:SCOPE]->(segment:Segment) RETURN 0";
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
+                "CREATE (p)-[:SCOPE]->(segment:Segment) RETURN id(segment)";
 
-        if ( !success )
+        try ( Transaction tx = queryExecutor.beginTx() )
         {
-            assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+            long segmentNodeId = queryExecutor.executeQueryLong( query, params );
+
+            if ( segmentNodeId == -1 )
+            {
+                assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+            }
+            else
+            {
+                Segment segment = resourcePrivilege.getSegment();
+                if ( !segment.equals( Segment.ALL ) )
+                {
+                    String qualifierQuery =
+                            "MATCH (segment) WHERE id(segment) = $segment " +
+                                    "UNWIND $labels AS label " +
+                                    "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
+                    boolean success = queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
+
+                    if ( !success )
+                    {
+                        tx.failure();
+                    }
+                }
+
+                tx.success();
+            }
         }
     }
 
@@ -226,13 +251,36 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
                 "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
-                "CREATE (p)-[:SCOPE]->(segment:Segment)-[:NAME_ME]->(db) RETURN 0";
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
+                "CREATE (p)-[:SCOPE]->(segment:Segment)-[:FOR]->(db) RETURN id(segment)";
 
-        if ( !success )
+        try ( Transaction tx = queryExecutor.beginTx() )
         {
-            assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
-            assertDbExists( dbName );
+            long segmentNodeId = queryExecutor.executeQueryLong( query, params );
+
+            if ( segmentNodeId == -1 )
+            {
+                assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+                assertDbExists( dbName );
+            }
+            else
+            {
+                Segment segment = resourcePrivilege.getSegment();
+                if ( !segment.equals( Segment.ALL ) )
+                {
+                    String qualifierQuery =
+                            "MATCH (segment) WHERE id(segment) = $segment " +
+                            "UNWIND $labels AS label " +
+                            "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
+                    boolean success = queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
+
+                    if ( !success )
+                    {
+                        tx.failure();
+                    }
+                }
+
+                tx.success();
+            }
         }
     }
 
@@ -251,7 +299,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "(p)-[:SCOPE]->(segment:Segment) " +
                 "WHERE role.name = $roleName AND p.action = $action AND " +
                 "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "AND NOT (segment)-[:NAME_ME]->(:Database) " +
+                "AND NOT (segment)-[:FOR]->(:Database) " +
                 "DETACH DELETE p, segment RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
@@ -275,7 +323,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         );
         String query =
                 "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), " +
-                "(p)-[:SCOPE]->(segment:Segment)-[:NAME_ME]->(db:Database) " +
+                "(p)-[:SCOPE]->(segment:Segment)-[:FOR]->(db:Database) " +
                 "WHERE role.name = $roleName AND p.action = $action AND db.name = $dbName AND " +
                 "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
                 "DETACH DELETE p, segment RETURN 0";
@@ -302,7 +350,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment)," +
                 "(a)-[:APPLIES_TO]->(res) " +
                 "WHERE r.name IN $roles " +
-                "OPTIONAL MATCH (segment)-[:NAME_ME]->(db:Database) " +
+                "OPTIONAL MATCH (segment)-[:FOR]->(db:Database) " +
                 "RETURN db.name, a.action, res, segment";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
@@ -332,8 +380,9 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                         .build()
                 );
             }
-            catch ( InvalidArgumentsException ignored )
+            catch ( InvalidArgumentsException ie )
             {
+                throw new IllegalStateException( "Failed to authorize", ie );
             }
             return true;
         };

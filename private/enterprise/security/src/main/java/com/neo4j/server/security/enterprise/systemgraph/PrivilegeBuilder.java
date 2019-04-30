@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.Segment;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -50,7 +51,7 @@ class PrivilegeBuilder
                         this.labels.add( ((TextValue) qualifier.properties().get( "label" )).stringValue() );
                         break;
                     default:
-                        throw new IllegalStateException( "Unknown privilege qualifier type: " + qualifier.labels().stringValue( 0 ) );
+                        throw new InvalidArgumentsException( "Unknown privilege qualifier type: " + qualifier.labels().stringValue( 0 ) );
                     }
                     return true;
                 } );
@@ -69,10 +70,12 @@ class PrivilegeBuilder
         case GRAPH:
             this.resource = new Resource.GraphResource();
             break;
-        case LABEL:
-            String label = ((TextValue) resource.properties().get( "arg1" )).stringValue();
-            String property = ((TextValue) resource.properties().get( "arg2" )).stringValue();
-            this.resource = new Resource.LabelResource( label, property );
+        case PROPERTY:
+            String propertyKey = ((TextValue) resource.properties().get( "arg1" )).stringValue();
+            this.resource = new Resource.PropertyResource( propertyKey );
+            break;
+        case ALL_PROPERTIES:
+            this.resource = new Resource.AllPropertiesResource();
             break;
         case TOKEN:
             this.resource = new Resource.TokenResource();
@@ -107,6 +110,7 @@ class PrivilegeBuilder
 
     ResourcePrivilege build() throws InvalidArgumentsException
     {
-        return new ResourcePrivilege( action, resource );
+        Segment segment = labels.isEmpty() ? Segment.ALL : new Segment( labels );
+        return new ResourcePrivilege( action, resource, segment );
     }
 }

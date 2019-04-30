@@ -60,7 +60,7 @@ public class ResourcePrivilege
         if ( obj instanceof ResourcePrivilege )
         {
             ResourcePrivilege other = (ResourcePrivilege) obj;
-            return other.action.equals( this.action ) && other.resource.equals( this.resource );
+            return other.action.equals( this.action ) && other.resource.equals( this.resource ) && other.segment.equals( this.segment );
         }
         return false;
     }

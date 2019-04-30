@@ -219,6 +219,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
             }
         }

@@ -9,13 +9,17 @@ import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -100,19 +104,23 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
     private static class StandardAccessMode implements AccessMode
     {
         private final boolean allowsReads;
-        private final boolean allowsReadAllLabels;
         private final boolean allowsWrites;
         private final boolean allowsSchemaWrites;
         private final boolean allowsTokenCreates;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
-        private final Set<Integer> whitelistedLabels;
-        private final IntPredicate propertyPermissions;
+        private final boolean allowsReadAllPropertiesAllLabels;
+        private final Set<Integer> whitelistedNodeProperties;
+        private final Map<Integer, Set<Integer>> whitelistedLabelsForProperty;
+        private final IntPredicate propertyPermissions; // TODO translate this to blacklistedPropertiesForAllLabels
         private final boolean isAdmin;
+        private final boolean allowsTraverseAllLabels;
+        private final Set<Integer> whitelistTraverseLabels;
 
         StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
-                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions, boolean allowsReadAllLabels,
-                Set<Integer> whitelistedLabels )
+                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions,
+                boolean allowsReadAllPropertiesAllLabels, Map<Integer,Set<Integer>> whitelistedLabelsForProperty, Set<Integer> whitelistedNodeProperties,
+                boolean allowsTraverseAllLabels, Set<Integer> whitelistTraverseLabels )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
@@ -122,8 +130,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
-            this.whitelistedLabels = whitelistedLabels;
-            this.allowsReadAllLabels = allowsReadAllLabels;
+            this.allowsReadAllPropertiesAllLabels = allowsReadAllPropertiesAllLabels;
+            this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
+            this.whitelistedNodeProperties = whitelistedNodeProperties;
+            this.allowsTraverseAllLabels = allowsTraverseAllLabels;
+            this.whitelistTraverseLabels = whitelistTraverseLabels;
         }
 
         @Override
@@ -159,32 +170,28 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsTraverseAllLabels()
         {
-            // TODO implement me
-            return true;
+            return allowsTraverseAllLabels;
         }
 
         @Override
         public boolean allowsTraverseLabels( IntStream labels )
         {
-            // TODO implement me
-            return true;
+            return allowsTraverseAllLabels || labels.anyMatch( whitelistTraverseLabels::contains );
         }
 
         @Override
-        public boolean allowsReadAllLabels()
+        public boolean allowsReadPropertyAllLabels( int propertyKey )
         {
-            return allowsReadAllLabels;
+            return allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey );
         }
 
         @Override
-        public boolean allowsReadLabels( IntStream labels )
+        public boolean allowsReadProperty( Supplier<int[]> labelSupplier, int propertyKey )
         {
-            if ( allowsReadAllLabels )
-            {
-                return true;
-            }
-            // it is enough to have allows on one label to read the node
-            return labels.anyMatch( whitelistedLabels::contains );
+            IntStream labels = Arrays.stream( labelSupplier.get() );
+            return allowsReadPropertyAllLabels( propertyKey ) ||
+                    labels.anyMatch( l1 -> whitelistedLabelsForProperty.getOrDefault( propertyKey, Collections.emptySet() ).contains( l1 ) ) ||
+                    Arrays.stream( labelSupplier.get() ).anyMatch( l -> whitelistedLabelsForProperty.getOrDefault( -1, Collections.emptySet() ).contains( l ) );
         }
 
         @Override
@@ -244,9 +251,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean schema;
             private boolean admin;
             private IntPredicate propertyPermissions;
-            private boolean allowReadAllNodes;
-            private Set<Integer> allowedLabels;
-            private Map<Integer, Set<Integer>> allowedPropertyInSegment;
+            private boolean whitelistAllPropertiesInWholeGraph;
+            private Map<Integer, Set<Integer>> allowedSegmentForProperty = new HashMap<>();
+            private Set<Integer> whitelistNodeProperties = new HashSet<>();
+            private boolean allowsTraverseAllLabels;
+            private Set<Integer> whitelistTraverseLabels = new HashSet<>();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -254,7 +263,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
                 this.resolver = resolver;
-                allowedLabels = new HashSet<>();
             }
 
             void addPropertyPermissions( IntPredicate propertyPermissions )
@@ -274,8 +282,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         passwordChangeRequired,
                         roles,
                         propertyPermissions,
-                        allowReadAllNodes,
-                        allowedLabels );
+                        whitelistAllPropertiesInWholeGraph,
+                        allowedSegmentForProperty,
+                        whitelistNodeProperties,
+                        allowsTraverseAllLabels,
+                        whitelistTraverseLabels );
             }
 
             void addPrivileges( DatabasePrivilege dbPrivilege ) throws KernelException
@@ -285,6 +296,21 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     Resource resource = privilege.getResource();
                     switch ( privilege.getAction() )
                     {
+                    case FIND:
+                        read = true;
+                        if ( privilege.getSegment().equals( Segment.ALL ) )
+                        {
+                            allowsTraverseAllLabels = true;
+                        }
+                        else
+                        {
+                            for ( String label : privilege.getSegment().getLabels() )
+                            {
+                                int labelId = resolveLabelId( label );
+                                whitelistTraverseLabels.add( labelId );
+                            }
+                        }
+                        break;
                     case READ:
                         switch ( resource.type() )
                         {
@@ -294,31 +320,41 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         case PROCEDURE:
                             break;
                         case GRAPH:
-                        case LABEL:
                         case PROPERTY:
+                        case ALL_PROPERTIES:
                             read = true;
-                            if ( resource instanceof Resource.LabelResource )
+                            if ( resource instanceof Resource.PropertyResource )
                             {
-                                String label = resource.getArg1();
-                                if ( label.isEmpty() )
+                                int propertyId = resolvePropertyId( resource.getArg1() );
+
+                                if ( privilege.getSegment() == Segment.ALL )
                                 {
-                                    allowReadAllNodes = true;
+                                    if ( propertyId == -1 ) // TODO magic number
+                                    {
+                                        whitelistAllPropertiesInWholeGraph = true;
+                                    }
+                                    else
+                                    {
+                                        whitelistNodeProperties.add( propertyId );
+                                    }
                                 }
                                 else
                                 {
-                                    allowedLabels.add( resolver.getOrCreateLabelId( label ) );
+                                    Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( propertyId, label -> new HashSet<>() );
+                                    for ( String label : privilege.getSegment().getLabels() )
+                                    {
+                                        int labelId = resolveLabelId( label );
+                                        allowedNodesWithLabels.add( labelId );
+                                    }
                                 }
                             }
-                            else if ( resource instanceof Resource.PropertyResource )
+                            else if ( resource instanceof Resource.AllPropertiesResource )
                             {
-                                int propertyId = resolvePropertyId( resource.getArg1() );
-                                int labelId = resolveLabelSegment( privilege.getSegment() );
-                                Set<Integer> allowedProperties = allowedPropertyInSegment.putIfAbsent( labelId, new HashSet<>() );
-                                allowedProperties.add( propertyId );
+
                             }
                             else
                             {
-                                allowReadAllNodes = true;
+                                whitelistAllPropertiesInWholeGraph = true;
                             }
                             break;
                         default:
@@ -328,7 +364,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         switch ( resource.type() )
                         {
                         case GRAPH:
-                        case LABEL:
                         case PROPERTY:
                             write = true;
                             break;
@@ -349,13 +384,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case EXECUTE:
                         switch ( resource.type() )
                         {
-                        case GRAPH:
-                        case LABEL:
-                        case PROPERTY:
-                        case TOKEN:
-                        case SCHEMA:
-                        case SYSTEM:
-                            break;
                         case PROCEDURE:
                             // implement when porting procedure execute privileges to system graph
                             break;
@@ -367,35 +395,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 }
             }
 
-            private int resolveLabelSegment( Segment segment )
+            private int resolveLabelId( String label ) throws KernelException
             {
-                if ( !segment.equals( Segment.ALL ) )
-                {
-                    try
-                    {
-                        return resolver.getOrCreateLabelId( segment.getLabel() );
-                    }
-                    catch ( KernelException ignored )
-                    {
-                        // TODO couldn't get or create id for label...
-                    }
-                }
-                return -1; // TODO what should represent the "FULL" segment
+                return resolver.getOrCreateLabelId( label );
             }
 
-            private int resolvePropertyId( String property )
+            private int resolvePropertyId( String property ) throws KernelException
             {
                 if ( !property.isEmpty() )
                 {
-                    try
-                    {
-                        return resolver.getOrCreatePropertyKeyId( property );
-                    }
-                    catch ( KernelException ignored )
-                    {
-                        // TODO couldn't get or create id for property...
-                    }
-
+                    return resolver.getOrCreatePropertyKeyId( property );
                 }
                 return -1;
             }
