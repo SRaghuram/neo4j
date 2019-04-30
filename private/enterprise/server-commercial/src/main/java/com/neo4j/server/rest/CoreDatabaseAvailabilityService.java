@@ -44,9 +44,16 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context GraphDatabaseService db )
     {
         this.output = output;
-        this.roleProvider = db instanceof CoreGraphDatabase ? ((CoreGraphDatabase) db).getDependencyResolver().resolveDependency( RoleProvider.class ) :
-                                                              EMPTY_PROVIDER;
-        this.notCoreDatabaseType = true;
+        if ( db instanceof CoreGraphDatabase )
+        {
+            this.roleProvider = ((CoreGraphDatabase) db).getDependencyResolver().resolveDependency( RoleProvider.class );
+            this.notCoreDatabaseType = false;
+        }
+        else
+        {
+            this.roleProvider = EMPTY_PROVIDER;
+            this.notCoreDatabaseType = true;
+        }
     }
 
     @GET
