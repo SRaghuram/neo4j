@@ -13,21 +13,29 @@ public interface Resource
 {
     static Resource parse( String type, String arg1, String arg2 ) throws InvalidArgumentsException
     {
-        switch ( type.toUpperCase() )
+        try
         {
-        case "GRAPH":
-            return new GraphResource();
-        case "LABEL":
-            return new LabelResource( arg1, arg2 );
-        case "TOKEN":
-            return new TokenResource();
-        case "SCHEMA":
-            return new SchemaResource();
-        case "SYSTEM":
-            return new SystemResource();
-        case "PROCEDURE":
-            return new ProcedureResource( arg1, arg2 );
-        default:
+            Resource.Type resource = Type.valueOf( type.toUpperCase() );
+            switch ( resource )
+            {
+            case GRAPH:
+                return new GraphResource();
+            case LABEL:
+                return new LabelResource( arg1, arg2 );
+            case TOKEN:
+                return new TokenResource();
+            case SCHEMA:
+                return new SchemaResource();
+            case SYSTEM:
+                return new SystemResource();
+            case PROCEDURE:
+                return new ProcedureResource( arg1, arg2 );
+            default:
+                throw new InvalidArgumentsException( String.format( "'%s' is not a supported resource", type ) );
+            }
+        }
+        catch ( IllegalArgumentException e )
+        {
             throw new InvalidArgumentsException( String.format( "'%s' is not a valid resource", type ) );
         }
     }

@@ -106,16 +106,9 @@ public class CommercialSecurityContextDescriptionTest
         assertThat( restricted.description(), equalTo( "AUTH_DISABLED with FULL restricted to READ" ) );
     }
 
-    private CommercialSecurityContext context() throws InvalidAuthTokenException
+    private CommercialSecurityContext context() throws InvalidAuthTokenException, KernelException
     {
-        try
-        {
-            return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
-                    .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        }
-        catch ( KernelException e )
-        {
-            throw new TransactionFailureException( "Failed to start transaction.", e );
-        }
+        return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
+                .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 }

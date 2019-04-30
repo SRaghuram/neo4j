@@ -32,29 +32,30 @@ class PrivilegeBuilder
         return new PrivilegeBuilder( true, queryExecutor, action );
     }
 
-    PrivilegeBuilder onResource( NodeValue resource )
+    PrivilegeBuilder onResource( NodeValue resource ) throws InvalidArgumentsException
     {
         String type = ((TextValue) resource.properties().get( "type" )).stringValue();
-        switch ( type.toUpperCase() )
+        Resource.Type resourceType = asResourceType( type );
+        switch ( resourceType )
         {
-        case "GRAPH":
+        case GRAPH:
             this.resource = new Resource.GraphResource();
             break;
-        case "LABEL":
+        case LABEL:
             String label = ((TextValue) resource.properties().get( "arg1" )).stringValue();
             String property = ((TextValue) resource.properties().get( "arg2" )).stringValue();
             this.resource = new Resource.LabelResource( label, property );
             break;
-        case "TOKEN":
+        case TOKEN:
             this.resource = new Resource.TokenResource();
             break;
-        case "SCHEMA":
+        case SCHEMA:
             this.resource = new Resource.SchemaResource();
             break;
-        case "SYSTEM":
+        case SYSTEM:
             this.resource = new Resource.SystemResource();
             break;
-        case "PROCEDURE":
+        case PROCEDURE:
             String namespace = ((TextValue) resource.properties().get( "arg1" )).stringValue();
             String procedureName = ((TextValue) resource.properties().get( "arg2" )).stringValue();
             this.resource = new Resource.ProcedureResource( namespace, procedureName );
@@ -62,6 +63,18 @@ class PrivilegeBuilder
         default:
         }
         return this;
+    }
+
+    private Resource.Type asResourceType( String typeString ) throws InvalidArgumentsException
+    {
+        try
+        {
+            return Resource.Type.valueOf( typeString.toUpperCase() );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            throw new InvalidArgumentsException( String.format( "Found not valid resource (%s) in the system graph.", typeString ) );
+        }
     }
 
     ResourcePrivilege build() throws InvalidArgumentsException

@@ -177,19 +177,12 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
     {
-        try
-        {
-            DatabasePrivilege privilege = new DatabasePrivilege( database );
-            privilege.addPrivilege( new ResourcePrivilege(
-                    ResourcePrivilege.Action.valueOf( action.toUpperCase() ),
-                    Resource.parse( resource, null, null ) )
-            );
-            userManager.grantPrivilegeToRole( roleName, privilege );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", action ) );
-        }
+        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        privilege.addPrivilege( new ResourcePrivilege(
+                asAction( action ),
+                Resource.parse( resource, null, null ) )
+        );
+        userManager.grantPrivilegeToRole( roleName, privilege );
     }
 
     @Admin
@@ -201,18 +194,23 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "*" ) String database ) throws InvalidArgumentsException
     {
+        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        privilege.addPrivilege( new ResourcePrivilege(
+                asAction( action ),
+                Resource.parse( resource, null, null ) )
+        );
+        userManager.revokePrivilegeFromRole( roleName, privilege );
+    }
+
+    private ResourcePrivilege.Action asAction( String actionString ) throws InvalidArgumentsException
+    {
         try
         {
-            DatabasePrivilege privilege = new DatabasePrivilege( database );
-            privilege.addPrivilege( new ResourcePrivilege(
-                    ResourcePrivilege.Action.valueOf( action.toUpperCase() ),
-                    Resource.parse( resource, null, null ) )
-            );
-            userManager.revokePrivilegeFromRole( roleName, privilege );
+            return ResourcePrivilege.Action.valueOf( actionString.toUpperCase() );
         }
         catch ( IllegalArgumentException e )
         {
-            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", action ) );
+            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", actionString ) );
         }
     }
 }
