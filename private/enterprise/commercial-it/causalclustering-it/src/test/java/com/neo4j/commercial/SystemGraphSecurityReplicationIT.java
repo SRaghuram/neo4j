@@ -7,7 +7,6 @@ package com.neo4j.commercial;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
@@ -96,12 +95,12 @@ class SystemGraphSecurityReplicationIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            await( () -> getAllRoleNames( core.database() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( core.defaultDatabase() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
 
         for ( ReadReplica replica : cluster.readReplicas() )
         {
-            await( () -> getAllRoleNames( replica.database() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( replica.defaultDatabase() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
     }
 
@@ -119,16 +118,16 @@ class SystemGraphSecurityReplicationIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            await( () -> userCanLogin( username, password, core.database() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> userCanLogin( username, password, core.defaultDatabase() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
 
         for ( ReadReplica replica : cluster.readReplicas() )
         {
-            await( () -> userCanLogin( username, password, replica.database() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> userCanLogin( username, password, replica.defaultDatabase() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
     }
 
-    private void newUser( CoreGraphDatabase db, String username, String password )
+    private void newUser( GraphDatabaseFacade db, String username, String password )
     {
         try
         {

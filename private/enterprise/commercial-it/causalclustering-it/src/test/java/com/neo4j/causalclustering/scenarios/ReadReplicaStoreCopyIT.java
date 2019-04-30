@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.DatabaseShutdownException;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
@@ -57,7 +57,7 @@ public class ReadReplicaStoreCopyIT
             readReplica.txPollingClient().start();
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
-            ReadReplicaGraphDatabase replicaGraphDatabase = readReplica.database();
+            GraphDatabaseFacade replicaGraphDatabase = readReplica.defaultDatabase();
             try
             {
                 replicaGraphDatabase.beginTx();
@@ -101,7 +101,7 @@ public class ReadReplicaStoreCopyIT
     {
         try
         {
-            DependencyResolver dependencyResolver = core.database().getDependencyResolver();
+            DependencyResolver dependencyResolver = core.defaultDatabase().getDependencyResolver();
             dependencyResolver.resolveDependency( LogRotation.class ).rotateLogFile();
             SimpleTriggerInfo info = new SimpleTriggerInfo( "test" );
             dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );

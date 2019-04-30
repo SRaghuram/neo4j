@@ -97,7 +97,7 @@ class ClusterShutdownIT
         try
         {
             // when - blocking on lock acquiring
-            final GraphDatabaseService leader = cluster.getCoreMemberById( victimId ).database();
+            final GraphDatabaseService leader = cluster.getCoreMemberById( victimId ).defaultDatabase();
 
             for ( int i = 0; i < NUMBER_OF_LOCK_ACQUIRERS; i++ )
             {

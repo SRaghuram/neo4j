@@ -77,7 +77,7 @@ public class ClusterOverviewHelper
         assertEventualOverview( expected, readReplica, "rr" );
     }
 
-    private static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember<? extends GraphDatabaseFacade> member, String role )
+    private static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember member, String role )
             throws InterruptedException
     {
         Function<List<MemberInfo>, String> printableMemberInfos =
@@ -85,10 +85,10 @@ public class ClusterOverviewHelper
 
         String message = String.format( "should have overview from %s %s, but view was ", role, member.serverId() );
         assertEventually( memberInfos -> message + printableMemberInfos.apply( memberInfos ),
-                () -> clusterOverview( member.database() ), expected, 90, SECONDS );
+                () -> clusterOverview( member.defaultDatabase() ), expected, 90, SECONDS );
     }
 
-    public static Matcher<Iterable<? extends MemberInfo>> containsMemberAddresses( Collection<? extends ClusterMember<?>> members )
+    public static Matcher<Iterable<? extends MemberInfo>> containsMemberAddresses( Collection<? extends ClusterMember> members )
     {
         return containsInAnyOrder( members.stream().map( coreClusterMember ->
                 new TypeSafeMatcher<MemberInfo>()
@@ -138,7 +138,7 @@ public class ClusterOverviewHelper
     }
 
     @SafeVarargs
-    public static Matcher<Iterable<? extends MemberInfo>> containsAllMemberAddresses( Collection<? extends ClusterMember<?>>... members )
+    public static Matcher<Iterable<? extends MemberInfo>> containsAllMemberAddresses( Collection<? extends ClusterMember>... members )
     {
         return containsMemberAddresses( Stream.of( members).flatMap( Collection::stream ).collect( toList() ) );
     }

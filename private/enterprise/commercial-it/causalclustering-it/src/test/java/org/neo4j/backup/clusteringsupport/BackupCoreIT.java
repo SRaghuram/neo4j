@@ -66,7 +66,7 @@ class BackupCoreIT
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
             DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
             File coreDefaultDbBackupDir = new File( coreBackupDir, databaseId.name() );
-            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, databaseId );
+            String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseId );
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );
 
             // Add some new data

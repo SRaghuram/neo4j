@@ -148,7 +148,7 @@ public final class CausalClusteringTestHelpers
 
     private static Server raftServer( CoreClusterMember member )
     {
-        return member.database().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
+        return member.defaultDatabase().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
     }
 
     private static class RaftServerSelectionStrategy implements DependencyResolver.SelectionStrategy

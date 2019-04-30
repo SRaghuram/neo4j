@@ -106,7 +106,7 @@ class CatchupNewReadReplica extends Workload
     {
         try
         {
-            GraphDatabaseAPI database = member.database();
+            GraphDatabaseAPI database = member.defaultDatabase();
             TransactionIdStore txIdStore = database.getDependencyResolver().resolveDependency( TransactionIdStore.class );
             return OptionalLong.of( txIdStore.getLastClosedTransactionId() );
         }

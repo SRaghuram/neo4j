@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.server.rest.causalclustering.CausalClusteringService;
@@ -15,7 +14,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.common.DependencyResolver;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -38,40 +39,33 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     public static final String IS_READ_ONLY_PATH = "/read-only";
 
     private final OutputFormat output;
-    private final boolean notCoreDatabaseType;
+    private final boolean coreDatabaseType;
     private final RoleProvider roleProvider;
 
-    public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context GraphDatabaseService db )
+    public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context Database database )
     {
         this.output = output;
-        if ( db instanceof CoreGraphDatabase )
-        {
-            this.roleProvider = ((CoreGraphDatabase) db).getDependencyResolver().resolveDependency( RoleProvider.class );
-            this.notCoreDatabaseType = false;
-        }
-        else
-        {
-            this.roleProvider = EMPTY_PROVIDER;
-            this.notCoreDatabaseType = true;
-        }
+        DependencyResolver dependencyResolver = database.getGraph().getDependencyResolver();
+        DatabaseInfo databaseInfo = dependencyResolver.resolveDependency( DatabaseInfo.class );
+        coreDatabaseType = DatabaseInfo.CORE.equals( databaseInfo );
+        this.roleProvider = coreDatabaseType ? dependencyResolver.resolveDependency( RoleProvider.class ) : EMPTY_PROVIDER;
     }
 
     @GET
     public Response discover()
     {
-        if ( notCoreDatabaseType )
+        if ( coreDatabaseType )
         {
-            return status( FORBIDDEN ).build();
+            return output.ok( new CoreDatabaseAvailabilityDiscoveryRepresentation( BASE_PATH, IS_WRITABLE_PATH ) );
         }
-
-        return output.ok( new CoreDatabaseAvailabilityDiscoveryRepresentation( BASE_PATH, IS_WRITABLE_PATH ) );
+        return status( FORBIDDEN ).build();
     }
 
     @GET
     @Path( IS_WRITABLE_PATH )
     public Response isWritable()
     {
-        if ( notCoreDatabaseType )
+        if ( !coreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
@@ -88,7 +82,7 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     @Path( IS_READ_ONLY_PATH )
     public Response isReadOnly()
     {
-        if ( notCoreDatabaseType )
+        if ( !coreDatabaseType )
         {
             return status( FORBIDDEN ).build();
         }
@@ -106,12 +100,11 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     @Path( IS_AVAILABLE_PATH )
     public Response isAvailable()
     {
-        if ( notCoreDatabaseType )
+        if ( coreDatabaseType )
         {
-            return status( FORBIDDEN ).build();
+            return positiveResponse();
         }
-
-        return positiveResponse();
+        return status( FORBIDDEN ).build();
     }
 
     @Override

@@ -29,6 +29,7 @@ import org.neo4j.configuration.connectors.HttpConnector.Encryption;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
@@ -40,7 +41,7 @@ import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
+public class ReadReplica implements ClusterMember
 {
     public interface ReadReplicaGraphDatabaseFactory
     {
@@ -55,7 +56,8 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     private final MemberId memberId;
     private final String boltAdvertisedSocketAddress;
     private final Config memberConfig;
-    private ReadReplicaGraphDatabase database;
+    private ReadReplicaGraphDatabase readDatabase;
+    private GraphDatabaseFacade defaultDatabase;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
     private final File databasesDirectory;
@@ -134,25 +136,25 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     @Override
     public void start()
     {
-        database = dbFactory.create( databasesDirectory, memberConfig,
+        readDatabase =  dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId );
-
-        PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
+        defaultDatabase = (GraphDatabaseFacade) readDatabase.getManagementService().database( DEFAULT_DATABASE_NAME );
+        PanicService panicService = defaultDatabase.getDependencyResolver().resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
     @Override
     public void shutdown()
     {
-        if ( database != null )
+        if ( readDatabase != null )
         {
             try
             {
-                database.getManagementService().shutdown();
+                readDatabase.getManagementService().shutdown();
             }
             finally
             {
-                database = null;
+                readDatabase = null;
             }
         }
     }
@@ -160,7 +162,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     @Override
     public boolean isShutdown()
     {
-        return database == null;
+        return readDatabase == null;
     }
 
     @Override
@@ -171,13 +173,13 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
 
     public CatchupPollingProcess txPollingClient()
     {
-        return database.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
+        return defaultDatabase.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
     }
 
     @Override
-    public ReadReplicaGraphDatabase database()
+    public GraphDatabaseFacade defaultDatabase()
     {
-        return database;
+        return defaultDatabase;
     }
 
     @Override

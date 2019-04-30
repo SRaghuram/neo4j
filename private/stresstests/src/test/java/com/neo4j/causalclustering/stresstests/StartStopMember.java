@@ -30,7 +30,7 @@ public class StartStopMember implements WorkOnMember
     @Override
     public void doWorkOnMember( ClusterMember member ) throws Exception
     {
-        DatabaseLayout databaseLayout = member.database().databaseLayout();
+        DatabaseLayout databaseLayout = member.defaultDatabase().databaseLayout();
         log.info( "Stopping: " + member );
         member.shutdown();
 

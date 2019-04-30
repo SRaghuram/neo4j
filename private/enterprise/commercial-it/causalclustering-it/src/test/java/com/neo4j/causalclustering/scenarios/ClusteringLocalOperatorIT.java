@@ -22,7 +22,6 @@ import java.util.Optional;
 
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -72,24 +71,24 @@ class ClusteringLocalOperatorIT
         cluster.allMembers().forEach( member -> assertFalse( databaseContext( member, dbName ).isPresent() ) );
     }
 
-    private LocalOperator localOperator( ClusterMember<? extends GraphDatabaseAPI> member )
+    private LocalOperator localOperator( ClusterMember member )
     {
-        return member.database().getDependencyResolver().resolveDependency( LocalOperator.class );
+        return member.defaultDatabase().getDependencyResolver().resolveDependency( LocalOperator.class );
     }
 
-    private ClusteredDatabaseManager databaseManager( ClusterMember<? extends GraphDatabaseAPI> member )
+    private ClusteredDatabaseManager databaseManager( ClusterMember member )
     {
-        return member.database()
+        return member.defaultDatabase()
                 .getDependencyResolver()
                 .resolveDependency( ClusteredDatabaseManager.class );
     }
 
-    private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember<? extends GraphDatabaseAPI> member, String databaseName )
+    private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember member, String databaseName )
     {
         return databaseManager( member ).getDatabaseContext( new DatabaseId( databaseName ) );
     }
 
-    private DatabaseAvailabilityGuard availabilityGuard( ClusterMember<? extends GraphDatabaseAPI> member, String databaseName )
+    private DatabaseAvailabilityGuard availabilityGuard( ClusterMember member, String databaseName )
     {
         Optional<ClusteredDatabaseContext> optContext = databaseContext( member, databaseName );
         assertTrue( optContext.isPresent() );

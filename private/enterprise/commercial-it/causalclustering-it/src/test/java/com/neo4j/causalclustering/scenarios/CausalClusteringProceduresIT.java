@@ -143,13 +143,13 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private static void testProcedureExistence( String[] procedures, Collection<? extends ClusterMember<?>> members, boolean withContextParameter )
+    private static void testProcedureExistence( String[] procedures, Collection<? extends ClusterMember> members, boolean withContextParameter )
     {
         for ( var procedure : procedures )
         {
             for ( var member : members )
             {
-                try ( var result = invokeProcedure( member.database(), procedure, withContextParameter ) )
+                try ( var result = invokeProcedure( member.defaultDatabase(), procedure, withContextParameter ) )
                 {
                     var records = Iterators.asList( result );
                     assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
@@ -170,11 +170,11 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember<?> member, DatabaseId databaseId )
+    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, DatabaseId databaseId )
     {
         return () ->
         {
-            var db = member.database();
+            var db = member.defaultDatabase();
             try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseId.name() ) ) )
             {
                 return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );

@@ -170,7 +170,7 @@ public class FulltextIndexCausalClusterIT
         MutableLongSet appliedTransactions = new LongHashSet();
         Consumer<ClusterMember> awaitPopulationAndCollectionAppliedTransactionId = member ->
         {
-            GraphDatabaseAPI db = member.database();
+            GraphDatabaseAPI db = member.defaultDatabase();
             try ( Transaction ignore = db.beginTx() )
             {
                 db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
@@ -218,11 +218,11 @@ public class FulltextIndexCausalClusterIT
     {
         for ( CoreClusterMember member : cluster.coreMembers() )
         {
-            verifyIndexContents( member.database(), index, queryString, entityIds, queryNodes );
+            verifyIndexContents( member.defaultDatabase(), index, queryString, entityIds, queryNodes );
         }
         for ( ReadReplica member : cluster.readReplicas() )
         {
-            verifyIndexContents( member.database(), index, queryString, entityIds, queryNodes );
+            verifyIndexContents( member.defaultDatabase(), index, queryString, entityIds, queryNodes );
         }
     }
 

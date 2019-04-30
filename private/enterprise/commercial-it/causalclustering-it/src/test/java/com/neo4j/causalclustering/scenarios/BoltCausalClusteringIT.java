@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
@@ -30,10 +29,8 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.logging.Level;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.internal.logging.JULogging;
 import org.neo4j.driver.v1.AccessMode;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.driver.v1.Config;
@@ -49,6 +46,7 @@ import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.driver.v1.exceptions.SessionExpiredException;
 import org.neo4j.driver.v1.summary.ServerInfo;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -670,7 +668,7 @@ class BoltCausalClusteringIT
 
         ReadReplica replica = cluster.findAnyReadReplica();
 
-        CatchupPollingProcess pollingClient = replica.database().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
+        CatchupPollingProcess pollingClient = replica.defaultDatabase().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
 
         pollingClient.stop();
 
@@ -749,7 +747,7 @@ class BoltCausalClusteringIT
     {
         long deadline = System.currentTimeMillis() + (30 * 1000);
 
-        Role role = getCurrentCoreRole( initialLeader.database() );
+        Role role = getCurrentCoreRole( initialLeader.defaultDatabase() );
         while ( role != Role.FOLLOWER )
         {
             if ( System.currentTimeMillis() > deadline )
@@ -767,13 +765,13 @@ class BoltCausalClusteringIT
             }
             finally
             {
-                role = getCurrentCoreRole( initialLeader.database() );
+                role = getCurrentCoreRole( initialLeader.defaultDatabase() );
                 Thread.sleep( 100 );
             }
         }
     }
 
-    private static Role getCurrentCoreRole( CoreGraphDatabase database )
+    private static Role getCurrentCoreRole( GraphDatabaseFacade database )
     {
         return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }

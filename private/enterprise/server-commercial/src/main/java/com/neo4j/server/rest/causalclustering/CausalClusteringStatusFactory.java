@@ -5,27 +5,27 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.common.DependencyResolver;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 public class CausalClusteringStatusFactory
 {
-    public static CausalClusteringStatus build( OutputFormat output, GraphDatabaseService db )
+    public static CausalClusteringStatus build( OutputFormat output, Database database )
     {
-        if ( db instanceof CoreGraphDatabase )
+        GraphDatabaseFacade databaseFacade = database.getGraph();
+        DependencyResolver dependencyResolver = databaseFacade.getDependencyResolver();
+        DatabaseInfo databaseInfo = dependencyResolver.resolveDependency( DatabaseInfo.class );
+        switch ( databaseInfo )
         {
-            return new CoreStatus( output, (CoreGraphDatabase) db );
-        }
-        else if ( db instanceof ReadReplicaGraphDatabase )
-        {
-            return new ReadReplicaStatus( output, (ReadReplicaGraphDatabase) db );
-        }
-        else
-        {
-            return new NotCausalClustering( output );
+            case CORE:
+                return new CoreStatus( output, databaseFacade );
+            case READ_REPLICA:
+                return new ReadReplicaStatus( output, databaseFacade );
+            default:
+                return new NotCausalClustering( output );
         }
     }
 }

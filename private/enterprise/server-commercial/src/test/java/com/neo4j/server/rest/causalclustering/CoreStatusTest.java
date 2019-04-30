@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
@@ -36,12 +35,15 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
@@ -60,7 +62,7 @@ public class CoreStatusTest
 {
     private CausalClusteringStatus status;
 
-    private CoreGraphDatabase db;
+    private GraphDatabaseFacade databaseFacade;
     private Dependencies dependencyResolver = new Dependencies();
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final FakeClock clock = new FakeClock();
@@ -83,8 +85,10 @@ public class CoreStatusTest
     public void setup() throws Exception
     {
         OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        db = mock( CoreGraphDatabase.class );
-        when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
+        Database database = mock( Database.class );
+        databaseFacade = mock( GraphDatabaseFacade.class );
+        when( database.getGraph() ).thenReturn( databaseFacade );
+        when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
 
         raftMembershipManager = dependencyResolver.satisfyDependency( fakeRaftMembershipManager( new HashSet<>( Arrays.asList( myself, core2, core3 ) ) ) );
 
@@ -94,13 +98,14 @@ public class CoreStatusTest
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );
 
+        dependencyResolver.satisfyDependency( DatabaseInfo.CORE );
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         dependencyResolver.satisfyDependency( JobSchedulerFactory.createInitialisedScheduler() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
-        status = CausalClusteringStatusFactory.build( output, db );
+        status = CausalClusteringStatusFactory.build( output, database );
     }
 
     @Test

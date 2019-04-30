@@ -191,7 +191,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception
     {
         var databaseManager = cluster.awaitLeader()
-                .database()
+                .defaultDatabase()
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 

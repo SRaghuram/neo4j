@@ -180,7 +180,7 @@ public class ClusterIdReuseIT
 
     private <T> T resolveDependency( CoreClusterMember leader, Class<T> clazz )
     {
-        return leader.database().getDependencyResolver().resolveDependency( clazz );
+        return leader.defaultDatabase().getDependencyResolver().resolveDependency( clazz );
     }
 
     private CoreClusterMember removeTwoNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception

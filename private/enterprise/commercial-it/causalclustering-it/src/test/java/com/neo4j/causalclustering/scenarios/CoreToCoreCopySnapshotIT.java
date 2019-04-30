@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
@@ -22,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.time.Clocks;
 
@@ -61,7 +61,7 @@ public class CoreToCoreCopySnapshotIT
         follower.start();
 
         // then
-        assertEquals( DbRepresentation.of( source.database() ), DbRepresentation.of( follower.database() ) );
+        assertEquals( DbRepresentation.of( source.defaultDatabase() ), DbRepresentation.of( follower.defaultDatabase() ) );
     }
 
     @Test
@@ -87,10 +87,10 @@ public class CoreToCoreCopySnapshotIT
 
         int newDbId = 3;
         cluster.addCoreMemberWithId( newDbId ).start();
-        CoreGraphDatabase newDb = cluster.getCoreMemberById( newDbId ).database();
+        GraphDatabaseFacade newDb = cluster.getCoreMemberById( newDbId ).defaultDatabase();
 
         // then
-        assertEquals( DbRepresentation.of( leader.database() ), DbRepresentation.of( newDb ) );
+        assertEquals( DbRepresentation.of( leader.defaultDatabase() ), DbRepresentation.of( newDb ) );
     }
 
     @Test

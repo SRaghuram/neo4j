@@ -85,7 +85,7 @@ public class InstalledProtocolsProcedureIT
                 .toArray( ProtocolInfo[]::new );
 
         assertEventually( "should see outbound installed protocols on core " + leader.serverId(),
-                () -> installedProtocols( leader.database(), OUTBOUND ),
+                () -> installedProtocols( leader.defaultDatabase(), OUTBOUND ),
                 hasItems( expectedProtocolInfos ),
                 60, SECONDS );
     }
@@ -94,7 +94,7 @@ public class InstalledProtocolsProcedureIT
     void shouldSeeInboundInstalledProtocolsOnLeader() throws Throwable
     {
         assertEventually( "should see inbound installed protocols on core " + leader.serverId(),
-                () -> installedProtocols( leader.database(), INBOUND ),
+                () -> installedProtocols( leader.defaultDatabase(), INBOUND ),
                 hasSize( greaterThanOrEqualTo( cluster.coreMembers().size() - 1 ) ),
                 60, SECONDS );
     }

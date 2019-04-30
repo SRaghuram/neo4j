@@ -36,6 +36,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
@@ -46,7 +47,7 @@ import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
+public class CoreClusterMember implements ClusterMember
 {
     public interface CoreGraphDatabaseFactory
     {
@@ -63,7 +64,8 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     private final String boltAdvertisedSocketAddress;
     private final int discoveryPort;
     private final String raftListenAddress;
-    private CoreGraphDatabase database;
+    private CoreGraphDatabase coreGraphDatabase;
+    private GraphDatabaseFacade defaultDatabase;
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
@@ -172,31 +174,32 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     @Override
     public MemberId id()
     {
-        return database.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
+        return defaultDatabase.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
     }
 
     @Override
     public void start()
     {
-        database = dbFactory.create( databasesDirectory, memberConfig,
+        coreGraphDatabase = dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
+        defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
-        PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
+        PanicService panicService = defaultDatabase.getDependencyResolver().resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
     @Override
     public void shutdown()
     {
-        if ( database != null )
+        if ( coreGraphDatabase != null )
         {
             try
             {
-                database.getManagementService().shutdown();
+                coreGraphDatabase.getManagementService().shutdown();
             }
             finally
             {
-                database = null;
+                coreGraphDatabase = null;
             }
         }
     }
@@ -204,7 +207,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     @Override
     public boolean isShutdown()
     {
-        return database == null;
+        return coreGraphDatabase == null;
     }
 
     @Override
@@ -214,9 +217,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     }
 
     @Override
-    public CoreGraphDatabase database()
+    public GraphDatabaseFacade defaultDatabase()
     {
-        return database;
+        return defaultDatabase;
     }
 
     @Override
@@ -227,12 +230,12 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
     public RaftLogPruner raftLogPruner()
     {
-        return database.getDependencyResolver().resolveDependency( RaftLogPruner.class );
+        return defaultDatabase.getDependencyResolver().resolveDependency( RaftLogPruner.class );
     }
 
     public RaftMachine raft()
     {
-        return database.getDependencyResolver().resolveDependency( RaftMachine.class );
+        return defaultDatabase.getDependencyResolver().resolveDependency( RaftMachine.class );
     }
 
     public SortedMap<Long, File> getLogFileNames() throws IOException
@@ -252,7 +255,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     @Override
     public String toString()
     {
-        return "CoreClusterMember{serverId=" + serverId + ", memberId=" + (database == null ? null : id()) + "}";
+        return "CoreClusterMember{serverId=" + serverId + ", memberId=" + (coreGraphDatabase == null ? null : id()) + "}";
     }
 
     @Override
@@ -263,7 +266,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
     public DatabaseId databaseId()
     {
-        return database.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        return defaultDatabase.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
     }
 
     @Override

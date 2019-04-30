@@ -7,8 +7,6 @@ package org.neo4j.io.pagecache.impl.muninn;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -27,6 +25,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.FileIsNotMappedException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -98,14 +97,14 @@ public class VersionContextTrackingIT
         return cluster.coreMembers().iterator().next();
     }
 
-    private CoreGraphDatabase getAnyCore()
+    private GraphDatabaseFacade getAnyCore()
     {
-        return anyCoreClusterMember().database();
+        return anyCoreClusterMember().defaultDatabase();
     }
 
-    private ReadReplicaGraphDatabase getAnyReadReplica()
+    private GraphDatabaseFacade getAnyReadReplica()
     {
-        return cluster.findAnyReadReplica().database();
+        return cluster.findAnyReadReplica().defaultDatabase();
     }
 
     private static long getLatestPageVersion( GraphDatabaseAPI databaseFacade ) throws IOException

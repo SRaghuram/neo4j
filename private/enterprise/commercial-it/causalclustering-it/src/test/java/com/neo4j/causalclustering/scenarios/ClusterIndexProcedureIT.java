@@ -82,8 +82,8 @@ public class ClusterIndexProcedureIT
         cluster.readReplicas().forEach( this::awaitIndexOnline );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.database() ) );
-        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.database() ) );
+        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
     }
 
     @Test
@@ -109,12 +109,12 @@ public class ClusterIndexProcedureIT
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.database() ) );
-        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.database() ) );
+        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
 
         // verify constraints
-        cluster.coreMembers().forEach( core -> verifyConstraints( core.database(), UNIQUENESS ) );
-        cluster.readReplicas().forEach( rr -> verifyConstraints( rr.database(), UNIQUENESS ) );
+        cluster.coreMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), UNIQUENESS ) );
+        cluster.readReplicas().forEach( rr -> verifyConstraints( rr.defaultDatabase(), UNIQUENESS ) );
     }
 
     @Test
@@ -140,17 +140,17 @@ public class ClusterIndexProcedureIT
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.database() ) );
-        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.database() ) );
+        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
 
         // verify node keys
-        cluster.coreMembers().forEach( core -> verifyConstraints( core.database(), NODE_KEY ) );
-        cluster.readReplicas().forEach( rr -> verifyConstraints( rr.database(), NODE_KEY ) );
+        cluster.coreMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), NODE_KEY ) );
+        cluster.readReplicas().forEach( rr -> verifyConstraints( rr.defaultDatabase(), NODE_KEY ) );
     }
 
     private void awaitIndexOnline( ClusterMember member )
     {
-        GraphDatabaseAPI db = member.database();
+        GraphDatabaseAPI db = member.defaultDatabase();
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );

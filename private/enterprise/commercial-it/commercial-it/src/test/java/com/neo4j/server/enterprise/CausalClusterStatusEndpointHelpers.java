@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
@@ -25,6 +24,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.junit.Neo4j;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -77,7 +77,7 @@ class CausalClusterStatusEndpointHelpers
 
     private static Role getCurrentCoreRole( InProcessNeo4j core )
     {
-        return ((CoreGraphDatabase) core.graph()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+        return ((GraphDatabaseFacade) core.graph()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     static Boolean[] availabilityStatuses( URI server )

@@ -61,6 +61,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -134,7 +135,7 @@ public class Cluster
     public Set<CoreClusterMember> healthyCoreMembers()
     {
         return coreMembers.values().stream()
-                .filter( db -> db.database().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
+                .filter( db -> db.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
                 .collect( Collectors.toSet() );
     }
 
@@ -257,7 +258,7 @@ public class Cluster
         } ) ).get() );
     }
 
-    private static <X extends GraphDatabaseAPI, T extends ClusterMember<X>, R> List<Future<R>> invokeAll( String threadName, Collection<T> members,
+    private static <X extends GraphDatabaseAPI, T extends ClusterMember, R> List<Future<R>> invokeAll( String threadName, Collection<T> members,
             Function<T,R> call )
     {
         List<Future<R>> list = new ArrayList<>( members.size() );
@@ -381,7 +382,7 @@ public class Cluster
         List<CoreClusterMember> list = new ArrayList<>();
         for ( CoreClusterMember m : coreMembers.values() )
         {
-            CoreGraphDatabase database = m.database();
+            GraphDatabaseFacade database = m.defaultDatabase();
             if ( database == null )
             {
                 continue;
@@ -398,7 +399,7 @@ public class Cluster
         return list;
     }
 
-    private static Role getCurrentDatabaseRole( CoreGraphDatabase database )
+    private static Role getCurrentDatabaseRole( GraphDatabaseFacade database )
     {
         return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
@@ -456,13 +457,13 @@ public class Cluster
         return coreMembers
                 .values()
                 .stream()
-                .filter( member -> member.database() != null )
+                .filter( member -> member.defaultDatabase() != null )
                 .filter( member -> !member.hasPanicked() )
                 .findAny()
                 .map( coreClusterMember ->
                 {
                     CoreTopologyService coreTopologyService =
-                            coreClusterMember.database().getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                            coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CoreTopologyService.class );
                     return topologySelector.apply( coreTopologyService ).members().size();
                 } )
                 .orElse( 0 );
@@ -471,7 +472,7 @@ public class Cluster
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
+    public CoreClusterMember coreTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
         var databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return coreTx( databaseId, op );
@@ -480,7 +481,7 @@ public class Cluster
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<CoreGraphDatabase,Transaction> op ) throws Exception
+    public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
         return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
     }
@@ -489,13 +490,13 @@ public class Cluster
      * Perform a transaction against the leader of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember leaderTx( DatabaseId databaseId, BiConsumer<CoreGraphDatabase,Transaction> op, int timeout, TimeUnit timeUnit )
+    private CoreClusterMember leaderTx( DatabaseId databaseId, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
         {
             CoreClusterMember member = awaitLeader( databaseId, timeout, timeUnit );
-            CoreGraphDatabase db = member.database();
+            GraphDatabaseFacade db = member.defaultDatabase();
             if ( db == null )
             {
                 throw new DatabaseShutdownException();
@@ -695,8 +696,8 @@ public class Cluster
                     try
                     {
                         // We recalculate the DbRepresentation of both source and target, so changes can be picked up
-                        DbRepresentation representationToLookLike = DbRepresentation.of( memberToLookLike.database() );
-                        DbRepresentation representationThatChanges = DbRepresentation.of( memberThatChanges.database() );
+                        DbRepresentation representationToLookLike = DbRepresentation.of( memberToLookLike.defaultDatabase() );
+                        DbRepresentation representationThatChanges = DbRepresentation.of( memberThatChanges.defaultDatabase() );
                         return representationToLookLike.equals( representationThatChanges );
                     }
                     catch ( DatabaseShutdownException e )
@@ -716,7 +717,7 @@ public class Cluster
     public static <T extends ClusterMember> void dataMatchesEventually( ClusterMember source, Collection<T> targets )
             throws TimeoutException
     {
-        dataMatchesEventually( DbRepresentation.of( source.database() ), targets );
+        dataMatchesEventually( DbRepresentation.of( source.defaultDatabase() ), targets );
     }
 
     /**
@@ -734,7 +735,7 @@ public class Cluster
         {
             await( () ->
             {
-                DbRepresentation representation = DbRepresentation.of( targetDB.database() );
+                DbRepresentation representation = DbRepresentation.of( targetDB.defaultDatabase() );
                 return source.equals( representation );
             }, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
@@ -776,7 +777,7 @@ public class Cluster
         return Optional.of( list.get( ordinal ) );
     }
 
-    public Stream<ClusterMember<?>> allMembers()
+    public Stream<ClusterMember> allMembers()
     {
         return Stream.concat( coreMembers.values().stream(), readReplicas.values().stream() );
     }

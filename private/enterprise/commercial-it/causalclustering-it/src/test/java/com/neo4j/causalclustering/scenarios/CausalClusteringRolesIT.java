@@ -30,7 +30,7 @@ public class CausalClusteringRolesIT
     {
         // given
         Cluster cluster = clusterRule.startCluster();
-        GraphDatabaseService db = cluster.findAnyReadReplica().database();
+        GraphDatabaseService db = cluster.findAnyReadReplica().defaultDatabase();
         Transaction tx = db.beginTx();
 
         // then

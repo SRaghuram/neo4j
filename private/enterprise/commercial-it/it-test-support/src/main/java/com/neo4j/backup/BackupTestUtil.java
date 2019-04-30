@@ -8,7 +8,6 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +26,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
@@ -42,18 +42,18 @@ public class BackupTestUtil
 {
     public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, DatabaseId databaseId ) throws Exception
     {
-        String[] args = backupArguments( backupAddress( core.database() ), baseBackupDir, databaseId );
+        String[] args = backupArguments( backupAddress( core.defaultDatabase() ), baseBackupDir, databaseId );
         assertThat( runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ), equalTo( 0 ) );
         return new File( baseBackupDir, databaseId.name() );
     }
 
-    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember<?> clusterMember ) throws IOException, CommandFailed
+    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException, CommandFailed
     {
         restoreFromBackup( backup, fsa, clusterMember, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
-            ClusterMember<?> clusterMember, DatabaseId databaseId ) throws IOException, CommandFailed
+            ClusterMember clusterMember, DatabaseId databaseId ) throws IOException, CommandFailed
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
                 .withSetting( GraphDatabaseSettings.default_database, databaseId.name() )
@@ -63,14 +63,14 @@ public class BackupTestUtil
         restoreDatabaseCommand.execute();
     }
 
-    public static CoreGraphDatabase createSomeData( Cluster cluster ) throws Exception
+    public static GraphDatabaseFacade createSomeData( Cluster cluster ) throws Exception
     {
         return cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.success();
-        } ).database();
+        } ).defaultDatabase();
     }
 
     public static String[] backupArguments( String from, File backupsDir, DatabaseId databaseId )

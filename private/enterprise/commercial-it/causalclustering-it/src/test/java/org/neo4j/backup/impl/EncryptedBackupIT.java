@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
@@ -330,7 +329,7 @@ class EncryptedBackupIT
             assertEquals( 0, exitCode );
 
             // and data matches
-            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ),
+            assertEquals( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ),
                     DbRepresentation.of( DatabaseLayout.of( backupHome, DEFAULT_DATABASE_NAME ) ) );
         }
 

@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -19,6 +18,7 @@ import javax.ws.rs.core.Response;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -37,7 +37,7 @@ class ReadReplicaStatus extends BaseStatus
     private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
 
-    ReadReplicaStatus( OutputFormat output, ReadReplicaGraphDatabase db )
+    ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI db )
     {
         super( output );
         this.output = output;

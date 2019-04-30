@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
@@ -24,6 +23,8 @@ import java.util.Objects;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -44,12 +45,12 @@ class CoreStatus extends BaseStatus
     private final ThroughputMonitor throughputMonitor;
     private final RoleProvider roleProvider;
 
-    CoreStatus( OutputFormat output, CoreGraphDatabase db )
+    CoreStatus( OutputFormat output, GraphDatabaseService databaseService )
     {
         super( output );
         this.output = output;
 
-        DependencyResolver dependencyResolver = db.getDependencyResolver();
+        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) databaseService).getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
         this.databaseHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );

@@ -6,8 +6,6 @@
 package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -22,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Settings;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
@@ -72,9 +71,9 @@ class BackupReadReplicaIT
     void makeSureBackupCanBePerformed() throws Throwable
     {
         // Run backup
-        CoreGraphDatabase leader = createSomeData( cluster );
+        GraphDatabaseFacade leader = createSomeData( cluster );
 
-        ReadReplicaGraphDatabase readReplica = cluster.findAnyReadReplica().database();
+        GraphDatabaseFacade readReplica = cluster.findAnyReadReplica().defaultDatabase();
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( leader, readReplica ), 1, TimeUnit.MINUTES );
 
@@ -93,7 +92,7 @@ class BackupReadReplicaIT
         assertNotEquals( backupRepresentation, afterChange );
     }
 
-    private static boolean readReplicasUpToDateAsTheLeader( CoreGraphDatabase leader, ReadReplicaGraphDatabase readReplica )
+    private static boolean readReplicasUpToDateAsTheLeader( GraphDatabaseFacade leader, GraphDatabaseFacade readReplica )
     {
         long leaderTxId = leader.getDependencyResolver().resolveDependency( TransactionIdStore.class )
                 .getLastClosedTransactionId();

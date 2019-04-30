@@ -49,9 +49,9 @@ public class ClusterCustomLogLocationIT
         Collection<CoreClusterMember> coreClusterMembers = cluster.coreMembers();
         for ( CoreClusterMember coreClusterMember : coreClusterMembers )
         {
-            DependencyResolver dependencyResolver = coreClusterMember.database().getDependencyResolver();
+            DependencyResolver dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), coreClusterMember.database().databaseLayout().getDatabaseName() );
+            assertEquals( logFiles.logFilesDirectory().getName(), coreClusterMember.defaultDatabase().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseLayout(), dependencyResolver );
@@ -61,9 +61,9 @@ public class ClusterCustomLogLocationIT
         for ( ReadReplica readReplica : readReplicas )
         {
             readReplica.txPollingClient().upToDateFuture().get();
-            DependencyResolver dependencyResolver = readReplica.database().getDependencyResolver();
+            DependencyResolver dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), readReplica.database().databaseLayout().getDatabaseName() );
+            assertEquals( logFiles.logFilesDirectory().getName(), readReplica.defaultDatabase().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( readReplica.databaseLayout(), dependencyResolver );

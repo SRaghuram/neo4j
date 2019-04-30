@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -25,6 +24,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,8 +53,8 @@ public class ClusterFormationIT
     void shouldSupportBuiltInProcedures()
     {
         Stream.concat(
-            cluster.readReplicas().stream().map( ReadReplica::database),
-            cluster.coreMembers().stream().map(CoreClusterMember::database)
+            cluster.readReplicas().stream().map( ReadReplica::defaultDatabase ),
+            cluster.coreMembers().stream().map(CoreClusterMember::defaultDatabase )
         ).forEach( gdb ->
         {
             // (1) BuiltInProcedures from community
@@ -105,7 +105,7 @@ public class ClusterFormationIT
     {
         // given
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        CoreGraphDatabase leader = cluster.awaitLeader().database();
+        GraphDatabaseFacade leader = cluster.awaitLeader().defaultDatabase();
         executorService.submit( () ->
         {
             try ( Transaction tx = leader.beginTx() )

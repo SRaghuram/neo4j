@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -32,6 +31,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
@@ -98,7 +98,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
+        GraphDatabaseFacade follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).defaultDatabase();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -113,7 +113,7 @@ class CoreReplicationIT
     {
         // Given initial pin counts on all members
         Function<CoreClusterMember,PageCacheCounters> getPageCacheCounters =
-                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
+                ccm -> ccm.defaultDatabase().getDependencyResolver().resolveDependency( PageCacheCounters.class );
         List<PageCacheCounters> countersList = cluster.coreMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
 
@@ -153,7 +153,7 @@ class CoreReplicationIT
         // given
         cluster.awaitLeader();
 
-        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
+        GraphDatabaseFacade follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).defaultDatabase();
 
         // when
         try ( Transaction tx = follower.beginTx() )
@@ -177,7 +177,7 @@ class CoreReplicationIT
         awaitForDataToBeApplied( leader );
         dataMatchesEventually( leader, cluster.coreMembers() );
 
-        CoreGraphDatabase follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).database();
+        GraphDatabaseFacade follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).defaultDatabase();
 
         // when
         try ( Transaction tx = follower.beginTx();

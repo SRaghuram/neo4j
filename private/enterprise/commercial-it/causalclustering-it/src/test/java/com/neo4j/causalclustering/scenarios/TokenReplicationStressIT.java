@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -40,6 +39,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
@@ -127,7 +127,7 @@ class TokenReplicationStressIT
         while ( !stop.get() )
         {
             CoreClusterMember leader = awaitLeader( cluster );
-            GraphDatabaseService db = leader.database();
+            GraphDatabaseService db = leader.defaultDatabase();
 
             // transaction that creates a lot of new tokens
             try ( Transaction tx = db.beginTx() )
@@ -291,7 +291,7 @@ class TokenReplicationStressIT
 
     private static <T> List<T> allTokens( CoreClusterMember member, TokenAccess<T> tokenAccess )
     {
-        CoreGraphDatabase db = member.database();
+        GraphDatabaseFacade db = member.defaultDatabase();
         try ( Transaction ignore = db.beginTx() )
         {
             KernelTransaction kernelTx = currentKernelTx( member );
@@ -316,7 +316,7 @@ class TokenReplicationStressIT
 
     private static KernelTransaction currentKernelTx( CoreClusterMember member )
     {
-        ThreadToStatementContextBridge bridge = member.database().getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        ThreadToStatementContextBridge bridge = member.defaultDatabase().getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         return bridge.getKernelTransactionBoundToThisThread( true );
     }
 }

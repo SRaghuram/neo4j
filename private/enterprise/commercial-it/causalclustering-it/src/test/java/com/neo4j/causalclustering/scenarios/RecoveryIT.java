@@ -88,7 +88,7 @@ public class RecoveryIT
 
     private static DbRepresentation dbRepresentation( CoreClusterMember member )
     {
-        return  DbRepresentation.of( member.database() );
+        return  DbRepresentation.of( member.defaultDatabase() );
     }
 
     private static void assertConsistent( DatabaseLayout databaseLayout )

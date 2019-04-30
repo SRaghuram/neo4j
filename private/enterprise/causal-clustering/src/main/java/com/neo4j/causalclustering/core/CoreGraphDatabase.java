@@ -15,11 +15,9 @@ import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
-public class CoreGraphDatabase extends GraphDatabaseFacade
+public class CoreGraphDatabase
 {
-
     private final DatabaseManagementService managementService;
 
     public interface CoreEditionModuleFactory

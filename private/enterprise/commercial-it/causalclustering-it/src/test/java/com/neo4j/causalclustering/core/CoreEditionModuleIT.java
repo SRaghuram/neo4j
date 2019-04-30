@@ -36,7 +36,7 @@ public class CoreEditionModuleIT
     {
         Cluster cluster = clusterRule.startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
-        DependencyResolver dependencyResolver = leader.database().getDependencyResolver();
+        DependencyResolver dependencyResolver = leader.defaultDatabase().getDependencyResolver();
 
         IdController idController = dependencyResolver.resolveDependency( IdController.class );
         IdGeneratorFactory idGeneratorFactory = dependencyResolver.resolveDependency( IdGeneratorFactory.class );

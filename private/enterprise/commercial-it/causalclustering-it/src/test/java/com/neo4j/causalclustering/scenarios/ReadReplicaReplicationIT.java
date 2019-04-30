@@ -11,13 +11,11 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.hamcrest.Matchers;
@@ -111,7 +109,7 @@ public class ReadReplicaReplicationIT
         // given
         Cluster cluster = clusterRule.startCluster();
 
-        ReadReplicaGraphDatabase readReplica = cluster.findAnyReadReplica().database();
+        GraphDatabaseFacade readReplica = cluster.findAnyReadReplica().defaultDatabase();
 
         // when
         try ( Transaction tx = readReplica.beginTx() )
@@ -137,7 +135,7 @@ public class ReadReplicaReplicationIT
         // then
         for ( final ReadReplica readReplica : cluster.readReplicas() )
         {
-            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.database().isAvailable( 0 );
+            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
         }
     }
@@ -181,7 +179,7 @@ public class ReadReplicaReplicationIT
         // then
         for ( final ReadReplica server : cluster.readReplicas() )
         {
-            GraphDatabaseService readReplica = server.database();
+            GraphDatabaseService readReplica = server.defaultDatabase();
             try ( Transaction tx = readReplica.beginTx() )
             {
                 ThrowingSupplier<Long,Exception> nodeCount = () -> count( readReplica.getAllNodes() );
@@ -223,7 +221,7 @@ public class ReadReplicaReplicationIT
         // Get a read replica and make sure that it is operational
         ReadReplica readReplica = cluster.addReadReplicaWithId( 4 );
         readReplica.start();
-        readReplica.database().beginTx().close();
+        readReplica.defaultDatabase().beginTx().close();
 
         // Change the store id, so it should fail to join the cluster again
         changeStoreId( readReplica );
@@ -266,7 +264,7 @@ public class ReadReplicaReplicationIT
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
-        Function<ClusterMember,DbRepresentation> toRep = db -> DbRepresentation.of( db.database() );
+        Function<ClusterMember,DbRepresentation> toRep = db -> DbRepresentation.of( db.defaultDatabase() );
         Set<DbRepresentation> dbs = cluster.coreMembers().stream().map( toRep ).collect( toSet() );
         dbs.addAll( cluster.readReplicas().stream().map( toRep ).collect( toSet() ) );
 
@@ -288,7 +286,7 @@ public class ReadReplicaReplicationIT
         // then
         for ( final ReadReplica readReplica : cluster.readReplicas() )
         {
-            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.database().isAvailable( 0 );
+            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
         }
     }
@@ -326,8 +324,8 @@ public class ReadReplicaReplicationIT
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
         assertEventually( "The read replica has the same data as the core members",
-                () -> DbRepresentation.of( readReplica.database() ),
-                equalTo( DbRepresentation.of( cluster.awaitLeader().database() ) ), 10, TimeUnit.SECONDS );
+                () -> DbRepresentation.of( readReplica.defaultDatabase() ),
+                equalTo( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -365,8 +363,8 @@ public class ReadReplicaReplicationIT
 
         // then
         assertEventually( "The read replica has the same data as the core members",
-                () -> DbRepresentation.of( readReplica.database() ),
-                equalTo( DbRepresentation.of( cluster.awaitLeader().database() ) ), 10, TimeUnit.SECONDS );
+                () -> DbRepresentation.of( readReplica.defaultDatabase() ),
+                equalTo( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -375,7 +373,7 @@ public class ReadReplicaReplicationIT
         // given
         Cluster cluster = clusterRule.startCluster();
 
-        ReadReplicaGraphDatabase readReplicaGraphDatabase = cluster.findAnyReadReplica().database();
+        GraphDatabaseFacade readReplicaGraphDatabase = cluster.findAnyReadReplica().defaultDatabase();
         CatchupPollingProcess pollingClient = readReplicaGraphDatabase.getDependencyResolver()
                 .resolveDependency( CatchupPollingProcess.class );
         pollingClient.stop();
@@ -386,7 +384,7 @@ public class ReadReplicaReplicationIT
             transaction.success();
         } );
 
-        CoreGraphDatabase leaderDatabase = cluster.awaitLeader().database();
+        GraphDatabaseFacade leaderDatabase = cluster.awaitLeader().defaultDatabase();
         long transactionVisibleOnLeader = transactionIdTracker( leaderDatabase ).newestEncounteredTxId();
 
         // when the poller is paused, transaction doesn't make it to the read replica
@@ -416,13 +414,13 @@ public class ReadReplicaReplicationIT
 
     private static LogFiles physicalLogFiles( ClusterMember clusterMember )
     {
-        return clusterMember.database().getDependencyResolver().resolveDependency( LogFiles.class );
+        return clusterMember.defaultDatabase().getDependencyResolver().resolveDependency( LogFiles.class );
     }
 
     private static boolean readReplicasUpToDateAsTheLeader( CoreClusterMember leader, Collection<ReadReplica> readReplicas )
     {
-        long leaderTxId = lastClosedTransactionId( true, leader.database() );
-        return readReplicas.stream().map( ReadReplica::database )
+        long leaderTxId = lastClosedTransactionId( true, leader.defaultDatabase() );
+        return readReplicas.stream().map( ReadReplica::defaultDatabase )
                 .map( db -> lastClosedTransactionId( false, db ) )
                 .reduce( true, ( acc, txId ) -> acc && txId == leaderTxId, Boolean::logicalAnd );
     }
@@ -430,7 +428,7 @@ public class ReadReplicaReplicationIT
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
         File neoStoreFile = replica.databaseLayout().metadataStore();
-        PageCache pageCache = replica.database().getDependencyResolver().resolveDependency( PageCache.class );
+        PageCache pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
     }
 
@@ -524,7 +522,7 @@ public class ReadReplicaReplicationIT
         // then
         for ( final ReadReplica readReplica : cluster.readReplicas() )
         {
-            assertEventually( "read replica available", () -> readReplica.database().isAvailable( 0 ), is( true ), 10,
+            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), is( true ), 10,
                     SECONDS );
         }
     }
@@ -544,7 +542,7 @@ public class ReadReplicaReplicationIT
         // Given initial pin counts on all members
         Cluster cluster = clusterRule.startCluster();
         Function<ReadReplica,PageCacheCounters> getPageCacheCounters =
-                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
+                ccm -> ccm.defaultDatabase().getDependencyResolver().resolveDependency( PageCacheCounters.class );
         List<PageCacheCounters> countersList =
                 cluster.readReplicas().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();

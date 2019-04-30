@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -17,6 +16,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
@@ -93,7 +93,7 @@ public class DataCreator
 
     public static long countNodes( CoreClusterMember member )
     {
-        CoreGraphDatabase db = member.database();
+        GraphDatabaseFacade db = member.defaultDatabase();
         long count;
         try ( Transaction tx = db.beginTx() )
         {

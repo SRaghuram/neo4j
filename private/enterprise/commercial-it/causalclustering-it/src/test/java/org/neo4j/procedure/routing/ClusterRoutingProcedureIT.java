@@ -85,7 +85,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         String unknownDatabaseName = "non_existing_core_database";
 
         assertAll( cluster.coreMembers().stream().map( core ->
-                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, core.database() ) ) );
+                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, core.defaultDatabase() ) ) );
     }
 
     @Test
@@ -94,7 +94,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         String unknownDatabaseName = "non_existing_replica_database";
 
         assertAll( cluster.readReplicas().stream().map( readReplica ->
-                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, readReplica.database() ) ) );
+                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, readReplica.defaultDatabase() ) ) );
     }
 
     @Test
@@ -149,11 +149,11 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
 
             if ( databaseName != null )
             {
-                assertRoutingProceduresAvailable( databaseName, coreMember.database(), expectedResult );
+                assertRoutingProceduresAvailable( databaseName, coreMember.defaultDatabase(), expectedResult );
             }
             else
             {
-                assertRoutingProceduresAvailable( coreMember.database(), expectedResult );
+                assertRoutingProceduresAvailable( coreMember.defaultDatabase(), expectedResult );
             }
         };
     }
@@ -174,16 +174,16 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
 
             if ( databaseName != null )
             {
-                assertRoutingProceduresAvailable( databaseName, readReplica.database(), expectedResult );
+                assertRoutingProceduresAvailable( databaseName, readReplica.defaultDatabase(), expectedResult );
             }
             else
             {
-                assertRoutingProceduresAvailable( readReplica.database(), expectedResult );
+                assertRoutingProceduresAvailable( readReplica.defaultDatabase(), expectedResult );
             }
         };
     }
 
-    private AdvertisedSocketAddress boltAddress( ClusterMember<?> member )
+    private AdvertisedSocketAddress boltAddress( ClusterMember member )
     {
         return socketAddress( member.boltAdvertisedAddress(), AdvertisedSocketAddress::new );
     }

@@ -82,7 +82,7 @@ class AdminToolCausalClusterBackupIT
 
         assertEquals( 0, exitCode );
 
-        DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.database() );
+        DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.defaultDatabase() );
         DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupDir, DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }

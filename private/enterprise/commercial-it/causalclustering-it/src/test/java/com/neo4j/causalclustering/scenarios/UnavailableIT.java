@@ -41,11 +41,11 @@ public class UnavailableIT
         ClusterMember member = cluster.getCoreMemberById( 1 );
 
         // when
-        member.database().getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class )
+        member.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class )
                 .require( () -> "Not doing long operation" );
 
         // then
-        try ( Transaction tx = member.database().beginTx() )
+        try ( Transaction tx = member.defaultDatabase().beginTx() )
         {
             tx.success();
             fail();
@@ -63,7 +63,7 @@ public class UnavailableIT
         ClusterMember member = cluster.getCoreMemberById( 1 );
 
         // when
-        GraphDatabaseAPI db = member.database();
+        GraphDatabaseAPI db = member.defaultDatabase();
         member.shutdown();
 
         // then

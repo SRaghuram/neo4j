@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
@@ -28,6 +27,7 @@ import java.util.function.IntFunction;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -89,7 +89,7 @@ public class ServerGroupsIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            assertEventually( core + " should have groups", () -> getServerGroups( core.database() ),
+            assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new GroupsMatcher( expected ), 30, SECONDS );
         }
 
@@ -108,7 +108,7 @@ public class ServerGroupsIT
         // then
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            assertEventually( core + " should have groups", () -> getServerGroups( core.database() ),
+            assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new GroupsMatcher( expected ), 30, SECONDS );
         }
     }
@@ -175,7 +175,7 @@ public class ServerGroupsIT
         return asList( format( "replica-%d-%s", id, suffix ), "replica" );
     }
 
-    private List<List<String>> getServerGroups( CoreGraphDatabase db )
+    private List<List<String>> getServerGroups( GraphDatabaseFacade db )
     {
         List<List<String>> serverGroups = new ArrayList<>();
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )

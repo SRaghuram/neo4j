@@ -68,7 +68,7 @@ public class ReadReplicaToReadReplicaCatchupIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            coreClusterMember.database().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().stop();
+            coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().stop();
         }
 
         // when
@@ -135,7 +135,7 @@ public class ReadReplicaToReadReplicaCatchupIT
     {
         for ( final ReadReplica server : cluster.readReplicas() )
         {
-            GraphDatabaseService readReplica = server.database();
+            GraphDatabaseService readReplica = server.defaultDatabase();
             try ( Transaction tx = readReplica.beginTx() )
             {
                 ThrowingSupplier<Long,Exception> nodeCount = () -> count( readReplica.getAllNodes() );

@@ -263,7 +263,7 @@ abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ) ), leader );
 
-            List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
+            List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.defaultDatabase() );
 
             CausalClusteringTestHelpers.forceReelection( cluster );
 

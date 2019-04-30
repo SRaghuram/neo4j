@@ -99,7 +99,7 @@ class OnlineBackupCommandCcIT
     void backupCanBePerformedOverCcWithCustomPort( String recordFormat ) throws Exception
     {
         Cluster cluster = startCluster( recordFormat );
-        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().database() );
+        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().defaultDatabase() );
 
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
         assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
@@ -178,7 +178,7 @@ class OnlineBackupCommandCcIT
     {
         // given
         Cluster cluster = startCluster( recordFormat );
-        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().database() );
+        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().defaultDatabase() );
 
         // when
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
@@ -194,7 +194,7 @@ class OnlineBackupCommandCcIT
         // given
         Cluster cluster = startCluster( recordFormat );
         createIndexes( cluster );
-        String customAddress = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().database() );
+        String customAddress = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().defaultDatabase() );
 
         // when
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
@@ -268,7 +268,7 @@ class OnlineBackupCommandCcIT
 
         // and we have a full backup
         File backupDir = testDirectory.directory( "backups", "backupName-" + recordFormat );
-        String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().database() );
+        String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().defaultDatabase() );
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
                 "--cc-report-dir=" + backupDir,
@@ -303,16 +303,16 @@ class OnlineBackupCommandCcIT
     {
         // given a prexisting backup from a different store
         Cluster cluster1 = startCluster( recordFormat );
-        String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster1.awaitLeader().database() );
+        String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster1.awaitLeader().defaultDatabase() );
 
         assertEquals( 0, runBackupToolAndGetExitCode( firstBackupAddress, DEFAULT_DATABASE_NAME ) );
         DbRepresentation firstDatabaseRepresentation = leaderDbRepresentation( cluster1 );
 
         // and a different database
         Cluster cluster2 = startSecondCluster( recordFormat );
-        DbRepresentation secondDatabaseRepresentation = DbRepresentation.of( cluster2.awaitLeader().database() );
+        DbRepresentation secondDatabaseRepresentation = DbRepresentation.of( cluster2.awaitLeader().defaultDatabase() );
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
-        String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster2.awaitLeader().database() );
+        String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster2.awaitLeader().defaultDatabase() );
 
         // when backup is performed
         assertEquals( 0, runBackupToolAndGetExitCode( secondBackupAddress, DEFAULT_DATABASE_NAME ) );
@@ -359,7 +359,7 @@ class OnlineBackupCommandCcIT
 
     private static DbRepresentation leaderDbRepresentation( Cluster cluster ) throws Exception
     {
-        return DbRepresentation.of( cluster.awaitLeader().database() );
+        return DbRepresentation.of( cluster.awaitLeader().defaultDatabase() );
     }
 
     private Cluster startCluster( String recordFormat ) throws Exception

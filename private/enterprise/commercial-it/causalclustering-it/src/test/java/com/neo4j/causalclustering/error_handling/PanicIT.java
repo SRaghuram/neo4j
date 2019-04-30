@@ -111,7 +111,7 @@ class PanicIT
         @Override
         PanicService panicService()
         {
-            return cluster.getCoreMemberById( instnaceNr() ).database().getDependencyResolver().resolveDependency( PanicService.class );
+            return cluster.getCoreMemberById( instnaceNr() ).defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
         }
     }
 
@@ -138,7 +138,7 @@ class PanicIT
         @Override
         PanicService panicService()
         {
-            return cluster.getReadReplicaById( instnaceNr() ).database().getDependencyResolver().resolveDependency( PanicService.class );
+            return cluster.getReadReplicaById( instnaceNr() ).defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
         }
     }
 

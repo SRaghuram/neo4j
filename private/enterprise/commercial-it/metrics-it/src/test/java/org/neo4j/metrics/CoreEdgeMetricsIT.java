@@ -81,12 +81,12 @@ public class CoreEdgeMetricsIT
         // then
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
-            assertAllNodesVisible( db.database() );
+            assertAllNodesVisible( db.defaultDatabase() );
         }
 
         for ( ReadReplica db : cluster.readReplicas() )
         {
-            assertAllNodesVisible( db.database() );
+            assertAllNodesVisible( db.defaultDatabase() );
         }
 
         File coreMetricsDir = new File( coreMember.homeDir(), csvPath.getDefaultValue() );

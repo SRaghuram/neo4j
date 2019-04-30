@@ -28,8 +28,9 @@ import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -37,6 +38,7 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
@@ -70,8 +72,11 @@ class ReadReplicaStatusTest
     void setup() throws Exception
     {
         OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        ReadReplicaGraphDatabase db = mock( ReadReplicaGraphDatabase.class );
+        Database database = mock( Database.class );
+        GraphDatabaseFacade db = mock( GraphDatabaseFacade.class );
+        when( database.getGraph() ).thenReturn( db );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
+        dependencyResolver.satisfyDependency( DatabaseInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         dependencyResolver.satisfyDependency( jobScheduler );
@@ -83,11 +88,11 @@ class ReadReplicaStatusTest
         dependencyResolver.satisfyDependency(
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
-        Database database = mock( Database.class );
-        when( database.getDatabaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
-        dependencyResolver.satisfyDependency( database );
+        org.neo4j.kernel.database.Database internalDatabase = mock( org.neo4j.kernel.database.Database.class );
+        when( internalDatabase.getDatabaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        dependencyResolver.satisfyDependency( internalDatabase );
 
-        status = CausalClusteringStatusFactory.build( output, db );
+        status = CausalClusteringStatusFactory.build( output, database );
     }
 
     @Test

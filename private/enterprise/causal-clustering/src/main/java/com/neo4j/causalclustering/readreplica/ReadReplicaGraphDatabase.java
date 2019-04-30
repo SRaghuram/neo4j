@@ -20,12 +20,11 @@ import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
-public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
+public class ReadReplicaGraphDatabase
 {
 
-    private DatabaseManagementService managementService;
+    private final DatabaseManagementService managementService;
 
     public interface ReadReplicaEditionModuleFactory
     {

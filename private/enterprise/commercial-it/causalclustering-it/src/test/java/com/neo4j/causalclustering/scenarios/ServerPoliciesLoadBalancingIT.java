@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
@@ -41,6 +40,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.ParameterNames;
@@ -163,7 +163,7 @@ class ServerPoliciesLoadBalancingIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            CoreGraphDatabase db = core.database();
+            GraphDatabaseFacade db = core.defaultDatabase();
 
             assertThat( getServers( db, policyContext( "default" ) ), new SpecificReplicasMatcher( 0, 1 ) );
             assertThat( getServers( db, policyContext( "policy_one_two" ) ), new SpecificReplicasMatcher( 1, 2 ) );
@@ -201,7 +201,7 @@ class ServerPoliciesLoadBalancingIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            CoreGraphDatabase db = core.database();
+            GraphDatabaseFacade db = core.defaultDatabase();
 
             assertThat( getServers( db, policyContext( "evens" ) ),
                     new RouterPartialOrderMatcher( false, asSet( 2 ), asSet( 1, 3 ) ) );
@@ -243,17 +243,17 @@ class ServerPoliciesLoadBalancingIT
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            if ( core.database() == null )
+            if ( core.defaultDatabase() == null )
             {
                 // this core is shutdown
                 continue;
             }
 
-            assertEventually( matcher, () -> getServers( core.database(), context ) );
+            assertEventually( matcher, () -> getServers( core.defaultDatabase(), context ) );
         }
     }
 
-    private static RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
+    private static RoutingResult getServers( GraphDatabaseFacade db, Map<String,String> context )
     {
         RoutingResult lbResult = null;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )

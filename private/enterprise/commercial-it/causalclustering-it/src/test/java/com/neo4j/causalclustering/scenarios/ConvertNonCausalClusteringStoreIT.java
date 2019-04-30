@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -28,6 +27,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.rule.TestDirectory;
@@ -92,7 +92,7 @@ public class ConvertNonCausalClusteringStoreIT
         // then
         for ( final CoreClusterMember server : cluster.coreMembers() )
         {
-            CoreGraphDatabase db = server.database();
+            GraphDatabaseFacade db = server.defaultDatabase();
 
             try ( Transaction tx = db.beginTx() )
             {

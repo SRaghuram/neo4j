@@ -82,7 +82,7 @@ class ClusterDiscoveryIT
 
     private static void verifyServersDiscovery( Cluster cluster, CoreClusterMember coreMember, boolean expectFollowersAsReadEndPoints ) throws Exception
     {
-        List<Map<String,Object>> members = getMembers( coreMember.database() );
+        List<Map<String,Object>> members = getMembers( coreMember.defaultDatabase() );
 
         Set<String> expectedWriteEndpoints = expectedWriteEndpoints( cluster );
         Set<String> expectedReadEndpoints = expectedReadEndpoints( cluster, expectFollowersAsReadEndPoints );
@@ -101,11 +101,11 @@ class ClusterDiscoveryIT
 
     private static Set<String> expectedReadEndpoints( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws TimeoutException
     {
-        ClusterMember<?> leader = cluster.awaitLeader();
-        Stream<ClusterMember<?>> cores = cluster.coreMembers().stream().map( identity() );
-        Stream<ClusterMember<?>> readReplicas = cluster.readReplicas().stream().map( identity() );
+        ClusterMember leader = cluster.awaitLeader();
+        Stream<ClusterMember> cores = cluster.coreMembers().stream().map( identity() );
+        Stream<ClusterMember> readReplicas = cluster.readReplicas().stream().map( identity() );
 
-        Stream<ClusterMember<?>> members = expectFollowersAsReadEndPoints ? Stream.concat( cores, readReplicas ) : readReplicas;
+        Stream<ClusterMember> members = expectFollowersAsReadEndPoints ? Stream.concat( cores, readReplicas ) : readReplicas;
 
         return members.filter( member -> !leader.equals( member ) )
                 .map( ClusterMember::boltAdvertisedAddress )
@@ -122,7 +122,7 @@ class ClusterDiscoveryIT
 
     private static void verifyServersDiscovery( ReadReplica readReplica ) throws Exception
     {
-        List<Map<String,Object>> members = getMembers( readReplica.database() );
+        List<Map<String,Object>> members = getMembers( readReplica.defaultDatabase() );
 
         assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, READ ) );
         assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, ROUTE ) );
