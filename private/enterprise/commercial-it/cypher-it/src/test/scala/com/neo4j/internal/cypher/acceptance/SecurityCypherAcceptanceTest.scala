@@ -5,19 +5,29 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.time.Duration
+import java.util
 import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext
+import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager}
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.mockito.Mockito.when
+import org.neo4j.collection.Dependencies
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.internal.kernel.api.security.AuthSubject
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.SecureHasher
+import org.neo4j.server.security.auth.{BasicPasswordPolicy, CommunitySecurityModule, SecureHasher}
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
+
+import scala.collection.JavaConverters._
 
 class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val defaultRoles = Set(
@@ -36,6 +46,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   )
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
+
+  private var systemGraphRealm: SystemGraphRealm = _
 
   test("should list all roles") {
     // GIVEN
@@ -269,6 +281,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     result.toSet should be(Set(Map("user" -> "neo4j", "roles" -> Seq("admin"))))
+
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
   }
 
   test("should list all users") {
@@ -298,26 +312,35 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       Map("user" -> "Bar", "roles" -> Seq("fairy", "dragon")),
       Map("user" -> "Baz", "roles" -> Seq.empty)
     ))
+
+    getAllUserNamesFromManager should equal(Set("neo4j", "Bar", "Baz").asJava)
+
   }
 
   test("should create user with password as string") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
+    //TODO: Comment: I tested that at THIS point, no user bar is in the system graph
 
     // WHEN
-    execute("CREATE USER foo WITH PASSWORD 'password'")
+    execute("CREATE USER bar WITH PASSWORD 'password'")
 
     // THEN
     val result = execute("SHOW USERS")
     result.toSet should be(Set(
       Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
+      Map("user" -> "bar", "roles" -> Seq.empty)
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "bar").asJava)
+
   }
 
   test("should create user with password change not required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
     execute("CREATE USER foo WITH PASSWORD 'password' CHANGE NOT REQUIRED")
@@ -328,11 +351,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       Map("user" -> "neo4j", "roles" -> Seq("admin")),
       Map("user" -> "foo", "roles" -> Seq.empty)
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
   }
 
   test("should create user with status active") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
     execute("CREATE USER foo WITH PASSWORD 'password' WITH STATUS ACTIVE")
@@ -343,12 +368,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       Map("user" -> "neo4j", "roles" -> Seq("admin")),
       Map("user" -> "foo", "roles" -> Seq.empty)
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
   }
 
   test("should create user with status suspended") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
     // WHEN
     execute("CREATE USER foo WITH PASSWORD 'password' WITH STATUS SUSPENDED")
 
@@ -358,6 +384,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       Map("user" -> "neo4j", "roles" -> Seq("admin")),
       Map("user" -> "foo", "roles" -> Seq.empty)
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
   }
 
   test("should fail on creating already existing user") {
@@ -366,6 +393,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("SHOW USERS").toSet should be(Set(
       Map("user" -> "neo4j", "roles" -> Seq("admin"))
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
 //    try {
@@ -374,13 +402,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 //      fail("Expected error \"Cannot create already existing user\" but succeeded.")
 //    } catch {
 //      // THEN
-//      case e :Exception if e.getMessage.equals("Cannot create already existing user") =>
+//      case e :Exception if e.getMessage.equals("The specified user 'neo4j' already exists.") =>
 //    }
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(
       Map("user" -> "neo4j", "roles" -> Seq("admin"))
     ))
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
   }
 
   // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
@@ -389,15 +418,44 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   protected override def initTest(): Unit = {
     super.initTest()
+
     systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "neo4j")
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
     val systemGraphInitializer = new SystemGraphInitializer(systemGraphInnerQueryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
     systemGraphInitializer.initializeSystemGraph()
+
+    // need to setup/mock security a bit so we can have a userManager
+    val config = mock[Config]
+    when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false )
+    when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO )
+    when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 )
+    when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true )
+    when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false )
+    when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 )  //!
+    when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) )
+    when (config.get( SecuritySettings.auth_providers )).thenReturn(List(SecuritySettings.NATIVE_REALM_NAME).asJava)
+
+    systemGraphRealm = new SystemGraphRealm(   // this is also a UserManager even if the Name does not indicate that
+      systemGraphOperations,
+      systemGraphInitializer,
+      false,
+      secureHasher,
+      new BasicPasswordPolicy(),
+      CommunitySecurityModule.createAuthenticationStrategy( config ),
+      false,
+      false
+    )
   }
 
-  private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
+  private def databaseManager() = {
+    dependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
+  }
+
+  private def dependencyResolver = {
+    graph.getDependencyResolver
+  }
 
   private def selectDatabase(name: String): Unit = {
     val manager = databaseManager()
@@ -406,5 +464,30 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)
     eengine = ExecutionEngineHelper.createEngine(graph)
+
+    dependencyResolver.asInstanceOf[Dependencies].satisfyDependency(SimpleUserManagerSupplier(systemGraphRealm)) // needed to do that here on the outer engine
+
   }
+
+  private def getAllUserNamesFromManager = {
+    systemGraphRealm.getAllUsernames
+  }
+}
+
+case class SimpleUserManagerSupplier(userManager: EnterpriseUserManager) extends CommercialAuthAndUserManager {
+  override def getUserManager(authSubject: AuthSubject, isUserManager: Boolean): EnterpriseUserManager = getUserManager
+
+  override def getUserManager: EnterpriseUserManager = userManager
+
+  override def clearAuthCache(): Unit = ???
+
+  override def login(authToken: util.Map[String, AnyRef]): CommercialLoginContext = ???
+
+  override def init(): Unit = ???
+
+  override def start(): Unit = ???
+
+  override def stop(): Unit = ???
+
+  override def shutdown(): Unit = ???
 }

@@ -1,24 +1,12 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal
 
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager
+import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
@@ -26,14 +14,16 @@ import org.neo4j.cypher.internal.procs.{SystemCommandExecutionPlan, UpdatingSyst
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.kernel.api.security.UserManager
 import org.neo4j.string.UTF8
-import org.neo4j.values.storable.{TextValue, Values}
+import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
 
 /**
   * This runtime takes on queries that require no planning, such as multidatabase management commands
   */
-case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine) extends CypherRuntime[RuntimeContext] {
-  override def name: String = "multidatabase-commands"
+case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
+  val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine)
+
+  override def name: String = "enterprise management-commands"
 
   override def compileToExecutable(state: LogicalQuery, context: RuntimeContext): ExecutionPlan = {
 
@@ -44,16 +34,16 @@ case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: Executio
 
     val (withSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
-    logicalToExecutable.applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
+    //TODO: Test this with overlapping commands
+    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable)
+      .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
   }
 
-  private val userManager: UserManager = //TODO this doesn't work since UserManager cannot currently be resolved
-    /*if (normalExecutionEngine != null)
-      normalExecutionEngine.queryService.getDependencyResolver.resolveDependency(classOf[UserManager])
-    // should rather be EnterpriseUserManager
-    else*/ null
-
-
+  private lazy val userManager: UserManager = {
+    val supplier = resolver.resolveDependency(classOf[CommercialAuthAndUserManager])
+    //      val supplier = normalExecutionEngine.queryService.getDependencyResolver.resolveDependency(classOf[CommercialAuthAndUserManager])
+    supplier.getUserManager
+  }
 
   val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, Int]) => ExecutionPlan] = {
     // SHOW USERS
@@ -70,9 +60,9 @@ case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: Executio
       // TODO check so we don't log plain passwords
       val user = userManager.newUser(userName, UTF8.encode(initialPassword),requirePasswordChange)
       val credentials = user.credentials().serialize()
-      SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
+      val createUser = SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
         """CREATE (u:User {name:$name,credentials:$credentials,passwordChangeRequired:$requirePasswordChange,suspended:$suspended})
-          |RETURN u.name as name""".stripMargin,
+RETURN u.name as name""".stripMargin,
         VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
           Values.stringValue(userName),
           Values.stringValue(credentials),
@@ -80,6 +70,7 @@ case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: Executio
           Values.booleanValue(suspended)
         ))
       )
+      createUser
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
@@ -187,7 +178,8 @@ case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: Executio
         }
       )
 
-    // START DATABASE foo
+      // TODO: Check back if Start/Stop should also be "just" in enterprise or not. Check also CommunityManagementCommandRuntime
+    /*// START DATABASE foo
     case StartDatabase(dbName) => (_, _) =>
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
@@ -225,19 +217,9 @@ case class MultiDatabaseManagementCommandRuntime(normalExecutionEngine: Executio
         record => {
           if (record.get("db") == null) throw new IllegalStateException("Cannot stop non-existent database '" + dbName + "'")
         }
-      )
+      )*/
   }
-}
 
-object MultiDatabaseManagementCommandRuntime {
-  def isApplicable(logicalPlanState: LogicalPlanState): Boolean =
-    MultiDatabaseManagementCommandRuntime(null).logicalToExecutable.isDefinedAt(logicalPlanState.maybeLogicalPlan.get)
-}
-
-object DatabaseStatus extends Enumeration {
-  type Status = TextValue
-
-  val Deleted: TextValue = Values.stringValue("deleted")
-  val Online: TextValue = Values.stringValue("online")
-  val Offline: TextValue = Values.stringValue("offline")
+  override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =
+    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).isDefinedAt(logicalPlanState.maybeLogicalPlan.get)
 }
