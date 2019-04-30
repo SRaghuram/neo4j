@@ -27,7 +27,7 @@ class MultiDatabaseHealthIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder().newImpermanentService();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build();
     }
 
     @AfterEach
