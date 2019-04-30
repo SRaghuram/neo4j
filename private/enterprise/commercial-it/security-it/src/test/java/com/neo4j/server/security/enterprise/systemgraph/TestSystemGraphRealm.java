@@ -24,7 +24,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager<?> dbManager )
             throws Throwable
     {
-        ContextSwitchingSystemGraphQueryExecutor executor = new TestContextSwitchingSystemGraphQueryExecutor( dbManager );
+        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
         return testRealm( importOptions, securityLog, newRateLimitedAuthStrategy(), executor );
     }
 

@@ -15,15 +15,12 @@ import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
-import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.auth.ShiroCaffeineCache;
 import com.neo4j.server.security.enterprise.auth.UserManagementProcedures;
 import com.neo4j.server.security.enterprise.auth.plugin.PluginRealm;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
@@ -46,7 +43,6 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -62,6 +58,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -69,16 +66,18 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
+import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @ServiceProvider
 public class CommercialSecurityModule extends SecurityModule
@@ -97,6 +96,7 @@ public class CommercialSecurityModule extends SecurityModule
     private AccessCapability accessCapability;
     private CommercialAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
+    private ThreadToStatementContextBridge threadToStatementContextBridge;
 
     @Override
     public String getName()
@@ -109,6 +109,7 @@ public class CommercialSecurityModule extends SecurityModule
     {
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
+        threadToStatementContextBridge = platformDependencies.resolveDependency( ThreadToStatementContextBridge.class );
 
         this.config = dependencies.config();
         this.logProvider = dependencies.logService().getUserLogProvider();
@@ -285,8 +286,7 @@ public class CommercialSecurityModule extends SecurityModule
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager,
-                config.get( GraphDatabaseSettings.default_database ) );
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
@@ -639,13 +639,11 @@ public class CommercialSecurityModule extends SecurityModule
     }
 
     // This is used by ImportAuthCommand for offline import of auth information
-    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config,
-            SecurityLog securityLog,
-            DatabaseManager<?> databaseManager,
-            UserRepository importUserRepository, RoleRepository importRoleRepository,
-            boolean shouldResetSystemGraphAuthBeforeImport )
+    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, SecurityLog securityLog, DatabaseManager<?> databaseManager,
+            UserRepository importUserRepository, RoleRepository importRoleRepository, boolean shouldResetSystemGraphAuthBeforeImport,
+            ThreadToStatementContextBridge threadToStatementContextBridge )
     {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, SYSTEM_DATABASE_NAME );
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphImportOptions importOptions =
                 configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );

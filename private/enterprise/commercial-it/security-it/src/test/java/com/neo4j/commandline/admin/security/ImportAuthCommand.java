@@ -25,12 +25,14 @@ import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
 import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
@@ -212,17 +214,14 @@ public class ImportAuthCommand implements AdminCommand
 
         SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
 
-        DatabaseManager<?> databaseManager = getDatabaseManager( db );
+        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db).getDependencyResolver();
+        DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
+        ThreadToStatementContextBridge threadToStatementContextBridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
         return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
                 databaseManager,
                 importUserRepository, importRoleRepository,
-                shouldResetSystemGraphAuthBeforeImport );
-    }
-
-    private DatabaseManager<?> getDatabaseManager( GraphDatabaseService db )
-    {
-        return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( DatabaseManager.class );
+                shouldResetSystemGraphAuthBeforeImport, threadToStatementContextBridge );
     }
 }

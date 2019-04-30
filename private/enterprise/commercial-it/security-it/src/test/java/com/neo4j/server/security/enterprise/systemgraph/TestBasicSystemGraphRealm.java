@@ -23,13 +23,12 @@ import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExe
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TestBasicSystemGraphRealm
 {
     static BasicSystemGraphRealm testRealm( BasicImportOptionsBuilder importOptions, DatabaseManager<?> dbManager ) throws Throwable
     {
-        ContextSwitchingSystemGraphQueryExecutor executor = new TestContextSwitchingSystemGraphQueryExecutor( dbManager );
+        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
         return testRealm( importOptions, newRateLimitedAuthStrategy(), executor );
     }
 
@@ -67,23 +66,6 @@ class TestBasicSystemGraphRealm
     static AuthenticationStrategy newRateLimitedAuthStrategy()
     {
         return new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() );
-    }
-
-    protected static class TestContextSwitchingSystemGraphQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
-    {
-        private TestThreadToStatementContextBridge bridge;
-
-        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager<?> databaseManager )
-        {
-            super( databaseManager, DEFAULT_DATABASE_NAME );
-            bridge = new TestThreadToStatementContextBridge();
-        }
-
-        @Override
-        protected ThreadToStatementContextBridge getThreadToStatementContextBridge()
-        {
-            return bridge;
-        }
     }
 
     protected static class TestThreadToStatementContextBridge extends ThreadToStatementContextBridge
