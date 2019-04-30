@@ -19,7 +19,6 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
@@ -141,16 +140,16 @@ class ClusteredDatabaseManagerTest
 //        verify( databaseManager, never() ).start();
 //    }
 
-    private DatabaseAvailabilityGuard newAvailabilityGuard()
+    private static DatabaseAvailabilityGuard newAvailabilityGuard()
     {
         return new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clock.systemUTC(), NullLog.getInstance(),
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
     }
 
-    private ClusteredDatabaseManager newDatabaseManager( AvailabilityGuard availabilityGuard )
+    private static ClusteredDatabaseManager newDatabaseManager( AvailabilityGuard availabilityGuard )
     {
         return new ClusteredMultiDatabaseManager( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Log.class ),
-                mock( GraphDatabaseFacade.class ), StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
+                StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
                 mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), Config.defaults(),
                 mock( DatabaseHealth.class ), availabilityGuard );
     }

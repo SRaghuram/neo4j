@@ -115,7 +115,6 @@ import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.Log;
@@ -457,9 +456,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
     {
-        var databaseManager = new CoreDatabaseManager( platform, this, log, facade,
+        var databaseManager = new CoreDatabaseManager( platform, this, log,
                 this::coreStateService, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),
                 platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig(), globalHealth );
         createDatabaseManagerDependentModules( databaseManager );

@@ -68,7 +68,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -189,9 +188,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
     {
-        var databaseManager = new ClusteredMultiDatabaseManager( platform, this, log, facade,
+        var databaseManager = new ClusteredMultiDatabaseManager( platform, this, log,
                 catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
                 logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
         createDatabaseManagerDependentModules( databaseManager );

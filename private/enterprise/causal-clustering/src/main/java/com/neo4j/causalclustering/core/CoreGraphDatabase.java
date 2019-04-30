@@ -34,7 +34,7 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
     {
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
-                .initFacade( storeDir, config, dependencies, this );
+                .initFacade( storeDir, config, dependencies );
     }
 
     public DatabaseManagementService getManagementService()

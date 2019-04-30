@@ -56,21 +56,21 @@ public class ClusteredMultiDatabaseManager extends MultiDatabaseManager<Clustere
 
     private volatile AvailabilityRequirement currentRequirement;
 
-    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
+    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log,
             CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths, AvailabilityGuard availabilityGuard )
     {
-        this( globalModule, edition, log, facade, DefaultClusteredDatabaseContext::new, catchupComponentsFactory, fs, pageCache,
+        this( globalModule, edition, log, DefaultClusteredDatabaseContext::new, catchupComponentsFactory, fs, pageCache,
                 logProvider, config, globalHealths, availabilityGuard );
     }
 
     @VisibleForTesting // allows to inject a ClusteredDatabaseContextFactory
-    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
+    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log,
             ClusteredDatabaseContextFactory contextFactory, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths, AvailabilityGuard availabilityGuard )
     {
 
-        super( globalModule, edition, log, facade );
+        super( globalModule, edition, log );
         this.contextFactory = contextFactory;
         this.logProvider = logProvider;
         this.availabilityGuard = availabilityGuard;

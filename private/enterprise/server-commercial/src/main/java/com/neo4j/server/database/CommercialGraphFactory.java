@@ -21,7 +21,6 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.GraphFactory;
 
 public class CommercialGraphFactory implements GraphFactory
@@ -41,7 +40,7 @@ public class CommercialGraphFactory implements GraphFactory
                     ReadReplicaEditionModule::new ).getManagementService();
         default:
             return new DatabaseManagementServiceFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
-                    .initFacade( storeDir, config, dependencies, new GraphDatabaseFacade() );
+                    .initFacade( storeDir, config, dependencies );
         }
     }
 

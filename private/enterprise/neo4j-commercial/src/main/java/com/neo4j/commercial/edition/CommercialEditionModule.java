@@ -46,7 +46,6 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -138,9 +137,9 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Log msgLog )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log msgLog )
     {
-        CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog, graphDatabaseFacade );
+        CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }

@@ -20,7 +20,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Health;
@@ -29,12 +28,12 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
     private final Supplier<CoreStateService> coreStateService;
 
-    CoreDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, GraphDatabaseFacade facade,
+    CoreDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log,
             Supplier<CoreStateService> coreStateService, CatchupComponentsFactory catchupComponentsFactory,
             AvailabilityGuard availabilityGuard, FileSystemAbstraction fs, PageCache pageCache,
             LogProvider logProvider, Config config, Health globalHealths )
     {
-        super( globalModule, edition, log, facade, catchupComponentsFactory, fs, pageCache, logProvider, config, globalHealths, availabilityGuard );
+        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config, globalHealths, availabilityGuard );
         this.coreStateService = coreStateService;
     }
 
