@@ -30,6 +30,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
+import org.neo4j.causalclustering.discovery.MultiRetryStrategy;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
@@ -240,6 +241,7 @@ public class AkkaCoreTopologyDowningIT
                 logProvider,
                 logProvider,
                 new TopologyServiceNoRetriesStrategy(),
+                new MultiRetryStrategy<>( 0L, 10L, NullLogProvider.getInstance(), AkkaCoreTopologyDowningIT::sleep ),
                 pool,
                 Clocks.systemClock()
         );
@@ -256,6 +258,18 @@ public class AkkaCoreTopologyDowningIT
     {
         service.topologyService().stop();
         service.topologyService().shutdown();
+    }
+
+    private static void sleep( long durationInMillis )
+    {
+        try
+        {
+            Thread.sleep( durationInMillis );
+        }
+        catch ( InterruptedException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     private static class TestActorSystemLifecycle extends ActorSystemLifecycle

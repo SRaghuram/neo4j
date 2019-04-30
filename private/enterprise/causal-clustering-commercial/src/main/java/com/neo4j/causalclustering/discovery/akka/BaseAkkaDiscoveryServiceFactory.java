@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import org.neo4j.causalclustering.discovery.MultiRetryStrategy;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
@@ -27,7 +28,10 @@ import org.neo4j.scheduler.JobScheduler;
 
 public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
-   protected abstract ActorSystemFactory actorSystemFactory( ExecutorService executor, Config config, LogProvider logProvider );
+    private static final long RESTART_RETRY_DELAY_MS = 1000L;
+    private static final long RESTART_RETRIES = 10L;
+
+    protected abstract ActorSystemFactory actorSystemFactory( ExecutorService executor, Config config, LogProvider logProvider );
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
@@ -35,6 +39,8 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
             Monitors monitors, Clock clock )
     {
         ExecutorService executor = executorService( config, jobScheduler );
+        MultiRetryStrategy<Void,Boolean> restartRetryStrategy =
+                new MultiRetryStrategy<>( RESTART_RETRY_DELAY_MS, RESTART_RETRIES, logProvider, BaseAkkaDiscoveryServiceFactory::sleep );
 
         return new AkkaCoreTopologyService(
                 config,
@@ -43,6 +49,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 logProvider,
                 userLogProvider,
                 topologyServiceRetryStrategy,
+                restartRetryStrategy,
                 executor,
                 clock );
     }
@@ -51,6 +58,18 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
     {
         int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
         return jobScheduler.workStealingExecutorAsyncMode( Group.AKKA_TOPOLOGY_WORKER, parallelism );
+    }
+
+    static void sleep( long durationInMillis )
+    {
+        try
+        {
+            Thread.sleep( durationInMillis );
+        }
+        catch ( InterruptedException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     @Override

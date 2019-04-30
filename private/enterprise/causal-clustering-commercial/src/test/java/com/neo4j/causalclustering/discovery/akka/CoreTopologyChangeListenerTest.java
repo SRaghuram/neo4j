@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
+import org.neo4j.causalclustering.discovery.MultiRetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -40,6 +41,7 @@ public class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
             topologyServiceRetryStrategy,
+            new MultiRetryStrategy<>( 0L, 10L, NullLogProvider.getInstance(), BaseAkkaDiscoveryServiceFactory::sleep ),
             executor,
             Clocks.systemClock() );
 
