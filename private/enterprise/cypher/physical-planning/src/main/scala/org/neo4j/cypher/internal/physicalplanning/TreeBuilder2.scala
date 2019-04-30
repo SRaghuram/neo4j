@@ -49,13 +49,13 @@ import scala.collection.mutable
   * D      = onOneChildPlan(d, H, initialArgument)
   * argB   = onTwoChildPlanComingFromLeft(b, D, initialArgument)
   * E      = onLeaf(e, argB)
-  * B      = onTwoChildPlanComingFromRight(b, D, E)
+  * B      = onTwoChildPlanComingFromRight(b, D, E, argB)
   * argA   = onTwoChildPlanComingFromLeft(a, B, initialArgument)
   * F      = onLeaf(f, argA)
   * argC   = onTwoChildPlanComingFromLeft(c, F, argA)
   * G      = onLeaf(g, argC)
-  * C      = onTwoChildPlanComingFromRight(c, F, G)
-  * A      = onTwoChildPlanComingFromRight(a, B, C)
+  * C      = onTwoChildPlanComingFromRight(c, F, G, argC)
+  * A      = onTwoChildPlanComingFromRight(a, B, C, argA)
   *
   * @tparam T type of build output
   * @tparam ARGUMENT type of argument
