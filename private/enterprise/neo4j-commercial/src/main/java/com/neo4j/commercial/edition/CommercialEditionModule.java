@@ -38,8 +38,6 @@ import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
-import org.neo4j.graphdb.factory.module.id.IdContextFactory;
-import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
@@ -79,12 +77,6 @@ public class CommercialEditionModule extends CommunityEditionModule
         super.registerEditionSpecificProcedures( globalProcedures );
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-    }
-
-    @Override
-    protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
-    {
-        return IdContextFactoryBuilder.of( globalModule.getJobScheduler() ).withFileSystem( fileSystem ).withPageCache( globalModule.getPageCache() ).build();
     }
 
     @Override
