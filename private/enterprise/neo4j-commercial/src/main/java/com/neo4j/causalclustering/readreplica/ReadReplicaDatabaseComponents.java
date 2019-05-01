@@ -42,6 +42,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     private final CommitProcessFactory commitProcessFactory;
     private final DatabaseTransactionStats transactionMonitor;
     private final ReadReplicaEditionModule editionModule;
+    private final long startTimeoutMillis;
 
     public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, DatabaseId databaseId )
     {
@@ -62,6 +63,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
         this.commitProcessFactory = ( appender, storageEngine, config ) -> new ReadOnlyTransactionCommitProcess();
         this.transactionMonitor = editionModule.createTransactionMonitor();
+        this.startTimeoutMillis = editionModule.getTransactionStartTimeout();
     }
 
     @Override
@@ -128,5 +130,11 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     public DatabaseTransactionStats getTransactionMonitor()
     {
         return transactionMonitor;
+    }
+
+    @Override
+    public long getStartTimeoutMillis()
+    {
+        return startTimeoutMillis;
     }
 }

@@ -67,7 +67,6 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -132,7 +131,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         LifeSupport globalLife = globalModule.getGlobalLife();
 
-        threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
         this.accessCapability = new ReadOnly();
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,

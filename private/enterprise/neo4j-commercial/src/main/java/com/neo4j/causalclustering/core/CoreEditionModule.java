@@ -114,7 +114,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.Log;
@@ -193,8 +192,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
         startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, clusterStateLayout ); // must be constructed before storage is touched by other modules
-
-        threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
 
         panicService = new PanicService( logService.getUserLogProvider() );
         globalDependencies.satisfyDependencies( panicService ); // used by test

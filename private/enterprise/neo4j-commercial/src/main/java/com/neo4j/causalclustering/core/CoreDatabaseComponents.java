@@ -33,6 +33,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     private final DatabaseCoreStateComponents databaseState;
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseTransactionStats transactionMonitor;
+    private final long startTimeoutMillis;
 
     CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, DatabaseId databaseId )
     {
@@ -43,6 +44,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
         statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), globalModule.getGlobalConfig(),
                 globalModule.getLogService() ).select();
         transactionMonitor = editionModule.createTransactionMonitor();
+        startTimeoutMillis = editionModule.getTransactionStartTimeout();
     }
 
     @Override
@@ -109,5 +111,11 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     public DatabaseTransactionStats getTransactionMonitor()
     {
         return transactionMonitor;
+    }
+
+    @Override
+    public long getStartTimeoutMillis()
+    {
+        return startTimeoutMillis;
     }
 }
