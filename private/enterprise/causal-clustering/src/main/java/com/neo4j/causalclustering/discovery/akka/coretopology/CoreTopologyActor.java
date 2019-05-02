@@ -16,12 +16,16 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.toSet;
 
 public class CoreTopologyActor extends AbstractActorWithTimers
 {
@@ -40,6 +44,8 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private final Address myAddress;
 
     private final Log log;
+
+    private Set<DatabaseId> knownDatabaseIds = emptySet();
 
     private final ActorRef clusterIdActor;
     private final ActorRef readReplicaTopologyActor;
@@ -110,10 +116,21 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopologies()
     {
-        memberData.getStream()
+        var receivedDatabaseIds = memberData.getStream()
                 .flatMap( info -> info.coreServerInfo().getDatabaseIds().stream() )
-                .distinct()
-                .forEach( this::buildTopology );
+                .collect( toSet() );
+
+        var absentDatabaseIds = knownDatabaseIds.stream()
+                .filter( id -> !receivedDatabaseIds.contains( id ) )
+                .collect( toSet() );
+
+        knownDatabaseIds = receivedDatabaseIds; // override the set of known IDs to no accumulate deleted ones
+
+        // build empty topologies for database IDs cached locally but absent from the set of received database IDs
+        absentDatabaseIds.forEach( this::buildTopology );
+
+        // build topologies for the set of received database IDs
+        receivedDatabaseIds.forEach( this::buildTopology );
     }
 
     private void buildTopology( DatabaseId databaseId )

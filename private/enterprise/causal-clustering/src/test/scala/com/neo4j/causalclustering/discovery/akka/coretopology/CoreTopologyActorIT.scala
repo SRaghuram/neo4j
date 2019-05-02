@@ -16,7 +16,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka._
-import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, _}
+import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, _}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
@@ -50,10 +50,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
         "metadata updated" in new Fixture {
           Given("updated metadata")
-          val metadata = Map(
-            UniqueAddress(Address("protocol", "system", "host", 1),1L) ->
-              new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1))).asJava
-          val event = new MetadataMessage(metadata)
+          val event = newMetadataMessage()
 
           When("metadata received")
           topologyActorRef ! event
@@ -91,8 +88,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
           topologyActorRef ! clusterView
-          makeTopologyActorKnowAboutCoreMember()
-          awaitExpectedCoreTopology(nullClusterIdTopology)
+          makeTopologyActorKnowAboutCoreMember(nullClusterIdTopology)
 
           When("update cluster ID")
           val clusterIdData = Map(databaseId -> clusterId).asJava
@@ -104,24 +100,37 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           Then("update topology")
           awaitExpectedCoreTopology()
         }
+
+        "database core topology updated to empty when database does not exist" in new Fixture {
+          Given("metadata updated with default database")
+          makeTopologyActorKnowAboutCoreMember()
+
+          val otherDatabaseId = new DatabaseId("non-default")
+          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, clusterId, false, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
+          val emptyTopology = new DatabaseCoreTopology(databaseId, clusterId, false, Map.empty[MemberId, CoreServerInfo].asJava)
+
+          Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(otherDatabaseId), any(), any(), any())).thenReturn(otherTopology)
+          Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any())).thenReturn(emptyTopology)
+
+          When("received metadata with a different database")
+          val message = newMetadataMessage(otherDatabaseId)
+          topologyActorRef ! message
+
+          Then("update default database topology to empty")
+          awaitExpectedCoreTopology(emptyTopology) // receive empty topology for default database because it was removed
+          awaitExpectedCoreTopology(otherTopology) // receive non-empty topology for non-default database because it was added
+        }
       }
     }
   }
 
   trait Fixture {
-    var actualCoreTopology = DatabaseCoreTopology.EMPTY
-    var actualReadReplicaTopology = DatabaseReadReplicaTopology.EMPTY
-
-    val updateSink = new TopologyUpdateSink {
-      override def onTopologyUpdate(topology: DatabaseCoreTopology) = actualCoreTopology = topology
-
-      override def onTopologyUpdate(topology: DatabaseReadReplicaTopology) = actualReadReplicaTopology = topology
-    }
+    val coreTopologyReceiver = TestProbe("CoreTopologyReceiver")
 
     val materializer = ActorMaterializer()
 
     val topologySink = Source.queue[CoreTopologyMessage](1, OverflowStrategy.dropHead)
-      .to(Sink.foreach(msg => updateSink.onTopologyUpdate(msg.coreTopology)))
+      .to(Sink.foreach(msg => coreTopologyReceiver.ref ! msg.coreTopology()))
       .run(materializer)
 
     val config = {
@@ -169,22 +178,23 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology) = {
-      awaitCond(
-        actualCoreTopology == newCoreTopology,
-        max = defaultWaitTime,
-        message = s"Expected $newCoreTopology but was $actualCoreTopology"
-      )
+      awaitAssert(coreTopologyReceiver.receiveOne(defaultWaitTime) should equal(newCoreTopology), max = defaultWaitTime)
       readReplicaProbe.expectMsg(newCoreTopology)
     }
 
-    def makeTopologyActorKnowAboutCoreMember(): Unit = {
-      val metadata = Map(UniqueAddress(Address("protocol", "system"), 1L) ->
-        new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1))).asJava
-      val metadataEvent = new MetadataMessage(metadata)
-
+    def makeTopologyActorKnowAboutCoreMember(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology): Unit = {
+      val metadataEvent = newMetadataMessage(databaseId)
       topologyActorRef ! metadataEvent
+      awaitExpectedCoreTopology(newCoreTopology)
     }
 
-    def coreServerInfo(id: Int): CoreServerInfo = TestTopology.addressesForCore(id, false, Set(databaseId).asJava)
+    def newMetadataMessage(databaseId: DatabaseId = databaseId): MetadataMessage = {
+      val info = new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1, databaseId))
+      val metadata = Map(UniqueAddress(Address("protocol", "system"), 1L) -> info).asJava
+      new MetadataMessage(metadata)
+    }
+
+    def coreServerInfo(serverId: Int, databaseId: DatabaseId = databaseId): CoreServerInfo =
+      TestTopology.addressesForCore(serverId, false, Set(databaseId).asJava)
   }
 }

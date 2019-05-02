@@ -53,6 +53,13 @@ class TopologyBuilderTest
         val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3, 3), memberMetaData(3))
         topology.members() shouldBe empty
       }
+
+      "no member contains the database" in new Fixture {
+        val otherDatabaseId = new DatabaseId("some-other-database")
+        val topology = topologyBuilder().buildCoreTopology(otherDatabaseId, clusterId, clusterState(3), memberMetaData(3))
+        topology.databaseId() shouldBe otherDatabaseId
+        topology.members() shouldBe empty
+      }
     }
 
     "return a topology with members only in both metadata and cluster" when {

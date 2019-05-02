@@ -14,14 +14,14 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.util.stream.Collectors.toMap;
 
 public class TopologyBuilder
 {
@@ -38,22 +38,16 @@ public class TopologyBuilder
 
     DatabaseCoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
-        log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
-        Map<MemberId, CoreServerInfo> coreMembers =
-                getCoreInfos( cluster, memberData )
-                .collect( Collectors.toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
+        log.debug( "Building new view of core topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
+        Map<MemberId,CoreServerInfo> coreMembers = cluster.availableMembers()
+                .flatMap( memberData::getStream )
+                .filter( member -> member.coreServerInfo().getDatabaseIds().contains( databaseId ) )
+                .collect( toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
         boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData, databaseId );
         DatabaseCoreTopology newCoreTopology = new DatabaseCoreTopology( databaseId, clusterId, canBeBootstrapped, coreMembers );
         log.debug( "Returned topology: %s", newCoreTopology );
         return newCoreTopology;
-    }
-
-    private Stream<CoreServerInfoForMemberId> getCoreInfos( ClusterViewMessage cluster, MetadataMessage memberData )
-    {
-         return cluster
-                 .availableMembers()
-                 .flatMap( memberData::getStream );
     }
 
     private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData, DatabaseId databaseId )
