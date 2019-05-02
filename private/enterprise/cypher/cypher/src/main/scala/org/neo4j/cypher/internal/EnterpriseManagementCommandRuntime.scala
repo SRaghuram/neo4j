@@ -58,11 +58,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // CREATE USER foo WITH PASSWORD password
     case CreateUser(userName, initialPassword, requirePasswordChange, suspended) => (_, _) =>
       // TODO check so we don't log plain passwords
-      val user = userManager.newUser(userName, UTF8.encode(initialPassword),requirePasswordChange)
-      val credentials = user.credentials().serialize()
+      val credentials = userManager.getCredentialsForPassword(UTF8.encode(initialPassword))
       val createUser = SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
         """CREATE (u:User {name:$name,credentials:$credentials,passwordChangeRequired:$requirePasswordChange,suspended:$suspended})
-RETURN u.name as name""".stripMargin,
+          |RETURN u.name as name""".stripMargin,
         VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
           Values.stringValue(userName),
           Values.stringValue(credentials),

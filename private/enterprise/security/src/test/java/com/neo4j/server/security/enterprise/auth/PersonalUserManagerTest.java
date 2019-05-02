@@ -265,6 +265,17 @@ class PersonalUserManagerTest
         }
 
         @Override
+        public String getCredentialsForPassword( byte[] initialPassword ) throws InvalidArgumentsException, IOException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new IOException( "getCredentialsException" );
+            }
+            return delegate.getCredentialsForPassword( initialPassword );
+        }
+
+        @Override
         public Set<String> getAllUsernames()
         {
             return delegate.getAllUsernames();

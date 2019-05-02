@@ -201,6 +201,13 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
+    public String getCredentialsForPassword( byte[] initialPassword ) throws InvalidArgumentsException, IOException
+    {
+        assertUserManager();
+        return userManager.getCredentialsForPassword( initialPassword );
+    }
+
+    @Override
     public Set<String> getAllUsernames() throws AuthorizationViolationException
     {
         try

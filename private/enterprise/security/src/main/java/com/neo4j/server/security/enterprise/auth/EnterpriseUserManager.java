@@ -215,6 +215,16 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
+        public String getCredentialsForPassword( byte[] initialPassword )
+        {
+            if ( initialPassword != null )
+            {
+                Arrays.fill( initialPassword, (byte) 0 );
+            }
+            return null;
+        }
+
+        @Override
         public Set<String> getAllUsernames()
         {
             return emptySet();

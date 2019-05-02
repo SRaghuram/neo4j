@@ -322,8 +322,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
-    //TODO: Comment: I tested that at THIS point, no user bar is in the system graph
-
     // WHEN
     execute("CREATE USER bar WITH PASSWORD 'password'")
 
@@ -402,7 +400,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 //      fail("Expected error \"Cannot create already existing user\" but succeeded.")
 //    } catch {
 //      // THEN
-//      case e :Exception if e.getMessage.equals("The specified user 'neo4j' already exists.") =>
+//      case e :Exception if e.getMessage.equals("Cannot create already existing user") =>
 //    }
 
     // THEN
