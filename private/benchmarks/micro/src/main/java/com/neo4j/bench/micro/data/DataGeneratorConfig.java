@@ -44,6 +44,8 @@ public class DataGeneratorConfig
     private LabelKeyDefinition[] uniqueConstraints;
     private LabelKeyDefinition[] mandatoryNodeConstraints;
     private RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
+    private LabelKeyDefinition[] fulltextNodeSchemaIndexes;
+    private RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes;
     private Neo4jConfig neo4jConfig;
     private boolean isReusable;
     private String augmentedBy;
@@ -71,6 +73,8 @@ public class DataGeneratorConfig
             LabelKeyDefinition[] uniqueConstraints,
             LabelKeyDefinition[] mandatoryNodeConstraints,
             RelationshipKeyDefinition[] mandatoryRelationshipConstraints,
+            LabelKeyDefinition[] fulltextNodeSchemaIndexes,
+            RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes,
             Neo4jConfig neo4jConfig,
             boolean isReusable,
             String augmentedBy,
@@ -98,6 +102,8 @@ public class DataGeneratorConfig
         this.uniqueConstraints = uniqueConstraints;
         this.mandatoryNodeConstraints = mandatoryNodeConstraints;
         this.mandatoryRelationshipConstraints = mandatoryRelationshipConstraints;
+        this.fulltextNodeSchemaIndexes = fulltextNodeSchemaIndexes;
+        this.fulltextRelationshipSchemaIndexes = fulltextRelationshipSchemaIndexes;
         this.neo4jConfig = neo4jConfig;
         this.isReusable = isReusable;
         this.augmentedBy = augmentedBy;
@@ -213,6 +219,16 @@ public class DataGeneratorConfig
         return mandatoryRelationshipConstraints;
     }
 
+    public LabelKeyDefinition[] fulltextNodeSchemaIndexes()
+    {
+        return fulltextNodeSchemaIndexes;
+    }
+
+    public RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes()
+    {
+        return fulltextRelationshipSchemaIndexes;
+    }
+
     public Neo4jConfig neo4jConfig()
     {
         return neo4jConfig;
@@ -280,6 +296,8 @@ public class DataGeneratorConfig
                 Arrays.equals( uniqueConstraints, that.uniqueConstraints ) &&
                 Arrays.equals( mandatoryNodeConstraints, that.mandatoryNodeConstraints ) &&
                 Arrays.equals( mandatoryRelationshipConstraints, that.mandatoryRelationshipConstraints ) &&
+                Arrays.equals( fulltextNodeSchemaIndexes, that.fulltextNodeSchemaIndexes ) &&
+                Arrays.equals( fulltextRelationshipSchemaIndexes, that.fulltextRelationshipSchemaIndexes ) &&
                 Objects.equals( neo4jConfig, that.neo4jConfig );
     }
 
@@ -292,7 +310,8 @@ public class DataGeneratorConfig
                         graphWriter, nodeProperties, relationshipProperties, propertyLocality, propertyOrder,
                         labelNames,
                         labelOrder, labelLocality, schemaIndexes, uniqueConstraints, mandatoryNodeConstraints,
-                        mandatoryRelationshipConstraints, neo4jConfig, isReusable, augmentedBy, rngSeed );
+                        mandatoryRelationshipConstraints,
+                        fulltextNodeSchemaIndexes, fulltextRelationshipSchemaIndexes, isReusable, augmentedBy, rngSeed );
     }
 
     @Override
@@ -315,6 +334,8 @@ public class DataGeneratorConfig
                "  Uniqueness Constraints:              " + Arrays.toString( uniqueConstraints ) + "\n" +
                "  Mandatory Node Constraints:          " + Arrays.toString( mandatoryNodeConstraints ) + "\n" +
                "  Mandatory Relationship Constraints:  " + Arrays.toString( mandatoryRelationshipConstraints ) + "\n" +
+               "  Fulltext Node Indexes:               " + Arrays.toString( fulltextNodeSchemaIndexes ) + "\n" +
+               "  Fulltext Relationship Indexes:       " + Arrays.toString( fulltextRelationshipSchemaIndexes ) + "\n" +
                "  --- PER NODE/REL ---\n" +
                "  Out Relationship Count:              " + FORMAT.format( outDegree() ) + "\n" +
                "  Node Property Count:                 " + FORMAT.format( nodeProperties().length ) + "\n" +

@@ -12,6 +12,7 @@ import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
+import com.neo4j.bench.micro.profile.ProfileDescriptor;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -203,7 +204,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
         assertCount( txState.node, txState.lowSelectivityMin, txState.lowSelectivityMax, bh );
     }
 
-    public static void main( String... methods ) throws Exception
+    public static void main( String... methods )
     {
         run( FindNodeNonUnique.class, methods );
     }

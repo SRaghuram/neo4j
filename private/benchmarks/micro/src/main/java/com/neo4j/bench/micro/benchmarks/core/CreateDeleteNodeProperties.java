@@ -212,7 +212,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                     // Create indexes
                     LabelKeyDefinition[] indexes = indexes();
                     Stream.of( indexes ).forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
-                    waitForSchemaIndexes( db, Stream.of( indexes ).map( LabelKeyDefinition::label ).toArray( Label[]::new ) );
+                    waitForSchemaIndexes( db );
                 }
 
                 db.shutdown();

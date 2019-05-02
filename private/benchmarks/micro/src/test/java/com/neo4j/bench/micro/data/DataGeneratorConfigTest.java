@@ -103,6 +103,12 @@ public class DataGeneratorConfigTest
                 .withMandatoryRelationshipConstraints(
                         new RelationshipKeyDefinition( RelationshipType.withName( "REL1" ), "C" ),
                         new RelationshipKeyDefinition( RelationshipType.withName( "REL2" ), "D" ) )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "REL1" ), "C" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "REL2" ), "D" ) )
                 .withNeo4jConfig( neo4jConfig )
                 .withRngSeed( 42 )
                 .isReusableStore( true )
@@ -678,6 +684,76 @@ public class DataGeneratorConfigTest
                 .withUniqueConstraints(
                         new LabelKeyDefinition( Label.label( "A" ), "a" ),
                         new LabelKeyDefinition( Label.label( "C" ), "b" ) )
+                .build();
+
+        assertConfigEquality( config1, config2, false );
+    }
+
+    @Test
+    public void dataGeneratorsWithSameFulltextNodeSchemaIndexesShouldBeEqual() throws IOException
+    {
+        Supplier<DataGeneratorConfig> fun = () -> new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config1 = fun.get();
+        DataGeneratorConfig config2 = fun.get();
+        assertConfigEquality( config1, config2, true );
+    }
+
+    @Test
+    public void dataGeneratorsWithSameFulltextRelationshipSchemaIndexesShouldBeEqual() throws IOException
+    {
+        Supplier<DataGeneratorConfig> fun = () -> new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config1 = fun.get();
+        DataGeneratorConfig config2 = fun.get();
+        assertConfigEquality( config1, config2, true );
+    }
+
+    @Test
+    public void dataGeneratorsWithDifferentFulltextNodeSchemaIndexesShouldNotBeEqual() throws IOException
+    {
+        DataGeneratorConfig config1 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config2 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "C" ), "b" ) )
+                .build();
+
+        assertConfigEquality( config1, config2, false );
+    }
+
+    @Test
+    public void dataGeneratorsWithDifferentFulltextRelationshipSchemaIndexesShouldNotBeEqual() throws IOException
+    {
+        DataGeneratorConfig config1 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config2 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "C" ), "b" ) )
                 .build();
 
         assertConfigEquality( config1, config2, false );

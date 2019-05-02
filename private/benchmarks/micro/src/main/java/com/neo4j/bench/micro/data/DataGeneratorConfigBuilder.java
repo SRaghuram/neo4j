@@ -42,6 +42,8 @@ public class DataGeneratorConfigBuilder
     private LabelKeyDefinition[] uniqueConstraints = {};
     private LabelKeyDefinition[] mandatoryNodeConstraints = {};
     private RelationshipKeyDefinition[] mandatoryRelationshipConstraints = {};
+    private LabelKeyDefinition[] fulltextNodeSchemaIndexes = {};
+    private RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes = {};
     private Neo4jConfig neo4jConfig = Neo4jConfig.empty();
     private boolean isReusable;
     private String augmentedBy = NullAugmenterizer.AUGMENT_KEY;
@@ -72,6 +74,8 @@ public class DataGeneratorConfigBuilder
         builder.uniqueConstraints = config.uniqueConstraints();
         builder.mandatoryNodeConstraints = config.mandatoryNodeConstraints();
         builder.mandatoryRelationshipConstraints = config.mandatoryRelationshipConstraints();
+        builder.fulltextNodeSchemaIndexes = config.fulltextNodeSchemaIndexes();
+        builder.fulltextRelationshipSchemaIndexes = config.fulltextRelationshipSchemaIndexes();
         builder.neo4jConfig = config.neo4jConfig();
         builder.isReusable = config.isReusable();
         builder.augmentedBy = config.augmentedBy();
@@ -370,6 +374,30 @@ public class DataGeneratorConfigBuilder
     }
 
     /**
+     * Label:property... pairs to create fulltext schema indexes for.
+     *
+     * @param fulltextNodeSchemaIndexes
+     * @return mutated version of the same builder instance.
+     */
+    public DataGeneratorConfigBuilder withFulltextNodeSchemaIndexes( LabelKeyDefinition... fulltextNodeSchemaIndexes )
+    {
+        this.fulltextNodeSchemaIndexes = fulltextNodeSchemaIndexes;
+        return this;
+    }
+
+    /**
+     * RelationshipType:property... pairs to create fulltext relationship schema indexxes for.
+     *
+     * @param fulltextRelationshipSchemaIndexes
+     * @return mutated version of the same builder instance.
+     */
+    public DataGeneratorConfigBuilder withFulltextRelationshipSchemaIndexes( RelationshipKeyDefinition... fulltextRelationshipSchemaIndexes )
+    {
+        this.fulltextRelationshipSchemaIndexes = fulltextRelationshipSchemaIndexes;
+        return this;
+    }
+
+    /**
      * Neo4j configuration to (1) use for store generation and (2) open the resulting store with when benchmarking.
      *
      * @param neo4jConfig
@@ -440,6 +468,8 @@ public class DataGeneratorConfigBuilder
                 uniqueConstraints,
                 mandatoryNodeConstraints,
                 mandatoryRelationshipConstraints,
+                fulltextNodeSchemaIndexes,
+                fulltextRelationshipSchemaIndexes,
                 neo4jConfig,
                 isReusable,
                 augmentedBy,
