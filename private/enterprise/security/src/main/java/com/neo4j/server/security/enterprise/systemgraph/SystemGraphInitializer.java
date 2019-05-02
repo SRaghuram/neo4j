@@ -12,7 +12,6 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.authz.SimpleRole;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
@@ -58,6 +58,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         this.log = log;
     }
 
+    @Override
     public void initializeSystemGraph() throws Exception
     {
         // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)

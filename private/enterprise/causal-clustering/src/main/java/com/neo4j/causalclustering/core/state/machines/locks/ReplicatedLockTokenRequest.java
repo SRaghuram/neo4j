@@ -91,6 +91,7 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
         contentHandler.handle( this );
     }
 
+    @Override
     public DatabaseId databaseId()
     {
         return databaseId;

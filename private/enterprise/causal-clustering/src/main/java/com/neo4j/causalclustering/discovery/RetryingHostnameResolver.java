@@ -32,6 +32,7 @@ public abstract class RetryingHostnameResolver implements HostnameResolver
         return new RetryStrategy( retryIntervalMillis, numRetries );
     }
 
+    @Override
     public final Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddress )
     {
         try

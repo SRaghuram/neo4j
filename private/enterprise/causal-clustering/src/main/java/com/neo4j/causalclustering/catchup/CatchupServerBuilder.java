@@ -149,6 +149,7 @@ public final class CatchupServerBuilder
             return this;
         }
 
+        @Override
         public Server build()
         {
             ApplicationProtocolRepository

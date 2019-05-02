@@ -35,6 +35,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         this.logProvider = logProvider;
     }
 
+    @Override
     public ProtocolInstaller<ProtocolInstaller.Orientation.Client> clientInstaller()
     {
         if ( version == ProtocolVersion.V2 )

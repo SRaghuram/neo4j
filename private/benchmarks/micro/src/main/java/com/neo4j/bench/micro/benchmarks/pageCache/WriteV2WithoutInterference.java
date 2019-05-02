@@ -34,6 +34,7 @@ public class WriteV2WithoutInterference extends WriteV2
             super.setUp( threadParams, benchmarkState );
         }
 
+        @Override
         @TearDown
         public void tearDown() throws IOException
         {

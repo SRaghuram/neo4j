@@ -5,14 +5,13 @@
  */
 package org.neo4j.cypher.internal.codegen.profiling;
 
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.cypher.internal.codegen.QueryExecutionTracer;
 import org.neo4j.cypher.internal.planner.spi.KernelStatisticProvider;
 import org.neo4j.cypher.internal.runtime.compiled.codegen.QueryExecutionEvent;
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id;
 import org.neo4j.cypher.result.OperatorProfile;
 import org.neo4j.cypher.result.QueryProfile;
 
@@ -42,6 +41,7 @@ public class ProfilingTracer implements QueryExecutionTracer, QueryProfile
         this.statisticProvider = statisticProvider;
     }
 
+    @Override
     public OperatorProfile operatorProfile( int query )
     {
         Data value = data.get( query );

@@ -133,6 +133,7 @@ class OperationProgressMonitorTest
             noResponseSince = initial;
         }
 
+        @Override
         public OptionalLong get()
         {
             return noResponseEver ? OptionalLong.empty() : OptionalLong.of( ++noResponseSince );

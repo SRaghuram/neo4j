@@ -100,6 +100,7 @@ public class ReplicatedTokenRequest implements CoreReplicatedContent
         contentHandler.handle( this );
     }
 
+    @Override
     public DatabaseId databaseId()
     {
         return databaseId;

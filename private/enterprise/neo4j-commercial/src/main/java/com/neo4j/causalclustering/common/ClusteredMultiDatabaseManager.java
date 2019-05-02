@@ -141,6 +141,7 @@ public class ClusteredMultiDatabaseManager extends MultiDatabaseManager<Clustere
      * Stop database to perform a store copy. This will raise {@link DatabaseAvailabilityGuard} with
      * a more friendly blocking requirement.
      */
+    @Override
     public void stopForStoreCopy() throws Throwable
     {
         stopWithRequirement( notCopyingReq );
@@ -152,6 +153,7 @@ public class ClusteredMultiDatabaseManager extends MultiDatabaseManager<Clustere
         return Optional.ofNullable( databaseMap.get( databaseId ) );
     }
 
+    @Override
     protected ClusteredDatabaseContext createNewDatabaseContext( DatabaseId databaseId )
     {
         return super.createNewDatabaseContext( databaseId );
@@ -176,11 +178,13 @@ public class ClusteredMultiDatabaseManager extends MultiDatabaseManager<Clustere
         }
     }
 
+    @Override
     public Health getAllHealthServices()
     {
         return globalHealths;
     }
 
+    @Override
     public <EXCEPTION extends Throwable> void assertHealthy( DatabaseId databaseId, Class<EXCEPTION> cause ) throws EXCEPTION
     {
         getDatabaseHealth( databaseId ).orElseThrow( () ->

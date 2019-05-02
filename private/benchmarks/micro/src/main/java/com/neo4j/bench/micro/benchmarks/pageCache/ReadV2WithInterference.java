@@ -37,6 +37,7 @@ public class ReadV2WithInterference extends ReadV2
             super.setUp( threadParams, benchmarkState );
         }
 
+        @Override
         @TearDown
         public void tearDown() throws IOException
         {

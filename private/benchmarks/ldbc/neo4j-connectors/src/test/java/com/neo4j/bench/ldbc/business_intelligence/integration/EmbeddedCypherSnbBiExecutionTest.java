@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Disabled;
 @Disabled
 public class EmbeddedCypherSnbBiExecutionTest extends SnbBiExecutionTest
 {
+    @Override
     Scenario buildValidationData() throws DbException
     {
         return Scenario.randomBi();

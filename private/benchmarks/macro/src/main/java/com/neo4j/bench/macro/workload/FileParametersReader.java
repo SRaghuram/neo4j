@@ -139,6 +139,7 @@ public class FileParametersReader implements ParametersReader
                      .orElseThrow( () -> new RuntimeException( "Invalid column type: " + columnTypeId ) );
     }
 
+    @Override
     public boolean hasNext()
     {
         if ( closed )
@@ -152,6 +153,7 @@ public class FileParametersReader implements ParametersReader
         return null != next;
     }
 
+    @Override
     public Map<String,Object> next()
     {
         if ( !hasNext() )

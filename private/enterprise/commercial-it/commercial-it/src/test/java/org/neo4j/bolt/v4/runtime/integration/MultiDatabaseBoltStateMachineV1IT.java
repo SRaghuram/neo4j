@@ -140,6 +140,7 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
         verifyStatementProcessorIsEmpty( machine );
     }
 
+    @Override
     protected BoltStateMachineV1 newStateMachineInReadyState() throws Throwable
     {
         BoltStateMachineV1 machine = (BoltStateMachineV1) env.newMachine( BoltProtocolV1.VERSION, BOLT_CHANNEL );

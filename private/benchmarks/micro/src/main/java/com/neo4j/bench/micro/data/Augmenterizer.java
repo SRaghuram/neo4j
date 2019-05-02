@@ -42,6 +42,7 @@ public abstract class Augmenterizer
             // do nothing
         }
 
+        @Override
         public String augmentKey( FullBenchmarkName benchmarkName )
         {
             return "NONE";
