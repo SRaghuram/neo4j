@@ -5,8 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.operators.PreparedOutput
 
 /**
@@ -19,10 +18,9 @@ trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
     * called again iff [[canContinue]] returns `true`.
     *
     * @param threadLocalResource resources to use for execution
-    * @param output morsel into which execution results are written
+    * @param workUnitEvent the current tracing even
     */
-  def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE,
-                      output: MorselExecutionContext): PreparedOutput
+  def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE, workUnitEvent: WorkUnitEvent): PreparedOutput
 
   /**
     * Returns true if there is another work unit to execute.

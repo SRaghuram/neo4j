@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
-import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, _}
+import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity, WorkUnitEvent}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, _}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
@@ -86,6 +86,21 @@ class PipelineState(val pipeline: ExecutablePipeline,
       // if it returns `true`, there is no work left and the task has been already closed.
     } while (task != null && task.filterCancelledArguments())
     task
+  }
+
+  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
+
+      val slots = pipeline.slots
+      val slotSize = slots.size()
+      val morsel = Morsel.create(slots, state.morselSize)
+      new MorselExecutionContext(
+        morsel,
+        slotSize.nLongs,
+        slotSize.nReferences,
+        state.morselSize,
+        currentRow = 0,
+        slots,
+        producingWorkUnitEvent)
   }
 
   private def innerNextTask(context: QueryContext,

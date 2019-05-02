@@ -68,8 +68,7 @@ class Worker(val workerId: Int,
           executingQuery.bindTransactionToThread()
 
           val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-          val output = task.getOrAllocateMorsel(workUnitEvent)
-          val preparedOutput = task.executeWorkUnit(resources, output)
+          val preparedOutput = task.executeWorkUnit(resources, workUnitEvent)
           workUnitEvent.stop()
           // TODO should we call produce, if the OutputOperatorState can continue?
           preparedOutput.produce()

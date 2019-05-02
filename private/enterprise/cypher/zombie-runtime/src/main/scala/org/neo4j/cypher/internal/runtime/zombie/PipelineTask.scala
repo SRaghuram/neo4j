@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 
@@ -26,57 +26,29 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   @volatile private var _output: MorselExecutionContext = _
 
-  // TODO this is awkward, let's see if tasks can create their own output, possibly via provided lambda
-  def getOrAllocateMorsel(producingWorkUnitEvent: WorkUnitEvent): MorselExecutionContext = {
-    if (_output != null) {
-      _output
-    } else {
-      val slots = pipelineState.pipeline.slots
-      val slotSize = slots.size()
-      val morsel = Morsel.create(slots, state.morselSize)
-      new MorselExecutionContext(
-        morsel,
-        slotSize.nLongs,
-        slotSize.nReferences,
-        state.morselSize,
-        currentRow = 0,
-        slots,
-        producingWorkUnitEvent)
-    }
-  }
-
-  override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): PreparedOutput = {
-    /*
-
-    TODO less vomit, also comment
-
-    _(´ཀ`」 ∠)_
-
-         {)
-      ,;`/Y\
-    ,:;  /^\
-
-     */
+  override final def executeWorkUnit(resources: QueryResources, workUnitEvent: WorkUnitEvent): PreparedOutput = {
     if (_output == null) {
-      executeStartOperators(resources, output)
+      _output = pipelineState.allocateMorsel(workUnitEvent, state)
+      executeStartOperators(resources)
     }
-    executeOutputOperator(resources, output)
+    executeOutputOperator(resources)
   }
 
-  private def executeStartOperators(resources: QueryResources, output: MorselExecutionContext): Unit = {
-    startTask.operate(output, queryContext, state, resources)
+  private def executeStartOperators(resources: QueryResources): Unit = {
+    startTask.operate(_output, queryContext, state, resources)
     for (op <- middleTasks) {
-      output.resetToFirstRow()
-      op.operate(output, queryContext, state, resources)
+      _output.resetToFirstRow()
+      op.operate(_output, queryContext, state, resources)
     }
-    output.resetToFirstRow()
+    _output.resetToFirstRow()
   }
 
-  private def executeOutputOperator(resources: QueryResources, output: MorselExecutionContext): PreparedOutput = {
-    val preparedOutput = outputOperatorState.prepareOutput(output, queryContext, state, resources)
-    if (outputOperatorState.canContinue) {
-      // TODO comment
-      _output = output
+  private def executeOutputOperator(resources: QueryResources): PreparedOutput = {
+    val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources)
+    if (!outputOperatorState.canContinue) {
+      // There is no continuation on the output operator,
+      // next-time around we need a new output morsel
+      _output = null
     }
     preparedOutput
   }
