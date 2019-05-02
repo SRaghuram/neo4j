@@ -101,10 +101,11 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     counter.counts should equal(CacheCounts(hits = 2, misses = 2, flushes = 1, evicted = 1))
   }
 
+  override lazy val logProvider: AssertableLogProvider = new AssertableLogProvider()
+
   test("should log on cache evictions") {
     // given
-    val logProvider = new AssertableLogProvider()
-    val engine = createEngine(graph, logProvider)
+    val engine = createEngine(graph)
     val counter = new CacheCounter()
     kernelMonitors.addMonitorListener(counter)
     val query = "match (n:Person:Dog) return n"
