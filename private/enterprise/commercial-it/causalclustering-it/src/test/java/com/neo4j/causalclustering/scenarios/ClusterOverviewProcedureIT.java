@@ -77,16 +77,16 @@ class ClusterOverviewProcedureIT
         }
     }
 
-    private static List<Map<String,Object>> invokeClusterOverviewProcedure( ClusterMember<?> member )
+    private static List<Map<String,Object>> invokeClusterOverviewProcedure( ClusterMember member )
     {
-        var db = member.database();
+        var db = member.defaultDatabase();
         try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
         {
             return asList( result );
         }
     }
 
-    private static ClusterOverviewMatcher buildClusterOverviewMatcher( CoreClusterMember leader, Map<MemberId,ClusterMember<?>> membersById )
+    private static ClusterOverviewMatcher buildClusterOverviewMatcher( CoreClusterMember leader, Map<MemberId,ClusterMember> membersById )
     {
         var sortedMemberIds = membersById.keySet()
                 .stream()
@@ -115,7 +115,7 @@ class ClusterOverviewProcedureIT
         return new ClusterOverviewMatcher( expectedMemberIds, expectedAddresses, expectedDatabases, expectedGroups );
     }
 
-    private static List<String> expectedAddresses( ClusterMember<?> member )
+    private static List<String> expectedAddresses( ClusterMember member )
     {
         return member.clientConnectorAddresses()
                 .uriList()
@@ -124,14 +124,14 @@ class ClusterOverviewProcedureIT
                 .collect( toList() );
     }
 
-    private static Map<String,String> expectedDatabases( ClusterMember<?> member, ClusterMember<?> leader )
+    private static Map<String,String> expectedDatabases( ClusterMember member, ClusterMember leader )
     {
         return Map.of(
                 SYSTEM_DB.name(), expectedRole( member, SYSTEM_DB, leader ).toString(),
                 DEFAULT_DB.name(), expectedRole( member, DEFAULT_DB, leader ).toString() );
     }
 
-    private static RoleInfo expectedRole( ClusterMember<?> member, DatabaseId databaseId, ClusterMember<?> leader )
+    private static RoleInfo expectedRole( ClusterMember member, DatabaseId databaseId, ClusterMember leader )
     {
         // todo: temporarily system db does not report its leader because it is in the same raft group with the default db
         //  that's why we have to check database ID here; check needs to be removed once system runs in a separate raft group
@@ -150,7 +150,7 @@ class ClusterOverviewProcedureIT
         throw new IllegalArgumentException( "Unable to find role for " + member );
     }
 
-    private static List<String> expectedGroups( ClusterMember<?> member )
+    private static List<String> expectedGroups( ClusterMember member )
     {
         if ( isCore( member ) )
         {
@@ -163,12 +163,12 @@ class ClusterOverviewProcedureIT
         throw new IllegalArgumentException( "Unable to find groups for " + member );
     }
 
-    private static boolean isCore( ClusterMember<?> member )
+    private static boolean isCore( ClusterMember member )
     {
         return cluster.coreMembers().contains( member );
     }
 
-    private static boolean isReadReplica( ClusterMember<?> member )
+    private static boolean isReadReplica( ClusterMember member )
     {
         return cluster.readReplicas().contains( member );
     }
