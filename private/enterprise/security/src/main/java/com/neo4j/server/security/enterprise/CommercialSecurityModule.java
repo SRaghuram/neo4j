@@ -286,7 +286,8 @@ public class CommercialSecurityModule extends SecurityModule
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor =
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
@@ -643,7 +644,8 @@ public class CommercialSecurityModule extends SecurityModule
             UserRepository importUserRepository, RoleRepository importRoleRepository, boolean shouldResetSystemGraphAuthBeforeImport,
             ThreadToStatementContextBridge threadToStatementContextBridge )
     {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor =
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphImportOptions importOptions =
                 configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );
