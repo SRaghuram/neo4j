@@ -50,7 +50,6 @@ public class BackupSupportingClassesFactory
     private final Monitors monitors;
     private final FileSystemAbstraction fileSystemAbstraction;
     private final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
-    private final JobScheduler jobScheduler;
     private final StorageEngineFactory storageEngineFactory;
 
     public BackupSupportingClassesFactory( StorageEngineFactory storageEngineFactory, FileSystemAbstraction fileSystemAbstraction, LogProvider logProvider,
@@ -61,7 +60,6 @@ public class BackupSupportingClassesFactory
         this.monitors = monitors;
         this.fileSystemAbstraction = fileSystemAbstraction;
         this.transactionLogCatchUpFactory = new TransactionLogCatchUpFactory();
-        this.jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         this.storageEngineFactory = storageEngineFactory;
     }
 
@@ -73,18 +71,19 @@ public class BackupSupportingClassesFactory
      */
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
+        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
-                backupDelegatorFromConfig( pageCache, context ),
+                backupDelegatorFromConfig( pageCache, context, jobScheduler ),
                 pageCache,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
-    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext )
+    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
     {
         Config config = onlineBackupContext.getConfig();
         DatabaseId databaseId = onlineBackupContext.getDatabaseId();
-        CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext );
+        CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
 
         TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
@@ -105,7 +104,7 @@ public class BackupSupportingClassesFactory
         return factory.forClient( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
     }
 
-    private CatchupClientFactory catchUpClient( OnlineBackupContext onlineBackupContext )
+    private CatchupClientFactory catchUpClient( OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
     {
         Config config = onlineBackupContext.getConfig();
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
