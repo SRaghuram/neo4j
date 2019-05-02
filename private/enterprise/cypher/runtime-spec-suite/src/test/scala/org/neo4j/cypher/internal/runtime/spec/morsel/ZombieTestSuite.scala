@@ -95,6 +95,11 @@ class ZombieParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARAL
 // NODE HASH JOIN
 class ZombieNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
+// REACTIVE
+class ZombieReactiveSingleThreadedTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime)
+class ZombieReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime)
+
+
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)

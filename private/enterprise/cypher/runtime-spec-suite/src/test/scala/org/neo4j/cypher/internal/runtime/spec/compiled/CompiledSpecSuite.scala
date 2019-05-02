@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.compiled
 
 import org.neo4j.cypher.internal.runtime.spec.compiled.CompiledSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AllNodeScanTestBase, ExpandAllTestBase, LabelScanTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AllNodeScanTestBase, ReactiveResultTestBase, ExpandAllTestBase, LabelScanTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.{CompiledRuntime, EnterpriseRuntimeContext}
 

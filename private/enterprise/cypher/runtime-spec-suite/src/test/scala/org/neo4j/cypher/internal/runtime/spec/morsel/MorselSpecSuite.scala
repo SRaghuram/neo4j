@@ -203,6 +203,9 @@ class MorselLabelScanCartesianStressTestBase(runtime: CypherRuntime[EnterpriseRu
     )
 }
 
+// REACTIVE RESULTS
+class MorselReactiveResultTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, MorselRuntime)
+
 class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime) {
 
   ignore("should support nested Cartesian Product") {
