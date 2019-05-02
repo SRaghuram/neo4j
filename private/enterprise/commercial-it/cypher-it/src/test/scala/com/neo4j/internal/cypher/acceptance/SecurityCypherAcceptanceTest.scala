@@ -323,7 +323,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
-    execute("CREATE USER bar WITH PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
 
     // THEN
     val result = execute("SHOW USERS")
@@ -335,13 +335,30 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   }
 
+  test("should create user with password as parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
+    // WHEN
+    execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "password"))
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+  }
+
   test("should create user with password change not required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
-    execute("CREATE USER foo WITH PASSWORD 'password' CHANGE NOT REQUIRED")
+    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
 
     // THEN
     val result = execute("SHOW USERS")
@@ -358,7 +375,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
-    execute("CREATE USER foo WITH PASSWORD 'password' WITH STATUS ACTIVE")
+    execute("CREATE USER foo SET PASSWORD 'password' SET STATUS ACTIVE")
 
     // THEN
     val result = execute("SHOW USERS")
@@ -374,7 +391,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
     // WHEN
-    execute("CREATE USER foo WITH PASSWORD 'password' WITH STATUS SUSPENDED")
+    execute("CREATE USER foo SET PASSWORD 'password' SET STATUS SUSPENDED")
 
     // THEN
     val result = execute("SHOW USERS")
@@ -394,14 +411,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
-//    try {
-      execute("CREATE USER neo4j WITH PASSWORD 'password'")
+    try {
+      execute("CREATE USER neo4j SET PASSWORD 'password'")
 
-//      fail("Expected error \"Cannot create already existing user\" but succeeded.")
-//    } catch {
-//      // THEN
-//      case e :Exception if e.getMessage.equals("Cannot create already existing user") =>
-//    }
+      fail("Expected error \"Cannot create already existing user\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot create already existing user") =>
+    }
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(

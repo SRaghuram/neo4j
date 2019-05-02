@@ -59,7 +59,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case CreateUser(userName, initialPassword, requirePasswordChange, suspended) => (_, _) =>
       // TODO check so we don't log plain passwords
       val credentials = userManager.getCredentialsForPassword(UTF8.encode(initialPassword))
-      val createUser = SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
+      SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
         """CREATE (u:User {name:$name,credentials:$credentials,passwordChangeRequired:$requirePasswordChange,suspended:$suspended})
           |RETURN u.name as name""".stripMargin,
         VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
@@ -69,7 +69,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           Values.booleanValue(suspended)
         ))
       )
-      createUser
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
