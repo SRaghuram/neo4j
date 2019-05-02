@@ -67,8 +67,18 @@ public class ClusterOverviewHelper
         }
     }
 
-    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember<? extends GraphDatabaseFacade> member, String role )
-            throws InterruptedException, KernelException
+    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, CoreClusterMember core ) throws InterruptedException
+    {
+        assertEventualOverview( expected, core, "core" );
+    }
+
+    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ReadReplica readReplica ) throws InterruptedException
+    {
+        assertEventualOverview( expected, readReplica, "rr" );
+    }
+
+    private static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember<? extends GraphDatabaseFacade> member, String role )
+            throws InterruptedException
     {
         Function<List<MemberInfo>, String> printableMemberInfos =
                 memberInfos -> memberInfos.stream().map( MemberInfo::toString ).collect( Collectors.joining( ", " ) );

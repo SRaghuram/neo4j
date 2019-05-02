@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -24,12 +25,17 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertEventualOverview;
+import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRole;
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
+import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
+import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -100,13 +106,40 @@ class CausalClusteringProceduresIT
         for ( var member : cluster.coreMembers() )
         {
             var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-            assertEventually( roleReportedByProcedure( member, databaseId.name() ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseId ), equalTo( expectedRole ), 2, MINUTES );
         }
 
         for ( var member : cluster.readReplicas() )
         {
             var expectedRole = RoleInfo.READ_REPLICA;
-            assertEventually( roleReportedByProcedure( member, databaseId.name() ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseId ), equalTo( expectedRole ), 2, MINUTES );
+        }
+    }
+
+    @Test
+    void clusterRoleProcedureAfterFollowerShutdown() throws Exception
+    {
+        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var leader = cluster.awaitLeader();
+        var follower = cluster.getMemberWithAnyRole( databaseId, Role.FOLLOWER );
+
+        assertThat( cluster.coreMembers(), hasSize( 2 ) );
+
+        try
+        {
+            // shutdown the only follower and wait for the leader to become a follower
+            follower.shutdown();
+            assertEventually( roleReportedByProcedure( leader, databaseId ), equalTo( RoleInfo.FOLLOWER ), 2, MINUTES );
+        }
+        finally
+        {
+            // restart the follower so cluster has the same shape as before this test
+            follower.start();
+
+            // await until follower views the correct cluster
+            assertEventualOverview( allOf(
+                    containsRole( LEADER, databaseId, 1 ),
+                    containsRole( FOLLOWER, databaseId, 1 ) ), follower );
         }
     }
 
@@ -137,12 +170,12 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember<?> member, String databaseName )
+    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember<?> member, DatabaseId databaseId )
     {
         return () ->
         {
             var db = member.database();
-            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseName ) ) )
+            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseId.name() ) ) )
             {
                 return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
             }

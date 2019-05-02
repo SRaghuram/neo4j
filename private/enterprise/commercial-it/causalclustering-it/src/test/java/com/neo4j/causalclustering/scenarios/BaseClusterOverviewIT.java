@@ -243,7 +243,7 @@ abstract class BaseClusterOverviewIT
             List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
             cluster.removeCoreMembers( followers );
 
-            ClusterOverviewHelper.assertEventualOverview( ClusterOverviewHelper.containsRole( LEADER, DB, 0 ), leader, "core" );
+            ClusterOverviewHelper.assertEventualOverview( ClusterOverviewHelper.containsRole( LEADER, DB, 0 ), leader );
         }
 
         @Test
@@ -261,7 +261,7 @@ abstract class BaseClusterOverviewIT
 
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ) ), leader, "core" );
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ) ), leader );
 
             List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
 
@@ -270,7 +270,7 @@ abstract class BaseClusterOverviewIT
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ),
-                    not( equalTo( preElectionOverview ) ) ), leader, "core" );
+                    not( equalTo( preElectionOverview ) ) ), leader );
         }
     }
 
