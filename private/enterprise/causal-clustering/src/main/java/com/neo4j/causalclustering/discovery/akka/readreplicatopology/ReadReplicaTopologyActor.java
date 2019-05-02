@@ -137,16 +137,16 @@ public class ReadReplicaTopologyActor extends AbstractActor
     {
         var receivedDatabaseIds = readReplicaViewMessage.databaseIds();
 
-        // build topologies for the set of received database IDs
-        receivedDatabaseIds.forEach( this::buildTopology );
-
-        // build empty topologies for database IDs cached locally but absent from the set of received database IDs
         var absentDatabaseIds = readReplicaTopologies.keySet()
                 .stream()
                 .filter( id -> !receivedDatabaseIds.contains( id ) )
                 .collect( toSet() );
 
+        // build empty topologies for database IDs cached locally but absent from the set of received database IDs
         absentDatabaseIds.forEach( this::buildTopology );
+
+        // build topologies for the set of received database IDs
+        receivedDatabaseIds.forEach( this::buildTopology );
     }
 
     private void buildTopology( DatabaseId databaseId )

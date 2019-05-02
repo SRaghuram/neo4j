@@ -46,16 +46,22 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
       "build empty topologies for removed databases" in new Fixture {
         Given("actor with a cached view containing a read replica topology")
-        val databaseIds = Set(new DatabaseId("employees"))
-        readReplicaTopologyActor ! newReadReplicaViewMessage(1, databaseIds)
+        val initialDatabaseIds = Set(new DatabaseId("employees"))
+        val newDatabaseIds = Set(new DatabaseId("orders"))
+        readReplicaTopologyActor ! newReadReplicaViewMessage(1, initialDatabaseIds)
         topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
 
-        When("send empty view message")
-        readReplicaTopologyActor ! newReadReplicaViewMessage(0, databaseIds)
+        When("send view message for a different database")
+        val message = newReadReplicaViewMessage(1, newDatabaseIds)
+        readReplicaTopologyActor ! message
 
-        Then("empty topology is built")
+        Then("empty topology is built for the previous database")
         val expectedEmptyTopology = new DatabaseReadReplicaTopology(new DatabaseId("employees"), Map.empty[MemberId, ReadReplicaInfo].asJava)
-        awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime * 2)
+        awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime)
+
+        And("non-empty topology is built for the new database")
+        val expectedNewTopology = message.toReadReplicaTopology(new DatabaseId("orders"))
+        awaitAssert(topologyReceiver.expectMsg(expectedNewTopology), defaultWaitTime)
       }
     }
   }
