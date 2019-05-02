@@ -200,6 +200,7 @@ public class CoreClusterMember implements ClusterMember
             finally
             {
                 coreGraphDatabase = null;
+                defaultDatabase = null;
             }
         }
     }

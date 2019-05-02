@@ -243,9 +243,8 @@ class ServerPoliciesLoadBalancingIT
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            if ( core.defaultDatabase() == null )
+            if ( core.isShutdown() )
             {
-                // this core is shutdown
                 continue;
             }
 
