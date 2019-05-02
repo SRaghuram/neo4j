@@ -68,8 +68,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class OutputOOperatorState extends OutputOperatorState with PreparedOutput {
 
-    // TODO this will turn to false again when we have been able to produce all the results. then PipelineTask will be finished too.
-    // TODO but is awkward that there is 1 OutputOperatorState instance per pipeline that lives for duration of query execution
     @volatile private var _canContinue: Boolean = false
 
     override def toString: String = "ProduceResultOutputTask"

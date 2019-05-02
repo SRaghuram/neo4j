@@ -32,7 +32,7 @@ case class ExecutablePipeline(id: PipelineId,
     new PipelineState(this,
                       start.createState(executionState),
                       middleOperators.map(_.createTask(executionState, queryContext, queryState, resources)),
-                      outputOperator.createState(executionState, id),
+                      () => outputOperator.createState(executionState, id),
                       executionState)
 
   override val workId: Int = start.workIdentity.workId
@@ -49,7 +49,9 @@ case class ExecutablePipeline(id: PipelineId,
 class PipelineState(val pipeline: ExecutablePipeline,
                     startState: OperatorState,
                     middleTasks: Array[OperatorTask],
-                    outputOperatorState: OutputOperatorState,
+                    // TODO reviewer: it feels awkward that start & outputOperator are a-sci-metric (one 'state' creates tasks, while the other does not)
+                    //                OutputOperator should probably have something analogous to OperatorState.newTasks()
+                    outputOperatorStateCreator:() => OutputOperatorState,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
@@ -99,7 +101,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
       Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
       val tasks = streamTasks.map(startTask => PipelineTask(startTask,
                                                             middleTasks,
-                                                            outputOperatorState,
+                                                            // output operator state may be stateful, should not be shared across tasks
+                                                            outputOperatorStateCreator(),
                                                             context,
                                                             state,
                                                             this))

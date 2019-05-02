@@ -137,14 +137,13 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     //TODO no, just don't
-    if (subscriber!= QuerySubscriber.NOT_A_SUBSCRIBER) {
+    if (subscriber != QuerySubscriber.NOT_A_SUBSCRIBER) {
       subscriber.onResult(fieldNames.length)
     }
 
     private var querySubscription: QuerySubscription = _
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      subscriber.onResult(fieldNames.length)
       val subscription = new DemandControlSubscription
       subscription.request(Long.MaxValue)
       val executionHandle = queryExecutor.execute(executablePipelines,
@@ -156,7 +155,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   queryIndexes,
                                                   nExpressionSlots,
                                                   prePopulateResults,
-                                                  new VisitSubscriber(visitor),
+                                                  new VisitSubscriber(visitor, fieldNames.length),
                                                   subscription)
 
       resultRequested = true
@@ -207,14 +206,11 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
 }
 
-class VisitSubscriber(visitor: QueryResultVisitor[_]) extends QuerySubscriber {
-
-  private var array: Array[AnyValue] = _
-  private var results: QueryResult.Record = _
+class VisitSubscriber(visitor: QueryResultVisitor[_], numberOfFields: Int) extends QuerySubscriber {
+  private val array: Array[AnyValue] = new Array[AnyValue](numberOfFields)
+  private val results: QueryResult.Record = new CompiledQueryResultRecord(array)
 
   override def onResult(numberOfFields: Int): Unit = {
-    array = new Array[AnyValue](numberOfFields)
-    results = new CompiledQueryResultRecord(array)
   }
 
   override def onRecord(): Unit = {}
