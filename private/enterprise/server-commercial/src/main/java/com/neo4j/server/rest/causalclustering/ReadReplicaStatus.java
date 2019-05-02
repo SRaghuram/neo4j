@@ -37,12 +37,12 @@ class ReadReplicaStatus extends BaseStatus
     private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
 
-    ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI db )
+    ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
     {
         super( output );
         this.output = output;
 
-        DependencyResolver dependencyResolver = db.getDependencyResolver();
+        DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
         this.databaseId = dependencyResolver.resolveDependency( Database.class ).getDatabaseId();
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );

@@ -23,7 +23,6 @@ import java.util.Objects;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
@@ -45,12 +44,12 @@ class CoreStatus extends BaseStatus
     private final ThroughputMonitor throughputMonitor;
     private final RoleProvider roleProvider;
 
-    CoreStatus( OutputFormat output, GraphDatabaseService databaseService )
+    CoreStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
     {
         super( output );
         this.output = output;
 
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) databaseService).getDependencyResolver();
+        DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
         this.databaseHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
