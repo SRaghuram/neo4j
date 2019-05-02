@@ -140,6 +140,9 @@ class AkkaCoreTopologyServiceTest
 
         assertEquals( RoleInfo.LEADER, service.coreRole( databaseId1, memberId1 ) );
         assertEquals( RoleInfo.LEADER, service.coreRole( databaseId2, memberId2 ) );
+
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId1, memberId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId2, memberId1 ) );
     }
 
     @Test
