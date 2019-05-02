@@ -26,7 +26,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     protected final Log log;
     protected final Log userLog;
 
-    private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseName = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
 
     protected AbstractCoreTopologyService( Config config, DiscoveryMember myself, LogProvider logProvider, LogProvider userLogProvider )
     {
@@ -57,7 +57,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         if ( currentLeaderInfo.term() < newLeader.term() )
         {
             log.info( "Leader %s updating leader info for database %s and term %s", memberId(), databaseId.name(), newLeader.term() );
-            localLeadersByDatabaseName.put( databaseId, newLeader );
+            localLeadersByDatabaseId.put( databaseId, newLeader );
             setLeader0( newLeader, databaseId );
         }
     }
@@ -77,7 +77,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         {
             log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
                       "to follower.", memberId(), databaseId.name(), currentLeaderInfo.term() );
-            localLeadersByDatabaseName.put( databaseId, currentLeaderInfo.stepDown() );
+            localLeadersByDatabaseId.put( databaseId, currentLeaderInfo.stepDown() );
             handleStepDown0( currentLeaderInfo.stepDown(), databaseId );
         }
     }
@@ -87,7 +87,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     @Override
     public final RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
-        var leaderInfo = localLeadersByDatabaseName.get( databaseId );
+        var leaderInfo = localLeadersByDatabaseId.get( databaseId );
         if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
         {
             return RoleInfo.LEADER;
@@ -105,6 +105,6 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
 
     private LeaderInfo getLeader( DatabaseId databaseId )
     {
-        return localLeadersByDatabaseName.getOrDefault( databaseId, LeaderInfo.INITIAL );
+        return localLeadersByDatabaseId.getOrDefault( databaseId, LeaderInfo.INITIAL );
     }
 }
