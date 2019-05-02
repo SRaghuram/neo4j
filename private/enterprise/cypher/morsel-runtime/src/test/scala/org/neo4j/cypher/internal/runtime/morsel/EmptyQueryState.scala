@@ -14,6 +14,8 @@ object EmptyQueryState extends MockitoSugar {
   def apply(): QueryState = {
     QueryState(Array.empty,
                null,
+               null,
+               null,
                10000,
                Array(session),
                NO_TRANSACTION_BINDER,

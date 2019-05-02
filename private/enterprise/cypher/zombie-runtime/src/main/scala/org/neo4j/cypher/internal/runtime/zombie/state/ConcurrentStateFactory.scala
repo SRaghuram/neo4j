@@ -7,9 +7,10 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
+import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Implementation of [[StateFactory]] which constructs concurrent state management classes.
@@ -17,8 +18,10 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Concurren
 object ConcurrentStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new ConcurrentBuffer[T]
 
-  override def newTracker(subscriber: ZombieSubscriber, queryContext: QueryContext): QueryCompletionTracker =
-    new ConcurrentQueryCompletionTracker(subscriber, queryContext)
+  override def newTracker(subscriber: QuerySubscriber,
+                          demandControlSubscription: DemandControlSubscription,
+                          queryContext: QueryContext): QueryCompletionTracker =
+    new ConcurrentQueryCompletionTracker(subscriber, demandControlSubscription, queryContext)
 
   override def newIdAllocator(): IdAllocator = new ConcurrentIdAllocator
 

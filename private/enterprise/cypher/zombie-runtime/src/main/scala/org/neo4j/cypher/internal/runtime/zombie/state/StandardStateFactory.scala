@@ -7,9 +7,10 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
+import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, StandardBuffer}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
@@ -17,8 +18,10 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, StandardB
 object StandardStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new StandardBuffer[T]
 
-  override def newTracker(subscriber: ZombieSubscriber, queryContext: QueryContext): QueryCompletionTracker =
-    new StandardQueryCompletionTracker(subscriber, queryContext)
+  override def newTracker(subscriber: QuerySubscriber,
+                          demandControlSubscription: DemandControlSubscription,
+                          queryContext: QueryContext): QueryCompletionTracker =
+    new StandardQueryCompletionTracker(subscriber, demandControlSubscription, queryContext)
 
   override def newIdAllocator(): IdAllocator = new StandardIdAllocator
 

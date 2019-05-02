@@ -20,15 +20,15 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   with QuerySubscription {
 
   override def request(numberOfRecords: Long): Unit = {
-    queryState.subscriber.request(numberOfRecords)
+    queryState.demandControlSubscription.request(numberOfRecords)
   }
 
   override def cancel(): Unit = {
-    queryState.subscriber.cancel()
+    queryState.demandControlSubscription.cancel()
   }
 
   override def await(): Boolean = {
-    while (!executionState.isCompleted && queryState.subscriber.hasDemand) {
+    while (!executionState.isCompleted && queryState.demandControlSubscription.hasDemand) {
       worker.workOnQuery(this)
     }
 

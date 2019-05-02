@@ -9,8 +9,9 @@ import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
-import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
+import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
+import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
@@ -51,7 +52,9 @@ trait QueryCompletionTracker {
 /**
   * Not thread-safe implementation of [[QueryCompletionTracker]].
   */
-class StandardQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext: QueryContext) extends QueryCompletionTracker {
+class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
+                                     demandControlSubscription: DemandControlSubscription,
+                                     queryContext: QueryContext) extends QueryCompletionTracker {
   private var count = 0L
   private var throwable: Throwable = _
 
@@ -68,6 +71,7 @@ class StandardQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext:
     if (count == 0) {
       val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
       subscriber.onResultCompleted(statistics)
+      demandControlSubscription.setCompleted()
     }
     count
   }
@@ -81,12 +85,12 @@ class StandardQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext:
     if (throwable != null) {
       throw throwable
     }
-    if (count != 0 && !subscriber.isCompleteOrCancelled) {
+    if (count != 0 && !demandControlSubscription.isCompleteOrCancelled) {
       throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
     }
   }
 
-  override def isCompleted: Boolean = throwable != null || count == 0 || subscriber.isCompleteOrCancelled
+  override def isCompleted: Boolean = throwable != null || count == 0 || demandControlSubscription.isCompleteOrCancelled
 
   override def toString: String = s"StandardQueryCompletionTracker($count)"
 }
@@ -94,7 +98,9 @@ class StandardQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext:
 /**
   * Concurrent implementation of [[QueryCompletionTracker]].
   */
-class ConcurrentQueryCompletionTracker(subscriber: ZombieSubscriber, queryContext: QueryContext) extends QueryCompletionTracker {
+class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
+                                       demandControlSubscription: DemandControlSubscription,
+                                       queryContext: QueryContext) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
   private val latch = new CountDownLatch(1)
@@ -112,6 +118,7 @@ class ConcurrentQueryCompletionTracker(subscriber: ZombieSubscriber, queryContex
       latch.countDown()
       val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
       subscriber.onResultCompleted(statistics)
+      demandControlSubscription.setCompleted()
     }
     else if (newCount < 0)
       throw new IllegalStateException("Cannot count below 0")
@@ -133,7 +140,7 @@ class ConcurrentQueryCompletionTracker(subscriber: ZombieSubscriber, queryContex
     }
   }
 
-  override def isCompleted: Boolean = latch.getCount == 0 || subscriber.isCompleteOrCancelled
+  override def isCompleted: Boolean = latch.getCount == 0 || demandControlSubscription.isCompleteOrCancelled
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 }

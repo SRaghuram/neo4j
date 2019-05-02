@@ -11,9 +11,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.zombie.state.{StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
-import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.QuerySubscription
+import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 
 /**
@@ -34,11 +33,14 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: ZombieSubscriber): QuerySubscription = {
+                                       subscriber: QuerySubscriber,
+                                       demandControlSubscription: DemandControlSubscription): QuerySubscription = {
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
     val queryState = QueryState(params,
                                 subscriber,
+                                demandControlSubscription,
+                                null,
                                 morselSize,
                                 queryIndexes,
                                 transactionBinder,
@@ -54,7 +56,8 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                                queryContext,
                                                queryState,
                                                resources,
-                                               subscriber)
+                                               subscriber,
+                                               demandControlSubscription)
 
     executionState.initializeState()
 

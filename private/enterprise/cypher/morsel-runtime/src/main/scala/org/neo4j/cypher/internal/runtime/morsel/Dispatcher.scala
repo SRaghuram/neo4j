@@ -25,7 +25,9 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transact
     val leafPipeline = pipeline.getUpstreamLeafPipeline
 
     val state = QueryState(params,
-                           new ZombieSubscriber(null, visitor),
+                           null,
+                           null,
+                           visitor,
                            morselSize,
                            queryIndexes,
                            transactionBinder,

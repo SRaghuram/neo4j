@@ -126,7 +126,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     val subscriber = state.subscriber
     var served = 0
-    val demand = subscriber.getDemand
+    val demand = state.demandControlSubscription.getDemand
     // Loop over the rows of the morsel and call the visitor for each one
     while (output.isValidRow && served < demand) {
       subscriber.onRecord()
@@ -144,9 +144,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
       output.moveToNextRow()
     }
-    subscriber.addServed(served)
-
-    //TODO should we call subscriber.setCompleted here?
+    state.demandControlSubscription.addServed(served)
   }
 }
 
@@ -216,6 +214,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
         arraySet(loadField(RESULT_FIELD_ARRAY), index, getFromSlot(slot))
     }:_ *)
 
+    // TODO Pontus promised to update this part
     block(
       project,
       // We should actually check the return value and exit the loop if the visitor returns false to fulfill the contract, but morsel runtime doesn't do that currently

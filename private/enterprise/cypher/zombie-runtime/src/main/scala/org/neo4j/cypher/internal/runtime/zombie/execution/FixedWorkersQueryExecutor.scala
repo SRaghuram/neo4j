@@ -14,9 +14,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
-import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.QuerySubscription
+import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 
 /**
@@ -59,10 +58,13 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: ZombieSubscriber): QuerySubscription = {
+                                       subscriber: QuerySubscriber,
+                                       demandControlSubscription: DemandControlSubscription): QuerySubscription = {
 
     val queryState = QueryState(params,
                                 subscriber,
+                                demandControlSubscription,
+                                null,
                                 morselSize,
                                 queryIndexes,
                                 transactionBinder,
@@ -82,7 +84,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                queryContext,
                                                queryState,
                                                initResources,
-                                               subscriber)
+                                               subscriber,
+                                               demandControlSubscription)
 
     executionState.initializeState()
 
@@ -92,6 +95,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                             schedulerTracer.traceQuery())
 
     queryManager.addQuery(executingQuery)
-    subscriber
+    demandControlSubscription
   }
 }

@@ -7,18 +7,10 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
-import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.graphdb
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
-import org.neo4j.values.AnyValue
+import org.neo4j.kernel.impl.query.QuerySubscription
 
 // TODO maybe we can have a thread-unsafe version too, for single threaded
-class ZombieSubscriber(subscriber: QuerySubscriber, visitor: QueryResultVisitor[_])
-  extends QuerySubscription
-    with QuerySubscriber
-    with QueryResultVisitor[Exception] {
-
+class DemandControlSubscription extends QuerySubscription {
   private val demand = new AtomicLong(0)
   private val completed = new AtomicBoolean(false)
   private val cancelled = new AtomicBoolean(false)
@@ -33,6 +25,8 @@ class ZombieSubscriber(subscriber: QuerySubscriber, visitor: QueryResultVisitor[
   def isCompleteOrCancelled: Boolean = completed.get() || cancelled.get()
 
   def isCancelled: Boolean = cancelled.get()
+
+  def setCompleted(): Unit = completed.set(true)
 
   // -------- Subscription Methods --------
 
@@ -59,31 +53,5 @@ class ZombieSubscriber(subscriber: QuerySubscriber, visitor: QueryResultVisitor[
       completeOrCancelled = isCompleteOrCancelled
     }
     !completeOrCancelled
-  }
-
-  // -------- Subscriber Methods --------
-
-  override def onResult(numberOfFields: Int): Unit =
-    subscriber.onResult(numberOfFields)
-
-  override def onRecord(): Unit =
-    subscriber.onRecord()
-
-  override def onField(offset: Int, value: AnyValue): Unit =
-    subscriber.onField(offset, value)
-
-  override def onRecordCompleted(): Unit =
-    subscriber.onRecordCompleted()
-
-  override def onError(throwable: Throwable): Unit =
-    subscriber.onError(throwable)
-
-  override def onResultCompleted(statistics: graphdb.QueryStatistics): Unit = {
-    subscriber.onResultCompleted(statistics)
-    completed.set(true)
-  }
-
-  override def visit(row: QueryResult.Record): Boolean = {
-    visitor.visit(row)
   }
 }

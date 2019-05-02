@@ -7,7 +7,7 @@ import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuil
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.morsel.ZombieSubscriber
+import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
@@ -144,9 +144,9 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var querySubscription: QuerySubscription = _
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      val nonReactiveSubscriber = new ZombieSubscriber(new VisitSubscriber(visitor), visitor)
-      nonReactiveSubscriber.request(Long.MaxValue)
-      nonReactiveSubscriber.onResult(fieldNames.length)
+      subscriber.onResult(fieldNames.length)
+      val subscription = new DemandControlSubscription
+      subscription.request(Long.MaxValue)
       val executionHandle = queryExecutor.execute(executablePipelines,
                                                   stateDefinition,
                                                   inputDataStream,
@@ -156,7 +156,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   queryIndexes,
                                                   nExpressionSlots,
                                                   prePopulateResults,
-                                                  nonReactiveSubscriber)
+                                                  new VisitSubscriber(visitor),
+                                                  subscription)
 
       resultRequested = true
       executionHandle.await()
@@ -190,7 +191,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
           queryIndexes,
           nExpressionSlots,
           prePopulateResults,
-          new ZombieSubscriber(subscriber, null))
+          subscriber,
+          new DemandControlSubscription())
       }
       querySubscription.request(numberOfRecords)
     }

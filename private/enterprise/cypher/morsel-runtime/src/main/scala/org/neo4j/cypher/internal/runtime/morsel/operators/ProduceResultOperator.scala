@@ -41,7 +41,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfigura
       // Loop over the rows of the morsel and call the visitor for each one
       while (currentRow.isValidRow) {
         val arrayRow = resultFactory.newResult(currentRow, queryState, queryState.prePopulateResults)
-        state.subscriber.visit(arrayRow)
+        state.visitor.visit(arrayRow)
         currentRow.moveToNextRow()
       }
     }
