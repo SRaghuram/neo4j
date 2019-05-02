@@ -27,11 +27,11 @@ import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toFloat;
+import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.diagonal;
 import static com.neo4j.bench.micro.data.PointGenerator.grid;
-import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 import static com.neo4j.bench.micro.data.TemporalGenerator.date;
 import static com.neo4j.bench.micro.data.TemporalGenerator.dateTime;
 import static com.neo4j.bench.micro.data.TemporalGenerator.duration;
@@ -51,10 +51,9 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-
-import static java.lang.String.format;
 
 public class DataGeneratorConfigTest
 {

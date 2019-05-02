@@ -1351,7 +1351,7 @@ public class DataGenerator
     {
         try ( Transaction ignore = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.DAYS ); // Enough for everyone?
+            db.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
         }
         catch ( Exception e )
         {

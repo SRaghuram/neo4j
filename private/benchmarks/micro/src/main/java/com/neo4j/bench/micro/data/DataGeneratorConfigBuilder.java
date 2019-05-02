@@ -386,7 +386,7 @@ public class DataGeneratorConfigBuilder
     }
 
     /**
-     * RelationshipType:property... pairs to create fulltext relationship schema indexxes for.
+     * RelationshipType:property... pairs to create fulltext relationship schema indexes for.
      *
      * @param fulltextRelationshipSchemaIndexes
      * @return mutated version of the same builder instance.

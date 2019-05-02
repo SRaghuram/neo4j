@@ -13,7 +13,6 @@ import com.neo4j.bench.micro.data.DiscreteGenerator;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.profile.ProfileDescriptor;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -25,25 +24,13 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
-import java.util.stream.Stream;
-
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.kernel.api.IndexOrder;
-import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReference;
-import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
-import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.impl.fulltext.FulltextAdapter;
-import org.neo4j.kernel.api.impl.fulltext.FulltextProcedures;
 import org.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.storable.TextValue;
-import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -56,7 +43,6 @@ import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.getBuckets
 import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.getPropertyDefinition;
 import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.maxEstimateFor;
 import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.minEstimateFor;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
