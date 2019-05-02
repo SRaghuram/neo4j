@@ -58,12 +58,12 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: QuerySubscriber,
-                                       demandControlSubscription: DemandControlSubscription): QuerySubscription = {
+                                       subscriber: QuerySubscriber): QuerySubscription = {
 
+    val subscription = ConcurrentStateFactory.newDemandControlSubscription
     val queryState = QueryState(params,
                                 subscriber,
-                                demandControlSubscription,
+                                subscription,
                                 null,
                                 morselSize,
                                 queryIndexes,
@@ -85,7 +85,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                queryState,
                                                initResources,
                                                subscriber,
-                                               demandControlSubscription)
+                                               subscription)
 
     executionState.initializeState()
 
@@ -95,6 +95,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                             schedulerTracer.traceQuery())
 
     queryManager.addQuery(executingQuery)
-    demandControlSubscription
+    subscription
   }
 }

@@ -9,8 +9,61 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
 import org.neo4j.kernel.impl.query.QuerySubscription
 
-// TODO maybe we can have a thread-unsafe version too, for single threaded
-class DemandControlSubscription extends QuerySubscription {
+trait DemandControlSubscription  extends QuerySubscription {
+  def getDemand: Long
+  def hasDemand: Boolean
+  def addServed(newlyServed: Long): Unit
+  def isCompleteOrCancelled: Boolean
+  def isCancelled: Boolean
+  def setCompleted(): Unit
+}
+
+class StandardDemandControlSubscription extends DemandControlSubscription {
+  private var demand = 0L
+  private var completed = false
+  private var cancelled = false
+
+  def getDemand: Long = demand
+
+  def hasDemand: Boolean = getDemand > 0
+
+  def addServed(newlyServed: Long): Unit = {
+    demand -= newlyServed
+  }
+
+  def isCompleteOrCancelled: Boolean = completed || cancelled
+
+  def isCancelled: Boolean = cancelled
+
+  def setCompleted(): Unit = {
+    completed = true
+  }
+
+  // -------- Subscription Methods --------
+
+  override def request(numberOfRecords: Long): Unit = {
+    val newDemand = demand + numberOfRecords
+    //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+    demand = if (newDemand < 0) {
+      Long.MaxValue
+    } else {
+      newDemand
+    }
+  }
+
+  override def cancel(): Unit = {
+    cancelled = true
+  }
+
+  override def await(): Boolean = {
+    if (demand > 0) {
+      throw new IllegalStateException("When single-threaded await should not be called before demand has been served")
+    }
+    !isCompleteOrCancelled
+  }
+}
+
+class ConcurrentDemandControlSubscription extends DemandControlSubscription {
   private val demand = new AtomicLong(0)
   private val completed = new AtomicBoolean(false)
   private val cancelled = new AtomicBoolean(false)
@@ -19,7 +72,7 @@ class DemandControlSubscription extends QuerySubscription {
 
   def hasDemand: Boolean = getDemand > 0
 
-  def addServed(newlyServed: Long): Long =
+  def addServed(newlyServed: Long): Unit =
     demand.addAndGet(-newlyServed)
 
   def isCompleteOrCancelled: Boolean = completed.get() || cancelled.get()
@@ -31,7 +84,6 @@ class DemandControlSubscription extends QuerySubscription {
   // -------- Subscription Methods --------
 
   override def request(numberOfRecords: Long): Unit = {
-    // numberOfRecords == newVal
     demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
       val newDemand = oldVal + newVal
       //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`

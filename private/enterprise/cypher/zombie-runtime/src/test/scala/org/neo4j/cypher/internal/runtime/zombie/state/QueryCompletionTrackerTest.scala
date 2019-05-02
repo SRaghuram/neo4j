@@ -6,19 +6,19 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
+import org.neo4j.cypher.internal.runtime.morsel.{ConcurrentDemandControlSubscription, StandardDemandControlSubscription}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         new DemandControlSubscription,
+                                                                                         new StandardDemandControlSubscription,
                                                                                          mock[QueryContext])
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         new DemandControlSubscription,
+                                                                                         new ConcurrentDemandControlSubscription,
                                                                                          mock[QueryContext])
 }
 

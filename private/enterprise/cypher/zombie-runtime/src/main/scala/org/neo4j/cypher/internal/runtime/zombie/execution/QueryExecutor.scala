@@ -27,6 +27,5 @@ trait QueryExecutor {
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
-                              subscriber: QuerySubscriber,
-                              demandControlSubscription: DemandControlSubscription): QuerySubscription
+                              subscriber: QuerySubscriber): QuerySubscription
 }

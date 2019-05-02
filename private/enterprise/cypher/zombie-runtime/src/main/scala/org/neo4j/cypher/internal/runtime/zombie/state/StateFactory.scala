@@ -28,4 +28,5 @@ trait StateFactory {
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
+  def newDemandControlSubscription: DemandControlSubscription
 }

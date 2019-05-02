@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -36,7 +36,7 @@ trait QueryCompletionTracker {
   /**
     * Await query completion.
     *
-    * @retun when the query has completed successfully
+    * @return when the query has completed successfully
     * @throws Throwable if an exception has occurred
     */
   def await(): Unit

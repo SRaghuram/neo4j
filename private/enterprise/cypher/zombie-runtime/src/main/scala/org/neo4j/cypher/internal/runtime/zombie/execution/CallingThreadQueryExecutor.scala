@@ -33,13 +33,13 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: QuerySubscriber,
-                                       demandControlSubscription: DemandControlSubscription): QuerySubscription = {
+                                       subscriber: QuerySubscriber): QuerySubscription = {
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
+    val subscription = StandardStateFactory.newDemandControlSubscription
     val queryState = QueryState(params,
                                 subscriber,
-                                demandControlSubscription,
+                                subscription,
                                 null,
                                 morselSize,
                                 queryIndexes,
@@ -57,7 +57,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                                queryState,
                                                resources,
                                                subscriber,
-                                               demandControlSubscription)
+                                               subscription)
 
     executionState.initializeState()
 

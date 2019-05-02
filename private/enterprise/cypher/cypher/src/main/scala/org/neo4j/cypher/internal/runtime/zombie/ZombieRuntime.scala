@@ -144,8 +144,6 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var querySubscription: QuerySubscription = _
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      val subscription = new DemandControlSubscription
-      subscription.request(Long.MaxValue)
       val executionHandle = queryExecutor.execute(executablePipelines,
                                                   stateDefinition,
                                                   inputDataStream,
@@ -155,9 +153,9 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   queryIndexes,
                                                   nExpressionSlots,
                                                   prePopulateResults,
-                                                  new VisitSubscriber(visitor, fieldNames.length),
-                                                  subscription)
+                                                  new VisitSubscriber(visitor, fieldNames.length))
 
+      executionHandle.request(Long.MaxValue)
       resultRequested = true
       executionHandle.await()
     }
@@ -190,8 +188,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
           queryIndexes,
           nExpressionSlots,
           prePopulateResults,
-          subscriber,
-          new DemandControlSubscription())
+          subscriber)
       }
       querySubscription.request(numberOfRecords)
     }
