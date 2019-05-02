@@ -70,7 +70,6 @@ class Worker(val workerId: Int,
           val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
           val preparedOutput = task.executeWorkUnit(resources, workUnitEvent)
           workUnitEvent.stop()
-          // TODO should we call produce, if the OutputOperatorState can continue?
           preparedOutput.produce()
         } finally {
           executingQuery.unbindTransaction()

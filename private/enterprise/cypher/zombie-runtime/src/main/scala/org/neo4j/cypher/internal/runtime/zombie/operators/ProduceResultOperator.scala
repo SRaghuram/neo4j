@@ -10,19 +10,16 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, Slot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContext, ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, OperatorExpressionCompiler}
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, QueryStatistics, ValuePopulation}
+import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, OperatorExpressionCompiler}
+import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
-
-import scala.collection.mutable
 
 /**
   * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
@@ -87,25 +84,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = new OutputOOperatorState
-
-
-//
-//  override def prepareOutput(outputMorsel: MorselExecutionContext,
-//                             context: QueryContext,
-//                             state: QueryState,
-//                             resources: QueryResources): PreparedOutput =
-//    new OutputOTask(outputMorsel, context, state, resources)
-//
-//  class OutputOTask(outputMorsel: MorselExecutionContext,
-//                    context: QueryContext,
-//                    state: QueryState,
-//                    resources: QueryResources) extends PreparedOutput {
-//
-//    override def toString: String = "ProduceResultOutputTask"
-//    override def produce(): Unit = {
-//      produceOutput(outputMorsel, context, state, resources)
-//    }
-//  }
 
   //==========================================================================
 

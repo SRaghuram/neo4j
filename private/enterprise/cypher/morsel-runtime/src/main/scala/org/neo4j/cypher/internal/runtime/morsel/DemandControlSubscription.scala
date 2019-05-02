@@ -101,7 +101,7 @@ class ConcurrentDemandControlSubscription extends DemandControlSubscription {
     var completeOrCancelled = isCompleteOrCancelled
     while (demand.get() > 0 && !completeOrCancelled) {
       // TODO reviewer: is this sleep too long?
-      Thread.sleep(1000)
+      Thread.sleep(10)
       completeOrCancelled = isCompleteOrCancelled
     }
     !completeOrCancelled
