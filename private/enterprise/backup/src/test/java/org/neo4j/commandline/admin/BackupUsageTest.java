@@ -18,12 +18,14 @@ import java.util.List;
 import org.neo4j.backup.impl.BackupHelpOutput;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
+@SkipThreadLeakageGuard
 @ExtendWith( SuppressOutputExtension.class )
 class BackupUsageTest
 {
