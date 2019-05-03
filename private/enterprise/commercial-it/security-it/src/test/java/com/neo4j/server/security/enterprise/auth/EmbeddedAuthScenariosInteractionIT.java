@@ -521,6 +521,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( subject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 2 ) );
         assertSuccess( adminSubject, "MATCH (n:A) return count(n)", r -> assertKeyIs( r, "count(n)", 2 ) );
         assertSuccess( subject, "MATCH (n:A) return count(n)", r -> assertKeyIs( r, "count(n)", 2 ) );
+        assertSuccess( adminSubject, "MATCH (n:Node) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
+        assertSuccess( subject, "MATCH (n:Node) return count(n)", r -> assertKeyIs( r, "count(n)", 1 ) );
     }
 
     @Test

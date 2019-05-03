@@ -174,9 +174,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
-        public boolean allowsTraverseLabels( IntStream labels )
+        public boolean allowsTraverseLabels( int... labels )
         {
-            return allowsTraverseAllLabels || labels.anyMatch( whitelistTraverseLabels::contains );
+            return allowsTraverseAllLabels || Arrays.stream( labels ).anyMatch( whitelistTraverseLabels::contains );
         }
 
         @Override
