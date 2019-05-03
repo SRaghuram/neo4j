@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
-import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -30,6 +31,20 @@ class SegmentedRaftLogRotationTruncationPruneTest
     @Inject
     private TestDirectory testDirectory;
 
+    private SegmentedRaftLog log;
+
+    @BeforeEach
+    void before() throws Exception
+    {
+        log = createRaftLog();
+    }
+
+    @AfterEach
+    void after() throws Exception
+    {
+        log.stop();
+    }
+
     @Test
     void shouldPruneAwaySingleEntriesIfRotationHappenedEveryEntry() throws Exception
     {
@@ -37,9 +52,6 @@ class SegmentedRaftLogRotationTruncationPruneTest
          * If you have a raft log which rotates after every append, therefore having a single entry in every segment,
          * we assert that every sequential prune attempt will result in the prevIndex incrementing by one.
          */
-
-        // given
-        RaftLog log = createRaftLog();
 
         long term = 0;
         for ( int i = 0; i < 10; i++ )
@@ -80,9 +92,6 @@ class SegmentedRaftLogRotationTruncationPruneTest
          * The prevIndex should not become corrupt and become greater than 5 in this example.
          */
 
-        // given
-        RaftLog log = createRaftLog();
-
         long term = 0;
         for ( int i = 0; i < 10; i++ )
         {
@@ -106,7 +115,7 @@ class SegmentedRaftLogRotationTruncationPruneTest
         }
     }
 
-    private RaftLog createRaftLog() throws Exception
+    private SegmentedRaftLog createRaftLog() throws Exception
     {
         File directory = testDirectory.directory();
 
