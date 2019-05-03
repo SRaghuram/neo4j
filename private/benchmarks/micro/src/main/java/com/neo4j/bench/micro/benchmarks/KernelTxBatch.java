@@ -47,6 +47,11 @@ public class KernelTxBatch
         }
     }
 
+    public Transaction unwrap()
+    {
+        return tx;
+    }
+
     public void closeTx() throws Exception
     {
         tx.close();

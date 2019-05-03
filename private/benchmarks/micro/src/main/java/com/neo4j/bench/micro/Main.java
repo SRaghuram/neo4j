@@ -55,15 +55,30 @@ public class Main
      */
     public static void run(
             Class<? extends Neo4jBenchmark> benchmark,
-            String... methods ) throws Exception
+            String... methods )
     {
         Path profilesDir = Paths.get( "profiler_recordings" );
+        ProfileDescriptor profileDescriptor = ProfileDescriptor.profileTo( profilesDir, Lists.newArrayList( ProfilerType.JFR ) );
+        run( benchmark, profileDescriptor, methods );
+    }
+
+    /**
+     * Convenience method for running benchmarks from a specific benchmark class, with the given {@link ProfileDescriptor}.
+     * @param benchmark the benchmark class from which benchmarks will be run.
+     * @param profileDescriptor describes which profilers to use when running the benchmarks.
+     * @param methods methods of benchmark class to run, if none are provided all will be run.
+     * @throws Exception
+     */
+    public static void run(
+            Class<? extends Neo4jBenchmark> benchmark,
+            ProfileDescriptor profileDescriptor,
+            String... methods )
+    {
         Path storesDir = Paths.get( "benchmark_stores" );
         run(
                 benchmark,
                 true,
-                1,
-                ProfileDescriptor.profileTo( profilesDir, Lists.newArrayList( ProfilerType.JFR ) ),
+                1, profileDescriptor,
                 new Stores( storesDir ),
                 ErrorReporter.ErrorPolicy.FAIL,
                 null,
@@ -90,7 +105,7 @@ public class Main
             Stores stores,
             ErrorReporter.ErrorPolicy errorPolicy,
             Path jvmFile,
-            String... methods ) throws Exception
+            String... methods )
     {
         runBenchmark(
                 benchmark,
