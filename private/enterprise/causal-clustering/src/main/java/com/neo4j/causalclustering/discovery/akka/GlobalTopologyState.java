@@ -60,6 +60,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             log.info( "Core topology for database %s changed from %s to %s", databaseId, currentCoreTopology, newCoreTopology );
             callback.accept( newCoreTopology );
         }
+
+        if ( hasNoMembers( newCoreTopology ) )
+        {
+            // do not store core topologies with no members, they can represent deleted databases
+            coreTopologiesByDatabase.remove( databaseId, newCoreTopology );
+        }
     }
 
     @Override
@@ -72,6 +78,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         {
             this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
             log.info( "Read replica topology for database %s changed from %s to %s", databaseId, currentReadReplicaTopology, newReadReplicaTopology );
+        }
+
+        if ( hasNoMembers( newReadReplicaTopology ) )
+        {
+            // do not store read replica topologies with no members, they can represent deleted databases
+            readReplicaTopologiesByDatabase.remove( databaseId, newReadReplicaTopology );
         }
     }
 
@@ -156,5 +168,10 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private static boolean haveDifferentMembers( DatabaseCoreTopology oldTopology, DatabaseCoreTopology newTopology )
     {
         return oldTopology == null || !oldTopology.members().equals( newTopology.members() );
+    }
+
+    private static boolean hasNoMembers( Topology<?> topology )
+    {
+        return topology.members().isEmpty();
     }
 }

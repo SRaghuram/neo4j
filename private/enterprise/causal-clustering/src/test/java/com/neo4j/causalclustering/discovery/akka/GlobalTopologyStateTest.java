@@ -29,8 +29,11 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -321,6 +324,42 @@ class GlobalTopologyStateTest
 
         verify( listener ).accept( coreTopology1 );
         verify( listener, never() ).accept( coreTopology2 );
+    }
+
+    @Test
+    void shouldNotStoreEmptyCoreTopologies()
+    {
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, clusterId, false, Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId1, clusterId, false, emptyMap() );
+
+        state.onTopologyUpdate( coreTopology1 );
+        state.onTopologyUpdate( coreTopology2 );
+
+        // changes from both topologies are reported
+        verify( listener ).accept( coreTopology1 );
+        verify( listener ).accept( coreTopology2 );
+
+        // seconds core topology is not stored because it does not contain any members
+        var topology = state.coreTopologyForDatabase( databaseId1 );
+        assertNotEquals( coreTopology1, topology );
+        assertNotEquals( coreTopology2, topology );
+        assertSame( DatabaseCoreTopology.EMPTY, topology );
+    }
+
+    @Test
+    void shouldNotStoreEmptyReadReplicaTopologies()
+    {
+        var readReplicaTopology1 = new DatabaseReadReplicaTopology( databaseId1, Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 ) );
+        var readReplicaTopology2 = new DatabaseReadReplicaTopology( databaseId1, emptyMap() );
+
+        state.onTopologyUpdate( readReplicaTopology1 );
+        state.onTopologyUpdate( readReplicaTopology2 );
+
+        // seconds read replica topology is not stored because it does not contain any members
+        var topology = state.readReplicaTopologyForDatabase( databaseId1 );
+        assertNotEquals( readReplicaTopology1, topology );
+        assertNotEquals( readReplicaTopology2, topology );
+        assertSame( DatabaseReadReplicaTopology.EMPTY, topology );
     }
 
     private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )
