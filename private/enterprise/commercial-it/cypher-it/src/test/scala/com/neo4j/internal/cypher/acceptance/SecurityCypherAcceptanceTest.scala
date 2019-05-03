@@ -429,6 +429,48 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
   }
 
+  test("should drop user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("DROP USER foo")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin"))
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+  }
+
+  test("should fail on dropping non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
+    try {
+      // WHEN
+      execute("DROP USER foo")
+
+      fail("Expected error \"Cannot drop non-existent user 'foo'\"")
+    } catch {
+      // THEN
+      case e :Exception if e.getMessage.equals("Cannot drop non-existent user 'foo'") =>
+    }
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin"))
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+  }
+
   // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
   // But it can't be initialized until after super.initTest()
   private var systemGraphInnerQueryExecutor: ContextSwitchingSystemGraphQueryExecutor = _

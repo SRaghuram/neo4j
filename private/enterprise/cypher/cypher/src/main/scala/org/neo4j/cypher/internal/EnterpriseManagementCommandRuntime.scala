@@ -72,6 +72,22 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         ))
       )
 
+    // DROP USER foo
+    case DropUser(userName) => (_, _) =>
+      UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
+        """
+//          |OPTIONAL MATCH (u:User {name:$name})
+//          |WITH u, u.name as name
+//          |DETACH DELETE u
+//          |RETURN name
+          |RETURN null as name
+        """.stripMargin,
+        VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
+        record => {
+          if (record.get("name") == null) throw new IllegalStateException("Cannot drop non-existent user '" + userName + "'")
+        }
+      )
+
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
       // TODO fix the predefined roles to be connected to PredefinedRoles (aka PredefinedRoles.ADMIN)
