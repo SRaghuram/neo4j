@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{InstanceField, IntermediateRepresentation, Parameter}
-import org.neo4j.cypher.internal.runtime.morsel.{CursorPool, CursorPools, MorselExecutionContext}
+import org.neo4j.codegen.api.{InstanceField, IntermediateRepresentation, LocalVariable, Parameter}
+import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.internal.kernel.api._
 
 object OperatorCodeGenHelperTemplates {
@@ -35,8 +35,14 @@ object OperatorCodeGenHelperTemplates {
   val INNER_LOOP: InstanceField = field[Boolean]("innerLoop", constant(false))
 
   // IntermediateRepresentation code
+  val QUERY_STATE: IntermediateRepresentation = load("state")
+  val QUERY_RESOURCES: IntermediateRepresentation = load("resources")
+  val CURSOR_POOL_V: LocalVariable =
+    variable[CursorPools]("cursorPools",
+                          invoke(QUERY_RESOURCES,
+                                 method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
-    load("cursorPools")
+    load(CURSOR_POOL_V.name)
 
   val OUTPUT_ROW: IntermediateRepresentation =
     load("context")
@@ -47,8 +53,12 @@ object OperatorCodeGenHelperTemplates {
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
 
+  val PRE_POPULATE_RESULTS_V: LocalVariable =
+    variable[Boolean]("prePopulateResults",
+                      invoke(QUERY_STATE,
+                             method[QueryState, Boolean]("prepopulateResults")))
   val PRE_POPULATE_RESULTS: IntermediateRepresentation =
-    load("prePopulateResults")
+    load(PRE_POPULATE_RESULTS_V.name)
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)

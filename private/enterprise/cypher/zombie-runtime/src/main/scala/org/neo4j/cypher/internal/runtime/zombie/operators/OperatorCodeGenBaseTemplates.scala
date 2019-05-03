@@ -16,9 +16,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.values.AnyValue
 
@@ -77,6 +76,7 @@ trait OperatorTaskTemplate {
   def genOperate: IntermediateRepresentation
 
   // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
+  def genPost: Seq[IntermediateRepresentation]
   def genFields: Seq[Field]
   def genLocalVariables: Seq[LocalVariable]
 }
@@ -93,6 +93,7 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
 }
 
 trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskTemplate {
+  import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._
 
   // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
@@ -102,44 +103,50 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
 
     ClassDeclaration[ContinuableOperatorTaskWithMorsel](packageName, className,
-      extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
-      implementsInterfaces = Seq.empty,
+      extendsClass = None,
+      implementsInterfaces =  Seq(typeRefOf[ContinuableOperatorTaskWithMorsel]),
       constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
       initializationCode = genInit,
       methods = Seq(
-        MethodDeclaration("operateCompiled",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+        MethodDeclaration("operate",
+          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Unit],
           Seq(param[MorselExecutionContext]("context"),
-              param[DbAccess]("dbAccess"),
-              param[Array[AnyValue]]("params"),
-              param[ExpressionCursors]("cursors"),
-              param[Array[AnyValue]]("expressionVariables"),
-              param[CursorPools]("cursorPools"),
-              param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E"))),
-              param[Boolean]("prePopulateResults")
+              param[QueryContext]("dbAccess"),
+              param[QueryState]("state"),
+              param[QueryResources]("resources")
           ),
-          body = genOperate,
-          genLocalVariables = () => genLocalVariables, // NOTE: This has to be called after genOperate!
-          parameterizedWith = Some(("E", extending[Exception])),
-          throws = Some(typeParam("E"))
+          body = block(genOperate, block(genPost:_*)),
+          genLocalVariables = () => {
+            Seq(
+              variable[Array[AnyValue]]("params",
+                                 invoke(QUERY_STATE, method[QueryState, Array[AnyValue]]("params"))),
+              variable[ExpressionCursors]("cursors",
+                                          invoke(QUERY_RESOURCES,
+                                                 method[QueryResources, ExpressionCursors]("expressionCursors"))),
+              variable[Array[AnyValue]]("expressionVariables",
+                                        invoke(QUERY_RESOURCES,
+                                               method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
+                                               invoke(QUERY_STATE, method[QueryState, Int]("nExpressionSlots"))
+                                               ))) ++ genLocalVariables},
+                          parameterizedWith = None, throws = Some(typeRefOf[Exception])
         ),
         MethodDeclaration("canContinue",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Boolean],
           parameters = Seq.empty,
           body = genCanContinue
         ),
         // This is only needed because we extend an abstract scala class containing `val dataRead`
         MethodDeclaration("dataRead",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Read],
           parameters = Seq.empty,
           body = loadField(DATA_READ)
         ),
         // This is only needed because we extend an abstract scala class containing `val inputMorsel`
         MethodDeclaration("inputMorsel",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[MorselExecutionContext],
           parameters = Seq.empty,
           body = loadField(INPUT_MORSEL)
@@ -176,4 +183,6 @@ class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
     } ++
     delegate.genLocalVariables
   }
+
+  override def genPost: Seq[IntermediateRepresentation] = delegate.genPost
 }

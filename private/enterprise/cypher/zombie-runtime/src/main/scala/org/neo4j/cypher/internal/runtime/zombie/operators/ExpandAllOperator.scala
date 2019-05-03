@@ -137,11 +137,14 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
     override def genFields: Seq[Field] = Seq.empty
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+    override def genPost: Seq[IntermediateRepresentation] = Seq.empty
   }
 
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
+
+  override def genPost: Seq[IntermediateRepresentation] = inner.genPost
 
   override def genFields: Seq[Field] = {
     val localFields =
@@ -154,7 +157,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   }
 
   override def genLocalVariables: Seq[LocalVariable] = {
-    inner.genLocalVariables
+    inner.genLocalVariables :+ CURSOR_POOL_V
   }
 
   /**

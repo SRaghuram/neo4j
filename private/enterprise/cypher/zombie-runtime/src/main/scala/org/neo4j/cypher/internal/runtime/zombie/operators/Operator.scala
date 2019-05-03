@@ -5,15 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.values.AnyValue
 
 /**
   * Input to use for starting an operator task.
@@ -186,6 +184,8 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
   * Operator related task.
   */
 trait OperatorTask {
+
+  @throws[Exception]
   def operate(output: MorselExecutionContext,
               context: QueryContext,
               state: QueryState,
@@ -249,52 +249,4 @@ trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: Mor
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
-}
-
-abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOperatorTaskWithMorsel {
-
-  override def operate(output: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState,
-                       resources: QueryResources): Unit = {
-    // For compiled expressions to work they assume that some local variables exists with certain names
-    // as defined by the CompiledExpression.evaluate() interface
-    operateCompiled(
-      //--- Names used by compiled expressions
-      output,
-      dbAccess = context,
-      params = state.params,
-      cursors = resources.expressionCursors,
-      expressionVariables = resources.expressionVariables(state.nExpressionSlots),
-      //--- Additional operator codegen dependencies
-      cursorPools = resources.cursorPools,
-      //--- Additional produce result codegen dependencies
-      resultVisitor = state.visitor,
-      prepopulateResults = state.prepopulateResults
-    )
-  }
-
-  /**
-    * The implementation of this method is done by code generation
-    *
-    * It is currently required to include the same parameter names as CompiledExpression.evaluate()
-    * to play well with compiled expressions (where they are defined as static constants).
-    * If we expose a way to inject the IntermediateRepresentation for these variable accesses into
-    * the expression compiler we can eliminate this abstract class delegation of the operate() call.
-    *
-    * AnyValue evaluate( ExecutionContext context,
-    *                    DbAccess dbAccess,
-    *                    AnyValue[] params,
-    *                    ExpressionCursors cursors,
-    *                    AnyValue[] expressionVariables );
-    */
-  @throws[Exception]
-  def operateCompiled[E <: Exception](context: MorselExecutionContext,
-                                      dbAccess: DbAccess,
-                                      params: Array[AnyValue],
-                                      cursors: ExpressionCursors,
-                                      expressionVariables: Array[AnyValue],
-                                      cursorPools: CursorPools,
-                                      resultVisitor: QueryResultVisitor[E],
-                                      prepopulateResults: Boolean): Unit
 }

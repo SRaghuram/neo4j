@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{DemandControlSubscription, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
@@ -16,8 +16,8 @@ import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, OperatorExpress
 import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
@@ -48,7 +48,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     @volatile private var _canContinue: Boolean = false
     override def toString: String = "ProduceResultInputTask"
-    override def canContinue: Boolean =_canContinue
+    override def canContinue: Boolean = inputMorsel.isValidRow
 
     override def operate(outputIgnore: MorselExecutionContext,
                          context: QueryContext,
@@ -100,9 +100,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                        resources.expressionVariables(state.nExpressionSlots),
                                        prePopulateResults = state.prepopulateResults)
 
-    val subscriber = state.subscriber
+    val subscriber: QuerySubscriber = state.subscriber
     var served = 0
-    val demand = state.demandControlSubscription.getDemand
+    val demand: Long = state.demandControlSubscription.getDemand
     // Loop over the rows of the morsel and call the visitor for each one
     while (output.isValidRow && served < demand) {
       subscriber.onRecord()
@@ -126,23 +126,26 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
 class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
                                        (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskTemplate {
+  import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
+
+  private val subscriber = variable[QuerySubscriber](codeGen.namer.nextVariableName(),
+                                                     invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
+  private val subscription = variable[DemandControlSubscription](codeGen.namer.nextVariableName(),
+                                                                 invoke(QUERY_STATE, method[QueryState, DemandControlSubscription]("demandControlSubscription")))
+  private val demand = variable[Long](codeGen.namer.nextVariableName(),
+                                      invoke(load(subscription), method[DemandControlSubscription, Long]("getDemand")))
+  private val served = variable[Long](codeGen.namer.nextVariableName(), constant(0L))
 
   override def toString: String = "ProduceResultTaskTemplate"
 
   override def genInit: IntermediateRepresentation = {
-    block(
-      setField(RESULT_FIELD_ARRAY, newArray(typeRefOf[AnyValue], columns.length)),
-      setField(RESULT_RECORD, newInstance(constructor[CompiledQueryResultRecord, Array[AnyValue]], loadField(RESULT_FIELD_ARRAY))),
-      inner.genInit
-    )
+   inner.genInit
   }
 
   override def genCanContinue: IntermediateRepresentation = {
-    constant(false) // will be true sometimes for reactive results
+    INPUT_ROW_IS_VALID
   }
-
-  import OperatorCodeGenHelperTemplates._
 
   // This operates on a single row only
   override def genOperate: IntermediateRepresentation = {
@@ -166,6 +169,8 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
                            notPopulated), notPopulated)
     }
 
+    //figures out how to get a reference to project from a slot, e.g if we have a longSlot that is a node,
+    // we create a node, and if it is a relationship we create a relationship and so on
     def getFromSlot(slot: Slot) = slot match {
         case LongSlot(offset, true, symbols.CTNode) =>
           ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
@@ -182,31 +187,56 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
           throw new InternalException(s"Do not know how to project $slot")
       }
 
+    /**
+      * For each column to project we generate
+      * {{{
+      *   subscriber.onField(0, getFromSlot)
+      *   subscriber.onField(1, getFromSlot)
+      *   ....
+      * }}}
+     */
     val project = block(columns.zipWithIndex.map {
       case (name, index) =>
         val slot = slots.get(name).getOrElse(
           throw new InternalException(s"Did not find `$name` in the slot configuration")
-        )
-        arraySet(loadField(RESULT_FIELD_ARRAY), index, getFromSlot(slot))
+          )
+        invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
+                         constant(index), getFromSlot(slot))
     }:_ *)
 
-    // TODO Pontus promised to update this part
+    /**
+      * Generate:
+      * {{{
+      *   if (served < demand) {
+      *     subscriber.onRecord()
+      *     [[project]]
+      *     subscriber.onRecordCompleted()
+      *     served += 1L
+      *     [[inner]]]
+      *   }
+      * }}}
+      */
     block(
-      project,
-      // We should actually check the return value and exit the loop if the visitor returns false to fulfill the contract, but morsel runtime doesn't do that currently
-      invokeSideEffect(load("resultVisitor"), method[QueryResultVisitor[Exception], Boolean, QueryResult.Record]("visit"), loadField(RESULT_RECORD)),
-      inner.genOperate
+      condition(lessThan(load(served), load(demand)))(
+        block(
+          invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit]("onRecord")),
+          project,
+          invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit]("onRecordCompleted")),
+          assign(served, add(load(served), constant(1L))),
+          inner.genOperate
+          )
+      ),
     )
   }
 
-  override def genFields: Seq[Field] =
-    RESULT_FIELD_ARRAY +: (RESULT_RECORD +: inner.genFields)
+  override def genPost: Seq[IntermediateRepresentation] = {
+    invokeSideEffect(load(subscription), method[DemandControlSubscription, Unit, Long]("addServed"), load(served)) +: inner.genPost
+  }
+
+  override def genFields: Seq[Field] = inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] =
-    inner.genLocalVariables
-
-  val RESULT_FIELD_ARRAY: InstanceField = field[Array[AnyValue]]("fields")
-  val RESULT_RECORD: InstanceField = field[CompiledQueryResultRecord]("resultRecord")
+    inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, subscriber, subscription, demand, served)
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record
