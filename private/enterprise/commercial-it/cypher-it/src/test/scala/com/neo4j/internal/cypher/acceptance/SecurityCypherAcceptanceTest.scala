@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.internal.kernel.api.security.AuthSubject
 import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.{BasicPasswordPolicy, CommunitySecurityModule, SecureHasher}
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
@@ -317,6 +318,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   }
 
+  // TODO test so the user has the correct password in all create tests!!!!!
   test("should create user with password as string") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -341,7 +343,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
 
     // WHEN
-    execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "password"))
+    execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "bar"))
 
     // THEN
     val result = execute("SHOW USERS")
@@ -434,7 +436,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   protected override def initTest(): Unit = {
     super.initTest()
 
-    systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), "neo4j")
+    systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
@@ -466,6 +468,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   private def databaseManager() = {
     dependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
+  }
+
+  private def threadToStatementContextBridge() = {
+    dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
 
   private def dependencyResolver = {

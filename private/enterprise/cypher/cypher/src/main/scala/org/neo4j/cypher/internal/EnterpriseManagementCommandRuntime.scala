@@ -56,9 +56,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE USER foo WITH PASSWORD password
-    case CreateUser(userName, initialPassword, requirePasswordChange, suspended) => (_, _) =>
+    case CreateUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
       // TODO check so we don't log plain passwords
-      val credentials = userManager.getCredentialsForPassword(UTF8.encode(initialPassword))
+      // TODO handle both string and parameter passwords
+      val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
+      val credentials = userManager.getCredentialsForPassword(password)
       SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
         """CREATE (u:User {name:$name,credentials:$credentials,passwordChangeRequired:$requirePasswordChange,suspended:$suspended})
           |RETURN u.name as name""".stripMargin,
