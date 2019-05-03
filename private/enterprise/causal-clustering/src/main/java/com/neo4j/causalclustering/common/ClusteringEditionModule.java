@@ -9,14 +9,12 @@ import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 
 import java.io.File;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -25,12 +23,9 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.Log;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
@@ -44,8 +39,6 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
 
         headerInformationFactory = createHeaderInformationFactory();
-
-        transactionStartTimeout = config.get( GraphDatabaseSettings.transaction_start_timeout ).toMillis();
 
         constraintSemantics = new CommercialConstraintSemantics();
 
