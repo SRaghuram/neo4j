@@ -104,6 +104,6 @@ public class CreateUniqueConstraint extends AbstractCreateIndex
     public void createIndex()
     {
         createUniquenessConstraint( db(), LABEL, CreateUniqueConstraint_type );
-        waitForSchemaIndexes( db(), LABEL );
+        waitForSchemaIndexes( db() );
     }
 }

@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SplittableRandom;
-import java.util.function.Function;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -35,8 +35,8 @@ import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
 import static com.neo4j.bench.client.ClientUtil.durationToString;
-
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
 
@@ -162,6 +162,8 @@ public class DataGenerator
     private final LabelKeyDefinition[] uniqueConstraints;
     private final LabelKeyDefinition[] mandatoryNodeConstraints;
     private final RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
+    private final LabelKeyDefinition[] fulltextNodeSchemaIndexes;
+    private final RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes;
 
     public DataGenerator( DataGeneratorConfig config )
     {
@@ -195,6 +197,8 @@ public class DataGenerator
         this.uniqueConstraints = config.uniqueConstraints();
         this.mandatoryNodeConstraints = config.mandatoryNodeConstraints();
         this.mandatoryRelationshipConstraints = config.mandatoryRelationshipConstraints();
+        this.fulltextNodeSchemaIndexes = config.fulltextNodeSchemaIndexes();
+        this.fulltextRelationshipSchemaIndexes = config.fulltextRelationshipSchemaIndexes();
     }
 
     private RelationshipType[] toRelationshipTypes( RelationshipDefinition[] relationships )
@@ -1181,24 +1185,10 @@ public class DataGenerator
     {
         Stream.of( schemaIndexes )
               .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
-    }
-
-    private void waitForSchemaIndexes( GraphDatabaseService db )
-    {
-        try ( Transaction ignore = db.beginTx() )
-        {
-            Label[] indexedLabels = Stream
-                    .of(
-                            Stream.of( uniqueConstraints ).map( LabelKeyDefinition::label ),
-                            Stream.of( schemaIndexes ).map( LabelKeyDefinition::label ) )
-                    .flatMap( Function.identity() )
-                    .toArray( Label[]::new );
-            waitForSchemaIndexes( db, indexedLabels );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error while waiting for indexes to come online", e );
-        }
+        Stream.of( fulltextNodeSchemaIndexes )
+                .forEach( def -> createFulltextNodeIndex( db, def.label(), def.keys() ) );
+        Stream.of( fulltextRelationshipSchemaIndexes )
+                .forEach( def -> createFulltextRelationshipIndex( db, def.type(), def.key() ) );
     }
 
     public static void createMandatoryNodeConstraint( GraphDatabaseService db, Label label, String key )
@@ -1253,6 +1243,24 @@ public class DataGenerator
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
                                                 label, Arrays.toString( keys ) ), e );
+        }
+    }
+
+    public static void createFulltextNodeIndex( GraphDatabaseService db, Label label, String[] propertyKeys )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( "CALL db.index.fulltext.createNodeIndex('ftsNodes', ['" + label.name() + "'], ['" + join( "','", propertyKeys ) + "'] )" ).close();
+            tx.success();
+        }
+    }
+
+    public static void createFulltextRelationshipIndex( GraphDatabaseService db, RelationshipType type, String propertyKey )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( "CALL db.index.fulltext.createRelationshipIndex('ftsRels', ['" + type.name() + "'], ['" + propertyKey + "'])" ).close();
+            tx.success();
         }
     }
 
@@ -1339,43 +1347,48 @@ public class DataGenerator
         }
     }
 
-    public static void waitForSchemaIndexes( GraphDatabaseService db, Label... indexedLabels )
+    public static void waitForSchemaIndexes( GraphDatabaseService db )
     {
         try ( Transaction ignore = db.beginTx() )
         {
-            for ( Label label : indexedLabels )
+            db.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
+        }
+        catch ( Exception e )
+        {
+            throw indexWaitException( db, e );
+        }
+    }
+
+    private static RuntimeException indexWaitException( GraphDatabaseService db, Exception e )
+    {
+        RuntimeException exception = new RuntimeException( "Error while waiting for indexes to come online", e );
+        for ( IndexDefinition index : db.schema().getIndexes() )
+        {
+            Schema.IndexState indexState = db.schema().getIndexState( index );
+            if ( indexState == Schema.IndexState.FAILED )
             {
-                for ( IndexDefinition index : db.schema().getIndexes( label ) )
-                {
-                    assertIndexNotFailed( db, index );
-                    if ( db.schema().getIndexState( index ) != Schema.IndexState.ONLINE )
-                    {
-                        while ( db.schema().getIndexState( index ) == Schema.IndexState.POPULATING )
-                        {
-                            Thread.sleep( 500 );
-                        }
-                        assertIndexNotFailed( db, index );
-                    }
-                }
+                exception.addSuppressed( new RuntimeException( "Index " + index + " failed: " + db.schema().getIndexFailure( index ) ) );
+            }
+            else if ( indexState == Schema.IndexState.POPULATING )
+            {
+                exception.addSuppressed( new RuntimeException( "Index is still building: " + index ) );
+            }
+        }
+        return exception;
+    }
+
+    public static void waitForSchemaIndexes( GraphDatabaseService db, Label label )
+    {
+        try
+        {
+            for ( IndexDefinition index : db.schema().getIndexes( label ) )
+            {
+                db.schema().awaitIndexOnline( index, 1, TimeUnit.DAYS );
             }
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Error while waiting for indexes to come online", e );
-        }
-    }
-
-    private static void assertIndexNotFailed( GraphDatabaseService db, IndexDefinition index )
-    {
-        if ( db.schema().getIndexState( index ) == Schema.IndexState.FAILED )
-        {
-            throw new RuntimeException(
-                    format( "Index (%s,%s) failed to build:\n%s",
-                            index.getLabel(),
-                            index.getPropertyKeys(),
-                            db.schema().getIndexFailure( index )
-                    )
-            );
+            throw indexWaitException( db, e );
         }
     }
 

@@ -27,11 +27,11 @@ import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toFloat;
+import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.diagonal;
 import static com.neo4j.bench.micro.data.PointGenerator.grid;
-import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 import static com.neo4j.bench.micro.data.TemporalGenerator.date;
 import static com.neo4j.bench.micro.data.TemporalGenerator.dateTime;
 import static com.neo4j.bench.micro.data.TemporalGenerator.duration;
@@ -51,10 +51,9 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-
-import static java.lang.String.format;
 
 public class DataGeneratorConfigTest
 {
@@ -101,6 +100,12 @@ public class DataGeneratorConfigTest
                         new LabelKeyDefinition( Label.label( "A" ), "a" ),
                         new LabelKeyDefinition( Label.label( "B" ), "b" ) )
                 .withMandatoryRelationshipConstraints(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "REL1" ), "C" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "REL2" ), "D" ) )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .withFulltextRelationshipSchemaIndexes(
                         new RelationshipKeyDefinition( RelationshipType.withName( "REL1" ), "C" ),
                         new RelationshipKeyDefinition( RelationshipType.withName( "REL2" ), "D" ) )
                 .withNeo4jConfig( neo4jConfig )
@@ -678,6 +683,76 @@ public class DataGeneratorConfigTest
                 .withUniqueConstraints(
                         new LabelKeyDefinition( Label.label( "A" ), "a" ),
                         new LabelKeyDefinition( Label.label( "C" ), "b" ) )
+                .build();
+
+        assertConfigEquality( config1, config2, false );
+    }
+
+    @Test
+    public void dataGeneratorsWithSameFulltextNodeSchemaIndexesShouldBeEqual() throws IOException
+    {
+        Supplier<DataGeneratorConfig> fun = () -> new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config1 = fun.get();
+        DataGeneratorConfig config2 = fun.get();
+        assertConfigEquality( config1, config2, true );
+    }
+
+    @Test
+    public void dataGeneratorsWithSameFulltextRelationshipSchemaIndexesShouldBeEqual() throws IOException
+    {
+        Supplier<DataGeneratorConfig> fun = () -> new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config1 = fun.get();
+        DataGeneratorConfig config2 = fun.get();
+        assertConfigEquality( config1, config2, true );
+    }
+
+    @Test
+    public void dataGeneratorsWithDifferentFulltextNodeSchemaIndexesShouldNotBeEqual() throws IOException
+    {
+        DataGeneratorConfig config1 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config2 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextNodeSchemaIndexes(
+                        new LabelKeyDefinition( Label.label( "A" ), "a" ),
+                        new LabelKeyDefinition( Label.label( "C" ), "b" ) )
+                .build();
+
+        assertConfigEquality( config1, config2, false );
+    }
+
+    @Test
+    public void dataGeneratorsWithDifferentFulltextRelationshipSchemaIndexesShouldNotBeEqual() throws IOException
+    {
+        DataGeneratorConfig config1 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "B" ), "b" ) )
+                .build();
+
+        DataGeneratorConfig config2 = new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .withFulltextRelationshipSchemaIndexes(
+                        new RelationshipKeyDefinition( RelationshipType.withName( "A" ), "a" ),
+                        new RelationshipKeyDefinition( RelationshipType.withName( "C" ), "b" ) )
                 .build();
 
         assertConfigEquality( config1, config2, false );
