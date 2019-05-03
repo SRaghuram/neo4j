@@ -40,7 +40,7 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 public class DefaultMasterImplSPI implements MasterImpl.SPI
 {
     private static final int ID_GRAB_SIZE = 1000;
-    static final String STORE_COPY_CHECKPOINT_TRIGGER = "store copy";
+    static final String STORE_COPY_CHECKPOINT_TRIGGER = "Store copy";
 
     private final GraphDatabaseAPI graphDb;
     private final TransactionChecksumLookup txChecksumLookup;
