@@ -95,6 +95,10 @@ public class MetricsSettings implements LoadableConfig
     @Description( "Enable reporting metrics about the current number of threads running." )
     public static final Setting<Boolean> jvmThreadsEnabled = buildSetting( "metrics.jvm.threads.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 
+    @Description( "Enable reporting metrics about the number of open file descriptors." )
+    public static final Setting<Boolean> jvmFileDescriptorsEnabled =
+            buildSetting( "metrics.jvm.file.descriptors.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+
     @Description( "Enable reporting metrics about number of occurred replanning events." )
     public static final Setting<Boolean> cypherPlanningEnabled =
             buildSetting( "metrics.cypher.replanning.enabled", BOOLEAN ).inherits( neoEnabled ).build();

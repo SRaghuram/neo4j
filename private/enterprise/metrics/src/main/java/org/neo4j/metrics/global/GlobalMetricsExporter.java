@@ -19,6 +19,7 @@ import org.neo4j.metrics.source.causalclustering.CoreMetrics;
 import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import org.neo4j.metrics.source.db.BoltMetrics;
 import org.neo4j.metrics.source.db.PageCacheMetrics;
+import org.neo4j.metrics.source.jvm.FileDescriptorMetrics;
 import org.neo4j.metrics.source.jvm.GCMetrics;
 import org.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
 import org.neo4j.metrics.source.jvm.MemoryPoolMetrics;
@@ -71,6 +72,11 @@ public class GlobalMetricsExporter
         if ( config.get( MetricsSettings.jvmBuffersEnabled ) )
         {
             life.add( new MemoryBuffersMetrics( globalMetricsPrefix, registry ) );
+        }
+
+        if ( config.get( MetricsSettings.jvmFileDescriptorsEnabled ) )
+        {
+            life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
         }
 
         if ( config.get( MetricsSettings.boltMessagesEnabled ) )
