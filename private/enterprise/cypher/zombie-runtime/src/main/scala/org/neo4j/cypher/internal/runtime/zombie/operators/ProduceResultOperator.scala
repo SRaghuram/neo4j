@@ -46,7 +46,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
-    @volatile private var _canContinue: Boolean = false
     override def toString: String = "ProduceResultInputTask"
     override def canContinue: Boolean = inputMorsel.isValidRow
 
@@ -56,7 +55,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                          resources: QueryResources): Unit = {
 
       produceOutput(inputMorsel, context, state, resources)
-      _canContinue = inputMorsel.isValidRow
     }
   }
 
@@ -65,6 +63,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class OutputOOperatorState extends OutputOperatorState with PreparedOutput {
 
+    //TODO reviewer: we are generally not making state variables volatile, like for example cursors etc
+    //               should we be consistent and stick with non-volatile here as well
     @volatile private var _canContinue: Boolean = false
 
     override def toString: String = "ProduceResultOutputTask"
