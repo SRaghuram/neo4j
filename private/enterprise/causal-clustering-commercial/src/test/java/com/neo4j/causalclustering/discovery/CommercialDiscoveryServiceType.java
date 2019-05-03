@@ -9,12 +9,12 @@ import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceF
 
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.scenarios.DiscoveryServiceType;
 
 public enum CommercialDiscoveryServiceType implements DiscoveryServiceType
 {
     AKKA( CommercialAkkaDiscoveryServiceFactory::new ),
-    AKKA_UNCLEAN_SHUTDOWN( AkkaUncleanShutdownDiscoveryServiceFactory::new ),
     HAZELCAST( SslHazelcastDiscoveryServiceFactory::new ),
     SHARED( SslSharedDiscoveryServiceFactory::new );
 
@@ -30,4 +30,23 @@ public enum CommercialDiscoveryServiceType implements DiscoveryServiceType
     {
         return supplier.get();
     }
+
+    /**
+     * A version of Akka discovery service that does not cleanly shutdown cluster members. They just stop, and must be removed by the rest of the cluster.
+     * Intended to simulate a member crash or network partition, and only for use in tests that test recovery of clusters from such situations.
+     */
+    public static DiscoveryServiceType AKKA_UNCLEAN_SHUTDOWN = new DiscoveryServiceType()
+    {
+        @Override
+        public DiscoveryServiceFactory createFactory()
+        {
+            return new AkkaUncleanShutdownDiscoveryServiceFactory();
+        }
+
+        @Override
+        public String name()
+        {
+            return "AKKA_UNCLEAN_SHUTDOWN";
+        }
+    };
 }
