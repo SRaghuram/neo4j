@@ -117,6 +117,7 @@ public class AkkaDiscoveryUncleanShutdownIT
             CoreClusterMember toRestart = shutdownCore( 0 );
             Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
             shutdownCore( 1 );
+            Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
             startCore( toRestart );
         } );
     }
