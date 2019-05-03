@@ -74,6 +74,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // DROP USER foo
     case DropUser(userName) => (_, _) =>
+      // TODO implement
       UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
         """
 //          |OPTIONAL MATCH (u:User {name:$name})
@@ -86,6 +87,27 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         record => {
           if (record.get("name") == null) throw new IllegalStateException("Cannot drop non-existent user '" + userName + "'")
         }
+      )
+
+    // ALTER USER foo
+    case AlterUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
+      // TODO check so we don't log plain passwords
+      // TODO implement
+      val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
+      val credentials = userManager.getCredentialsForPassword(password)
+      SystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
+        """
+//          |OPTIONAL MATCH (u:User {name:$name})
+//          |SET ???
+//          |RETURN u.name as name
+          |RETURN null as name
+          |""".stripMargin,
+        VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
+          Values.stringValue(userName),
+          Values.stringValue(credentials),
+          Values.booleanValue(requirePasswordChange.get),
+          Values.booleanValue(suspended.get)
+        ))
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]

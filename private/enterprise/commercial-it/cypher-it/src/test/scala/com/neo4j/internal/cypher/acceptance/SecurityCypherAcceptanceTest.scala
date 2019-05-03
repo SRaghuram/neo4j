@@ -471,6 +471,77 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
   }
 
+  test("should alter user password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD 'baz'")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    // TODO confirm changed password
+  }
+
+  test("should alter user password mode") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    // TODO confirm changed password mode
+  }
+
+  test("should alter user status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("ALTER USER foo SET STATUS SUSPENDED")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    // TODO confirm changed status
+  }
+
+  // TODO test combos
+
   // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
   // But it can't be initialized until after super.initTest()
   private var systemGraphInnerQueryExecutor: ContextSwitchingSystemGraphQueryExecutor = _
