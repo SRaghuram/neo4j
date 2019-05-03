@@ -142,7 +142,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         }
         catch ( NoSuchTransactionException e )
         {
-            log.info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist.", firstTxId );
+            log.info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist. Last committed tx %d", firstTxId, txIdPromise );
             return Prepare.fail( E_TRANSACTION_PRUNED );
         }
     }
