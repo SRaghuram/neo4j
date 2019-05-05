@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, Pipeline, ProduceResultOutput}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, Pipeline, ProduceResultOutput}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln
@@ -125,6 +125,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = new FilterOperatorTemplate(acc.template, compiledPredicate),
               fusedPlans = nextPlan :: acc.fusedPlans)
+
+          case plans.Input(nodes, variables, nullable) =>
+            val newTemplate = new InputOperatorTemplate(acc.template, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)),
+                                                        variables.map(v => slots.getReferenceOffsetFor(v)), nullable)(expressionCompiler)
+            acc.copy(template = newTemplate,
+                     fusedPlans = nextPlan :: acc.fusedPlans)
 
           case _ =>
             // We cannot handle this plan. Start over from scratch (discard any previously fused plans)

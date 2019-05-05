@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import java.util.concurrent.{Callable, Executors, TimeUnit}
 
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
-import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.zombie.ZombieRuntime
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
@@ -96,7 +96,8 @@ class ZombieParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARAL
 class ZombieNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
 // REACTIVE
-class ZombieReactiveSingleThreadedTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime)
+class ZombieReactiveSingleThreadedTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED, ZombieRuntime)
+class ZombieReactiveSingleThreadedNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime)
 class ZombieReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime)
 
 
