@@ -153,10 +153,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE foo")
 
-      fail("Expected error \"Cannot create already existing role\" but succeeded.")
+      fail("Expected error \"The specified role already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create already existing role") =>
+      case e :Exception if e.getMessage.equals("The specified role already exists.") =>
     }
 
     val result2 = execute("SHOW ROLES")
@@ -208,10 +208,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
-      fail("Expected error \"Cannot create already existing role\" but succeeded.")
+      fail("Expected error \"The specified role already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create already existing role") =>
+      case e :Exception if e.getMessage.equals("The specified role already exists.") =>
     }
 
     val result2 = execute("SHOW ROLES")
@@ -262,10 +262,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("DROP ROLE foo")
 
-      fail("Expected error \"Cannot drop non-existent role 'foo'\"")
+      fail("Expected error \"Role 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot drop non-existent role 'foo'") =>
+      case e :Exception if e.getMessage.equals("Role 'foo' does not exist.") =>
     }
 
     // THEN
@@ -416,10 +416,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     try {
       execute("CREATE USER neo4j SET PASSWORD 'password'")
 
-      fail("Expected error \"Cannot create already existing user\" but succeeded.")
+      fail("Expected error \"The specified user already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create already existing user") =>
+      case e :Exception if e.getMessage.equals("The specified user already exists.") =>
     }
 
     // THEN
@@ -458,10 +458,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("DROP USER foo")
 
-      fail("Expected error \"Cannot drop non-existent user 'foo'\"")
+      fail("Expected error \"User 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot drop non-existent user 'foo'") =>
+      case e :Exception if e.getMessage.equals("User 'foo' does not exist.") =>
     }
 
     // THEN

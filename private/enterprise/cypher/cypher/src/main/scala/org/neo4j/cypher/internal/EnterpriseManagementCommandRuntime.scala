@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs.{SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.security.UserManager
 import org.neo4j.string.UTF8
 import org.neo4j.values.storable.Values
@@ -74,18 +75,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // DROP USER foo
     case DropUser(userName) => (_, _) =>
-      // TODO implement
       UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
-        """
-//          |OPTIONAL MATCH (u:User {name:$name})
-//          |WITH u, u.name as name
-//          |DETACH DELETE u
-//          |RETURN name
-          |RETURN null as name
-        """.stripMargin,
+        """OPTIONAL MATCH (u:User {name:$name})
+          |WITH u, u.name as name
+          |DETACH DELETE u
+          |RETURN name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
         record => {
-          if (record.get("name") == null) throw new IllegalStateException("Cannot drop non-existent user '" + userName + "'")
+          if (record.get("name") == null) throw new InvalidArgumentsException("User '" + userName + "' does not exist.")
         }
       )
 
@@ -95,7 +92,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       // TODO implement
       val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
       val credentials = userManager.getCredentialsForPassword(password)
-      SystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
         """
 //          |OPTIONAL MATCH (u:User {name:$name})
 //          |SET ???
@@ -107,7 +104,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           Values.stringValue(credentials),
           Values.booleanValue(requirePasswordChange.get),
           Values.booleanValue(suspended.get)
-        ))
+        )),
+        record => {
+          if (record.get("name") == null) throw new InvalidArgumentsException("User '" + userName + "' does not exist.")
+        }
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
@@ -156,7 +156,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN r.name as name, f.name as old""".stripMargin,
         VirtualValues.map(Array("name", "from"), Array(Values.stringValue(roleName), Values.stringValue(from))),
         record => {
-          if (record.get("old") == null) throw new IllegalStateException("Cannot create role '" + roleName + "' from non-existent role '" + from + "'")
+          if (record.get("old") == null) throw new InvalidArgumentsException("Cannot create role '" + roleName + "' from non-existent role '" + from + "'")
         }
       )
 
@@ -178,7 +178,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         record => {
-          if (record.get("name") == null) throw new IllegalStateException("Cannot drop non-existent role '" + roleName + "'")
+          if (record.get("name") == null) throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.")
         }
       )
 
@@ -212,7 +212,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
         record => {
-          if (record.get("name") == null) throw new IllegalStateException("Cannot drop non-existent database '" + dbName + "'")
+          if (record.get("name") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
         }
       )
 
@@ -233,7 +233,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           )
         ),
         record => {
-          if (record.get("db") == null) throw new IllegalStateException("Cannot start non-existent database '" + dbName + "'")
+          if (record.get("db") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
         }
       )
 
@@ -253,7 +253,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           )
         ),
         record => {
-          if (record.get("db") == null) throw new IllegalStateException("Cannot stop non-existent database '" + dbName + "'")
+          if (record.get("db") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
         }
       )*/
   }
