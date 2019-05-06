@@ -7,6 +7,7 @@ package org.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.commons.lang3.SystemUtils;
 
 import org.neo4j.io.os.OsBeanUtil;
 import org.neo4j.kernel.impl.annotations.Documented;
@@ -36,8 +37,16 @@ public class FileDescriptorMetrics extends JvmMetrics
     @Override
     public void start()
     {
-        registry.register( fileCount, (Gauge<Long>) OsBeanUtil::getOpenFileDescriptors );
-        registry.register( fileMaximum, (Gauge<Long>) OsBeanUtil::getMaxFileDescriptors );
+        if ( SystemUtils.IS_OS_UNIX )
+        {
+            registry.register( fileCount, (Gauge<Long>) OsBeanUtil::getOpenFileDescriptors );
+            registry.register( fileMaximum, (Gauge<Long>) OsBeanUtil::getMaxFileDescriptors );
+        }
+        else
+        {
+            registry.register( fileCount, (Gauge<Long>) () -> -1L );
+            registry.register( fileMaximum, (Gauge<Long>) () -> -1L );
+        }
     }
 
     @Override

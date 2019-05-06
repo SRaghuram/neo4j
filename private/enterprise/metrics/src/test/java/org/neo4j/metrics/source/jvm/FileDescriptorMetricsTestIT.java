@@ -5,6 +5,10 @@
  */
 package org.neo4j.metrics.source.jvm;
 
+import org.apache.commons.lang3.SystemUtils;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +26,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
@@ -58,13 +63,13 @@ class FileDescriptorMetricsTestIT
     void shouldMonitorOpenFileDescriptors() throws Exception
     {
         assertEventually( "Some file descriptors are open at startup",
-                () -> readLongGaugeValue( metricsCsv( metricsFolder, "neo4j.vm.file.descriptors.count" ) ), greaterThan( 0L ), 30, SECONDS );
+                () -> readLongGaugeValue( metricsCsv( metricsFolder, "neo4j.vm.file.descriptors.count" ) ), new OSDependentMatcher(), 30, SECONDS );
     }
 
     @Test
     void shouldMonitorMaximumFileDescriptors() throws Exception
     {
-        assertEventually( "Some file descriptors are open at startup",
+        assertEventually( "Allowed to open files at startup",
                 () -> readLongGaugeAndAssert( metricsCsv( metricsFolder, "neo4j.vm.file.descriptors.maximum" ), new BiPredicate<>()
                 {
                     private long prevValue = Long.MIN_VALUE;
@@ -79,6 +84,35 @@ class FileDescriptorMetricsTestIT
                         }
                         return Objects.equals( newValue, currentValue );
                     }
-                } ), greaterThan( 0L ), 30, SECONDS );
+                } ), new OSDependentMatcher(), 30, SECONDS );
+    }
+
+    private static class OSDependentMatcher extends BaseMatcher<Long>
+    {
+        private final Matcher<Long> matcher;
+
+        private OSDependentMatcher()
+        {
+            if ( SystemUtils.IS_OS_UNIX )
+            {
+                matcher = greaterThan( 0L );
+            }
+            else
+            {
+                matcher = comparesEqualTo( -1L );
+            }
+        }
+
+        @Override
+        public boolean matches( Object actual )
+        {
+            return matcher.matches( actual );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            matcher.describeTo( description );
+        }
     }
 }
