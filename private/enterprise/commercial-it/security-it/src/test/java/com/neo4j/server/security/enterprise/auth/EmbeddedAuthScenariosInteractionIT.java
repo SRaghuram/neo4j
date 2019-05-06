@@ -46,19 +46,24 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     }
 
     @Test
-    void shouldAllowReadsForCustomRoleWithReadPrivilege() throws Throwable
+    void shouldAllowFindForCustomRoleWithFindPrivilege() throws Throwable
     {
         // Given
         userManager.newUser( "Alice", password( "foo" ), false );
-        userManager.newRole( "CustomRead", "Alice" );
+        userManager.newRole( "custom", "Alice" );
+
+        // When
+        CommercialLoginContext subject = neo.login( "Alice", "foo" );
+
+        // Then
+        testFailRead( subject, 3 );
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
-        userManager.grantPrivilegeToRole( "CustomRead", dbPriv );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
+        userManager.grantPrivilegeToRole( "custom", dbPriv );
 
         // Then
-        CommercialLoginContext subject = neo.login( "Alice", "foo" );
         testSuccessfulRead( subject, 3 );
         testFailWrite( subject );
     }
@@ -80,7 +85,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         userManager.grantPrivilegeToRole( roleName, dbPriv );
 
@@ -139,7 +144,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
@@ -159,7 +164,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), Segment.ALL )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL )
         );
 
         assertSuccess( subject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
@@ -173,9 +178,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) )
         );
 
         assertSuccess( adminSubject, "MATCH (a:A)-[]->(n)-[]->(c:C) RETURN a.number AS a, n.number AS n, c.number AS c", r ->
@@ -211,107 +216,79 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     }
 
     @Test
-    void shouldNotTraverseExplicitLabelsWithoutPermission() throws Throwable
+    void shouldOnlyShowWhitelistedPropertiesWithIndex() throws Throwable
     {
-        // TODO works without FIND privilege...
-        setupGraph();
-        CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "B" ) ) )
+        assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
+        assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
+
+        CommercialLoginContext readOnly = setupUserAndLogin(
+                "readOnlyUser", "readOnlyRole",
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+        );
+        CommercialLoginContext findAndRead = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
         );
 
-        assertSuccess( adminSubject, "MATCH (a:A)-[]->(n1:D)-[]->(c:C) RETURN a.number AS a, n1.number AS n1, c.number AS c", r ->
-        {
-            assertTrue( r.hasNext() );
-            Map<String,Object> row = r.next();
-            assertThat( row.get( "a" ), equalTo( 0L ) );
-            assertThat( row.get( "n1" ), equalTo( 4L ) );
-            assertThat( row.get( "c" ), equalTo( 3L ) );
-            assertThat( r.hasNext(), equalTo( false ) );
-        } );
-        assertEmpty( subject, "MATCH (a:A)-[]->(n1:C)-[]->(n2:D)-[]->(b:B) RETURN a.number AS a, n1.number AS n1, n2.number AS n2, b.number AS b" );
+        String query = "MATCH (n:A) WHERE n.number IS NOT NULL return n.number";
+        String queryIndex = "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number";
+
+        assertSuccess( adminSubject, query, r -> assertKeyIs( r, "n.number", 3, 4 ) );
+        assertSuccess( findAndRead, query, r -> assertKeyIs( r, "n.number", 3 ) );
+        assertEmpty( readOnly, query );
+
+        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
+        assertEmpty( adminSubject, "CALL db.awaitIndexes" );
+
+        assertSuccess( adminSubject, queryIndex, r -> assertKeyIs( r, "n.number", 3, 4 ) );
+        assertSuccess( findAndRead, queryIndex, r -> assertKeyIs( r, "n.number", 3 ) );
+        assertEmpty( readOnly, queryIndex );
     }
 
     @Test
-    void shouldShowLabelsForWhitelistedNode() throws Throwable
+    void shouldOnlyShowWhitelistedPropertiesWithIndexSeek() throws Throwable
     {
+        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
+        assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
+
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
-        );
-
-        assertSuccess( adminSubject, "MATCH (n:Node) WHERE n.number = 3 return labels(n)",
-                r -> assertKeyIs( r, "labels(n)", listOf( "A", "Node" ) ) );
-        assertSuccess( subject, "MATCH (n:Node) WHERE n.number = 3 return labels(n)",
-                r -> assertKeyIs( r, "labels(n)", listOf( "A", "Node" ) ) );
-    }
-
-    @Test
-    void shouldOnlyShowWhitelistedNodeLabelsWithIndex() throws Throwable
-    {
-        // TODO works without FIND privilege...
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
-        assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
-        assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
-
-        CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
-        );
-
-        assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
-                r -> assertKeyIs( r, "n.number", 3, 4 ) );
-        assertEmpty( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number" );
-    }
-
-    @Test
-    void shouldOnlyShowWhitelistedNodeLabelsWithIndexSeek() throws Throwable
-    {
-        // TODO works without FIND privilege...
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
-        assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
-        assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
-
-        CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
-        assertEmpty( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number" );
+        assertSuccess( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
     }
 
     @Test
-    void shouldOnlyShowWhitelistedNodeLabelsWithConstraint() throws Throwable
+    void shouldOnlyShowWhitelistedPropertiesWithConstraint() throws Throwable
     {
-        // TODO works without FIND privilege...
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT a.number IS UNIQUE" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
         CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
-        assertEmpty( subject, "MATCH (n:A) WHERE n.number IS NOT NULL return n.number" );
-        assertEmpty( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number" );
+        assertSuccess( subject, "MATCH (n:A) WHERE n.number IS NOT NULL return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
+        assertSuccess( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
     }
 
     @Test
-    void shouldOnlyShowWhitelistedNodeLabelsWithExistConstraint() throws Throwable
+    void shouldOnlyShowWhitelistedPropertiesWithExistConstraint() throws Throwable
     {
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
@@ -326,12 +303,10 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldRespectExistsConstraintsWithoutReadPrivileges() throws Throwable
     {
-        // TODO works without FIND privilege...
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
                 new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
         );
 
@@ -343,12 +318,10 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldRespectUniqueConstraintsWithoutReadPrivileges() throws Throwable
     {
-        // TODO works without FIND privilege...
         assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT a.number IS UNIQUE" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
                 new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
         );
 
@@ -364,8 +337,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A {number: 3})" );
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "B" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ) );
 
         assertSuccess( adminSubject, "MATCH ()-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
         assertSuccess( adminSubject, "MATCH (:A)-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
@@ -381,8 +354,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "B" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ) );
 
         String varlenBasic = "MATCH (:A)-[:R*3]-(n:B) return n.number";
         String varlenMinMax = "MATCH (:A)-[:R*..3]-(n:B) return n.number";
@@ -402,9 +375,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "" ), new Segment( Collections.singleton( "C" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) ) );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
         String shortestWithProperty =
@@ -455,7 +428,15 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldOnlyShowWhitelistedPropertiesForSegment() throws Throwable
     {
-        CommercialLoginContext subject = setupUserAndLogin(
+        CommercialLoginContext findSome = setupUserAndLogin(
+                "user1", "role1",
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( Collections.singleton( "B" ) ) )
+        );
+
+        CommercialLoginContext findAll = setupUserAndLogin(
+                "user2", "role2",
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
                 new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( Collections.singleton( "A" ) ) ),
                 new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( Collections.singleton( "B" ) ) )
@@ -465,30 +446,21 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (:A {foo: 1, bar: 2}), (:B {foo: 3, bar: 4}), (:A:B {foo: 5, bar: 6}), ({foo: 7, bar: 8})" );
 
         assertSuccess( adminSubject, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 3, 5, 7 ) );
-        assertSuccess( subject, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, null, 5, null ) );
+        assertSuccess( findAll, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, null, 5, null ) );
+        assertSuccess( findSome, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 5 ) );
 
         assertSuccess( adminSubject, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 5 ) );
-        assertSuccess( subject, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
-    }
+        assertSuccess( findAll, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
+        assertSuccess( findSome, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
 
-    @Test
-    void shouldOnlyShowWhitelistedPropertiesForSegmentWithIndex() throws Throwable
-    {
-        // TODO works without FIND privilege...
-        CommercialLoginContext subject = setupUserAndLogin(
-//                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( Collections.singleton( "B" ) ) )
-        );
-
-        assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
-        assertEmpty( adminSubject, "CREATE (:A {foo: 1, bar: 2}), (:B {foo: 3, bar: 4}), (:A:B {foo: 5, bar: 6}), ({foo: 7, bar: 8})" );
         assertEmpty( adminSubject, "CREATE INDEX ON :A(foo, bar)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
                 r -> assertKeyIs( r, "n.foo", 1, 5 ) );
-        assertSuccess( subject, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
+        assertSuccess( findAll, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
+                r -> assertKeyIs( r, "n.foo", 5 ) );
+        assertSuccess( findSome, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
                 r -> assertKeyIs( r, "n.foo", 5 ) );
     }
 
@@ -539,19 +511,101 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
                 r -> assertKeyIs( r, "labels(n)", Collections.singletonList( "A" ), List.of( "A", "B" ) ) );
     }
 
+    @Test
+    void shouldNotTraverseExplicitLabelsWithoutPermission() throws Throwable
+    {
+        setupGraph();
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "D" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+        );
+
+        assertSuccess( adminSubject, "MATCH (a:A)--(n1:D) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( subject, "MATCH (a:A)--(n1:D) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( subject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C)--(b:B) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( subject, "MATCH (a:A)--(n1:D)--(c:C)--(b:B) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 0 ) );
+    }
+
+    @Test
+    void shouldNotTraverseWithOnlyReadPrivileges() throws Throwable
+    {
+        setupGraph();
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "D" ) ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) )
+        );
+
+        assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( subject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 0 ) );
+        assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C)--(b:B) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
+        assertSuccess( subject, "MATCH (a:A)--(n1:D)--(c:C)--(b:B) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 0 ) );
+    }
+
+    @Test
+    void shouldOnlyFindWhitelistedNodeLabelsForVarLengthPattern() throws Throwable
+    {
+        setupGraph();
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "B" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+        );
+
+        String varlenBasic = "MATCH p = (:A)-[:R*3]-(n:C) return length(p)";
+        String varlenMinMax = "MATCH p = (:A)-[:R*..3]-(n:C) return length(p)";
+        String varlenPredicate = "MATCH p = (:A)-[:R*..3]-(n:C) WHERE ALL (n IN nodes(p) WHERE exists(n.number)) return length(p)";
+
+        assertSuccess( adminSubject, varlenBasic, r -> assertKeyIs( r, "length(p)", 3 ) );
+        assertSuccess( adminSubject, varlenMinMax, r -> assertKeyIs( r, "length(p)", 2, 3 ) );
+        assertSuccess( adminSubject, varlenPredicate, r -> assertKeyIs( r, "length(p)", 2, 3 ) );
+        assertSuccess( subject, varlenBasic, r -> assertKeyIs( r, "length(p)", 3 ) );
+        assertSuccess( subject, varlenMinMax, r -> assertKeyIs( r, "length(p)", 3 ) );
+        assertEmpty( subject, varlenPredicate );
+    }
+
+    @Test
+    void shouldOnlyFindWhitelistedNodeLabelsForShortestPath() throws Throwable
+    {
+        setupGraph();
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "B" ) ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+        );
+
+        String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
+        String shortestWithProperty =
+                "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) " +
+                        "WHERE ALL (n in nodes(p) WHERE exists(n.number)) return length(p) as length";
+
+        assertSuccess( adminSubject, shortestBasic, r -> assertKeyIs( r, "length", 2 ) );
+        assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );
+        assertSuccess( subject, shortestBasic, r -> assertKeyIs( r, "length", 3 ) );
+        assertEmpty( subject, shortestWithProperty );
+    }
+
     // Helpers
 
     private CommercialLoginContext setupUserAndLogin( ResourcePrivilege... privileges ) throws Exception
+    {
+        return setupUserAndLogin( "Alice", "custom", privileges );
+    }
+
+    private CommercialLoginContext setupUserAndLogin( String username, String roleName, ResourcePrivilege... privileges ) throws Exception
     {
         DatabasePrivilege dbPriv = new DatabasePrivilege();
         for ( ResourcePrivilege privilege : privileges )
         {
             dbPriv.addPrivilege( privilege );
         }
-        userManager.newUser( "Alice", password( "foo" ), false );
-        userManager.newRole( "custom", "Alice" );
-        userManager.grantPrivilegeToRole( "custom", dbPriv );
-        return neo.login( "Alice", "foo" );
+        userManager.newUser( username, password( "foo" ), false );
+        userManager.newRole( roleName, username );
+        userManager.grantPrivilegeToRole( roleName, dbPriv );
+        return neo.login( username, "foo" );
     }
 
     private void setupGraph()

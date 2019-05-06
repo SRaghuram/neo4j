@@ -314,47 +314,42 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case READ:
                         switch ( resource.type() )
                         {
-                        case TOKEN:
-                        case SCHEMA:
-                        case SYSTEM:
-                        case PROCEDURE:
-                            break;
                         case GRAPH:
-                        case PROPERTY:
-                        case ALL_PROPERTIES:
+                            whitelistAllPropertiesInWholeGraph = true;
                             read = true;
-                            if ( resource instanceof Resource.PropertyResource )
+                            break;
+                        case PROPERTY:
+                            read = true;
+                            int propertyId = resolvePropertyId( resource.getArg1() );
+                            if ( privilege.getSegment() == Segment.ALL )
                             {
-                                int propertyId = resolvePropertyId( resource.getArg1() );
-
-                                if ( privilege.getSegment() == Segment.ALL )
-                                {
-                                    if ( propertyId == -1 ) // TODO magic number
-                                    {
-                                        whitelistAllPropertiesInWholeGraph = true;
-                                    }
-                                    else
-                                    {
-                                        whitelistNodeProperties.add( propertyId );
-                                    }
-                                }
-                                else
-                                {
-                                    Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( propertyId, label -> new HashSet<>() );
-                                    for ( String label : privilege.getSegment().getLabels() )
-                                    {
-                                        int labelId = resolveLabelId( label );
-                                        allowedNodesWithLabels.add( labelId );
-                                    }
-                                }
-                            }
-                            else if ( resource instanceof Resource.AllPropertiesResource )
-                            {
-
+                                whitelistNodeProperties.add( propertyId );
                             }
                             else
                             {
+                                Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( propertyId, label -> new HashSet<>() );
+                                for ( String label : privilege.getSegment().getLabels() )
+                                {
+                                    int labelId = resolveLabelId( label );
+                                    allowedNodesWithLabels.add( labelId );
+                                }
+                            }
+                            break;
+                        case ALL_PROPERTIES:
+                            read = true;
+                            if ( privilege.getSegment() == Segment.ALL )
+                            {
                                 whitelistAllPropertiesInWholeGraph = true;
+                            }
+                            else
+                            {
+                                // TODO replace with another Set<>?
+                                Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( -1, label -> new HashSet<>() ); // TODO MAGIC
+                                for ( String label : privilege.getSegment().getLabels() )
+                                {
+                                    int labelId = resolveLabelId( label );
+                                    allowedNodesWithLabels.add( labelId );
+                                }
                             }
                             break;
                         default:
@@ -365,6 +360,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                         case GRAPH:
                         case PROPERTY:
+                        case ALL_PROPERTIES:
                             write = true;
                             break;
                         case TOKEN:
@@ -375,8 +371,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             break;
                         case SYSTEM:
                             admin = true;
-                            break;
-                        case PROCEDURE:
                             break;
                         default:
                         }
@@ -397,16 +391,14 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
 
             private int resolveLabelId( String label ) throws KernelException
             {
+                assert !label.isEmpty();
                 return resolver.getOrCreateLabelId( label );
             }
 
             private int resolvePropertyId( String property ) throws KernelException
             {
-                if ( !property.isEmpty() )
-                {
-                    return resolver.getOrCreatePropertyKeyId( property );
-                }
-                return -1;
+                assert !property.isEmpty();
+                return resolver.getOrCreatePropertyKeyId( property );
             }
         }
     }
