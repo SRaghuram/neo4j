@@ -28,8 +28,18 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         super( globalModule, edition, log );
     }
 
+    public DB createStoppedDatabase( DatabaseId databaseId ) throws DatabaseExistsException
+    {
+        return createDatabase( databaseId, false );
+    }
+
     @Override
     public DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
+    {
+        return createDatabase( databaseId, true );
+    }
+
+    private DB createDatabase( DatabaseId databaseId, boolean autostart )
     {
         return databaseMap.compute( databaseId, ( key, currentContext ) ->
         {
@@ -38,7 +48,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
                 throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
             }
             DB databaseContext = createNewDatabaseContext( databaseId );
-            if ( started )
+            if ( autostart && started )
             {
                 databaseContext.database().start();
             }

@@ -30,9 +30,12 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.event.DatabaseEventContext;
+import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
@@ -155,16 +158,20 @@ public class CommercialEditionModule extends CommunityEditionModule
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private static void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config )
+    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config )
             throws DatabaseExistsException
     {
         databaseManager.createDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private static void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
+    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         databaseManager.createDatabase( new DatabaseId( config.get( GraphDatabaseSettings.default_database ) ) );
+        DatabaseManagementService managementService = globalModule.getGlobalDependencies().resolveDependency( DatabaseManagementService.class );
+        managementService.registerDatabaseEventListener( new SystemDatabaseEventListener( databaseManager, config ) );
+        globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME,
+                new MultiDatabaseTransactionEventListener( databaseManager ) );
     }
 
     @Override
@@ -214,5 +221,26 @@ public class CommercialEditionModule extends CommunityEditionModule
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
+    }
+
+    private static class SystemDatabaseEventListener extends DatabaseEventListenerAdapter
+    {
+        private final DatabaseManager<?> databaseManager;
+        private final Config config;
+
+        SystemDatabaseEventListener( DatabaseManager<?> databaseManager, Config config )
+        {
+            this.databaseManager = databaseManager;
+            this.config = config;
+        }
+
+        @Override
+        public void databaseStart( DatabaseEventContext eventContext )
+        {
+            if ( SYSTEM_DATABASE_NAME.equals( eventContext.getDatabaseName() ) )
+            {
+                MultiDatabaseTransactionEventListener.createDatabasesFromSystem( databaseManager, config );
+            }
+        }
     }
 }
