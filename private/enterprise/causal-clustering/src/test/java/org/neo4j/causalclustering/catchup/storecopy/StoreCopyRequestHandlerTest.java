@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
@@ -219,6 +220,13 @@ public class StoreCopyRequestHandlerTest
 
         @Override
         public long tryCheckPoint( TriggerInfo triggerInfo )
+        {
+            incrementInvocationCounter( _tryCheckPoint );
+            return _tryCheckPoint.orElseThrow( exceptionIfEmpty );
+        }
+
+        @Override
+        public long tryCheckPoint( TriggerInfo triggerInfo, BooleanSupplier timeout )
         {
             incrementInvocationCounter( _tryCheckPoint );
             return _tryCheckPoint.orElseThrow( exceptionIfEmpty );

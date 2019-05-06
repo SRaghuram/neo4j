@@ -24,7 +24,7 @@ import static org.neo4j.com.RequestContext.anonymous;
 
 public class BackupImpl implements TheBackupInterface
 {
-    static final String FULL_BACKUP_CHECKPOINT_TRIGGER = "full backup";
+    static final String FULL_BACKUP_CHECKPOINT_TRIGGER = "Full backup";
 
     private final StoreCopyServer storeCopyServer;
     private final ResponsePacker incrementalResponsePacker;
