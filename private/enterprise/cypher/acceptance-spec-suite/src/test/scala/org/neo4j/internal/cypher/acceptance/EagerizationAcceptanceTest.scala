@@ -102,7 +102,7 @@ class EagerizationAcceptanceTest
   test("should be eager between relationship property writes in QG head and reads in horizon") {
     val n1 = createNode()
     val n2 = createNode()
-    relate(n1, n2, ("val" -> 1))
+    relate(n1, n2, "val" -> 1)
 
     val query =
       """MATCH (n)-[r]-(m)
@@ -123,7 +123,7 @@ class EagerizationAcceptanceTest
   test("should be eager between relationship property writes in QG tail and reads in horizon") {
     val n1 = createNode()
     val n2 = createNode()
-    relate(n1, n2, ("val" -> 1))
+    relate(n1, n2, "val" -> 1)
 
     val query =
       """UNWIND [1] as i WITH *
@@ -742,7 +742,7 @@ class EagerizationAcceptanceTest
   test("should not introduce eagerness for leaf create match") {
     val query = "CREATE () WITH * MATCH () RETURN count(*)"
     val result = executeWith(Configs.UpdateConf, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should not(includeSomewhere.aPlan("ReadOnly"))
         plan should includeSomewhere.nTimes(0, aPlan().withName(EagerRegEx))
       }))
@@ -2044,7 +2044,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = {null} RETURN count(*)"
 
-    val buggyVersions =  Configs.Cost3_4 + Configs.Cost3_1 + Configs.Rule3_1
+    val buggyVersions =  Configs.Version3_1
     val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query, params = Map("null" -> null),
                              expectedDifferentResults = buggyVersions,
                              planComparisonStrategy = testEagerPlanComparisonStrategy(1, buggyVersions))
@@ -2059,7 +2059,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode())
 
     val query = "MATCH ()-[r]-() WHERE exists(r.prop) REMOVE r.prop  RETURN count(*)"
-    val buggyVersions =  Configs.Cost3_4 + Configs.Cost3_1 + Configs.Rule3_1
+    val buggyVersions =  Configs.Version3_1
     val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query, params = Map("null" -> null),
                             expectedDifferentResults = buggyVersions,
                              planComparisonStrategy = testEagerPlanComparisonStrategy(1, buggyVersions))
@@ -2899,11 +2899,10 @@ class EagerizationAcceptanceTest
     test("matching node property using string unequality and writing other node should be eager") {
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop <> '6' SET m.prop = '5' RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2912,11 +2911,10 @@ class EagerizationAcceptanceTest
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop STARTS WITH '5' SET m.prop = '5' RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2925,11 +2923,10 @@ class EagerizationAcceptanceTest
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop ENDS WITH '5' SET m.prop = '5' RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2938,11 +2935,10 @@ class EagerizationAcceptanceTest
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop CONTAINS '5' SET m.prop = '5' RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2951,11 +2947,10 @@ class EagerizationAcceptanceTest
       relate(createNode(), createNode(Map("prop" -> "5")))
       val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NULL REMOVE m.prop RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2964,11 +2959,10 @@ class EagerizationAcceptanceTest
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NOT NULL SET m.prop='5' RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1 + Configs.Rule3_1
+      val buggyVersions = Configs.Version3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2977,11 +2971,10 @@ class EagerizationAcceptanceTest
       relate(createNode(Map("prop" -> "5")), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE exists(n.prop) SET m.prop='5' RETURN count(*)"
 
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1 + Configs.Rule3_1
+      val buggyVersions = Configs.Version3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -2989,11 +2982,10 @@ class EagerizationAcceptanceTest
     test("matching node property using less than operator and writing other node should be eager") {
       relate(createNode(Map("prop" -> 5)), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop < 6 SET m.prop = 5 RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -3001,11 +2993,10 @@ class EagerizationAcceptanceTest
     test("matching node property using less than or equal operator and writing other node should be eager") {
       relate(createNode(Map("prop" -> 5)), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop <= 6 SET m.prop = 5 RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -3013,11 +3004,10 @@ class EagerizationAcceptanceTest
     test("matching node property using greater than operator and writing other node should be eager") {
       relate(createNode(Map("prop" -> 5)), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop > 4 SET m.prop = 5 RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -3025,11 +3015,10 @@ class EagerizationAcceptanceTest
     test("matching node property using greater than or equal operator and writing other node should be eager") {
       relate(createNode(Map("prop" -> 5)), createNode())
       val query = "MATCH (n)-[r]-(m) WHERE n.prop >= 4 SET m.prop = 5 RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1
+      val buggyVersions = Configs.Cost3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 1)
       result.toList should equal(List(Map("count(*)" -> 1)))
     }
@@ -3048,11 +3037,10 @@ class EagerizationAcceptanceTest
       createLabeledNode("L")
       createNode()
       val query = "MATCH (m1:L), (m2:L) WHERE m1.prop < 43 SET m2.prop = 42 RETURN count(*)"
-      val buggyVersions = Configs.Cost3_4 + Configs.Cost3_1 + Configs.Rule3_1
+      val buggyVersions = Configs.Version3_1
       val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query,
                                expectedDifferentResults = buggyVersions,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1,
-                                                                                        expectPlansToFailPredicate = buggyVersions))
+                               planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = buggyVersions))
       assertStats(result, propertiesWritten = 2)
       result.toList should equal(List(Map("count(*)" -> 2)))
     }
