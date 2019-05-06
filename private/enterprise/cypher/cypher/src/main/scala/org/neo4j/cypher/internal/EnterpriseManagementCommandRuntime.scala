@@ -56,13 +56,19 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE USER foo WITH PASSWORD password
-    case CreateUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
-      // TODO handle both string and parameter passwords
-      val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
-      userManager.newUser(userName, password, requirePasswordChange)
+    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _) =>
+      userManager.newUser(userName, UTF8.encode(initialStringPassword), requirePasswordChange)
       // Default value is not suspended, so only set suspended if needed
       if (suspended) userManager.setUserStatus(userName, suspended)
       NoResultSystemCommandExecutionPlan()
+
+    // CREATE USER foo WITH PASSWORD $password
+    case CreateUser(_, _, Some(_), _, _) =>
+      throw new IllegalStateException("Did not resolve parameters correctly.")
+
+    // CREATE USER foo WITH PASSWORD
+    case CreateUser(_, _, _, _, _) =>
+      throw new IllegalStateException("Password not correctly supplied.")
 
     // DROP USER foo
     case DropUser(userName) => (_, _) =>
@@ -70,12 +76,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       NoResultSystemCommandExecutionPlan()
 
     // ALTER USER foo
-    case AlterUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
+    case AlterUser(userName, initialStringPassword, None, requirePasswordChange, suspended) => (_, _) =>
       if (suspended.isDefined)
         userManager.setUserStatus(userName, suspended.get)
 
-      // TODO handle both string and parameter passwords
-      val newPassword = initialStringPassword.getOrElse(null)
+      val newPassword: String = initialStringPassword.orNull
       if (requirePasswordChange.isDefined && newPassword != null)
         // change both password and requirePasswordChange
         userManager.setUserPassword(userName, UTF8.encode(newPassword), requirePasswordChange.get)
@@ -88,6 +93,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         userManager.setUserPassword(userName, UTF8.encode(newPassword), changePassword)
       }
       NoResultSystemCommandExecutionPlan()
+
+    // ALTER USER foo
+    case AlterUser(_, _, Some(_), _, _) =>
+      throw new IllegalStateException("Did not resolve parameters correctly.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
