@@ -5,6 +5,7 @@
  */
 package org.neo4j.procedure.commercial.builtin;
 
+import java.io.IOException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,6 +41,8 @@ import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Admin;
@@ -469,6 +473,35 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
             throw uncaught;
+        }
+    }
+
+    @Description( "Initiate and wait for a new check point, or wait any already on-going check point to complete. Note that this temporarily disables the " +
+            "`dbms.checkpoint.iops.limit` setting in order to make the check point complete faster. This might cause transaction throughput to degrade " +
+            "slightly, due to increased IO load." )
+    @Procedure( name = "dbms.checkpoint", mode = DBMS )
+    public Stream<CheckpointResult> checkpoint() throws IOException
+    {
+        KernelTransaction kernelTransaction = getCurrentTx();
+        CheckPointer checkPointer = resolver.resolveDependency( CheckPointer.class );
+        // Use isTerminated as a timeout predicate to ensure that we stop waiting, if the transaction is terminated.
+        BooleanSupplier timeoutPredicate = kernelTransaction::isTerminated;
+        long transactionId = checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Call to dbms.checkpoint() procedure" ), timeoutPredicate );
+        return Stream.of( transactionId == -1 ? CheckpointResult.TERMINATED : CheckpointResult.SUCCESS );
+    }
+
+    public enum CheckpointResult
+    {
+        SUCCESS( true, "Checkpoint completed." ),
+        TERMINATED( false, "Transaction terminated while waiting for the requested checkpoint operation to finish." );
+
+        public final boolean success;
+        public final String message;
+
+        CheckpointResult( boolean success, String message )
+        {
+            this.success = success;
+            this.message = message;
         }
     }
 
