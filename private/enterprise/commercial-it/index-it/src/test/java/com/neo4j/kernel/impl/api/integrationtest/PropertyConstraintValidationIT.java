@@ -40,9 +40,9 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabel;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabelNoIndex;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelTypeNoIndex;
+import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
+import static org.neo4j.internal.schema.SchemaDescriptor.forLabelNoIndex;
+import static org.neo4j.internal.schema.SchemaDescriptor.forRelTypeNoIndex;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 @RunWith( Suite.class )

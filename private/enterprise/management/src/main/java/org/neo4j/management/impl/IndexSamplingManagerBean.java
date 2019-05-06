@@ -10,7 +10,7 @@ import javax.management.NotCompliantMBeanException;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
@@ -99,7 +99,7 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
             }
             try
             {
-                indexingService.triggerIndexSampling( SchemaDescriptorFactory.forLabel( labelKeyId, propertyKeyId ), getIndexSamplingMode( forceSample ) );
+                indexingService.triggerIndexSampling( SchemaDescriptor.forLabel( labelKeyId, propertyKeyId ), getIndexSamplingMode( forceSample ) );
             }
             catch ( IndexNotFoundKernelException e )
             {

@@ -19,7 +19,7 @@ import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.NodeExistenceConstraintDescriptor;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
@@ -88,7 +88,7 @@ public class NodePropertyExistenceConstraintCreationIT
     @Override
     LabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
-        return SchemaDescriptorFactory.forLabelNoIndex( typeId, propertyKeyId );
+        return SchemaDescriptor.forLabelNoIndex( typeId, propertyKeyId );
     }
 
     @Test

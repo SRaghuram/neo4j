@@ -9,9 +9,9 @@ import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.kernel.impl.newapi.SchemaReadWriteTestBase;
 
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabel;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forLabelNoIndex;
-import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelType;
+import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
+import static org.neo4j.internal.schema.SchemaDescriptor.forLabelNoIndex;
+import static org.neo4j.internal.schema.SchemaDescriptor.forRelType;
 
 public class SchemaReadWriteTest extends SchemaReadWriteTestBase<EnterpriseWriteTestSupport>
 {

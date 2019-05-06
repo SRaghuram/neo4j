@@ -22,7 +22,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
@@ -93,7 +93,7 @@ class HalfCreatedConstraintIT
             DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
             ThreadToStatementContextBridge statementBridge = resolver.provideDependency( ThreadToStatementContextBridge.class ).get();
             KernelTransaction kernelTransaction = statementBridge.getKernelTransactionBoundToThisThread( true );
-            LabelSchemaDescriptor descriptor = SchemaDescriptorFactory.forLabel( 0, 0 );
+            LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( 0, 0 );
             Config config = resolver.resolveDependency( Config.class );
             kernelTransaction.indexUniqueCreate( descriptor, config.get( GraphDatabaseSettings.default_schema_provider ) );
             transaction.success();

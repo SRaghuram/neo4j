@@ -28,7 +28,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
@@ -126,7 +126,7 @@ public class UniquenessConstraintCreationIT
     LabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
         uniqueIndex = TestIndexDescriptorFactory.uniqueForLabel( typeId, propertyKeyId );
-        return SchemaDescriptorFactory.forLabel( typeId, propertyKeyId );
+        return SchemaDescriptor.forLabel( typeId, propertyKeyId );
     }
 
     @Test
@@ -151,7 +151,7 @@ public class UniquenessConstraintCreationIT
         commit();
 
         // when
-        LabelSchemaDescriptor descriptor = SchemaDescriptorFactory.forLabel( foo, name );
+        LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( foo, name );
         try
         {
             SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();

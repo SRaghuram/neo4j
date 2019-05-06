@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.newapi;
 
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 
 public class LockingTest extends LockingTestBase<EnterpriseWriteTestSupport>
 {
@@ -19,6 +19,6 @@ public class LockingTest extends LockingTestBase<EnterpriseWriteTestSupport>
     @Override
     protected LabelSchemaDescriptor labelDescriptor( int label, int... props )
     {
-        return SchemaDescriptorFactory.forLabel( label, props );
+        return SchemaDescriptor.forLabel( label, props );
     }
 }

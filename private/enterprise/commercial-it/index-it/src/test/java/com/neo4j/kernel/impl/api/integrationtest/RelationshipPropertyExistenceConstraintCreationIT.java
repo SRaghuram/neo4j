@@ -15,7 +15,7 @@ import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.RelExistenceConstraintDescriptor;
 
@@ -77,6 +77,6 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     @Override
     RelationTypeSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
-        return SchemaDescriptorFactory.forRelTypeNoIndex( typeId, propertyKeyId );
+        return SchemaDescriptor.forRelTypeNoIndex( typeId, propertyKeyId );
     }
 }

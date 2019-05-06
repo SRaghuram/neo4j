@@ -12,7 +12,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
@@ -73,7 +73,7 @@ public class IndexSamplingManagerBeanTest
 
         // Then
         verify( indexingService ).triggerIndexSampling(
-                SchemaDescriptorFactory.forLabel( LABEL_ID, PROPERTY_ID ) ,
+                SchemaDescriptor.forLabel( LABEL_ID, PROPERTY_ID ) ,
                 IndexSamplingMode.TRIGGER_REBUILD_UPDATED);
     }
 
@@ -88,7 +88,7 @@ public class IndexSamplingManagerBeanTest
 
         // Then
         verify( indexingService ).triggerIndexSampling(
-                SchemaDescriptorFactory.forLabel( LABEL_ID, PROPERTY_ID ) ,
+                SchemaDescriptor.forLabel( LABEL_ID, PROPERTY_ID ) ,
                 IndexSamplingMode.TRIGGER_REBUILD_ALL);
     }
 

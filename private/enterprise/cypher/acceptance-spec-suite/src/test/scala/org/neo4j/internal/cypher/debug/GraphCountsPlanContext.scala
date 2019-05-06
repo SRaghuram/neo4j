@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenConte
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.KernelException
-import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptorFactory}
+import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptor, SchemaDescriptorFactory}
 
 import scala.collection.JavaConverters._
 
@@ -65,7 +65,7 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
       val labelId = getLabelId(labelName)
       val propertyKeyId = getPropertyKeyId(propertyKey)
 
-      tc.schemaRead.constraintsGetForSchema(SchemaDescriptorFactory.forLabelNoIndex(labelId, propertyKeyId)).hasNext
+      tc.schemaRead.constraintsGetForSchema(SchemaDescriptor.forLabelNoIndex(labelId, propertyKeyId)).hasNext
     } catch {
       case _: KernelException => false
     }

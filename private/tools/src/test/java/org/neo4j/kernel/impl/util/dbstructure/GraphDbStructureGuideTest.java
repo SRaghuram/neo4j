@@ -17,7 +17,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
@@ -225,7 +225,7 @@ class GraphDbStructureGuideTest
     {
         KernelTransaction ktx = ktx();
 
-        return ktx.schemaWrite().indexCreate( SchemaDescriptorFactory.forLabel( labelId, pkId ) );
+        return ktx.schemaWrite().indexCreate( SchemaDescriptor.forLabel( labelId, pkId ) );
 
     }
 
@@ -234,7 +234,7 @@ class GraphDbStructureGuideTest
         KernelTransaction ktx = ktx();
 
         return ktx.schemaWrite()
-                .uniquePropertyConstraintCreate( SchemaDescriptorFactory.forLabel( labelId, pkId ) );
+                .uniquePropertyConstraintCreate( SchemaDescriptor.forLabel( labelId, pkId ) );
     }
 
     private int createLabeledNodes( String labelName, int amount ) throws Exception
