@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenConte
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.KernelException
-import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptor, SchemaDescriptorFactory}
+import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptor}
 
 import scala.collection.JavaConverters._
 
