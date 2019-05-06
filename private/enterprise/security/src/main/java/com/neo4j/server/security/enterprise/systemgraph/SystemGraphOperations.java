@@ -121,6 +121,17 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
     }
 
+    void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
+    {
+        String query = "MATCH (r:Role {name: $from}) RETURN 0";
+
+        Map<String,Object> params = Collections.singletonMap( "from", from );
+        String errorMsg = "Cannot create role '" + roleName + "' from non-existent role '" + from + "'.";
+
+        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
+        newRole( roleName );
+    }
+
     boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
         String query = "MATCH (r:Role {name: $name}) DETACH DELETE r RETURN 0";

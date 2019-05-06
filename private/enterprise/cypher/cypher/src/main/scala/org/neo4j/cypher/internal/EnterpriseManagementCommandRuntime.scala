@@ -5,15 +5,14 @@
  */
 package org.neo4j.cypher.internal
 
-import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager
+import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager}
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.procs.{SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
+import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.kernel.api.security.UserManager
 import org.neo4j.string.UTF8
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
@@ -40,7 +39,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
   }
 
-  private lazy val userManager: UserManager = {
+  private lazy val userManager: EnterpriseUserManager = {
     val supplier = resolver.resolveDependency(classOf[CommercialAuthAndUserManager])
     //      val supplier = normalExecutionEngine.queryService.getDependencyResolver.resolveDependency(classOf[CommercialAuthAndUserManager])
     supplier.getUserManager
@@ -58,57 +57,37 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE USER foo WITH PASSWORD password
     case CreateUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
-      // TODO check so we don't log plain passwords
       // TODO handle both string and parameter passwords
       val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
-      val credentials = userManager.getCredentialsForPassword(password)
-      SystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
-        """CREATE (u:User {name:$name,credentials:$credentials,passwordChangeRequired:$requirePasswordChange,suspended:$suspended})
-          |RETURN u.name as name""".stripMargin,
-        VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
-          Values.stringValue(userName),
-          Values.stringValue(credentials),
-          Values.booleanValue(requirePasswordChange),
-          Values.booleanValue(suspended)
-        ))
-      )
+      userManager.newUser(userName, password, requirePasswordChange)
+      // Default value is not suspended, so only set suspended if needed
+      if (suspended) userManager.setUserStatus(userName, suspended)
+      NoResultSystemCommandExecutionPlan()
 
     // DROP USER foo
     case DropUser(userName) => (_, _) =>
-      UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
-        """OPTIONAL MATCH (u:User {name:$name})
-          |WITH u, u.name as name
-          |DETACH DELETE u
-          |RETURN name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
-        record => {
-          if (record.get("name") == null) throw new InvalidArgumentsException("User '" + userName + "' does not exist.")
-        }
-      )
+      userManager.deleteUser(userName)
+      NoResultSystemCommandExecutionPlan()
 
     // ALTER USER foo
     case AlterUser(userName, initialStringPassword, initialParameterPassword, requirePasswordChange, suspended) => (_, _) =>
-      // TODO check so we don't log plain passwords
-      // TODO implement
-      val password = if (initialStringPassword.isDefined) UTF8.encode(initialStringPassword.get) else null
-      val credentials = userManager.getCredentialsForPassword(password)
-      UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
-        """
-//          |OPTIONAL MATCH (u:User {name:$name})
-//          |SET ???
-//          |RETURN u.name as name
-          |RETURN null as name
-          |""".stripMargin,
-        VirtualValues.map(Array("name", "credentials", "requirePasswordChange", "suspended"), Array(
-          Values.stringValue(userName),
-          Values.stringValue(credentials),
-          Values.booleanValue(requirePasswordChange.get),
-          Values.booleanValue(suspended.get)
-        )),
-        record => {
-          if (record.get("name") == null) throw new InvalidArgumentsException("User '" + userName + "' does not exist.")
-        }
-      )
+      if (suspended.isDefined)
+        userManager.setUserStatus(userName, suspended.get)
+
+      // TODO handle both string and parameter passwords
+      val newPassword = initialStringPassword.getOrElse(null)
+      if (requirePasswordChange.isDefined && newPassword != null)
+        // change both password and requirePasswordChange
+        userManager.setUserPassword(userName, UTF8.encode(newPassword), requirePasswordChange.get)
+      else if (requirePasswordChange.isDefined)
+        // change only mode
+        userManager.setUserRequirePasswordChange(userName, requirePasswordChange.get)
+      else if (newPassword != null) {
+        // change only password
+        val changePassword = userManager.getUser(userName).passwordChangeRequired()
+        userManager.setUserPassword(userName, UTF8.encode(newPassword), changePassword)
+      }
+      NoResultSystemCommandExecutionPlan()
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
@@ -143,44 +122,18 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE ROLE foo AS COPY OF bar
     case CreateRole(roleName, Some(from)) => (_, _) =>
-      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        """OPTIONAL MATCH (f:Role {name:$from})
-          |// FOREACH is an IF, only create the role if the 'from' node exists
-          |FOREACH (ignoreMe in CASE WHEN f IS NOT NULL THEN [1] ELSE [] END |
-          | CREATE (r:Role)
-          | SET r.name = $name
-          |)
-          |WITH f
-          |// Make sure the create is eagerly done
-          |OPTIONAL MATCH (r:Role {name:$name})
-          |RETURN r.name as name, f.name as old""".stripMargin,
-        VirtualValues.map(Array("name", "from"), Array(Values.stringValue(roleName), Values.stringValue(from))),
-        record => {
-          if (record.get("old") == null) throw new InvalidArgumentsException("Cannot create role '" + roleName + "' from non-existent role '" + from + "'")
-        }
-      )
+      userManager.newCopyOfRole(roleName, from)
+      NoResultSystemCommandExecutionPlan()
 
     // CREATE ROLE foo
     case CreateRole(roleName, _) => (_, _) =>
-      SystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        """CREATE (r:Role)
-          |SET r.name = $name
-          |RETURN r.name as name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName)))
-      )
+      userManager.newRole(roleName)
+      NoResultSystemCommandExecutionPlan()
 
     // DROP ROLE foo
     case DropRole(roleName) => (_, _) =>
-      UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
-        """OPTIONAL MATCH (r:Role {name:$name})
-          |WITH r, r.name as name
-          |DETACH DELETE r
-          |RETURN name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
-        record => {
-          if (record.get("name") == null) throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.")
-        }
-      )
+      userManager.deleteRole(roleName)
+      NoResultSystemCommandExecutionPlan()
 
     // SHOW DATABASES
     case ShowDatabases() => (_, _) =>

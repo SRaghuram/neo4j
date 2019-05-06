@@ -105,6 +105,13 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
+    public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
+    {
+        assertValidRoleName( roleName );
+        systemGraphOperations.newCopyOfRole( roleName, from );
+    }
+
+    @Override
     public boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );

@@ -265,14 +265,25 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public String getCredentialsForPassword( byte[] initialPassword ) throws InvalidArgumentsException, IOException
+        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, IOException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "getCredentialsException" );
+                throw new IOException( "setUserRequirePasswordChangeException" );
             }
-            return delegate.getCredentialsForPassword( initialPassword );
+            delegate.setUserRequirePasswordChange( username, requirePasswordChange );
+        }
+
+        @Override
+        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException, IOException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new IOException( "setUserStatusException" );
+            }
+            delegate.setUserStatus( username, isSuspended );
         }
 
         @Override
@@ -313,6 +324,17 @@ class PersonalUserManagerTest
                 throw new IOException( "newRoleException" );
             }
             delegate.newRole( roleName, usernames );
+        }
+
+        @Override
+        public void newCopyOfRole( String roleName, String from ) throws IOException, InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new IOException( "newRoleException" );
+            }
+            delegate.newCopyOfRole( roleName, from );
         }
 
         @Override

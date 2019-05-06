@@ -147,6 +147,23 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
+    public void newCopyOfRole( String roleName, String from )
+            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.newCopyOfRole( roleName, from );
+            securityLog.info( subject, "created role `%s` from role `%s`", roleName, from );
+        }
+        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to create role `%s` from role `%s`: %s", roleName, from, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
     public boolean deleteRole( String roleName )
             throws IOException, InvalidArgumentsException, AuthorizationViolationException
     {
@@ -201,10 +218,69 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public String getCredentialsForPassword( byte[] initialPassword ) throws InvalidArgumentsException, IOException
+    public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, IOException
     {
-        assertUserManager();
-        return userManager.getCredentialsForPassword( initialPassword );
+        if ( subject.hasUsername( username ) )
+        {
+            try
+            {
+                userManager.setUserRequirePasswordChange( username, requirePasswordChange );
+                securityLog.info( subject, "changed 'password change required'" );
+            }
+            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            {
+                securityLog.error( subject, "tried to change 'password change required': %s", e.getMessage() );
+                throw e;
+            }
+        }
+        else
+        {
+            try
+            {
+                assertUserManager();
+                userManager.setUserRequirePasswordChange( username, requirePasswordChange );
+                securityLog.info( subject, "changed 'password change required' for user `%s`", username);
+            }
+            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            {
+                securityLog.error( subject, "tried to change 'password change required' for user `%s`: %s", username,
+                        e.getMessage() );
+                throw e;
+            }
+        }
+    }
+
+    @Override
+    public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException, IOException
+    {
+        if ( subject.hasUsername( username ) )
+        {
+            try
+            {
+                userManager.setUserStatus( username, isSuspended );
+                securityLog.info( subject, "changed user status" );
+            }
+            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            {
+                securityLog.error( subject, "tried to change user status: %s", e.getMessage() );
+                throw e;
+            }
+        }
+        else
+        {
+            try
+            {
+                assertUserManager();
+                userManager.setUserRequirePasswordChange( username, isSuspended );
+                securityLog.info( subject, "changed user status for user `%s`", username);
+            }
+            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            {
+                securityLog.error( subject, "tried to change user status for user `%s`: %s", username,
+                        e.getMessage() );
+                throw e;
+            }
+        }
     }
 
     @Override

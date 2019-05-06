@@ -23,6 +23,8 @@ public interface EnterpriseUserManager extends UserManager
 
     void newRole( String roleName, String... usernames ) throws IOException, InvalidArgumentsException;
 
+    void newCopyOfRole( String roleName, String from ) throws IOException, InvalidArgumentsException;
+
     boolean deleteRole( String roleName ) throws IOException, InvalidArgumentsException;
 
     void assertRoleExists( String roleName ) throws InvalidArgumentsException;
@@ -101,6 +103,11 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void newRole( String roleName, String... usernames )
+        {
+        }
+
+        @Override
+        public void newCopyOfRole( String roleName, String from )
         {
         }
 
@@ -215,13 +222,13 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
-        public String getCredentialsForPassword( byte[] initialPassword )
+        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
         {
-            if ( initialPassword != null )
-            {
-                Arrays.fill( initialPassword, (byte) 0 );
-            }
-            return null;
+        }
+
+        @Override
+        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
+        {
         }
 
         @Override

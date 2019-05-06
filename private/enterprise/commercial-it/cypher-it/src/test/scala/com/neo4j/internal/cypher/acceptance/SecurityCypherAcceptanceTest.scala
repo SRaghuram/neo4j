@@ -153,10 +153,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE foo")
 
-      fail("Expected error \"The specified role already exists.\" but succeeded.")
+      fail("Expected error \"The specified role 'foo' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("The specified role already exists.") =>
+      case e :Exception => e.getMessage should be("The specified role 'foo' already exists.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -186,10 +186,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
-      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'\" but succeeded.")
+      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create role 'bar' from non-existent role 'foo'") =>
+      case e :Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -208,10 +208,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
-      fail("Expected error \"The specified role already exists.\" but succeeded.")
+      fail("Expected error \"The specified role 'bar' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("The specified role already exists.") =>
+      case e :Exception => e.getMessage should be("The specified role 'bar' already exists.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -229,10 +229,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
-      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'\" but succeeded.")
+      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create role 'bar' from non-existent role 'foo'") =>
+      case e :Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -265,7 +265,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       fail("Expected error \"Role 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Role 'foo' does not exist.") =>
+      case e :Exception => e.getMessage should be("Role 'foo' does not exist.")
     }
 
     // THEN
@@ -319,6 +319,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   }
 
   // TODO test so the user has the correct password in all create tests!!!!!
+  //   As well as the other properties
   test("should create user with password as string") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -416,10 +417,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     try {
       execute("CREATE USER neo4j SET PASSWORD 'password'")
 
-      fail("Expected error \"The specified user already exists.\" but succeeded.")
+      fail("Expected error \"The specified user 'neo4j' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("The specified user already exists.") =>
+      case e :Exception => e.getMessage should be("The specified user 'neo4j' already exists.")
     }
 
     // THEN
@@ -461,7 +462,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       fail("Expected error \"User 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("User 'foo' does not exist.") =>
+      case e :Exception => e.getMessage should be("User 'foo' does not exist.")
     }
 
     // THEN
