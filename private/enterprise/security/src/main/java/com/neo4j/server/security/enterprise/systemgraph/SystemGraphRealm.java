@@ -9,11 +9,7 @@ import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
-import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import org.neo4j.server.security.auth.SecureHasher;
-
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.AuthorizationInfo;
@@ -28,6 +24,7 @@ import java.util.regex.Pattern;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.PasswordPolicy;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
 
 import static java.lang.String.format;
@@ -182,21 +179,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
-    }
-
-    @Override
-    public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
-    {
-        assertNotPredefinedRoleName( roleName );
-        if ( setToAdmin )
-        {
-            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
-        }
-        else
-        {
-            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
-        }
-        clearCachedAuthorizationInfo();
     }
 
     @Override

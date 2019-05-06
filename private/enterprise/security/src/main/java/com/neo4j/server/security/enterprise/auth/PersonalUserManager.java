@@ -339,22 +339,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.setAdmin( roleName, setToAdmin );
-            securityLog.info( subject, "%s admin privilege for role `%s`", setToAdmin ? "granted" : "revoked", roleName );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to %s admin privilege for role `%s`: %s", setToAdmin ? "grant" : "revoke", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public Set<String> getAllRoleNames() throws AuthorizationViolationException
     {
         try

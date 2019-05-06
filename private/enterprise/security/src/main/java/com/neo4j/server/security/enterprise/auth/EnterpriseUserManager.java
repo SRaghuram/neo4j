@@ -77,8 +77,6 @@ public interface EnterpriseUserManager extends UserManager
 
     Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles );
 
-    void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException;
-
     Set<String> getAllRoleNames();
 
     Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException;
@@ -147,11 +145,6 @@ public interface EnterpriseUserManager extends UserManager
         public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return emptySet();
-        }
-
-        @Override
-        public void setAdmin( String roleName, boolean setToAdmin )
-        {
         }
 
         @Override

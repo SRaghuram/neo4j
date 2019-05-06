@@ -325,16 +325,15 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager );
 
         // When
-        realm.setAdmin( "CustomAdmin", true );
-
         DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        realm.grantPrivilegeToRole( "CustomAdmin", dbPriv );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), contains( dbPriv ) );
 
         // When
-        realm.setAdmin( "CustomAdmin", false );
+        realm.revokePrivilegeFromRole( "CustomAdmin", dbPriv );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), empty() );
@@ -430,13 +429,18 @@ class SystemGraphRealmIT
         Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
 
-        realm.setAdmin( "custom", true );
-        privileges = realm.showPrivilegesForUser( "bob" );
         DatabasePrivilege databasePrivilege = new DatabasePrivilege();
         databasePrivilege.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        realm.grantPrivilegeToRole( "custom", databasePrivilege );
+
+        // Then
+        privileges = realm.showPrivilegesForUser( "bob" );
         assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
 
-        realm.setAdmin( "custom", false );
+        // When
+        realm.revokePrivilegeFromRole( "custom", databasePrivilege );
+
+        // Then
         privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
     }

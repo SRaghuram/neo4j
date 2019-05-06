@@ -139,37 +139,6 @@ class PersonalUserManagerTest
     }
 
     @Test
-    void shouldLogSuccessSetAdmin() throws IOException, InvalidArgumentsException
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        userManager.newRole( ROLE_NAME );
-        log.clear();
-
-        userManager.setAdmin( ROLE_NAME, true );
-        userManager.setAdmin( ROLE_NAME, false );
-        log.assertExactly(
-                info( "[Alice]: %s admin privilege for role `%s`", "granted", ROLE_NAME ),
-                info( "[Alice]: %s admin privilege for role `%s`", "revoked", ROLE_NAME )
-        );
-    }
-
-    @Test
-    void shouldLogFailureSetAdmin()
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        log.clear();
-
-        evilUserManager.setFailNextCall();
-        catchInvalidArguments( () -> userManager.setAdmin( ROLE_NAME, true ) );
-        evilUserManager.setFailNextCall();
-        catchInvalidArguments( () -> userManager.setAdmin( ROLE_NAME, false ) );
-        log.assertExactly(
-                error( "[Alice]: tried to %s admin privilege for role `%s`: %s", "grant", ROLE_NAME, "setAdminException" ),
-                error( "[Alice]: tried to %s admin privilege for role `%s`: %s", "revoke", ROLE_NAME, "setAdminException" )
-        );
-    }
-
-    @Test
     void shouldLogUnauthorizedShowPrivileges()
     {
         PersonalUserManager userManager = getUserManager( "Bob", false );
@@ -416,17 +385,6 @@ class PersonalUserManagerTest
         public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return delegate.getPrivilegesForRoles( roles );
-        }
-
-        @Override
-        public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "setAdminException" );
-            }
-            delegate.setAdmin( roleName, setToAdmin );
         }
 
         @Override

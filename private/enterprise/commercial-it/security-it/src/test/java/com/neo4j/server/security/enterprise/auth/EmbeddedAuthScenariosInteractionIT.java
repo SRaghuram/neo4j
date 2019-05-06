@@ -106,7 +106,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         userManager.newRole( "UserManager", "Alice" );
 
         // When
-        userManager.setAdmin( "UserManager", true );
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        userManager.grantPrivilegeToRole( "UserManager", dbPriv );
 
         // Then
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
