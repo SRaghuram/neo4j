@@ -117,7 +117,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     }
 
     @Test
-    void shouldNotAllowChangingBuiltinRoles() throws InvalidArgumentsException
+    void shouldAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
         DatabasePrivilege privilege = new DatabasePrivilege();
         privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
@@ -125,10 +125,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )
         {
-            assertThrows( InvalidArgumentsException.class, () -> userManager.setAdmin( role, true ) );
-            assertThrows( InvalidArgumentsException.class, () -> userManager.setAdmin( role, false ) );
-            assertThrows( InvalidArgumentsException.class, () -> userManager.revokePrivilegeFromRole( role, privilege ) );
-            assertThrows( InvalidArgumentsException.class, () -> userManager.grantPrivilegeToRole( role, privilege ) );
+            userManager.revokePrivilegeFromRole( role, privilege );
+            userManager.grantPrivilegeToRole( role, privilege );
         }
     }
 

@@ -251,6 +251,7 @@ class SystemGraphRealmIT
         // Then
         DatabasePrivilege expected = new DatabasePrivilege();
         expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
         assertThat( privileges, contains( expected ) );
 
         // When

@@ -136,7 +136,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     @Override
     public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
-        assertNotPredefinedRoleName( roleName );
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
             if ( dbPrivilege.isAllDatabases() )
@@ -154,7 +153,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     @Override
     public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
-        assertNotPredefinedRoleName( roleName );
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
             if ( dbPrivilege.isAllDatabases() )

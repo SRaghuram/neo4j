@@ -229,7 +229,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testSuccessfulRead( S subject, Object count )
     {
-        assertSuccess( subject, "MATCH (n) RETURN count(n) as count", r ->
+        assertSuccess( subject, "MATCH (n) RETURN count(n) as count, 1 AS ignored", r ->
         {
             List<Object> result = r.stream().map( s -> s.get( "count" ) ).collect( toList() );
             assertThat( result.size(), equalTo( 1 ) );
