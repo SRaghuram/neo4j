@@ -119,7 +119,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         databaseManager.stopDatabase( defaultDatabaseId() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();
-        runWithFailure( "RETURN 1", machine, Status.General.UnknownError );
+        runWithFailure( "RETURN 1", machine, Status.General.DatabaseUnavailable );
     }
 
     @Test
