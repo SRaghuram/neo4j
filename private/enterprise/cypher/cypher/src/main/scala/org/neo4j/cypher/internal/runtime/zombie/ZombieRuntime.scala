@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal._
@@ -7,7 +12,6 @@ import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuil
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
