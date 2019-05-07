@@ -16,6 +16,7 @@ import com.neo4j.server.security.enterprise.systemgraph.TestSystemGraphRealm;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -92,6 +93,7 @@ class SystemGraphInternalsTest
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
     }
 
+    @Disabled
     @Test
     void defaultNodes()
     {

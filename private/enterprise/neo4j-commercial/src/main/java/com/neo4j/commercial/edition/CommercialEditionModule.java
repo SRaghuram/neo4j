@@ -47,12 +47,14 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -169,9 +171,15 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         databaseManager.createDatabase( new DatabaseId( config.get( GraphDatabaseSettings.default_database ) ) );
         DatabaseManagementService managementService = globalModule.getGlobalDependencies().resolveDependency( DatabaseManagementService.class );
+        globalModule.getGlobalLife().addLifecycleListener( ( instance, from, to ) ->
+        {
+            if ( instance instanceof CompositeDatabaseAvailabilityGuard && LifecycleStatus.STARTED == to )
+            {
+                globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME,
+                        new MultiDatabaseTransactionEventListener( databaseManager ) );
+            }
+        } );
         managementService.registerDatabaseEventListener( new SystemDatabaseEventListener( databaseManager, config ) );
-        globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME,
-                new MultiDatabaseTransactionEventListener( databaseManager ) );
     }
 
     @Override

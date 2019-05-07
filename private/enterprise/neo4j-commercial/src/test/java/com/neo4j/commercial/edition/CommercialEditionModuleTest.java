@@ -11,6 +11,7 @@ import org.mockito.InOrder;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseId;
@@ -48,6 +49,7 @@ class CommercialEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
+        globalModule.getGlobalDependencies().satisfyDependency( mock( DatabaseManagementServiceImpl.class ) );
         CommercialEditionModule editionModule = new CommercialEditionModule( globalModule );
         editionModule.createDatabases( manager, config );
 
