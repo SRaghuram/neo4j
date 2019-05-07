@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal
 
+import java.util.concurrent.ExecutorService
+
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
 import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, NO_TRANSACTION_BINDER, QueryResources}
 import org.neo4j.cypher.internal.runtime.scheduling._
@@ -40,7 +42,8 @@ object RuntimeEnvironment {
         (new SingleThreadScheduler(() => new QueryResources(cursors)), NO_TRANSACTION_BINDER)
       case Simple =>
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
-        val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
+        jobScheduler.setParallelism(Group.CYPHER_WORKER, numberOfThreads)
+        val executorService = jobScheduler.executor(Group.CYPHER_WORKER).asInstanceOf[ExecutorService]
         (new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads), new TxBridgeTransactionBinder(txBridge))
       case LockFree =>
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
