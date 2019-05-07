@@ -53,7 +53,7 @@ class SystemGraphInternalsTest
     private static final long DB_NODE_COUNT = 2;
     private static final long USER_NODE_COUNT = 1;
     private static final long ROLE_NODE_COUNT = 5;
-    private static final long PRIVILEGE_NODE_COUNT = 5 + 4 + 3 + 2 + 1;
+    private static final long PRIVILEGE_NODE_COUNT = 6 + 5 + 4 + 3 + 2;
     private static final long RESOURCE_NODE_COUNT = 4;
 
     private GraphDatabaseService database;
@@ -266,7 +266,7 @@ class SystemGraphInternalsTest
 
     private long nbrOfPrivilegeNodes()
     {
-        String query = "MATCH (p:Privilege) RETURN count(p)";
+        String query = "MATCH (p:Action) RETURN count(p)";
         return systemGraphExecutor.executeQueryLong( query );
 
     }

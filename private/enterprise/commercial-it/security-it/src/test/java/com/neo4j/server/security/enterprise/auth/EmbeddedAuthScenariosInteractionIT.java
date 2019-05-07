@@ -20,7 +20,6 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
@@ -586,6 +585,20 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( subject, shortestBasic, r -> assertKeyIs( r, "length", 3 ) );
         assertEmpty( subject, shortestWithProperty );
+    }
+
+    @Test
+    void shouldReadPropertiesOnRelationship() throws Throwable
+    {
+        assertEmpty( adminSubject, "CREATE (:A)-[:REL {foo: 1}]->(:B)" );
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource() )
+        );
+
+        String query = "MATCH (:A)-[r]->(:B) RETURN r.foo";
+
+        assertSuccess( adminSubject, query, r -> assertKeyIs( r, "r.foo", 1 ) );
+        assertSuccess( subject, query, r -> assertKeyIs( r, "r.foo", 1 ) );
     }
 
     // Helpers
