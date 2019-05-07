@@ -15,7 +15,7 @@ import akka.remote.artery.tcp.SSLEngineProviderSetup;
 import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -26,9 +26,9 @@ public class ActorSystemFactory
     private final LogProvider logProvider;
     private final Optional<SSLEngineProvider> sslEngineProvider;
     private final TypesafeConfigService configService;
-    private final ExecutorService executor;
+    private final Executor executor;
 
-    public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, ExecutorService executor, Config config, LogProvider logProvider )
+    public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, Executor executor, Config config, LogProvider logProvider )
     {
         this.executor = executor;
         this.logProvider = logProvider;

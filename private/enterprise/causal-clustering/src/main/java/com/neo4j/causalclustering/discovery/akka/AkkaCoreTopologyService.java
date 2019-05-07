@@ -37,7 +37,7 @@ import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
@@ -57,11 +57,11 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final LogProvider logProvider;
     private final RetryStrategy retryStrategy;
     private final GlobalTopologyState globalTopologyState;
-    private final ExecutorService executor;
+    private final Executor executor;
     private final Clock clock;
 
     public AkkaCoreTopologyService( Config config, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, ExecutorService executor, Clock clock )
+            LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, Executor executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
@@ -124,7 +124,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
     private ActorRef startRestartNeededListeningActor( Cluster cluster )
     {
-        Runnable restart = () -> executor.submit( this::restart );
+        Runnable restart = () -> executor.execute( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
         Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
         return actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );

@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 
 import java.time.Clock;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -37,7 +37,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
             SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
-        ExecutorService executor = executorService( config, jobScheduler );
+        Executor executor = executorService( config, jobScheduler );
 
         return new AkkaCoreTopologyService(
                 config,
@@ -62,7 +62,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
         );
     }
 
-    protected ActorSystemLifecycle actorSystemLifecycle( Config config, ExecutorService executor, LogProvider logProvider, RemoteMembersResolver resolver,
+    protected ActorSystemLifecycle actorSystemLifecycle( Config config, Executor executor, LogProvider logProvider, RemoteMembersResolver resolver,
             SslPolicyLoader sslPolicyLoader )
     {
         return new ActorSystemLifecycle(
@@ -73,16 +73,17 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 logProvider );
     }
 
-    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, ExecutorService executor, Config config, LogProvider logProvider )
+    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, Executor executor, Config config, LogProvider logProvider )
     {
         SslPolicy sslPolicy = sslPolicyLoader.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
         Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
         return new ActorSystemFactory( sslEngineProvider, executor, config, logProvider );
     }
 
-    private static ExecutorService executorService( Config config, JobScheduler jobScheduler )
+    private static Executor executorService( Config config, JobScheduler jobScheduler )
     {
         int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
-        return jobScheduler.workStealingExecutorAsyncMode( Group.AKKA_TOPOLOGY_WORKER, parallelism );
+        jobScheduler.setParallelism( Group.AKKA_TOPOLOGY_WORKER, parallelism );
+        return jobScheduler.executor( Group.AKKA_TOPOLOGY_WORKER );
     }
 }
