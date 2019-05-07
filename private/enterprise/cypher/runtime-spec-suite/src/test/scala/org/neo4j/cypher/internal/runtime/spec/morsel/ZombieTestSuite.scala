@@ -170,7 +170,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
   test("should handle expand") {
     // given
-    val (_, rels) = circleGraph(10)
+    val (_, rels) = circleGraph(10000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
