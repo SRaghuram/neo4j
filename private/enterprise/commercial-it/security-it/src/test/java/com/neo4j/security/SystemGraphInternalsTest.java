@@ -44,6 +44,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
 
+@Disabled
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphInternalsTest
 {
@@ -93,7 +94,6 @@ class SystemGraphInternalsTest
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
     }
 
-    @Disabled
     @Test
     void defaultNodes()
     {

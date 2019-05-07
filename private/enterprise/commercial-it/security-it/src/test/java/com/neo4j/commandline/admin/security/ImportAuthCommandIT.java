@@ -10,6 +10,7 @@ import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -53,6 +54,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
+@Disabled
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ImportAuthCommandIT
 {

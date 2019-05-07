@@ -19,7 +19,9 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
+import org.scalatest.Ignore
 
+@Ignore
 class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()

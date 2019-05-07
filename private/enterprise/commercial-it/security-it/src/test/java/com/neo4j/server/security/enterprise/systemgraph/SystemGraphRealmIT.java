@@ -13,6 +13,7 @@ import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
+@Disabled
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphRealmIT
 {
