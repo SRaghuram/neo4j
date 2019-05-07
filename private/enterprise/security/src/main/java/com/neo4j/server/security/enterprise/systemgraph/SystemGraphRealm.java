@@ -142,7 +142,14 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         assertNotPredefinedRoleName( roleName );
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
-            systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege.getDbName() );
+            if ( dbPrivilege.isAllDatabases() )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, privilege );
+            }
+            else
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege.getDbName() );
+            }
         }
         clearCachedAuthorizationInfo();
     }
@@ -153,7 +160,14 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         assertNotPredefinedRoleName( roleName );
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
-            systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege.getDbName() );
+            if ( dbPrivilege.isAllDatabases() )
+            {
+                systemGraphOperations.revokePrivilegeFromRole( roleName, privilege );
+            }
+            else
+            {
+                systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege.getDbName() );
+            }
         }
         clearCachedAuthorizationInfo();
     }
@@ -176,11 +190,11 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         assertNotPredefinedRoleName( roleName );
         if ( setToAdmin )
         {
-            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ), "*" );
+            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
         }
         else
         {
-            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ), "*" );
+            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
         }
         clearCachedAuthorizationInfo();
     }

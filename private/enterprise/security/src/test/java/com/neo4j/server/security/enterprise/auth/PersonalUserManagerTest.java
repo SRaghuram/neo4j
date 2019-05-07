@@ -194,7 +194,7 @@ class PersonalUserManagerTest
 
     private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( action, resource ) );
         return dbPriv;
     }

@@ -11,11 +11,20 @@ import java.util.Set;
 public class DatabasePrivilege
 {
     private final String dbname;
+    private final boolean allDatabases;
     private Set<ResourcePrivilege> privileges = new HashSet<>();
+
+    public DatabasePrivilege()
+    {
+        dbname = "";
+        allDatabases = true;
+    }
 
     public DatabasePrivilege( String dbname )
     {
+        assert !dbname.isEmpty();
         this.dbname = dbname;
+        allDatabases = false;
     }
 
     public void addPrivilege( ResourcePrivilege privilege )
@@ -66,5 +75,10 @@ public class DatabasePrivilege
     public String getDbName()
     {
         return this.dbname;
+    }
+
+    public boolean isAllDatabases()
+    {
+        return allDatabases;
     }
 }

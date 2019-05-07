@@ -54,7 +54,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         userManager.newRole( "CustomRead", "Alice" );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         userManager.grantPrivilegeToRole( "CustomRead", dbPriv );
 
@@ -80,7 +80,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailWrite( subject );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         userManager.grantPrivilegeToRole( roleName, dbPriv );
@@ -90,7 +90,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testSuccessfulWrite( subject );
 
         // When
-        dbPriv = new DatabasePrivilege( "*" );
+        dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         userManager.revokePrivilegeFromRole( roleName, dbPriv );
 
@@ -118,7 +118,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldNotAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege( "*" );
+        DatabasePrivilege privilege = new DatabasePrivilege();
         privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
 
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
@@ -332,7 +332,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
     private CommercialLoginContext setupUserAndLogin( ResourcePrivilege... privileges ) throws Exception
     {
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         for ( ResourcePrivilege privilege : privileges )
         {
             dbPriv.addPrivilege( privilege );

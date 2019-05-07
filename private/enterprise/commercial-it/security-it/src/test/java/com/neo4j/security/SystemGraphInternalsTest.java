@@ -96,8 +96,8 @@ class SystemGraphInternalsTest
     @Test
     void defaultNodes()
     {
-        // should have system, default and "*" db
-        assertEquals( 3, nbrOfDbNodes() );
+        // should have system and default databases
+        assertEquals( 2, nbrOfDbNodes() );
 
         // should have default neo4j user
         assertEquals( 1, nbrOfUserNodes() );
@@ -136,7 +136,7 @@ class SystemGraphInternalsTest
         // Given
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
-        DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege();
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         realm.grantPrivilegeToRole( "custom", dbPriv1 );
         long privilegeNodes = nbrOfPrivilegeNodes();

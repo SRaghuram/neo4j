@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @Disabled
@@ -248,7 +249,7 @@ class SystemGraphRealmIT
         Set<DatabasePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
-        DatabasePrivilege expected = new DatabasePrivilege( "*" );
+        DatabasePrivilege expected = new DatabasePrivilege();
         expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         assertThat( privileges, contains( expected ) );
 
@@ -326,7 +327,7 @@ class SystemGraphRealmIT
         // When
         realm.setAdmin( "CustomAdmin", true );
 
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
 
         // Then
@@ -352,7 +353,7 @@ class SystemGraphRealmIT
         try
         {
             // When
-            DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+            DatabasePrivilege dbPriv = new DatabasePrivilege();
             dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
             realm.grantPrivilegeToRole( "custom", dbPriv );
             fail( "Should not allow setting privilege on non existing role." );
@@ -375,7 +376,7 @@ class SystemGraphRealmIT
                 .migrateRole( "custom", "bob" )
                 .build(), securityLog, dbManager );
 
-        DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege( SYSTEM_DATABASE_NAME );
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource() ) );
@@ -406,11 +407,11 @@ class SystemGraphRealmIT
         Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
 
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         realm.grantPrivilegeToRole( "custom", dbPriv );
         privileges = realm.showPrivilegesForUser( "bob" );
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege();
         databasePrivilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
     }
@@ -431,7 +432,7 @@ class SystemGraphRealmIT
 
         realm.setAdmin( "custom", true );
         privileges = realm.showPrivilegesForUser( "bob" );
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege();
         databasePrivilege.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
         assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
 

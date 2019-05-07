@@ -151,12 +151,27 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName );
+        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
+        DatabasePrivilege dbPrivilege = databasePrivilegeMap.computeIfAbsent( "", db -> new DatabasePrivilege() );
+        dbPrivilege.addPrivilege( resourcePrivilege );
+    }
+
+    @Override
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
         Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
         DatabasePrivilege dbPrivilege = databasePrivilegeMap.computeIfAbsent( dbName, DatabasePrivilege::new );
         dbPrivilege.addPrivilege( resourcePrivilege );
+    }
+
+    @Override
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        revokePrivilegeFromRole( roleName, resourcePrivilege, "" );
     }
 
     @Override

@@ -55,7 +55,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         for ( DatabasePrivilege privilege : privileges )
         {
             String privilegeDbName = privilege.getDbName();
-            if ( privilegeDbName.equals( dbName ) || privilegeDbName.equals( "*" ) )
+            if ( privilege.isAllDatabases() || privilegeDbName.equals( dbName ) )
             {
                 accessModeBuilder.addPrivileges( privilege );
             }
