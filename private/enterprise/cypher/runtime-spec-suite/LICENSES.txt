@@ -10,6 +10,15 @@ Apache Software License, Version 2.0
   Apache Commons IO
   Apache Commons Lang
   Apache Commons Text
+  Apache Shiro :: Cache
+  Apache Shiro :: Configuration :: Core
+  Apache Shiro :: Configuration :: OGDL
+  Apache Shiro :: Core
+  Apache Shiro :: Cryptography :: Ciphers
+  Apache Shiro :: Cryptography :: Core
+  Apache Shiro :: Cryptography :: Hashing
+  Apache Shiro :: Event
+  Apache Shiro :: Lang
   Caffeine cache
   jPowerShell
   jProcesses
@@ -477,6 +486,8 @@ This Agreement is governed by the laws of the State of New York and the intellec
 ------------------------------------------------------------------------------
 MIT License
   scallop
+  SLF4J API Module
+  SLF4J NOP Binding
 ------------------------------------------------------------------------------
 
 The MIT License

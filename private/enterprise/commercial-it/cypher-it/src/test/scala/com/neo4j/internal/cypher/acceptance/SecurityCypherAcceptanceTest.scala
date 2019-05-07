@@ -316,11 +316,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     ))
 
     getAllUserNamesFromManager should equal(Set("neo4j", "Bar", "Baz").asJava)
-
   }
 
-  // TODO test so the user has the correct password in all create tests!!!!!
-  //   As well as the other properties
   test("should create user with password as string") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

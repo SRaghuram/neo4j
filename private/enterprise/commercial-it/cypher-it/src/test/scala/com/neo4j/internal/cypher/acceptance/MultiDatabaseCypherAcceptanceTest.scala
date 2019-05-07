@@ -73,10 +73,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("CREATE DATABASE foo")
 
-      fail("Expected error \"Cannot create already existing database\" but succeeded.")
+      fail("Expected error \"The specified database already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot create already existing database") =>
+      case e :Exception => e.getMessage should be("The specified database already exists.")
     }
   }
 
@@ -118,10 +118,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("DROP DATABASE foo")
 
-      fail("Expected error \"Cannot drop non-existent database 'foo'\"")
+      fail("Expected error \"Database 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot drop non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
   }
 
@@ -138,10 +138,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("DROP DATABASE foo")
 
-      fail("Expected error \"Cannot drop non-existent database 'foo'\"")
+      fail("Expected error \"Database 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot drop non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
   }
 
@@ -165,10 +165,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("START DATABASE foo")
 
-      fail("Expected error \"Cannot start non-existent database 'foo'\" but succeeded.")
+      fail("Expected error \"Database 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot start non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
 
     // THEN
@@ -188,10 +188,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     // WHEN
     execute("START DATABASE foo")
 
-      fail("Expected error \"Cannot start non-existent database 'foo'\" but succeeded.")
+      fail("Expected error \"Database 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot start non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
 
     // THEN
@@ -259,10 +259,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("STOP DATABASE foo")
 
-      fail("Expected error \"Cannot start non-existent database 'foo'\" but succeeded.")
+      fail("Expected error \"Database 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot stop non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
 
     // THEN
@@ -282,10 +282,10 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       // WHEN
       execute("STOP DATABASE foo")
 
-      fail("Expected error \"Cannot stop non-existent database 'foo'\" but succeeded.")
+      fail("Expected error \"Database 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.equals("Cannot stop non-existent database 'foo'") =>
+      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
     }
 
     // THEN

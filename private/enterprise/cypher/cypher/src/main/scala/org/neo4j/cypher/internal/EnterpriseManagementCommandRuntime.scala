@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.string.UTF8
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
@@ -100,8 +101,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _) =>
-      // TODO fix the predefined roles to be connected to PredefinedRoles (aka PredefinedRoles.ADMIN)
-      val predefinedRoles = Values.stringArray("admin", "architect", "publisher", "editor", "reader")
+      val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                                               PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val query = if (showAll)
                         """MATCH (r:Role)
                           |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r)
@@ -144,16 +145,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       userManager.deleteRole(roleName)
       NoResultSystemCommandExecutionPlan()
 
-    // SHOW DATABASES
-    case ShowDatabases() => (_, _) =>
-      SystemCommandExecutionPlan("ShowDatabases", normalExecutionEngine,
-        "MATCH (d:Database) RETURN d.name as name, d.status as status", VirtualValues.emptyMap())
-
-    // SHOW DATABASE foo
-    case ShowDatabase(dbName) => (_, _) =>
-      SystemCommandExecutionPlan("ShowDatabase", normalExecutionEngine,
-        "MATCH (d:Database {name: $name}) RETURN d.name as name, d.status as status", VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))))
-
     // CREATE DATABASE foo
     case CreateDatabase(dbName) => (_, _) =>
       SystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
@@ -177,47 +168,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           if (record.get("name") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
         }
       )
-
-      // TODO: Check back if Start/Stop should also be "just" in enterprise or not. Check also CommunityManagementCommandRuntime
-    /*// START DATABASE foo
-    case StartDatabase(dbName) => (_, _) =>
-      UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d:Database {name: $name})
-          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
-          |SET d2.status = $status
-          |SET d2.started_at = datetime()
-          |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
-        VirtualValues.map(
-          Array("name", "oldStatus", "status"),
-          Array(Values.stringValue(dbName),
-            DatabaseStatus.Offline,
-            DatabaseStatus.Online
-          )
-        ),
-        record => {
-          if (record.get("db") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
-        }
-      )
-
-    // STOP DATABASE foo
-    case StopDatabase(dbName) => (_, _) =>
-      UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d:Database {name: $name})
-          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
-          |SET d2.status = $status
-          |SET d2.stopped_at = datetime()
-          |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
-        VirtualValues.map(
-          Array("name", "oldStatus", "status"),
-          Array(Values.stringValue(dbName),
-            DatabaseStatus.Online,
-            DatabaseStatus.Offline
-          )
-        ),
-        record => {
-          if (record.get("db") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
-        }
-      )*/
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =
