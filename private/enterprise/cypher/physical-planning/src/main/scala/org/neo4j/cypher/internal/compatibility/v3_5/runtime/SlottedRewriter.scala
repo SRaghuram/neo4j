@@ -9,10 +9,10 @@ import org.neo4j.cypher.internal.compatibility.v3_5.runtime.PhysicalPlanningAttr
 import org.neo4j.cypher.internal.compatibility.v3_5.runtime.ast._
 import org.neo4j.cypher.internal.compiler.v3_5.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.planner.v3_5.spi.TokenContext
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans.{LogicalPlan, NestedPlanExpression, Projection, VarExpand, _}
 import org.neo4j.cypher.internal.v3_5.expressions
 import org.neo4j.cypher.internal.v3_5.expressions.{FunctionInvocation, functions => frontendFunctions, _}
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.{LogicalPlan, NestedPlanExpression, Projection, VarExpand, _}
 import org.neo4j.cypher.internal.v3_5.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.v3_5.util.Foldable._
 import org.neo4j.cypher.internal.v3_5.util.attribution.SameId
@@ -59,18 +59,18 @@ class SlottedRewriter(tokenContext: TokenContext) {
 
       case oldPlan: VarExpand =>
         /*
-        The node and edge predicates will be set and evaluated on the incoming rows, not on the outgoing ones.
+        The node and relationship predicates will be set and evaluated on the incoming rows, not on the outgoing ones.
         We need to use the incoming slot configuration for predicate rewriting
          */
         val incomingSlotConfiguration = slotConfigurations(oldPlan.source.id)
         val rewriter = rewriteCreator(incomingSlotConfiguration, oldPlan, slotConfigurations)
 
         val newNodePredicate = oldPlan.nodePredicate.endoRewrite(rewriter)
-        val newEdgePredicate = oldPlan.edgePredicate.endoRewrite(rewriter)
+        val newRelationshipPredicate = oldPlan.relationshipPredicate.endoRewrite(rewriter)
 
         val newPlan = oldPlan.copy(
           nodePredicate = newNodePredicate,
-          edgePredicate = newEdgePredicate,
+          relationshipPredicate = newRelationshipPredicate,
           legacyPredicates = Seq.empty // If we use the legacy predicates, we are not on the slotted runtime
         )(SameId(oldPlan.id))
 

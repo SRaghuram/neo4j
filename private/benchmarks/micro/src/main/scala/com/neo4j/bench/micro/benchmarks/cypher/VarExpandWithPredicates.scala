@@ -112,7 +112,7 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
       tempNode.name,
       "r_RELS",
       nodePredicate = tempNodePropertyPredicate,
-      edgePredicate = True()(Pos),
+      relationshipPredicate = True()(Pos),
       Seq.empty)(IdGen)
 
     val resultColumns = List(startNode.name, endNode.name)
