@@ -98,8 +98,8 @@ class ZombieNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, Z
 // REACTIVE
 class ZombieReactiveSingleThreadedTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED, ZombieRuntime)
 class ZombieReactiveSingleThreadedNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime)
-class ZombieReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime)
-
+class ZombieReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, ZombieRuntime)
+class ZombieReactiveParallelNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime)
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
@@ -170,7 +170,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
   test("should handle expand") {
     // given
-    val (_, rels) = circleGraph(10000)
+    val (_, rels) = circleGraph(10)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)

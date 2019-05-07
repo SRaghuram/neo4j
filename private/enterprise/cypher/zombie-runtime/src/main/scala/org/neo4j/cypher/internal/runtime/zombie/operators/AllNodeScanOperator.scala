@@ -144,26 +144,10 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                             val nodeVarName: String,
                                             val offset: Int,
                                             val argumentSize: SlotConfiguration.Size)
-                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate {
+                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
-
-  // Setup the innermost output template
-  innermost.delegate = new OperatorTaskTemplate {
-    override def genOperate: IntermediateRepresentation = {
-      OUTPUT_ROW_MOVE_TO_NEXT
-    }
-    override def genFields: Seq[Field] = Seq.empty
-    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-    override def genPost: Seq[IntermediateRepresentation] = Seq.empty
-  }
-
-  override def genInit: IntermediateRepresentation = {
-    inner.genInit
-  }
-
-  override def genPost: Seq[IntermediateRepresentation] = inner.genPost
 
   override def genFields: Seq[Field] = {
     (super.genFields :+ nodeCursorField) ++ inner.genFields
@@ -191,7 +175,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
     //  <<< inner.genOperate() >>>
     //  //outputRow.moveToNextRow() // <- This needs to move to the innermost level
     //}
-    loop(and(OUTPUT_ROW_IS_VALID, cursorNext[NodeCursor](loadField(nodeCursorField))))(
+    val demandPredicate = innermost.checkDemand(cursorNext[NodeCursor](loadField(nodeCursorField)), OUTPUT_ROW_IS_VALID)
+    loop(demandPredicate.predicate)(
       block(
         // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
         //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
@@ -210,7 +195,8 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
         },
 
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
-        inner.genOperate
+        inner.genOperate,
+        demandPredicate.endOfLoop
       )
     )
   }

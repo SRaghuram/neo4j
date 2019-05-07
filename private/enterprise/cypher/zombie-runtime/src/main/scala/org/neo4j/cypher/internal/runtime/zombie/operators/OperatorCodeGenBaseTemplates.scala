@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.zombie.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
+import org.neo4j.cypher.internal.runtime.zombie.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
@@ -76,13 +77,11 @@ trait OperatorTaskTemplate {
   def genOperate: IntermediateRepresentation
 
   // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
-  def genPost: Seq[IntermediateRepresentation]
   def genFields: Seq[Field]
   def genLocalVariables: Seq[LocalVariable]
 }
 
 trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
-
   /**
     * Responsible for generating:
     * {{{
@@ -103,12 +102,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
 
     ClassDeclaration[ContinuableOperatorTaskWithMorsel](packageName, className,
-      extendsClass = None,
-      implementsInterfaces =  Seq(typeRefOf[ContinuableOperatorTaskWithMorsel]),
-      constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
-      initializationCode = genInit,
-      methods = Seq(
-        MethodDeclaration("operate",
+                                                        extendsClass = None,
+                                                        implementsInterfaces =  Seq(typeRefOf[ContinuableOperatorTaskWithMorsel]),
+                                                        constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
+                                                        initializationCode = genInit,
+                                                        methods = Seq(
+                                                          MethodDeclaration("operate",
           owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Unit],
           Seq(param[MorselExecutionContext]("context"),
@@ -116,7 +115,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
               param[QueryState]("state"),
               param[QueryResources]("resources")
           ),
-          body = block(genOperate, block(genPost:_*)),
+          body = genOperate,
           genLocalVariables = () => {
             Seq(
               variable[Array[AnyValue]]("params",
@@ -131,34 +130,45 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
                                                ))) ++ genLocalVariables},
                           parameterizedWith = None, throws = Some(typeRefOf[Exception])
         ),
-        MethodDeclaration("canContinue",
-          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
-          returnType = typeRefOf[Boolean],
-          parameters = Seq.empty,
-          body = genCanContinue
-        ),
-        // This is only needed because we extend an abstract scala class containing `val dataRead`
-        MethodDeclaration("dataRead",
+                                                          MethodDeclaration("canContinue",
+                                                                            owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                                                                            returnType = typeRefOf[Boolean],
+                                                                            parameters = Seq.empty,
+                                                                            body = genCanContinue
+                                                                            ),
+                                                          // This is only needed because we extend an abstract scala class containing `val dataRead`
+                                                          MethodDeclaration("dataRead",
           owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Read],
           parameters = Seq.empty,
           body = loadField(DATA_READ)
         ),
-        // This is only needed because we extend an abstract scala class containing `val inputMorsel`
-        MethodDeclaration("inputMorsel",
+                                                          // This is only needed because we extend an abstract scala class containing `val inputMorsel`
+                                                          MethodDeclaration("inputMorsel",
           owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[MorselExecutionContext],
           parameters = Seq.empty,
           body = loadField(INPUT_MORSEL)
         )
-      ), genFields = () => genFields)// NOTE: This has to be called after genOperate!
+                                                          ), genFields = () => Seq(DATA_READ,
+                                                                                   INPUT_MORSEL) ++ genFields) // NOTE: This has to be called after genOperate!
   }
 }
 
+/**
+  * Contains two components, one `predicate` to be used as the condition of a loop and one call to be made at the end of the loop.
+  *
+  * @param predicate The check to be done in the condition to the loop, e.g. `while(predicate)`
+  * @param endOfLoop To be a called at the end of loop, allows the predicate to be updated, e.g. `predicate = cursor.next()`
+  */
+case class DemandPredicate(predicate: IntermediateRepresentation, endOfLoop: IntermediateRepresentation)
+
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
 class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
-                                   var shouldWriteToContext: Boolean = true)
+                                   var shouldWriteToContext: Boolean = true,
+                                   var shouldCheckDemand: Boolean = false)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+
   override def genOperate: IntermediateRepresentation = {
     if (shouldWriteToContext) {
       block(
@@ -169,6 +179,61 @@ class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
       delegate.genOperate
     }
   }
+
+  /**
+    * In the case where we need to check demand, i.e. produceResult is part of the fused operator, we need to generate
+    * loops of the following form.
+    *
+    * {{{
+    *   if (!canContinue) {
+    *     canContinue = cursor.next()
+    *   }
+    *   while (served < demand && input.isValidRow() && canContinue) {
+    *     ...
+    *     served += 1
+    *     canContinue = cursor.next()
+    *   }
+    * }}}
+    *
+    * For the other case where we can ignore demand we simply generate loops of the form
+    *
+    * {{{
+    *   while (input.isValidRow() && cursor.next()) {
+    *     ...
+    *   }
+    * }}}
+    * @param statefulPredicate   typically a predicate like `cursor.next`
+    * @param statelessPredicates idempotent predicates.
+    * @return
+    */
+  def checkDemand(statefulPredicate: IntermediateRepresentation,
+                  statelessPredicates: IntermediateRepresentation*): DemandPredicate = {
+    if (shouldCheckDemand) {
+      DemandPredicate(
+        /**
+          * {{{
+          *   if (!canContinue) {
+          *     canContinue = stateFulPredicate
+          *   }
+          *   while( served < demand && p1 && p2 && ... && canContinue)
+          * }}}
+          */
+        block(
+          condition(not(loadField(CAN_CONTINUE)))(setField(CAN_CONTINUE, statefulPredicate)),
+          and(HAS_DEMAND +: statelessPredicates :+ loadField(CAN_CONTINUE))),
+        setField(CAN_CONTINUE, statefulPredicate))
+    }
+    // we don't need to care about demand, just push through the data
+    else DemandPredicate(and(statelessPredicates :+ statefulPredicate), noop())
+  }
+
+  /**
+    * If we need to care about demand (produceResult part of the fused operator)
+    * we need to update the demand after having produced data.
+    */
+  def updatedDemand: IntermediateRepresentation =
+    if (shouldCheckDemand) UPDATE_DEMAND
+    else noop()
 
   override def genFields: Seq[Field] = delegate.genFields
 
@@ -183,6 +248,4 @@ class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
     } ++
     delegate.genLocalVariables
   }
-
-  override def genPost: Seq[IntermediateRepresentation] = delegate.genPost
 }

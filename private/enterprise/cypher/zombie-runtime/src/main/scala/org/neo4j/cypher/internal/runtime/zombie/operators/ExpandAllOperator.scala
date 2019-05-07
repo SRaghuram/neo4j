@@ -116,7 +116,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     dir: SemanticDirection,
                                     types: Array[Int],
                                     missingTypes: Array[String])
-                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate {
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
@@ -129,22 +129,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   )
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
                                                       arrayOf[String](missingTypes.map(constant):_*))
-
-  // Setup the innermost output template
-  innermost.delegate = new OperatorTaskTemplate {
-    override def genOperate: IntermediateRepresentation = {
-      OUTPUT_ROW_MOVE_TO_NEXT
-    }
-    override def genFields: Seq[Field] = Seq.empty
-    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-    override def genPost: Seq[IntermediateRepresentation] = Seq.empty
-  }
-
-  override def genInit: IntermediateRepresentation = {
-    inner.genInit
-  }
-
-  override def genPost: Seq[IntermediateRepresentation] = inner.genPost
 
   override def genFields: Seq[Field] = {
     val localFields =
@@ -242,7 +226,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       case INCOMING => method[RelationshipSelectionCursor, Long]("sourceNodeReference")
       case BOTH => method[RelationshipSelectionCursor, Long]("otherNodeReference")
     }
-    loop(and(OUTPUT_ROW_IS_VALID, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))(
+    val demandPredicate = innermost.checkDemand(cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)),
+                                                OUTPUT_ROW_IS_VALID)
+    loop(demandPredicate.predicate)(
       block(
         if (innermost.shouldWriteToContext) {
           invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext]("copyFrom"),
@@ -253,7 +239,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
-        inner.genOperate
+        inner.genOperate,
+        demandPredicate.endOfLoop
       )
     )
   }

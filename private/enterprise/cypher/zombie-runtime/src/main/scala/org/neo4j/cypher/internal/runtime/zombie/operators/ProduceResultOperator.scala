@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.{DemandControlSubscription, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
@@ -125,26 +125,14 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 }
 
 class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
-                                       (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskTemplate {
+                                       (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
-
-  private val subscriber = variable[QuerySubscriber](codeGen.namer.nextVariableName(),
-                                                     invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
-  private val subscription = variable[DemandControlSubscription](codeGen.namer.nextVariableName(),
-                                                                 invoke(QUERY_STATE, method[QueryState, DemandControlSubscription]("demandControlSubscription")))
-  private val demand = variable[Long](codeGen.namer.nextVariableName(),
-                                      invoke(load(subscription), method[DemandControlSubscription, Long]("getDemand")))
-  private val served = variable[Long](codeGen.namer.nextVariableName(), constant(0L))
 
   override def toString: String = "ProduceResultTaskTemplate"
 
   override def genInit: IntermediateRepresentation = {
    inner.genInit
-  }
-
-  override def genCanContinue: IntermediateRepresentation = {
-    INPUT_ROW_IS_VALID
   }
 
   // This operates on a single row only
@@ -200,43 +188,32 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
         val slot = slots.get(name).getOrElse(
           throw new InternalException(s"Did not find `$name` in the slot configuration")
           )
-        invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
+        invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
                          constant(index), getFromSlot(slot))
     }:_ *)
 
     /**
-      * Generate:
+      * Generates:
       * {{{
-      *   if (served < demand) {
-      *     subscriber.onRecord()
-      *     [[project]]
-      *     subscriber.onRecordCompleted()
-      *     served += 1L
-      *     [[inner]]]
-      *   }
+      *   subscriber.onRecord()
+      *   [[project]]
+      *   subscriber.onRecordCompleted()
+      *   served += 1L
+      *   [[inner]]]
       * }}}
       */
     block(
-      condition(lessThan(load(served), load(demand)))(
-        block(
-          invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit]("onRecord")),
-          project,
-          invokeSideEffect(load(subscriber), method[QuerySubscriber, Unit]("onRecordCompleted")),
-          assign(served, add(load(served), constant(1L))),
-          inner.genOperate
-          )
-      ),
-    )
+      invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecord")),
+      project,
+      invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
+      assign(SERVED, add(load(SERVED), constant(1L))),
+      inner.genOperate)
   }
 
-  override def genPost: Seq[IntermediateRepresentation] = {
-    invokeSideEffect(load(subscription), method[DemandControlSubscription, Unit, Long]("addServed"), load(served)) +: inner.genPost
-  }
-
-  override def genFields: Seq[Field] = inner.genFields
+  override def genFields: Seq[Field] = inner.genFields :+ CAN_CONTINUE
 
   override def genLocalVariables: Seq[LocalVariable] =
-    inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, subscriber, subscription, demand, served)
+    inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record

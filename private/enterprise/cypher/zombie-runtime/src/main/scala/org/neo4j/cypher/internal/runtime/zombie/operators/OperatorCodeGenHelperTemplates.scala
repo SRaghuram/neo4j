@@ -6,9 +6,10 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{InstanceField, IntermediateRepresentation, LocalVariable, Parameter}
+import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.internal.kernel.api._
+import org.neo4j.kernel.impl.query.QuerySubscriber
 
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
@@ -42,7 +43,7 @@ object OperatorCodeGenHelperTemplates {
                           invoke(QUERY_RESOURCES,
                                  method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
-    load(CURSOR_POOL_V.name)
+    load(CURSOR_POOL_V)
 
   val OUTPUT_ROW: IntermediateRepresentation =
     load("context")
@@ -53,12 +54,26 @@ object OperatorCodeGenHelperTemplates {
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
 
+  val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
+                                                            invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
+  val SUBSCRIPTION: LocalVariable = variable[DemandControlSubscription]("subscription",
+                                                                        invoke(QUERY_STATE, method[QueryState, DemandControlSubscription]("demandControlSubscription")))
+  val DEMAND: LocalVariable = variable[Long]("demand",
+                                             invoke(load(SUBSCRIPTION), method[DemandControlSubscription, Long]("getDemand")))
+
+  val SERVED: LocalVariable = variable[Long]("served", constant(0L))
+
+
+  val HAS_DEMAND: IntermediateRepresentation = lessThan(load(SERVED), load(DEMAND))
+  val CAN_CONTINUE: Field = field[Boolean]("canContinue", constant(false))
+
   val PRE_POPULATE_RESULTS_V: LocalVariable =
     variable[Boolean]("prePopulateResults",
                       invoke(QUERY_STATE,
                              method[QueryState, Boolean]("prepopulateResults")))
+
   val PRE_POPULATE_RESULTS: IntermediateRepresentation =
-    load(PRE_POPULATE_RESULTS_V.name)
+    load(PRE_POPULATE_RESULTS_V)
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
@@ -68,6 +83,8 @@ object OperatorCodeGenHelperTemplates {
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(load("context"), method[MorselExecutionContext, Boolean]("isValidRow"))
   val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("finishedWriting"))
   val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
+  val UPDATE_DEMAND: IntermediateRepresentation =
+    invokeSideEffect(load(SUBSCRIPTION), method[DemandControlSubscription, Unit, Long]("addServed"), load(SERVED))
 
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 
@@ -81,17 +81,28 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     inputMorsel.isValidRow || innerLoop
 }
 
-abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTemplate {
+abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
+                                     innermost: DelegateOperatorTaskTemplate) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
-  override def genFields: Seq[Field] = {
-    Seq(DATA_READ, INPUT_MORSEL, INNER_LOOP)
+  // Setup the innermost output template
+  innermost.delegate = new OperatorTaskTemplate {
+    override def genOperate: IntermediateRepresentation = {
+      OUTPUT_ROW_MOVE_TO_NEXT
+    }
+    override def genFields: Seq[Field] = Seq.empty
+    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   }
 
+  override def genFields: Seq[Field] = Seq(INNER_LOOP)
 
-  override def genCanContinue: IntermediateRepresentation = {
+  override def genCanContinue: IntermediateRepresentation= {
     /** {{{inputMorsel.isValidRow || innerLoop}}}*/
     or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP))
+  }
+
+  override def genInit: IntermediateRepresentation = {
+    inner.genInit
   }
 
   override def genOperate: IntermediateRepresentation = {
@@ -152,10 +163,11 @@ abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTe
             )
           )( //else
             INPUT_ROW_MOVE_TO_NEXT
+          ),
           )
-        )
       ),
-      OUTPUT_ROW_FINISHED_WRITING
+      innermost.updatedDemand,
+      if (innermost.shouldWriteToContext) OUTPUT_ROW_FINISHED_WRITING else noop()
     )
   }
 
