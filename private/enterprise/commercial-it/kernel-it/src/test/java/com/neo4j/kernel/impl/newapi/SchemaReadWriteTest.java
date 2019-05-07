@@ -10,7 +10,6 @@ import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.kernel.impl.newapi.SchemaReadWriteTestBase;
 
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
-import static org.neo4j.internal.schema.SchemaDescriptor.forLabelNoIndex;
 import static org.neo4j.internal.schema.SchemaDescriptor.forRelType;
 
 public class SchemaReadWriteTest extends SchemaReadWriteTestBase<EnterpriseWriteTestSupport>
@@ -30,7 +29,7 @@ public class SchemaReadWriteTest extends SchemaReadWriteTestBase<EnterpriseWrite
     @Override
     protected LabelSchemaDescriptor labelDescriptorNoIndex( int label, int... props )
     {
-        return forLabelNoIndex( label, props );
+        return forLabel( label, props );
     }
 
     @Override

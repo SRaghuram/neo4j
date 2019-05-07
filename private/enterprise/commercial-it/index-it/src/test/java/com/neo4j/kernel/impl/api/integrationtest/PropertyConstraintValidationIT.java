@@ -25,6 +25,7 @@ import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
@@ -41,8 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
-import static org.neo4j.internal.schema.SchemaDescriptor.forLabelNoIndex;
-import static org.neo4j.internal.schema.SchemaDescriptor.forRelTypeNoIndex;
+import static org.neo4j.internal.schema.SchemaDescriptor.forRelType;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 @RunWith( Suite.class )
@@ -129,7 +129,7 @@ public class PropertyConstraintValidationIT
             commit();
 
             SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-            schemaWrite.nodePropertyExistenceConstraintCreate( forLabelNoIndex( label, propertyKey ) );
+            schemaWrite.nodePropertyExistenceConstraintCreate( forLabel( label, propertyKey ) );
             commit();
         }
 
@@ -210,7 +210,7 @@ public class PropertyConstraintValidationIT
             commit();
 
             SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-            schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelTypeNoIndex( relTypeId, propertyKeyId ) );
+            schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelType( relTypeId, propertyKeyId ) );
             commit();
         }
 

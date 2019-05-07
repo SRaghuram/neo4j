@@ -88,7 +88,7 @@ public class NodePropertyExistenceConstraintCreationIT
     @Override
     LabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
-        return SchemaDescriptor.forLabelNoIndex( typeId, propertyKeyId );
+        return SchemaDescriptor.forLabel( typeId, propertyKeyId );
     }
 
     @Test
