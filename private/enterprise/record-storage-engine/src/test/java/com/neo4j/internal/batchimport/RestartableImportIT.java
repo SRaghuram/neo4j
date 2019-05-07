@@ -97,8 +97,8 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDirectory )
-                    .setConfig( transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
+            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( storeDir )
+                    .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
                     .build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
