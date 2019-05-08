@@ -140,11 +140,6 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             subscriber: QuerySubscriber) extends RuntimeResult {
     private var resultRequested = false
 
-    //TODO no, just don't
-    if (subscriber != QuerySubscriber.NOT_A_SUBSCRIBER) {
-      subscriber.onResult(fieldNames.length)
-    }
-
     private var querySubscription: QuerySubscription = _
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
@@ -195,6 +190,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
           subscriber)
       }
       querySubscription.request(numberOfRecords)
+      subscriber.onResult(fieldNames.length)
     }
 
     override def cancel(): Unit =
