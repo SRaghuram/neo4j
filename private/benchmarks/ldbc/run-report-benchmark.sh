@@ -101,7 +101,7 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    ${jvm_path} -XX:OnOutOfMemory="./on-out-of-memory.sh;--jvm-pid;%p;--output-dir;$ldbc_results_dir/out-of-memory" \
+    ${jvm_path} -XX:OnOutOfMemoryError="./on-out-of-memory.sh;--jvm-pid;%p;--output-dir;$ldbc_results_dir/out-of-memory" \
         -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
         --jvm-args "${ldbc_jvm_args}" \
