@@ -101,7 +101,8 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    ${jvm_path} -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
+    ${jvm_path} -XX:OnOutOfMemory="./on-out-of-memory.sh;--jvm-pid;%p;--output-dir;$ldbc_results_dir/out-of-memory" \
+        -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
         --jvm-args "${ldbc_jvm_args}" \
         --neo4j-package-for-jvm-args "${neo4j_tarball}" \
@@ -137,7 +138,6 @@ function runReport {
          --profile-gc \
         $@
 }
-
 
 uuid=$(uuidgen)
 profiler_recording_dir="${ldbc_results_dir}/${uuid}"
