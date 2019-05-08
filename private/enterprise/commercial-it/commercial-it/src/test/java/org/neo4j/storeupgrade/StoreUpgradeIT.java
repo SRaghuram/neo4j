@@ -236,7 +236,7 @@ public class StoreUpgradeIT
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
-            String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
+            String startedDatabaseName = database.databaseName();
             managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
@@ -263,7 +263,7 @@ public class StoreUpgradeIT
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
-            String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
+            String startedDatabaseName = database.databaseName();
             managementService.shutdown();
 
             File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );

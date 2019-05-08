@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -45,7 +44,6 @@ class CommercialDatabaseManagementServiceBuilderIT
                 .setConfig( databases_root_path, databasesDir.toString() )
                 .setConfig( online_backup_enabled, FALSE )
                 .build();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             assertTrue( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, DEFAULT_DATABASE_NAME ) ) );
@@ -66,7 +64,6 @@ class CommercialDatabaseManagementServiceBuilderIT
         File factoryDir = testDirectory.storeDir();
 
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( factoryDir ).build();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, DEFAULT_DATABASE_NAME ) ) );

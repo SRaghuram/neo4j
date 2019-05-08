@@ -75,7 +75,7 @@ class MultiDatabaseManagerIT
         GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseId ).databaseFacade();
 
         assertNotNull( database1 );
-        assertEquals( databaseId.name(), database1.databaseLayout().getDatabaseName() );
+        assertEquals( databaseId.name(), database1.databaseName() );
     }
 
     @Test
