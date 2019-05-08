@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.extension.Inject;
@@ -77,8 +78,7 @@ class SystemDatabaseDatabaseManagementIT
         managementService.shutdown();
         managementService = createManagementService();
         assertNotNull( managementService.database( "foo" ) );
-//        TODO: this should work after availability guard work merged
-//        assertNotAvailable();
+        assertNotAvailable();
     }
 
     @Test
@@ -116,8 +116,7 @@ class SystemDatabaseDatabaseManagementIT
         GraphDatabaseService oldFacade = managementService.database( "foo" );
         executeInSystemDatabase( "DROP DATABASE foo" );
         assertThrows( DatabaseNotFoundException.class, () -> managementService.database( "foo" ) );
-//        TODO: this should work after availability guard work merged
-//        assertThrows( DatabaseShutdownException.class, oldFacade::beginTx );
+        assertThrows( DatabaseShutdownException.class, oldFacade::beginTx );
     }
 
     private void assertNotAvailable()

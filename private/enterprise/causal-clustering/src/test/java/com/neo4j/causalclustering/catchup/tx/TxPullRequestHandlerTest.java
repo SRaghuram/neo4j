@@ -75,7 +75,7 @@ class TxPullRequestHandlerTest
     private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
             DATABASE_ID,
             new FakeClock(),
-            NullLog.getInstance(),
+            NullLog.getInstance(), 0,
             mock( CompositeDatabaseAvailabilityGuard.class ) );
     private LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
     private TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );

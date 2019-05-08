@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +32,7 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
@@ -70,7 +70,7 @@ class RaftReplicatorTest
     @BeforeEach
     void setUp()
     {
-        availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(),
+        availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
         clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
     }

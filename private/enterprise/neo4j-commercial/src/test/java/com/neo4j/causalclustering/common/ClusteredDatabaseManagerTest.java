@@ -142,7 +142,7 @@ class ClusteredDatabaseManagerTest
 
     private static DatabaseAvailabilityGuard newAvailabilityGuard()
     {
-        return new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clock.systemUTC(), NullLog.getInstance(),
+        return new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clock.systemUTC(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
     }
 
