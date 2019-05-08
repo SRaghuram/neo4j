@@ -7,7 +7,7 @@ package com.neo4j.server.rest;
 
 import org.junit.Test;
 
-import org.neo4j.kernel.internal.KernelData;
+import org.neo4j.kernel.internal.Version;
 import org.neo4j.server.rest.management.VersionAndEditionService;
 import org.neo4j.test.server.HTTP;
 
@@ -27,8 +27,7 @@ public class CommercialVersionAndEditionServiceIT extends CommercialVersionIT
     public void shouldReportEnterpriseEdition() throws Exception
     {
         // Given
-        String releaseVersion = server.getDatabase().getGraph().getDependencyResolver().resolveDependency( KernelData
-                .class ).version().getReleaseVersion();
+        String releaseVersion = Version.getKernel().getReleaseVersion();
 
         // When
         HTTP.Response res =

@@ -10,7 +10,6 @@ import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableI
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
-import java.io.File;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.Dependencies;
@@ -18,24 +17,16 @@ import org.neo4j.configuration.Config;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
-import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies, Config config, LifeSupport life )
     {
-        KernelData kernelData = createKernelData( globalModule.getFileSystem(), globalModule.getPageCache(),
-                                                globalModule.getStoreLayout().storeDirectory(), config );
-        dependencies.satisfyDependency( kernelData );
-        life.add( kernelData );
-
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
 
         headerInformationFactory = createHeaderInformationFactory();
@@ -45,12 +36,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
     }
 
-    private static KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config )
-    {
-        return new KernelData( fileSystem, pageCache, storeDir, config );
-    }
-
-    private TransactionHeaderInformationFactory createHeaderInformationFactory()
+    private static TransactionHeaderInformationFactory createHeaderInformationFactory()
     {
         return () -> new TransactionHeaderInformation( -1, -1, new byte[0] );
     }
