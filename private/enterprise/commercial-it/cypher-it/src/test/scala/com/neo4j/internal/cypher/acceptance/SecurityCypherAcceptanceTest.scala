@@ -20,15 +20,14 @@ import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
-import org.neo4j.internal.kernel.api.security.AuthSubject
+import org.neo4j.internal.kernel.api.security.{AuthSubject, AuthenticationResult}
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.{BasicPasswordPolicy, CommunitySecurityModule, SecureHasher}
+import org.neo4j.server.security.auth.{BasicPasswordPolicy, CommunitySecurityModule, SecureHasher, SecurityTestUtils}
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.server.security.systemgraph.{BasicSystemGraphRealm, ContextSwitchingSystemGraphQueryExecutor}
-import org.neo4j.string.UTF8
 
 import scala.collection.JavaConverters._
 
@@ -49,6 +48,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   )
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
+  private val neo4jUser = user("neo4j", Seq("admin"))
 
   private var systemGraphRealm: SystemGraphRealm = _
 
@@ -89,12 +89,11 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   test("should list populated roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    // TODO update to use actual DDL when available for creating users and assigning to roles
-    systemGraphInnerQueryExecutor.executeQueryLong(
-      """CREATE (r:Role {name:'foo'})
-        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
-        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
-      """.stripMargin)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE ROLE foo")
+    execute("GRANT ROLE foo TO Bar")
+    execute("GRANT ROLE foo TO Baz")
 
     // WHEN
     val result = execute("SHOW POPULATED ROLES")
@@ -140,12 +139,11 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   test("should list populated roles with several users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    // TODO update to use actual DDL when available for creating users and assigning to roles
-    systemGraphInnerQueryExecutor.executeQueryLong(
-      """CREATE (r:Role {name:'foo'})
-        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
-        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})-[:HAS_ROLE]->(r)
-      """.stripMargin)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE ROLE foo")
+    execute("GRANT ROLE foo TO Bar")
+    execute("GRANT ROLE foo TO Baz")
 
     // WHEN
     val result = execute("SHOW POPULATED ROLES WITH USERS")
@@ -158,6 +156,172 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     ))
   }
 
+  test("should list privileges for all users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW ALL PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq())
+    val grantSchema = Map("grant" -> "GRANT", "resource" -> "schema", "database" -> "*", "labels" -> Seq())
+    val grantToken = Map("grant" -> "GRANT", "resource" -> "token", "database" -> "*", "labels" -> Seq())
+    val grantSystem = Map("grant" -> "GRANT", "resource" -> "system", "database" -> "*", "labels" -> Seq())
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "reader"),
+      grantGraph ++ Map("action" -> "read", "role" -> "reader"),
+
+      grantGraph ++ Map("action" -> "find", "role" -> "editor"),
+      grantGraph ++ Map("action" -> "read", "role" -> "editor"),
+      grantGraph ++ Map("action" -> "write", "role" -> "editor"),
+
+      grantGraph ++ Map("action" -> "find", "role" -> "publisher"),
+      grantGraph ++ Map("action" -> "read", "role" -> "publisher"),
+      grantGraph ++ Map("action" -> "write", "role" -> "publisher"),
+      grantToken ++ Map("action" -> "write", "role" -> "publisher"),
+
+      grantGraph ++ Map("action" -> "find", "role" -> "architect"),
+      grantGraph ++ Map("action" -> "read", "role" -> "architect"),
+      grantGraph ++ Map("action" -> "write", "role" -> "architect"),
+      grantToken ++ Map("action" -> "write", "role" -> "architect"),
+      grantSchema ++ Map("action" -> "write", "role" -> "architect"),
+
+      grantGraph ++ Map("action" -> "find", "role" -> "admin"),
+      grantGraph ++ Map("action" -> "read", "role" -> "admin"),
+      grantGraph ++ Map("action" -> "write", "role" -> "admin"),
+      grantSystem ++ Map("action" -> "write", "role" -> "admin"),
+      grantToken ++ Map("action" -> "write", "role" -> "admin"),
+      grantSchema ++ Map("action" -> "write", "role" -> "admin"),
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should list privileges for specific role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW ROLE editor PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq())
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "editor"),
+      grantGraph ++ Map("action" -> "read", "role" -> "editor"),
+      grantGraph ++ Map("action" -> "write", "role" -> "editor")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should grant traversal privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "custom")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should grant traversal privilege to custom role for all databases but only a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    // WHEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq("A"))
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "custom")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should grant traversal privilege to custom role for a specific database and a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
+
+    // WHEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A"))
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "custom")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should grant traversal privilege to custom role for a specific database and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+
+    // WHEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("*"))
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "custom")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should grant traversal privilege to custom role for a specific database and multiple labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
+
+    // WHEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
+
+    // THEN
+    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A", "B"))
+    val expected = Set(
+      grantGraph ++ Map("action" -> "find", "role" -> "custom")
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should create role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("CREATE ROLE foo")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles ++ Set(foo))
+  }
+
   test("should fail on creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -165,14 +329,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLES")
     result.toSet should be(defaultRoles ++ Set(foo))
 
-    try{
+    try {
       // WHEN
       execute("CREATE ROLE foo")
 
       fail("Expected error \"The specified role 'foo' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("The specified role 'foo' already exists.")
+      case e: Exception => e.getMessage should be("The specified role 'foo' already exists.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -198,14 +362,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try{
+    try {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
       fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
+      case e: Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -220,14 +384,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLES")
     result.toSet should be(defaultRoles ++ Set(foo, bar))
 
-    try{
+    try {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
       fail("Expected error \"The specified role 'bar' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("The specified role 'bar' already exists.")
+      case e: Exception => e.getMessage should be("The specified role 'bar' already exists.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -241,14 +405,14 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLES")
     result.toSet should be(defaultRoles ++ Set(bar))
 
-    try{
+    try {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
 
       fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
+      case e: Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
     }
 
     val result2 = execute("SHOW ROLES")
@@ -300,7 +464,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       fail("Expected error \"Role 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("Role 'foo' does not exist.")
+      case e: Exception => e.getMessage should be("Role 'foo' does not exist.")
     }
 
     // THEN
@@ -316,9 +480,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW USERS")
 
     // THEN
-    result.toSet should be(Set(Map("user" -> "neo4j", "roles" -> Seq("admin"))))
-
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    result.toSet should be(Set(neo4jUser))
   }
 
   test("should list all users") {
@@ -328,102 +490,89 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // Bar   : dragon, fairy
     // Baz   :
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    // TODO update to use actual DDL when available for creating users and assigning to roles
-    systemGraphInnerQueryExecutor.executeQueryLong(
-      """
-        |CREATE (r1:Role {name:'dragon'})
-        |CREATE (r2:Role {name:'fairy'})
-        |CREATE (u1:User {name:'Bar',credentials:'neo',passwordChangeRequired:false,suspended:false})
-        |CREATE (u2:User {name:'Baz',credentials:'NEO',passwordChangeRequired:false,suspended:false})
-        |CREATE (u1)-[:HAS_ROLE]->(r1)
-        |CREATE (u1)-[:HAS_ROLE]->(r2)
-      """.stripMargin)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE USER Zet SET PASSWORD 'NeX'")
 
     // WHEN
     val result = execute("SHOW USERS")
 
     // THEN
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "Bar", "roles" -> Seq("dragon", "fairy")),
-      Map("user" -> "Baz", "roles" -> Seq.empty)
-    ))
+    result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
+  }
 
-    getAllUserNamesFromManager should equal(Set("neo4j", "Bar", "Baz").asJava)
+  test("should assign roles and list users with roles") {
+    // GIVEN
+    // User  : Roles
+    // neo4j : admin
+    // Bar   : dragon, fairy
+    // Baz   :
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE USER Zet SET PASSWORD 'NeX'")
+    execute("CREATE ROLE dragon")
+    execute("CREATE ROLE fairy")
+    execute("GRANT ROLE dragon TO Bar")
+    execute("GRANT ROLE fairy TO Bar")
+    execute("GRANT ROLE fairy TO Zet")
+    //TODO: execute("GRANT ROLE fairy TO Bar, Zet")
+
+    // WHEN
+    val result = execute("SHOW USERS")
+
+    // THEN
+    result.toSet shouldBe Set(neo4jUser, user("Bar", Seq("fairy", "dragon")), user("Baz"), user("Zet", Seq("fairy")))
   }
 
   test("should create user with password as string") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     // WHEN
     execute("CREATE USER bar SET PASSWORD 'password'")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "bar", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "bar").asJava)
-    val user = systemGraphRealm.getUser("bar")
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
-    user.credentials().matchesPassword(UTF8.encode("PASSword")) should be(false)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should create user with mixed password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     // WHEN
     execute("CREATE USER bar SET PASSWORD 'p4s5W*rd'")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "bar", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "bar").asJava)
-    val user = systemGraphRealm.getUser("bar")
-    user.credentials().matchesPassword(UTF8.encode("p4s5W*rd")) should be(true)
-    user.credentials().matchesPassword(UTF8.encode("p4s5w*rd")) should be(false)
-    user.credentials().matchesPassword(UTF8.encode("PASSword")) should be(false)
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(false)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    testUserLogin("bar", "p4s5w*rd", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "PASSword", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "password", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "p4s5W*rd", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should create user with password as parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "bar"))
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
-    user.credentials().matchesPassword(UTF8.encode("Bar")) should be(false)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should fail to create user with numeric password as parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     try {
       // WHEN
@@ -434,12 +583,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // THEN
       case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: Integer")
     }
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail to create user with password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     try {
       // WHEN
@@ -450,12 +600,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // THEN
       case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
     }
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail to create user with password as null parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     try {
       // WHEN
@@ -466,99 +617,67 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // THEN
       case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
     }
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should create user with password change not required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
-    user.passwordChangeRequired() should equal(false)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
+    testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "password", AuthenticationResult.SUCCESS)
   }
 
   test("should create user with status active") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS ACTIVE")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should create user with status suspended") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS SUSPENDED")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", suspended = true))
+    testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "password", AuthenticationResult.FAILURE)
   }
 
   test("should create user with all parameters") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
-    val result = execute("SHOW USERS")
-    result.toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
-    user.passwordChangeRequired() should equal(false)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true))
   }
 
   test("should fail on creating already existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin"))
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     try {
@@ -567,40 +686,29 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       fail("Expected error \"The specified user 'neo4j' already exists.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("The specified user 'neo4j' already exists.")
+      case e: Exception => e.getMessage should be("The specified user 'neo4j' already exists.")
     }
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin"))
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should drop user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("DROP USER foo")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin"))
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
   test("should fail on dropping non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     try {
       // WHEN
@@ -609,92 +717,59 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("User 'foo' does not exist.")
+      case e: Exception => e.getMessage should be("User 'foo' does not exist.")
     }
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin"))
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
   test("should alter user password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD 'baz'")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
   test("should alter user password with mixed upper- and lowercase letters") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD 'bAz'")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("bAz")) should be(true)
-    user.credentials().matchesPassword(UTF8.encode("BaZ")) should be(false)
-    user.credentials().matchesPassword(UTF8.encode("BAZ")) should be(false)
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(false)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    testUserLogin("foo", "bAz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "BaZ", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "BAZ", AuthenticationResult.FAILURE)
   }
 
   test("should alter user password as parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD $password", Map("password" -> "baz"))
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
-    user.credentials().matchesPassword(UTF8.encode("BAZ")) should be(false)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
   test("should fail on altering user password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     try {
       // WHEN
@@ -710,138 +785,95 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   test("should alter user password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.passwordChangeRequired() should equal(false)
-    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
   }
 
   test("should alter user status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET STATUS SUSPENDED")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
-    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
-    user.passwordChangeRequired() should equal(true)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
   test("should alter user password and mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
-    user.passwordChangeRequired() should equal(false)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
   }
 
   test("should alter user password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo","bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS SUSPENDED")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
-    user.passwordChangeRequired() should equal(true)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
   }
 
   test("should alter user password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
-    user.passwordChangeRequired() should equal(false)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
-  test("should alter user on all points") {
+  test("should alter user on all points as suspended") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     // WHEN
     execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED", Map("password" -> "baz"))
 
     // THEN
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
-    val user = systemGraphRealm.getUser("foo")
-    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
-    user.passwordChangeRequired() should equal(false)
-    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should alter user on all points as active") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE NOT REQUIRED SET STATUS ACTIVE", Map("password" -> "baz"))
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
   }
 
   test("should fail on alter user password as list parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER foo SET PASSWORD 'bar'")
-    execute("SHOW USERS").toSet should be(Set(
-      Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "foo", "roles" -> Seq.empty)
-    ))
-    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    prepareUser("foo", "bar")
 
     try {
       // WHEN
@@ -852,6 +884,30 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // THEN
       case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
     }
+  }
+
+  private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
+    Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
+  }
+
+  private def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
+    val login = systemGraphRealm.login(SecurityTestUtils.authToken(username, password))
+    val result = login.subject().getAuthenticationResult
+    if (expected == AuthenticationResult.FAILURE && result != AuthenticationResult.FAILURE) {
+      // This is a hack to get around the fact that login() does not fail for suspended users
+      val user = systemGraphRealm.getUser(username)
+      user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    }
+    else {
+      result should be(expected)
+    }
+  }
+
+  private def prepareUser(username: String, password: String): Unit = {
+    execute(s"CREATE USER $username SET PASSWORD '$password'")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   // The systemGraphInnerQueryExecutor is needed for test setup with multiple users
@@ -875,22 +931,22 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // need to setup/mock security a bit so we can have a userManager
     val config = mock[Config]
-    when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false )
-    when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO )
-    when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 )
-    when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true )
-    when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false )
-    when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 )  //!
-    when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) )
-    when (config.get( SecuritySettings.auth_providers )).thenReturn(List(SecuritySettings.NATIVE_REALM_NAME).asJava)
+    when(config.get(SecuritySettings.property_level_authorization_enabled)).thenReturn(false)
+    when(config.get(SecuritySettings.auth_cache_ttl)).thenReturn(Duration.ZERO)
+    when(config.get(SecuritySettings.auth_cache_max_capacity)).thenReturn(10)
+    when(config.get(SecuritySettings.auth_cache_use_ttl)).thenReturn(true)
+    when(config.get(SecuritySettings.security_log_successful_authentication)).thenReturn(false)
+    when(config.get(GraphDatabaseSettings.auth_max_failed_attempts)).thenReturn(3) //!
+    when(config.get(GraphDatabaseSettings.auth_lock_time)).thenReturn(Duration.ofSeconds(5))
+    when(config.get(SecuritySettings.auth_providers)).thenReturn(List(SecuritySettings.NATIVE_REALM_NAME).asJava)
 
-    systemGraphRealm = new SystemGraphRealm(   // this is also a UserManager even if the Name does not indicate that
+    systemGraphRealm = new SystemGraphRealm( // this is also a UserManager even if the Name does not indicate that
       systemGraphOperations,
       systemGraphInitializer,
       false,
       secureHasher,
       new BasicPasswordPolicy(),
-      CommunitySecurityModule.createAuthenticationStrategy( config ),
+      CommunitySecurityModule.createAuthenticationStrategy(config),
       false,
       false
     )
@@ -918,10 +974,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     dependencyResolver.asInstanceOf[Dependencies].satisfyDependency(SimpleUserManagerSupplier(systemGraphRealm)) // needed to do that here on the outer engine
 
-  }
-
-  private def getAllUserNamesFromManager = {
-    systemGraphRealm.getAllUsernames
   }
 }
 

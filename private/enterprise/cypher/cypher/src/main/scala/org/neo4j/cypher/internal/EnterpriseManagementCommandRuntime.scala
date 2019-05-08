@@ -5,17 +5,19 @@
  */
 package org.neo4j.cypher.internal
 
-import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager}
+import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager, Resource, ResourcePrivilege}
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.v4_0.ast.{LabelQualifier, NamedGraphScope}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.string.UTF8
-import org.neo4j.values.storable.Values
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.values.virtual.VirtualValues
 
 /**
@@ -53,7 +55,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
-          |RETURN u.name as user, collect(r.name) as roles""".stripMargin,
+          |RETURN u.name as user, collect(r.name) as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
         VirtualValues.EMPTY_MAP
       )
 
@@ -133,18 +135,104 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE ROLE foo AS COPY OF bar
     case CreateRole(roleName, Some(from)) => (_, _) =>
-      userManager.newCopyOfRole(roleName, from)
-      NoResultSystemCommandExecutionPlan()
+      val names: Array[AnyValue] = Array(Values.stringValue(from), Values.stringValue(roleName))
+      UpdatingSystemCommandExecutionPlan("CopyRole", normalExecutionEngine,
+        """MATCH (old:Role {name: $old})
+          |CREATE (new:Role {name: $new})
+          |RETURN count(*)""".stripMargin,
+        VirtualValues.map(Array("old", "new"), names),
+        record => if (record.get("count(*)").toString != "1") throw new InvalidArgumentsException(s"Cannot create role '$roleName' from non-existent role '$from'."),
+        e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.")
+      )
 
     // CREATE ROLE foo
     case CreateRole(roleName, _) => (_, _) =>
-      userManager.newRole(roleName)
-      NoResultSystemCommandExecutionPlan()
+      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
+        """CREATE (new:Role {name: $new})
+          |RETURN count(*)""".stripMargin,
+        VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
+        record => if (record.get("count(*)").toString != "1") throw new InvalidArgumentsException(s"Failed to create role '$roleName'."),
+        e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.")
+      )
 
     // DROP ROLE foo
     case DropRole(roleName) => (_, _) =>
       userManager.deleteRole(roleName)
       NoResultSystemCommandExecutionPlan()
+
+    // GRANT ROLE foo TO user
+    case GrantRolesToUsers(roleNames, userNames) => (_, _) =>
+      val roles = Values.stringArray(roleNames: _*)
+      val users = Values.stringArray(userNames: _*)
+      SystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
+        """UNWIND $roles AS role
+          |UNWIND $users AS user
+          |MATCH (r:Role {name: role}), (u:User {name: user})
+          |MERGE (u)-[a:HAS_ROLE]->(r)
+          |RETURN user, collect(role) AS roles""".stripMargin,
+        VirtualValues.map(Array("roles","users"), Array(roles, users))
+      )
+
+    // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
+    case GrantTraverse(database, qualifier, roleName) => (_, _) =>
+      val action = Values.stringValue(ResourcePrivilege.Action.FIND.toString)
+      val resource = Values.stringValue(Resource.Type.GRAPH.toString)
+      val roles = Values.stringArray(roleName)
+      val (labels:Value, qualifierMerge:String) = qualifier match {
+        case LabelQualifier(label) => (Values.stringArray(label), "UNWIND $labels AS label MERGE (q:LabelQualifier {label: label})")
+        case _ => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      }
+      val (dbName, databaseMerge, scopeMerge) = database match {
+        case NamedGraphScope(name) => (Values.stringValue(name), "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+        case _ => (Values.NO_VALUE, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      }
+      //TODO: Return error when we don't get at least one row (eg. database does not exist)
+      SystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+        s"""
+           |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
+           |$qualifierMerge
+           |
+           |// Find the specified database, or find/create the special DatabaseAll node for '*'
+           |WITH q
+           |$databaseMerge
+           |
+           |// Create a new scope connecting the database to the qualifier using a :Segment node
+           |WITH q, d
+           |$scopeMerge
+           |
+           |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
+           |MERGE (res:Resource {type: $$resource})
+           |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
+           |
+           |// For all roles we should apply this too, connect each to the new :Action
+           |WITH q, d, a
+           |UNWIND $$roles AS role
+           |MATCH (r:Role {name: role})
+           |MERGE (r)-[:GRANTED]->(a)
+           |
+           |// Return the table of results
+           |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+        VirtualValues.map(Array("action", "resource", "database", "labels", "roles"), Array(action, resource, dbName, labels, roles))
+      )
+
+    // SHOW [ALL | USER user | ROLE role1] PRIVILEGES
+    case ShowPrivileges(scope, grantee) => (_, _) =>
+      val role = Values.stringValue(grantee)
+      val (mainMatch, userReturn) = scope match {
+        case "ROLE" => (s"(r:Role) WHERE r.name = '$grantee'", "")
+        case "USER" => (s"(u:User)-[a:HAS_ROLE]->(r:Role) WHERE u.name = '$grantee'", "u.name AS user, ")
+        case _ => ("(r:Role)", "")
+      }
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine,
+        s"""MATCH $mainMatch
+           |MATCH (r)-[:GRANTED]->(a:Action)-[:SCOPE]->(s:Segment),
+           |    (a)-[:APPLIES_TO]->(res:Resource),
+           |    (s)-[:FOR]->(d)
+           |OPTIONAL MATCH (s)-[:QUALIFIED]->(q)
+           |WITH a, res, d, q, r ORDER BY d.name, r.name, q.label
+           |RETURN 'GRANT' AS grant, a.action AS action, res.type AS resource, d.name AS database, collect(q.label) AS labels, ${userReturn}r.name AS role""".stripMargin,
+        VirtualValues.map(Array("role"), Array(role))
+      )
 
     // CREATE DATABASE foo
     case CreateDatabase(dbName) => (_, _) =>
@@ -154,7 +242,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |Set d.default = false
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online))
+        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online)),
+        e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.")
       )
 
     // DROP DATABASE foo
