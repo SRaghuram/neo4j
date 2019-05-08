@@ -1178,13 +1178,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case NodeFromSlot(offset, name) =>
       Some(IntermediateExpression(
-        invoke(DB_ACCESS, method[DbAccess, VirtualNodeValue, Long]("nodeById"), getLongAt(offset, currentContext)),
+        invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset, currentContext)),
         Seq.empty, Seq.empty,
         slots.get(name).filter(_.nullable).map(slot => equal(getLongAt(slot.offset, currentContext), constant(-1L))).toSet))
 
     case RelationshipFromSlot(offset, name) =>
       Some(IntermediateExpression(
-        invoke(DB_ACCESS, method[DbAccess, VirtualRelationshipValue, Long]("relationshipById"),
+        invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"),
                getLongAt(offset, currentContext)), Seq.empty, Seq.empty,
         slots.get(name).filter(_.nullable).map(slot => equal(getLongAt(slot.offset, currentContext), constant(-1L))).toSet))
 

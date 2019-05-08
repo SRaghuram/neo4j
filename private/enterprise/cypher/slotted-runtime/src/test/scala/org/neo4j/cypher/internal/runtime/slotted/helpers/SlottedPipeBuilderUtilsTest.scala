@@ -258,7 +258,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
   }
 
   object TestEntityById extends EntityById {
-    override def nodeById(id: Long): VirtualNodeValue = VirtualValues.node(id)
-    override def relationshipById(id: Long): VirtualRelationshipValue = VirtualValues.relationship(id)
+    override def nodeById(id: Long): NodeValue = VirtualValues.nodeValue(id, Values.EMPTY_TEXT_ARRAY, VirtualValues.EMPTY_MAP)
+    override def relationshipById(id: Long): RelationshipValue = VirtualValues.relationshipValue(id, nodeById(id * 100), nodeById(id * 1000), Values.EMPTY_STRING, VirtualValues.EMPTY_MAP)
   }
 }
