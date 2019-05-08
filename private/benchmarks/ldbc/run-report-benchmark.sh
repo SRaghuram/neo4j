@@ -52,8 +52,8 @@ if [[ -z "$JAVA_HOME" ]]; then
 fi
 
 # things to handle out of memory errors
-out_of_memory_script=$(dirname "$0")/on-out-of-memory.sh
-out_of_memory_base_dir="${ldbc_results_dir}/out-of-memory"
+out_of_memory_script=$(realpath "$0")/on-out-of-memory.sh
+out_of_memory_base_dir=$(realpath "${ldbc_results_dir}/out-of-memory")
 out_of_memory_dir="$out_of_memory_base_dir"/$(uuidgen)
 out_of_memory_fork_dir="$out_of_memory_base_dir"/$(uuidgen)
 
