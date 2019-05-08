@@ -5,6 +5,9 @@
  */
 package com.neo4j.kernel.impl.pagecache;
 
+import com.github.luben.zstd.ZstdInputStream;
+import com.github.luben.zstd.ZstdOutputStream;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -15,8 +18,8 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
+import org.neo4j.dbms.archive.CompressionFormat;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -85,14 +88,12 @@ final class Profile implements Comparable<Profile>
 
     InputStream read( FileSystemAbstraction fs ) throws IOException
     {
-        InputStream source = fs.openAsInputStream( profileFile );
         try
         {
-            return new GZIPInputStream( source );
+            return CompressionFormat.decompress( () -> fs.openAsInputStream( profileFile ) );
         }
         catch ( IOException e )
         {
-            IOUtils.closeAllSilently( source );
             throw new IOException( "Exception when building decompressor.", e );
         }
     }
@@ -100,14 +101,12 @@ final class Profile implements Comparable<Profile>
     OutputStream write( FileSystemAbstraction fs ) throws IOException
     {
         fs.mkdirs( profileFile.getParentFile() ); // Create PROFILE_FOLDER if it does not exist.
-        OutputStream sink = fs.openAsOutputStream( profileFile, false );
         try
         {
-            return new BufferedOutputStream( new GZIPOutputStream( sink ) );
+            return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile, false ) );
         }
         catch ( IOException e )
         {
-            IOUtils.closeAllSilently( sink );
             throw new IOException( "Exception when building compressor.", e );
         }
     }

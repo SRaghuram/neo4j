@@ -369,9 +369,9 @@ class PageCacheWarmerTest
     void profilesMustSortByPagedFileAndProfileSequenceId()
     {
         File baseDir = new File( "baseDir" );
-        File fileAA = new File( baseDir,"aa" );
-        File fileAB = new File( baseDir,"ab" );
-        File fileBA = new File( baseDir,"ba" );
+        File fileAA = new File( baseDir, "aa" );
+        File fileAB = new File( baseDir, "ab" );
+        File fileBA = new File( baseDir, "ba" );
         Profile aa;
         Profile ab;
         Profile ba;
