@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.util.Set;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -36,6 +37,8 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -47,10 +50,15 @@ import static org.neo4j.test.assertion.Assert.assertException;
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphInternalsTest
 {
+    private static final long DB_NODE_COUNT = 2;
+    private static final long USER_NODE_COUNT = 1;
+    private static final long ROLE_NODE_COUNT = 5;
+    private static final long PRIVILEGE_NODE_COUNT = 5 + 4 + 3 + 2 + 1;
+    private static final long RESOURCE_NODE_COUNT = 4;
+
     private GraphDatabaseService database;
     private ContextSwitchingSystemGraphQueryExecutor systemGraphExecutor;
     private SystemGraphRealm realm;
-    private String activeDbName;
 
     @Inject
     private TestDirectory testDirectory;
@@ -64,7 +72,6 @@ class SystemGraphInternalsTest
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
-        activeDbName = database.databaseName();
         DatabaseManager<?> databaseManager = getDatabaseManager();
         systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, getThreadToStatementContextBridge() );
         AssertableLogProvider log = new AssertableLogProvider();
@@ -97,29 +104,27 @@ class SystemGraphInternalsTest
     void defaultNodes()
     {
         // should have system and default databases
-        assertEquals( 2, nbrOfDbNodes() );
+        assertEquals( DB_NODE_COUNT, nbrOfDbNodes() );
 
         // should have default neo4j user
-        assertEquals( 1, nbrOfUserNodes() );
+        assertEquals( USER_NODE_COUNT, nbrOfUserNodes() );
 
         // should have default roles
-        assertEquals( 5, nbrOfRoleNodes() );
+        assertEquals( ROLE_NODE_COUNT, nbrOfRoleNodes() );
 
         // default privileges
-        assertEquals( 5 + 4 + 3 + 2 + 1, nbrOfPrivilegeNodes() );
+        assertEquals( PRIVILEGE_NODE_COUNT, nbrOfPrivilegeNodes() );
 
         // graph, token, schema, system
-        assertEquals( 4, nbrOfResourceNodes() );
+        assertEquals( RESOURCE_NODE_COUNT, nbrOfResourceNodes() );
     }
 
     @Test
     void shouldShareRoleNodeBetweenUsersWithSameRole() throws Exception
     {
-        long roleNodeCount = nbrOfRoleNodes();
-        long userNodeCount = nbrOfUserNodes();
         setupTwoReaders();
-        assertEquals( roleNodeCount, nbrOfRoleNodes() );
-        assertEquals( userNodeCount + 2, nbrOfUserNodes() );
+        assertEquals( nbrOfRoleNodes(), ROLE_NODE_COUNT );
+        assertEquals( nbrOfUserNodes(), USER_NODE_COUNT + 2 );
     }
 
     @Test
@@ -131,23 +136,124 @@ class SystemGraphInternalsTest
     }
 
     @Test
-    void shouldSilentlyIgnoreAlreadyGrantedPrivilege() throws Exception
+    void shouldAddAlreadyGrantedPrivilegeAndRemoveAllDuplicatesWhenRevoking() throws Exception
     {
         // Given
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
-        DatabasePrivilege dbPriv1 = new DatabasePrivilege();
-        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
-        realm.grantPrivilegeToRole( "custom", dbPriv1 );
-        long privilegeNodes = nbrOfPrivilegeNodes();
-        long resourceNodes = nbrOfResourceNodes();
+        DatabasePrivilege dbPrivilege = new DatabasePrivilege();
+        dbPrivilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
 
         // When
-        realm.grantPrivilegeToRole( "custom", dbPriv1 );
+        realm.grantPrivilegeToRole( "custom", dbPrivilege );
+        realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
 
         // Then
-        assertThat( privilegeNodes, equalTo( nbrOfPrivilegeNodes() ) );
-        assertThat( resourceNodes, equalTo( nbrOfResourceNodes() ) );
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege, dbPrivilege2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPrivilege );
+        realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+
+        // Then
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege, dbPrivilege2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 4 ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
+
+        // When
+        realm.revokePrivilegeFromRole( "custom", dbPrivilege );
+
+        // Then
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
+
+        // When
+        realm.revokePrivilegeFromRole( "custom", dbPrivilege2 );
+
+        // Then
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), emptyIterable() );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
+    }
+
+    @Test
+    void shouldCreateNewPrivilegeNodeForDifferentResources() throws Exception
+    {
+        // Given
+        realm.newUser( "Neo", password( "abc" ), false );
+        realm.newRole( "custom", "Neo" );
+        DatabasePrivilege dbPrivilege1 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
+
+        // Then
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege1 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) ); // no new resources added
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+
+        // Then
+        DatabasePrivilege expected = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( expected ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) ); // no new resources added
+    }
+
+    @Test
+    void shouldCreateNewPrivilegeNodeForDifferentScope() throws Exception
+    {
+        // Given
+        realm.newRole( "custom" );
+        DatabasePrivilege dbPrivilege1 = new DatabasePrivilege();
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
+
+        // Then
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+
+        // Then
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+    }
+
+    @Test
+    void shouldRemoveCorrectPrivilege() throws Exception
+    {
+        // Given
+        realm.newRole( "custom" );
+        DatabasePrivilege dbPrivilege1 = new DatabasePrivilege();
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+
+        realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
+        realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+
+        // When
+        realm.revokePrivilegeFromRole( "custom", dbPrivilege1 );
+        Set<DatabasePrivilege> privileges = realm.getPrivilegesForRoles( Set.of( "custom" ) );
+
+        // Then
+        assertThat( privileges, containsInAnyOrder( dbPrivilege2 ) );
     }
 
     private void setupTwoReaders() throws InvalidArgumentsException

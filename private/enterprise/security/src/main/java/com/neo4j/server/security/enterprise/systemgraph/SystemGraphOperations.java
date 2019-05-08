@@ -199,7 +199,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String query =
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}) " +
-                "MERGE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
+                "CREATE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
                 "RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
@@ -225,8 +225,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String query =
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
-                "MERGE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
-                "MERGE (p)-[:SCOPE]->(db) RETURN 0";
+                "CREATE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
+                "CREATE (p)-[:SCOPE]->(db) RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -250,6 +250,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource) " +
                 "WHERE role.name = $roleName AND p.action = $action AND " +
                 "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
+                "AND NOT (p)-[:SCOPE]->(:Database) " +
                 "DETACH DELETE p RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
