@@ -5,10 +5,6 @@
  */
 package com.neo4j.kernel.impl.pagecache;
 
-import com.github.luben.zstd.ZstdInputStream;
-import com.github.luben.zstd.ZstdOutputStream;
-
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,10 +13,8 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
 import org.neo4j.dbms.archive.CompressionFormat;
-import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PagedFile;
