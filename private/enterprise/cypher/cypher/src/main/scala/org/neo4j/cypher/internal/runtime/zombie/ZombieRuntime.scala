@@ -220,7 +220,9 @@ class VisitSubscriber(visitor: QueryResultVisitor[_], numberOfFields: Int) exten
     visitor.visit(results)
   }
 
-  override def onError(throwable: Throwable): Unit = throw throwable
+  override def onError(throwable: Throwable): Unit = {
+    //errors are propagated via the QueryCompletionTracker
+  }
 
   override def onResultCompleted(statistics: graphdb.QueryStatistics): Unit = {
 

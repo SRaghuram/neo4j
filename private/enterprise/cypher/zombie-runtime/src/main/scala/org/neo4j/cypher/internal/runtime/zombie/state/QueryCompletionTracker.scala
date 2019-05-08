@@ -5,12 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
@@ -127,7 +127,9 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def error(throwable: Throwable): Unit = {
     errors.add(throwable)
-    subscriber.onError(throwable)
+    synchronized {
+      subscriber.onError(throwable)
+    }
     latch.countDown()
   }
 
