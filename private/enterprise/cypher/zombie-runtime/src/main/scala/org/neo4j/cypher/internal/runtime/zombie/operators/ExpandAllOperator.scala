@@ -116,7 +116,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     dir: SemanticDirection,
                                     types: Array[Int],
                                     missingTypes: Array[String])
-                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost) {
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
@@ -159,6 +159,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *                        //or incomingCursor or allCursor depending on the direction
     *                        outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
     *                      }
+    *      this.canContinue = relationships.next()
     *      true
     *      }
     * }}}
@@ -192,6 +193,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
          assign(resultBoolean, constant(true))
        )
       },
+      setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
       load(resultBoolean)
     )
   }
@@ -209,7 +211,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   /**
     * {{{
-    *     while (outputRow.isValidRow && relationships.next()) {
+    *     while (hasDemand && relationships.next()) {
     *         val relId = relationships.relationshipReference()
     *         val otherSide = relationships.otherNodeReference()
     *
@@ -217,7 +219,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *         outputRow.setLongAt(relOffset, relId)
     *         outputRow.setLongAt(toOffset, otherSide)
     *          <<< inner.genOperate() >>>
-    *            //outputRow.moveToNextRow()
+    *          this.canContinue = relationships.next()
     * }}}
     */
   override protected def genInnerLoop: IntermediateRepresentation = {
@@ -226,9 +228,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       case INCOMING => method[RelationshipSelectionCursor, Long]("sourceNodeReference")
       case BOTH => method[RelationshipSelectionCursor, Long]("otherNodeReference")
     }
-    val demandPredicate = innermost.checkDemand(cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)),
-                                                OUTPUT_ROW_IS_VALID)
-    loop(demandPredicate.predicate)(
+    loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         if (innermost.shouldWriteToContext) {
           invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext]("copyFrom"),
@@ -240,7 +240,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
         inner.genOperate,
-        demandPredicate.endOfLoop
+        setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
       )
     )
   }

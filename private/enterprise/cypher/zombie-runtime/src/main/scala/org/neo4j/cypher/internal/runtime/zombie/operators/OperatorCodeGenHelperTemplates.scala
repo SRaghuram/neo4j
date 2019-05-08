@@ -63,9 +63,7 @@ object OperatorCodeGenHelperTemplates {
 
   val SERVED: LocalVariable = variable[Long]("served", constant(0L))
 
-
   val HAS_DEMAND: IntermediateRepresentation = lessThan(load(SERVED), load(DEMAND))
-  val CAN_CONTINUE: Field = field[Boolean]("canContinue", constant(false))
 
   val PRE_POPULATE_RESULTS_V: LocalVariable =
     variable[Boolean]("prePopulateResults",

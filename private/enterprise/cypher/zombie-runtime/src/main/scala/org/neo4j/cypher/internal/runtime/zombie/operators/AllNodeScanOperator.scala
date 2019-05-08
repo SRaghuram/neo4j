@@ -144,7 +144,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
                                             val nodeVarName: String,
                                             val offset: Int,
                                             val argumentSize: SlotConfiguration.Size)
-                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost) {
+                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
@@ -158,25 +158,33 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
   }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    //cursor = resources.cursorPools.nodeCursorPool.allocate()
-    //context.transactionalContext.dataRead.allNodesScan(cursor)
-    //true
+    /**
+      * {{{
+      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+      *   context.transactionalContext.dataRead.allNodesScan(cursor)
+      *   this.canContinue = nodeCursor.next()
+      *   true
+      * }}}
+      */
     block(
       setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
       allNodeScan(loadField(nodeCursorField)),
+      setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
       constant(true)
     )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
-    //while (outputRow.isValidRow && cursor.next()) {
-    //  outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-    //  outputRow.setLongAt(offset, cursor.nodeReference())
-    //  <<< inner.genOperate() >>>
-    //  //outputRow.moveToNextRow() // <- This needs to move to the innermost level
-    //}
-    val demandPredicate = innermost.checkDemand(cursorNext[NodeCursor](loadField(nodeCursorField)), OUTPUT_ROW_IS_VALID)
-    loop(demandPredicate.predicate)(
+     /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     ...
+      *     << inner.genOperate >>
+      *     this.canContinue = this.nodeCursor.next()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
         //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
@@ -188,18 +196,19 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
         // If the pipeline ends with a ProduceResult, the prefix range array copy could be skipped entirely
         // since it means nobody is interested in those arguments.
         if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-            loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+          invokeSideEffect(OUTPUT_ROW, method[SinglePARG, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
         } else {
           noop()
         },
-
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperate,
-        demandPredicate.endOfLoop
+        setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField)))
+        )
       )
-    )
   }
+
+
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     //resources.cursorPools.nodeCursorPool.free(cursor)

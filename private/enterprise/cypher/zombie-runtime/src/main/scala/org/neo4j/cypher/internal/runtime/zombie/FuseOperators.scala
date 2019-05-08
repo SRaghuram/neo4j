@@ -64,7 +64,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val (innerTemplate, initFusedPlans, initUnhandledOutput) =
       output match {
         case ProduceResultOutput(p) =>
-          innermostTemplate.shouldCheckDemand = true
           innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
           val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
           (template, List(p), NoOutput)
@@ -135,6 +134,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case _ =>
             // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
+            innermostTemplate.shouldWriteToContext = true
             acc.copy(
               template = innermostTemplate,
               fusedPlans = List.empty,

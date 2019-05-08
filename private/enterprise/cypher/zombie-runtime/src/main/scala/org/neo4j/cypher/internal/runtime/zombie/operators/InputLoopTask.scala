@@ -6,9 +6,10 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.zombie.OperatorExpressionCompiler
 
 /**
   * Operator task which takes an input morsel and produces one or many output rows
@@ -82,23 +83,16 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 }
 
 abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
-                                     innermost: DelegateOperatorTaskTemplate) extends ContinuableOperatorTaskWithMorselTemplate {
+                                     innermost: DelegateOperatorTaskTemplate,
+                                     codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
-  // Setup the innermost output template
-  innermost.delegate = new OperatorTaskTemplate {
-    override def genOperate: IntermediateRepresentation = {
-      OUTPUT_ROW_MOVE_TO_NEXT
-    }
-    override def genFields: Seq[Field] = Seq.empty
-    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-  }
+  protected val canContinue: InstanceField = field[Boolean](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = Seq(INNER_LOOP)
+  override def genFields: Seq[Field] = Seq(INNER_LOOP, canContinue)
 
-  override def genCanContinue: IntermediateRepresentation= {
-    /** {{{inputMorsel.isValidRow || innerLoop}}}*/
-    or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP))
+  override def genCanContinue: Option[IntermediateRepresentation] = {
+    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
   }
 
   override def genInit: IntermediateRepresentation = {
@@ -142,33 +136,27 @@ abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
     //
     //outputRow.finishedWriting()
     block(
-      loop(
-        and(
-          or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP)),
-          OUTPUT_ROW_IS_VALID
-        )
-      )(
+      loop(and(or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP)), innermost.predicate))(
         block(
           condition(not(loadField(INNER_LOOP)))(setField(INNER_LOOP, genInitializeInnerLoop)),
           ifElse(loadField(INNER_LOOP))(
             block(
               genInnerLoop,
-              condition(OUTPUT_ROW_IS_VALID)(
+              condition(not(loadField(canContinue)))(
                 block(
                   genCloseInnerLoop,
                   setField(INNER_LOOP, constant(false)),
-                  INPUT_ROW_MOVE_TO_NEXT
+                  INPUT_ROW_MOVE_TO_NEXT,
+                  setField(canContinue, INPUT_ROW_IS_VALID),
                 )
               )
             )
           )( //else
             INPUT_ROW_MOVE_TO_NEXT
-          ),
+          )
           )
       ),
-      innermost.updatedDemand,
-      if (innermost.shouldWriteToContext) OUTPUT_ROW_FINISHED_WRITING else noop()
-    )
+      innermost.onExit)
   }
 
   /**

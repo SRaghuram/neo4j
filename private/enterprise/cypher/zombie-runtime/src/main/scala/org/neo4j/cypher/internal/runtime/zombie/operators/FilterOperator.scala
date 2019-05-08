@@ -76,4 +76,5 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate:
   override def genFields: Seq[Field] = {
     predicate.fields ++ inner.genFields
   }
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 }

@@ -210,10 +210,12 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
       inner.genOperate)
   }
 
-  override def genFields: Seq[Field] = inner.genFields :+ CAN_CONTINUE
+  override def genFields: Seq[Field] = inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] =
     inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record

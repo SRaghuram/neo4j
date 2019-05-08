@@ -107,24 +107,18 @@ class InputOperatorTemplate(inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
 
   private val inputCursorField = field[MutatingInputCursor](codeGen.namer.nextVariableName())
+  private val canContinue = field[Boolean](codeGen.namer.nextVariableName())
 
-  // Setup the innermost output template
-  innermost.delegate = new OperatorTaskTemplate {
-    override def genOperate: IntermediateRepresentation = {
-      OUTPUT_ROW_MOVE_TO_NEXT
-    }
-    override def genFields: Seq[Field] = Seq.empty
-    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-  }
-
-  override def genCanContinue: IntermediateRepresentation =
-    and(
-      not(isNull(loadField(inputCursorField))),
-      invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("canContinue")))
+  override def genCanContinue: Option[IntermediateRepresentation] =
+    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
 
   /**
     * {{{
-    *    while (outputRow.isValidRow && input.nextInput()) {
+    *
+    *    if (!this.canContinue) {
+    *       this.canContinue = input.nextInput();
+    *    }
+    *    while (hasDemand && this.canContinue) {
     *      outputRow.setLongAt(nodeOffsets(0), nodeOrNoValue(cursor.value(0));
     *      outputRow.setLongAt(nodeOffsets(1), nodeOrNoValue(cursor.value(1));
     *      ...
@@ -132,6 +126,7 @@ class InputOperatorTemplate(inner: OperatorTaskTemplate,
     *      outputRow.setRefAt(refOffsets(11), cursor.value(11);
     *      ...
     *      [[inner]]
+    *      this.canContinue = input.nextInput()
     *    }
     *    outputRow.finishedWriting()
     * }}}
@@ -148,30 +143,25 @@ class InputOperatorTemplate(inner: OperatorTaskTemplate,
         codeGen.setRefAt(refOffset, invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i)))
     }
     val setters = block(setNodes ++ setRefs:_*)
-
-    val demandPredicate =
-      innermost.checkDemand(invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")),
-                            OUTPUT_ROW_IS_VALID)
     block(
       condition(isNull(loadField(inputCursorField)))(
         setField(inputCursorField, newInstance(constructor[MutatingInputCursor, InputDataStream],
                                                invoke(QUERY_STATE,
                                                       method[QueryState, InputDataStream]("input"))))),
-      loop(demandPredicate.predicate)(
+      condition(not(loadField(canContinue)))(setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))),
+      loop(and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
           inner.genOperate,
-          demandPredicate.endOfLoop
+          setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))
           )
         ),
-      innermost.updatedDemand,
-      if (innermost.shouldWriteToContext) OUTPUT_ROW_FINISHED_WRITING else noop()
-      )
+      innermost.onExit)
   }
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
-  override def genFields: Seq[Field] = inputCursorField +: inner.genFields
+  override def genFields: Seq[Field] = inputCursorField +: canContinue +: inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] = inner.genLocalVariables
 }

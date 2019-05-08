@@ -79,19 +79,17 @@ trait OperatorTaskTemplate {
   // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
   def genFields: Seq[Field]
   def genLocalVariables: Seq[LocalVariable]
-}
-
-trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
   /**
     * Responsible for generating:
     * {{{
     *   override def canContinue: Boolean
     * }}}
     */
-  def genCanContinue: IntermediateRepresentation
+  def genCanContinue: Option[IntermediateRepresentation]
 }
 
-trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskTemplate {
+
+trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._
 
@@ -134,7 +132,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
                                                                             owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
                                                                             returnType = typeRefOf[Boolean],
                                                                             parameters = Seq.empty,
-                                                                            body = genCanContinue
+                                                                            body = genCanContinue.getOrElse(falseValue)
                                                                             ),
                                                           // This is only needed because we extend an abstract scala class containing `val dataRead`
                                                           MethodDeclaration("dataRead",
@@ -155,87 +153,33 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
   }
 }
 
-/**
-  * Contains two components, one `predicate` to be used as the condition of a loop and one call to be made at the end of the loop.
-  *
-  * @param predicate The check to be done in the condition to the loop, e.g. `while(predicate)`
-  * @param endOfLoop To be a called at the end of loop, allows the predicate to be updated, e.g. `predicate = cursor.next()`
-  */
-case class DemandPredicate(predicate: IntermediateRepresentation, endOfLoop: IntermediateRepresentation)
-
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
-class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
-                                   var shouldWriteToContext: Boolean = true,
-                                   var shouldCheckDemand: Boolean = false)
+// and also for providing demand operations
+class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   override def genOperate: IntermediateRepresentation = {
     if (shouldWriteToContext) {
       block(
         codeGen.writeLocalsToSlots(),
-        delegate.genOperate
+        OUTPUT_ROW_MOVE_TO_NEXT
       )
     } else {
-      delegate.genOperate
+      noop()
     }
   }
 
-  /**
-    * In the case where we need to check demand, i.e. produceResult is part of the fused operator, we need to generate
-    * loops of the following form.
-    *
-    * {{{
-    *   if (!canContinue) {
-    *     canContinue = cursor.next()
-    *   }
-    *   while (served < demand && input.isValidRow() && canContinue) {
-    *     ...
-    *     served += 1
-    *     canContinue = cursor.next()
-    *   }
-    * }}}
-    *
-    * For the other case where we can ignore demand we simply generate loops of the form
-    *
-    * {{{
-    *   while (input.isValidRow() && cursor.next()) {
-    *     ...
-    *   }
-    * }}}
-    * @param statefulPredicate   typically a predicate like `cursor.next`
-    * @param statelessPredicates idempotent predicates.
-    * @return
-    */
-  def checkDemand(statefulPredicate: IntermediateRepresentation,
-                  statelessPredicates: IntermediateRepresentation*): DemandPredicate = {
-    if (shouldCheckDemand) {
-      DemandPredicate(
-        /**
-          * {{{
-          *   if (!canContinue) {
-          *     canContinue = stateFulPredicate
-          *   }
-          *   while( served < demand && p1 && p2 && ... && canContinue)
-          * }}}
-          */
-        block(
-          condition(not(loadField(CAN_CONTINUE)))(setField(CAN_CONTINUE, statefulPredicate)),
-          and(HAS_DEMAND +: statelessPredicates :+ loadField(CAN_CONTINUE))),
-        setField(CAN_CONTINUE, statefulPredicate))
-    }
-    // we don't need to care about demand, just push through the data
-    else DemandPredicate(and(statelessPredicates :+ statefulPredicate), noop())
-  }
+  def predicate: IntermediateRepresentation = if (shouldWriteToContext) OUTPUT_ROW_IS_VALID else HAS_DEMAND
 
   /**
     * If we need to care about demand (produceResult part of the fused operator)
     * we need to update the demand after having produced data.
     */
-  def updatedDemand: IntermediateRepresentation =
-    if (shouldCheckDemand) UPDATE_DEMAND
-    else noop()
+  def onExit: IntermediateRepresentation =
+    if (shouldWriteToContext) OUTPUT_ROW_FINISHED_WRITING
+    else UPDATE_DEMAND
 
-  override def genFields: Seq[Field] = delegate.genFields
+  override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] = {
     codeGen.locals.getAllLocalsForLongSlots.map {
@@ -245,7 +189,8 @@ class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null,
     codeGen.locals.getAllLocalsForRefSlots.map {
       case (_, name) =>
         variable[AnyValue](name, noValue)
-    } ++
-    delegate.genLocalVariables
+    }
   }
+
+  override def genCanContinue: Option[IntermediateRepresentation] = None
 }
