@@ -55,8 +55,6 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
 
   override def arguments = List(inner)
 
-  override def symbolTableDependencies: Set[String] = Set()
-
   override def toString: String = s"NestedExpression()"
 
   override def children: Seq[AstNode[_]] = Seq(inner) ++ availableExpressionVariables

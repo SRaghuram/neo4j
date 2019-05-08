@@ -145,8 +145,6 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
     ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
-  override def symbolTableDependencies: Set[String] = legacy.symbolTableDependencies
-
   override def toString: String = legacy.toString
 
   override val isDeterministic: Boolean = !legacy.exists {

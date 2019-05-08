@@ -14,5 +14,4 @@ trait SlottedExpression {
 
   override def arguments: Seq[Expression] = Seq.empty
 
-  override def symbolTableDependencies: Set[String] = Set.empty
 }

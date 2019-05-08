@@ -37,5 +37,4 @@ abstract class AggregationExpressionOperatorWithInnerExpression(innerMapperExpre
 
   override def arguments: Seq[Expression] = Seq(innerMapperExpression)
 
-  override def symbolTableDependencies: Set[String] = innerMapperExpression.symbolTableDependencies
 }

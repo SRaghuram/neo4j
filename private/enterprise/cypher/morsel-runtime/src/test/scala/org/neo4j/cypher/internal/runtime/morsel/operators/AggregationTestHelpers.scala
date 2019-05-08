@@ -27,8 +27,6 @@ case class DummyEvenNodeIdAggregation(offset: Int) extends AggregationExpression
 
   override def arguments: Seq[Expression] = Seq.empty
 
-  override def symbolTableDependencies: Set[String] = Set.empty
-
   override def children: Seq[AstNode[_]] = Seq.empty
 }
 
@@ -38,8 +36,6 @@ class DummyExpression(values: AnyValue*) extends Expression {
   override def rewrite(f: Expression => Expression): Expression = this
 
   override def arguments: Seq[Expression] = Seq.empty
-
-  override def symbolTableDependencies: Set[String] = Set.empty
 
   override def apply(ctx: ExecutionContext,
                      state: OldQueryState): AnyValue = {
