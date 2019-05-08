@@ -34,9 +34,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 import static java.util.Arrays.asList;
@@ -128,7 +130,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             Path absoluteArtifact = baseDir.resolve( relativeArtifact );
             Files.createDirectories( absoluteArtifact.getParent() );
             LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
-            Files.copy( s3Object.getObjectContent(), absoluteArtifact );
+            Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
         }
 
     }

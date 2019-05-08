@@ -68,7 +68,8 @@ public class BenchmarkArgs
         jobParameters.put( "measurement_count", parameters.get( idx++ ) );
         jobParameters.put( "db_edition", parameters.get( idx++ ) );
         jobParameters.put( "jvm", parameters.get( idx++ ) );
-        // we should not pass these arguments to jobs
+        // we should not pass these arguments to jobs, this will be figured out
+        // on worker side
         // jobParameters.put( "neo4j_config", parameters.get( idx++ ) );
         // jobParameters.put( "work_dir", parameters.get( idx++ ) );
         jobParameters.put( "profilers", parameters.get( idx++ ) );

@@ -46,6 +46,7 @@ public class RunWorker extends InfraCommand
             String neo4jBranch = benchmarkArgs.getNeo4jBranch();
             String neo4jVersion = benchmarkArgs.getNeo4jVersion();
             Path workspaceDir = Paths.get( workspacePath );
+            Path runDir = workspaceDir.resolve( "macro" );
 
             AWSS3ArtifactStorage artifactStorage;
             if ( awsKey == null || awsSecret == null )
@@ -58,12 +59,13 @@ public class RunWorker extends InfraCommand
             }
             artifactStorage.verifyBuildArtifactsExpirationRule();
 
-            // download dataset
+            // download & extract dataset
             Dataset dataset = artifactStorage.downloadDataset( neo4jBranch, db );
-            Path runDir = workspaceDir.resolve( "macro" );
             dataset.extractInto( runDir );
 
+            // download artifacts
             artifactStorage.downloadBuildArtifacts( workspaceDir, buildID );
+            Files.setPosixFilePermissions( runDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
             Workspace workspace = Workspace.create(
                     workspaceDir.toAbsolutePath(),
@@ -73,32 +75,33 @@ public class RunWorker extends InfraCommand
                     Paths.get( "macro/target/macro.jar" ),
                     Paths.get( "macro/run-report-benchmarks.sh" ) );
 
+            // extract neo4j config
             Path neo4jConfig = runDir.resolve( "neo4j.conf" );
             workspace.extractNeo4jConfig( neo4jVersion, neo4jConfig );
 
+            // prepare command line to invoke run-report-benchmarks.sh
             List<String> command = new ArrayList<>();
-            Files.setPosixFilePermissions( runDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
             command.add( "./run-report-benchmarks.sh" );
-            command.addAll( benchmarkArgs.toArguments( neo4jConfig, runDir.resolve( "execute_work_dir" ) ) );
+            Path executeWorkDir = runDir.resolve( "execute_work_dir" );
+            Files.createDirectories( executeWorkDir );
+            command.addAll( benchmarkArgs.toArguments( neo4jConfig, executeWorkDir ) );
 
             LOG.info( "starting run report benchmark process, {}", join( " ", command ) );
-            ProcessBuilder processBuilder = new ProcessBuilder( command )
+            Process process = new ProcessBuilder( command )
                     .directory( runDir.toFile() )
-                    .inheritIO();
-//            processBuilder.environment().put( "JAVA_OPTS", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=6666" );
-            Process process = processBuilder
+                    .inheritIO()
                     .start();
 
             int waitFor = process.waitFor();
             if ( waitFor != 0 )
             {
-                throw new RuntimeException( String.format( "benchmark exited with code %d", waitFor ) );
+                throw new RuntimeException( format( "benchmark exited with code %d", waitFor ) );
             }
 
         }
         catch ( SdkClientException | IOException | InterruptedException e )
         {
-            LOG.error( "fatal error in worker", e );
+            throw new RuntimeException( "fatal error in worker", e );
         }
 
     }

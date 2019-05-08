@@ -19,6 +19,7 @@ import org.mockito.Mockito;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,9 +36,9 @@ class AWSBatchJobSchedulerTest
     @Test
     void scheduleJob()
     {
+        // given
         AWSBatch awsBatch = mock( AWSBatch.class );
         when( awsBatch.submitJob( Mockito.any() ) ).thenReturn( new SubmitJobResult().withJobId( "1" ) );
-        // given
         AWSBatchJobScheduler jobScheduler = new AWSBatchJobScheduler( awsBatch, "job-queue", "job-definition" );
         List<String> parameters = Arrays.asList(
                 "warmup_count",
@@ -66,30 +67,34 @@ class AWSBatchJobSchedulerTest
                 "planner",
                 "runtime",
                 "triggered_by",
-                "error_policy"
+                "error_policy",
+                "deployment"
                 );
+
         // when
         List<String> jobIds = jobScheduler.schedule(
                 "musicbrainz",
                 "musicbrainz",
                 new BenchmarkArgs( parameters, URI.create( "s3://benchmarking.neohq.net/worker.jar" ) ) );
-        // then
 
-        assertEquals( asList( "1" ), jobIds );
+        // then
+        assertEquals( asList( "1" ), jobIds, "invalid job id in submit job request response" );
 
         ArgumentCaptor<SubmitJobRequest> captor = ArgumentCaptor.forClass( SubmitJobRequest.class );
         verify( awsBatch ).submitJob( captor.capture() );
+        SubmitJobRequest submittedJobRequest = captor.getValue();
+        Map<String,String> submittedJobParameters = submittedJobRequest.getParameters();
 
-        assertEquals( "job-queue", captor.getValue().getJobQueue());
-        assertEquals( "job-definition", captor.getValue().getJobDefinition());
-        assertEquals( "macro-musicbrainz", captor.getValue().getJobName());
+        assertEquals( "job-queue", submittedJobRequest.getJobQueue());
+        assertEquals( "job-definition", submittedJobRequest.getJobDefinition());
+        assertEquals( "macro-musicbrainz", submittedJobRequest.getJobName());
 
         MapDifference<String,String> entriesDiffering = Maps.difference(
-                        captor.getValue().getParameters(),
+                        submittedJobParameters,
                         parameters.stream().collect( toMap( identity(), identity()) )
                         );
 
-        assertTrue( entriesDiffering.entriesDiffering().isEmpty() );
+        assertTrue( entriesDiffering.entriesDiffering().isEmpty(), "not all job parameters were passed to submit job request" );
         assertTrue( ImmutableMap.of(
                 "workerArtifactUri", "s3://benchmarking.neohq.net/worker.jar",
                 "workload", "musicbrainz",
