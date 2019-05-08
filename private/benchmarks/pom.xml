@@ -79,6 +79,8 @@
 
     <modules>
         <module>benchmark-results-client</module>
+        <module>jmh-benchmark-api</module>
+        <module>jmh-benchmark-api-test-suite</module>
         <module>benchmark-procedures</module>
         <module>ldbc</module>
         <module>micro</module>
