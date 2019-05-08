@@ -6,11 +6,10 @@
 package com.neo4j.kernel.impl.enterprise.store.id;
 
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
-import com.neo4j.test.rule.CommercialDbmsRule;
+import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -25,25 +24,33 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertThat;
 
-public class NodeIdReuseStressIT
+@CommercialDbmsExtension( configurationCallback = "configure" )
+class NodeIdReuseStressIT
 {
     private static final int CONTESTANTS_COUNT = 12;
     private static final int INITIAL_NODE_COUNT = 10_000;
     private static final int OPERATIONS_COUNT = 10_000;
 
-    @Rule
-    public final DbmsRule db = new CommercialDbmsRule()
-            .withSetting( CommercialEditionSettings.idTypesToReuse, IdType.NODE.name() );
+    @Inject
+    private GraphDatabaseService db;
 
-    @Before
-    public void verifyParams()
+    @ExtensionCallback
+    static void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setConfig( CommercialEditionSettings.idTypesToReuse, IdType.NODE.name() );
+    }
+
+    @BeforeEach
+    void verifyParams()
     {
         assertThat( CONTESTANTS_COUNT, greaterThan( 0 ) );
         assertThat( CONTESTANTS_COUNT % 2, equalTo( 0 ) );
@@ -52,7 +59,7 @@ public class NodeIdReuseStressIT
     }
 
     @Test
-    public void nodeIdsReused() throws Throwable
+    void nodeIdsReused() throws Throwable
     {
         createInitialNodes( db );
         long initialHighestNodeId = highestNodeId( db );

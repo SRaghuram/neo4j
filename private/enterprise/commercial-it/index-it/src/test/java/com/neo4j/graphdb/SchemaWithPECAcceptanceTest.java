@@ -6,10 +6,8 @@
 package com.neo4j.graphdb;
 
 import com.neo4j.SchemaHelper;
-import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -22,18 +20,19 @@ import org.neo4j.kernel.impl.coreapi.schema.NodeKeyConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.NodePropertyExistenceConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.RelationshipPropertyExistenceConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.UniquenessConstraintDefinition;
+import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
 
-public class SchemaWithPECAcceptanceTest
+@CommercialDbmsExtension
+class SchemaWithPECAcceptanceTest
 {
-    @Rule
-    public CommercialDbmsRule dbRule = new CommercialDbmsRule();
-
+    @Inject
     private GraphDatabaseService db;
+
     private Label label = Labels.MY_LABEL;
     private Label label2 = Labels.MY_OTHER_LABEL;
     private String propertyKey = "my_property_key";
@@ -51,14 +50,8 @@ public class SchemaWithPECAcceptanceTest
         MY_OTHER_TYPE
     }
 
-    @Before
-    public void init()
-    {
-        db = dbRule.getGraphDatabaseAPI();
-    }
-
     @Test
-    public void shouldCreateNodePropertyExistenceConstraint()
+    void shouldCreateNodePropertyExistenceConstraint()
     {
         // When
         ConstraintDefinition constraint = createNodePropertyExistenceConstraint( label, propertyKey );
@@ -68,7 +61,7 @@ public class SchemaWithPECAcceptanceTest
     }
 
     @Test
-    public void shouldCreateRelationshipPropertyExistenceConstraint()
+    void shouldCreateRelationshipPropertyExistenceConstraint()
     {
         // When
         ConstraintDefinition constraint = createRelationshipPropertyExistenceConstraint( Types.MY_TYPE, propertyKey );
@@ -78,7 +71,7 @@ public class SchemaWithPECAcceptanceTest
     }
 
     @Test
-    public void shouldListAddedConstraintsByLabel()
+    void shouldListAddedConstraintsByLabel()
     {
         // GIVEN
         ConstraintDefinition constraint1 = createUniquenessConstraint( label, propertyKey );
@@ -92,7 +85,7 @@ public class SchemaWithPECAcceptanceTest
     }
 
     @Test
-    public void shouldListAddedConstraintsByRelationshipType()
+    void shouldListAddedConstraintsByRelationshipType()
     {
         // GIVEN
         ConstraintDefinition constraint1 = createRelationshipPropertyExistenceConstraint( Types.MY_TYPE, propertyKey );
@@ -103,7 +96,7 @@ public class SchemaWithPECAcceptanceTest
     }
 
     @Test
-    public void shouldListAddedConstraints()
+    void shouldListAddedConstraints()
     {
         // GIVEN
         ConstraintDefinition constraint1 = createUniquenessConstraint( label, propertyKey );

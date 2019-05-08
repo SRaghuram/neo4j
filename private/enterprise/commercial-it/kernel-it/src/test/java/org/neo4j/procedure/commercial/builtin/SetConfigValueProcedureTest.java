@@ -5,33 +5,32 @@
  */
 package org.neo4j.procedure.commercial.builtin;
 
-import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.test.matchers.NestedThrowableMatcher;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 
-public class SetConfigValueProcedureTest
+@CommercialDbmsExtension
+class SetConfigValueProcedureTest
 {
-    @Rule
-    public final DbmsRule db = new CommercialDbmsRule();
-
-    @Rule
-    public final ExpectedException expect = ExpectedException.none();
+    @Inject
+    private GraphDatabaseAPI db;
 
     @Test
-    public void configShouldBeAffected()
+    void configShouldBeAffected()
     {
-        Config config = db.resolveDependency( Config.class );
+        Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
         db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" );
         assertFalse( config.get( log_queries ) );
@@ -41,30 +40,30 @@ public class SetConfigValueProcedureTest
     }
 
     @Test
-    public void failIfUnknownSetting()
+    void failIfUnknownSetting()
     {
-        expect.expect( new NestedThrowableMatcher( IllegalArgumentException.class ) );
-        expect.expectMessage( "Unknown setting: unknown.setting.indeed" );
-
-        db.execute( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" );
+        Throwable rootCause = Exceptions.rootCause(
+                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
+        assertTrue( rootCause instanceof IllegalArgumentException );
+        assertEquals( "Unknown setting: unknown.setting.indeed", rootCause.getMessage() );
     }
 
     @Test
-    public void failIfStaticSetting()
+    void failIfStaticSetting()
     {
-        expect.expect( new NestedThrowableMatcher( IllegalArgumentException.class ) );
-        expect.expectMessage( "Setting is not dynamic and can not be changed at runtime" );
-
         // Static setting, at least for now
-        db.execute( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" );
+        Throwable rootCause = Exceptions.rootCause(
+                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
+        assertTrue( rootCause instanceof IllegalArgumentException );
+        assertEquals( "Setting is not dynamic and can not be changed at runtime", rootCause.getMessage() );
     }
 
     @Test
-    public void failIfInvalidValue()
+    void failIfInvalidValue()
     {
-        expect.expect( new NestedThrowableMatcher( InvalidSettingException.class ) );
-        expect.expectMessage( "Bad value 'invalid' for setting 'dbms.logs.query.enabled': must be 'true' or 'false'" );
-
-        db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" );
+        Throwable rootCause = Exceptions.rootCause(
+                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
+        assertTrue( rootCause instanceof InvalidSettingException );
+        assertEquals( "Bad value 'invalid' for setting 'dbms.logs.query.enabled': must be 'true' or 'false'", rootCause.getMessage() );
     }
 }

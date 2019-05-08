@@ -64,7 +64,7 @@ public class MorselRuntimeStressIT
 
     private class Task implements Runnable
     {
-        int i;
+        volatile int i;
 
         @Override
         public void run()
@@ -112,7 +112,7 @@ public class MorselRuntimeStressIT
         }
     }
 
-    private Result.ResultVisitor<RuntimeException> visitor()
+    private static Result.ResultVisitor<RuntimeException> visitor()
     {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         switch ( random.nextInt( 2 ) )
@@ -126,7 +126,7 @@ public class MorselRuntimeStressIT
         }
     }
 
-    private String query()
+    private static String query()
     {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         switch ( random.nextInt( 4 ) )

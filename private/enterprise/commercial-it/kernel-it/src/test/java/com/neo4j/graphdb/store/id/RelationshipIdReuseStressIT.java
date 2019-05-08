@@ -6,11 +6,10 @@
 package com.neo4j.graphdb.store.id;
 
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
-import com.neo4j.test.rule.CommercialDbmsRule;
+import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,17 +36,26 @@ import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.DeadlockDetectedException;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 
 import static java.lang.System.currentTimeMillis;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class RelationshipIdReuseStressIT
+@CommercialDbmsExtension( configurationCallback = "configure" )
+class RelationshipIdReuseStressIT
 {
-    @Rule
-    public DbmsRule embeddedDatabase = new CommercialDbmsRule()
-            .withSetting( CommercialEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
+    @Inject
+    private GraphDatabaseAPI embeddedDatabase;
+
+    @ExtensionCallback
+    static void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setConfig( CommercialEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
+    }
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -55,14 +63,14 @@ public class RelationshipIdReuseStressIT
     private static final int NUMBER_OF_BANDS = 3;
     private static final int NUMBER_OF_CITIES = 10;
 
-    @After
-    public void tearDown()
+    @AfterAll
+    void tearDown()
     {
         executorService.shutdown();
     }
 
     @Test
-    public void relationshipIdReused() throws Exception
+    void relationshipIdReused() throws Exception
     {
         Label cityLabel = Label.label( "city" );
         final Label bandLabel = Label.label( "band" );
@@ -74,7 +82,7 @@ public class RelationshipIdReuseStressIT
         RelationshipRemover relationshipRemover = new RelationshipRemover( bandLabel, cityLabel, stopFlag );
         IdController idController = embeddedDatabase.getDependencyResolver().resolveDependency( IdController.class );
 
-        assertNotNull( "idController was null for some reason", idController );
+        assertNotNull( idController, "idController was null for some reason" );
 
         List<Future<?>> futures = new ArrayList<>();
         futures.add( executorService.submit( relationshipRemover ) );
@@ -111,7 +119,7 @@ public class RelationshipIdReuseStressIT
         return idGeneratorFactory.get( IdType.RELATIONSHIP ).getHighestPossibleIdInUse();
     }
 
-    private void completeFutures( List<Future<?>> futures )
+    private static void completeFutures( List<Future<?>> futures )
             throws InterruptedException, ExecutionException
     {
         for ( Future<?> future : futures )
@@ -154,23 +162,23 @@ public class RelationshipIdReuseStressIT
         return executorService.submit( new RelationshipTypeCalculator( stopFlag, bandLabel ) );
     }
 
-    private Direction getRandomDirection()
+    private static Direction getRandomDirection()
     {
         return Direction.values()[ThreadLocalRandom.current().nextInt( Direction.values().length )];
     }
 
-    private TestRelationshipTypes getRandomRelationshipType()
+    private static TestRelationshipTypes getRandomRelationshipType()
     {
         return TestRelationshipTypes.values()[ThreadLocalRandom.current().nextInt( TestRelationshipTypes.values().length )];
     }
 
-    private Node getRandomCityNode( DbmsRule embeddedDatabase, Label cityLabel )
+    private Node getRandomCityNode( GraphDatabaseAPI embeddedDatabase, Label cityLabel )
     {
         return embeddedDatabase.
                 findNode( cityLabel, NAME_PROPERTY, "city" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_CITIES + 1 )) );
     }
 
-    private Node getRandomBandNode( DbmsRule embeddedDatabase, Label bandLabel )
+    private Node getRandomBandNode( GraphDatabaseAPI embeddedDatabase, Label bandLabel )
     {
         return embeddedDatabase.
                 findNode( bandLabel, NAME_PROPERTY, "band" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_BANDS + 1 )) );

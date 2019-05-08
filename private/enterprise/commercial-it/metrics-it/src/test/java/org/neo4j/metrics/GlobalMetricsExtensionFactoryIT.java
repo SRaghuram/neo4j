@@ -7,18 +7,15 @@ package org.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import com.neo4j.test.rule.CommercialDbmsRule;
+import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import javax.management.MBeanServer;
 
@@ -30,21 +27,21 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.JmxQueryProcedure;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
 import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.api.ResourceManager.EMPTY_RESOURCE_MANAGER;
@@ -52,39 +49,41 @@ import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static org.neo4j.values.storable.Values.stringValue;
 
-public class GlobalMetricsExtensionFactoryIT
+@CommercialDbmsExtension( configurationCallback = "configure" )
+class GlobalMetricsExtensionFactoryIT
 {
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory directory;
 
-    @Rule
-    public final DbmsRule dbRule = new CommercialDbmsRule( directory ).startLazily();
+    @Inject
+    private GraphDatabaseAPI db;
 
     private File outputPath;
-    private GraphDatabaseAPI db;
-    private DatabaseManagementService managementService;
 
-    @Before
-    public void setup()
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        Map<Setting<?>, String> config = new HashMap<>();
-        config.put( MetricsSettings.neoEnabled, Settings.TRUE );
-        config.put( MetricsSettings.metricsEnabled, Settings.TRUE );
-        config.put( MetricsSettings.jmxEnabled, Settings.TRUE );
-        config.put( MetricsSettings.csvEnabled, Settings.TRUE );
-        config.put( GraphDatabaseSettings.cypher_min_replan_interval, "0m" );
-        config.put( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        config.put( GraphDatabaseSettings.check_point_interval_time, "100ms" );
-        config.put( MetricsSettings.graphiteInterval, "1s" );
-        config.put( GraphDatabaseSettings.record_id_batch_size, "1" );
-        config.put( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        db = dbRule.withSettings( config ).getGraphDatabaseAPI();
+        builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.metricsEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.jmxEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.csvEnabled, Settings.TRUE );
+        builder.setConfig( GraphDatabaseSettings.cypher_min_replan_interval, "0m" );
+        builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
+        builder.setConfig( GraphDatabaseSettings.check_point_interval_time, "100ms" );
+        builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
+        builder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+    }
+
+    @BeforeEach
+    void setup()
+    {
         addNodes( 1 ); // to make sure creation of label and property key tokens do not mess up with assertions in tests
     }
 
     @Test
-    public void shouldShowMetricsForThreads() throws Throwable
+    void shouldShowMetricsForThreads() throws Throwable
     {
         // WHEN
         addNodes( 100 );
@@ -102,15 +101,18 @@ public class GlobalMetricsExtensionFactoryIT
     }
 
     @Test
-    public void mustBeAbleToStartWithNullTracer()
+    void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
-        DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( disabledTracerDb );
-        managementService = builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
+
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( disabledTracerDb )
+                .setConfig( MetricsSettings.neoEnabled, Settings.TRUE )
+                .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
                 .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .build();
         // key point!
         GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = nullTracerDatabase.beginTx() )
@@ -127,7 +129,7 @@ public class GlobalMetricsExtensionFactoryIT
     }
 
     @Test
-    public void metricsAccessibleOverJmx() throws ProcedureException
+    void metricsAccessibleOverJmx() throws ProcedureException
     {
         MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
 

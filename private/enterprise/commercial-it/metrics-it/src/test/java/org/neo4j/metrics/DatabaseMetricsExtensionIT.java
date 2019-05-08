@@ -6,14 +6,11 @@
 package org.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -24,23 +21,24 @@ import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
@@ -48,37 +46,40 @@ import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 
-public class DatabaseMetricsExtensionIT
+@CommercialDbmsExtension( configurationCallback = "configure" )
+class DatabaseMetricsExtensionIT
 {
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory directory;
 
-    @Rule
-    public final DbmsRule dbRule = new CommercialDbmsRule( directory ).startLazily();
-
-    private File outputPath;
+    @Inject
     private GraphDatabaseAPI db;
 
-    @Before
-    public void setup()
+    private File outputPath;
+
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        Map<Setting<?>, String> config = new HashMap<>();
-        config.put( MetricsSettings.neoEnabled, Settings.TRUE );
-        config.put( MetricsSettings.metricsEnabled, Settings.TRUE );
-        config.put( MetricsSettings.csvEnabled, Settings.TRUE );
-        config.put( cypher_min_replan_interval, "0m" );
-        config.put( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        config.put( check_point_interval_time, "100ms" );
-        config.put( MetricsSettings.graphiteInterval, "1s" );
-        config.put( record_id_batch_size, "1" );
-        config.put( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        db = dbRule.withSettings( config ).getGraphDatabaseAPI();
+        builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.metricsEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.csvEnabled, Settings.TRUE );
+        builder.setConfig( cypher_min_replan_interval, "0m" );
+        builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
+        builder.setConfig( check_point_interval_time, "100ms" );
+        builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
+        builder.setConfig( record_id_batch_size, "1" );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+    }
+
+    @BeforeEach
+    void setup()
+    {
         addNodes( 1 ); // to make sure creation of label and property key tokens do not mess up with assertions in tests
     }
 
     @Test
-    public void shouldShowTxCommittedMetricsWhenMetricsEnabled() throws Throwable
+    void shouldShowTxCommittedMetricsWhenMetricsEnabled() throws Throwable
     {
         // GIVEN
         long lastCommittedTransactionId = db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
@@ -86,7 +87,7 @@ public class DatabaseMetricsExtensionIT
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j.neo4j.transaction.committed" );
+        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".transaction.committed" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -99,12 +100,12 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void shouldShowEntityCountMetricsWhenMetricsEnabled() throws Throwable
+    void shouldShowEntityCountMetricsWhenMetricsEnabled() throws Throwable
     {
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j.neo4j.ids_in_use.node" );
+        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".ids_in_use.node" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -116,7 +117,7 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void showReplanEvents() throws Throwable
+    void showReplanEvents() throws Throwable
     {
         // GIVEN
         try ( Transaction tx = db.beginTx() )
@@ -139,8 +140,8 @@ public class DatabaseMetricsExtensionIT
             addNodes( 1 );
         }
 
-        File replanCountMetricFile = metricsCsv( outputPath, "neo4j.neo4j.cypher.replan_events" );
-        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j.neo4j.cypher.replan_wait_time" );
+        File replanCountMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".cypher.replan_events" );
+        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".cypher.replan_wait_time" );
 
         // THEN see that the replan metric have pickup up at least one replan event
         // since reporting happens in an async fashion then give it some time and check now and then
@@ -159,7 +160,7 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void shouldUseEventBasedReportingCorrectly() throws Throwable
+    void shouldUseEventBasedReportingCorrectly() throws Throwable
     {
         // GIVEN
         addNodes( 100 );
@@ -169,7 +170,7 @@ public class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, "neo4j.neo4j.check_point.duration" );
+        File metricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".check_point.duration" );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 
@@ -178,20 +179,22 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
+    void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
-        databaseManager.createDatabase( new DatabaseId( "testdb" ) );
+        DatabaseId testdb = new DatabaseId( "testdb" );
+        databaseManager.createDatabase( testdb );
 
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+        databaseManager.dropDatabase( testdb );
     }
 
     @Test
-    public void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
+    void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
@@ -202,6 +205,7 @@ public class DatabaseMetricsExtensionIT
 
         databaseManager.stopDatabase( testDbName );
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
+        databaseManager.dropDatabase( testDbName );
     }
 
     private void addNodes( int numberOfNodes )

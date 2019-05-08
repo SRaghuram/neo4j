@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.codegen;
 
-import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.junit.jupiter.api.Test;
+
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.test.extension.Inject;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -15,13 +17,14 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
-public class CompiledRuntimeEchoIT
+@CommercialDbmsExtension
+class CompiledRuntimeEchoIT
 {
-    @Rule
-    public final CommercialDbmsRule db = new CommercialDbmsRule();
+    @Inject
+    private GraphDatabaseService db;
 
     @Test
-    public void shouldBeAbleToEchoMaps()
+    void shouldBeAbleToEchoMaps()
     {
         echo( map( "foo", "bar" ) );
         echo( map( "foo", 42L ) );
@@ -29,7 +32,7 @@ public class CompiledRuntimeEchoIT
     }
 
     @Test
-    public void shouldBeAbleToEchoLists()
+    void shouldBeAbleToEchoLists()
     {
         echo( asList( 1L, 2L, 3L ) );
         echo( asList( "a", 1L, 17L ) );
@@ -37,7 +40,7 @@ public class CompiledRuntimeEchoIT
     }
 
     @Test
-    public void shouldBeAbleToEchoListsOfMaps()
+    void shouldBeAbleToEchoListsOfMaps()
     {
         echo( singletonList( map( "foo", "bar" ) ) );
         echo( asList( "a", 1L, 17L, map( "foo", asList( 1L, 2L, 3L ) ) ) );
@@ -45,7 +48,7 @@ public class CompiledRuntimeEchoIT
     }
 
     @Test
-    public void shouldBeAbleToEchoMapsOfLists()
+    void shouldBeAbleToEchoMapsOfLists()
     {
         echo( map( "foo", singletonList( "bar" ) ) );
         echo( map( "foo", singletonList( map( "bar", map( "baz", 1337L ) ) ) ) );

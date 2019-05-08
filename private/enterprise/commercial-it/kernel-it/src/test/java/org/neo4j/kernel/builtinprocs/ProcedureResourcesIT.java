@@ -5,11 +5,9 @@
  */
 package org.neo4j.kernel.builtinprocs;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +19,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -29,31 +26,32 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ProcedureResourcesIT
+@CommercialDbmsExtension
+class ProcedureResourcesIT
 {
-    @Rule
-    public DbmsRule db = new CommercialDbmsRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+    @Inject
+    private GraphDatabaseAPI db;
 
     private final String indexDefinition = ":Label(prop)";
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    @After
-    public void tearDown() throws InterruptedException
+    @AfterAll
+    void tearDown() throws InterruptedException
     {
         executor.shutdown();
         executor.awaitTermination( 5, TimeUnit.SECONDS );
     }
 
     @Test
-    public void allProcedures() throws Exception
+    void allProcedures() throws Exception
     {
         // when
         createIndex();
@@ -106,9 +104,9 @@ public class ProcedureResourcesIT
             exhaust( db.execute( "MATCH (mo:Label) WHERE mo.prop = 'n/a' RETURN mo" ) ).close();
             executeInOtherThread( "CREATE(mo:Label) SET mo.prop = 'val' RETURN mo" );
             Result result = db.execute( "MATCH (mo:Label) WHERE mo.prop = 'val' RETURN mo" );
-            assertTrue( failureMessage, result.hasNext() );
+            assertTrue( result.hasNext(), failureMessage );
             Map<String,Object> next = result.next();
-            assertNotNull( failureMessage, next.get( "mo" ) );
+            assertNotNull( next.get( "mo" ), failureMessage );
             exhaust( result );
             result.close();
             outer.success();

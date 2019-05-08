@@ -5,19 +5,20 @@
  */
 package org.neo4j.cypher.internal.javacompat;
 
-import com.neo4j.test.rule.CommercialDbmsRule;
+import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.CoreMatchers;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,14 +27,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.IsNull.notNullValue;
 
-public class ExecutionResultTest
+@CommercialDbmsExtension
+class ExecutionResultTest
 {
     private static final String CURRENT_VERSION = "CYPHER 4.0";
-    @Rule
-    public final CommercialDbmsRule db = new CommercialDbmsRule();
+    @Inject
+    private GraphDatabaseService db;
 
     @Test
-    public void shouldBePossibleToConsumeCompiledExecutionResultsWithIterator()
+    void shouldBePossibleToConsumeCompiledExecutionResultsWithIterator()
     {
         // Given
         createNode();
@@ -51,7 +53,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldBePossibleToCloseNotFullyConsumedCompiledExecutionResults()
+    void shouldBePossibleToCloseNotFullyConsumedCompiledExecutionResults()
     {
         // Given
         createNode();
@@ -72,7 +74,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldBePossibleToConsumeCompiledExecutionResultsWithVisitor()
+    void shouldBePossibleToConsumeCompiledExecutionResultsWithVisitor()
     {
         // Given
         createNode();
@@ -94,7 +96,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldBePossibleToCloseNotFullyVisitedCompiledExecutionResult()
+    void shouldBePossibleToCloseNotFullyVisitedCompiledExecutionResult()
     {
         // Given
         createNode();
@@ -117,7 +119,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldBePossibleToCloseNotConsumedCompiledExecutionResult()
+    void shouldBePossibleToCloseNotConsumedCompiledExecutionResult()
     {
         // Given
         createNode();
@@ -128,7 +130,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldCreateAndDropUniqueConstraints()
+    void shouldCreateAndDropUniqueConstraints()
     {
         Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
         Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
@@ -140,7 +142,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldCreateAndDropExistenceConstraints()
+    void shouldCreateAndDropExistenceConstraints()
     {
         Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
         Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
@@ -152,7 +154,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowRuntimeInExecutionPlanDescription()
+    void shouldShowRuntimeInExecutionPlanDescription()
     {
         // Given
         Result result = db.execute( "EXPLAIN MATCH (n) RETURN n.prop" );
@@ -169,7 +171,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowCompiledRuntimeInExecutionPlan()
+    void shouldShowCompiledRuntimeInExecutionPlan()
     {
         // Given
         Result result = db.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
@@ -186,7 +188,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowInterpretedRuntimeInExecutionPlan()
+    void shouldShowInterpretedRuntimeInExecutionPlan()
     {
         // Given
         Result result = db.execute( "EXPLAIN CYPHER runtime=interpreted MATCH (n) RETURN n.prop" );
@@ -203,7 +205,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowArgumentsExecutionPlan()
+    void shouldShowArgumentsExecutionPlan()
     {
         // Given
         Result result = db.execute( "EXPLAIN CALL db.labels()" );
@@ -220,7 +222,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowArgumentsInProfileExecutionPlan()
+    void shouldShowArgumentsInProfileExecutionPlan()
     {
         // Given
         Result result = db.execute( "PROFILE CALL db.labels()" );
@@ -238,7 +240,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldShowArgumentsInSchemaExecutionPlan()
+    void shouldShowArgumentsInSchemaExecutionPlan()
     {
         // Given
         Result result = db.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
@@ -255,13 +257,13 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldReturnListFromSplit()
+    void shouldReturnListFromSplit()
     {
         assertThat( db.execute( "RETURN split('hello, world', ',') AS s" ).next().get( "s" ), instanceOf( List.class ) );
     }
 
     @Test
-    public void shouldReturnCorrectArrayType()
+    void shouldReturnCorrectArrayType()
     {
         // Given
         db.execute( "CREATE (p:Person {names:['adsf', 'adf' ]})" );
@@ -274,7 +276,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldContainCompletePlanFromFromLegacyVersions()
+    void shouldContainCompletePlanFromFromLegacyVersions()
     {
         for ( String version : new String[]{"3.5", "4.0"} )
         {
@@ -291,7 +293,7 @@ public class ExecutionResultTest
     }
 
     @Test
-    public void shouldContainCompleteProfileFromFromLegacyVersions()
+    void shouldContainCompleteProfileFromFromLegacyVersions()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
