@@ -51,6 +51,12 @@ if [[ -z "$JAVA_HOME" ]]; then
  echo "JAVA_HOME not set, bye, bye"
 fi
 
+# things to handle out of memory errors
+out_of_memory_script=$(dirname "$0")/on-out-of-memory.sh
+out_of_memory_base_dir="${ldbc_results_dir}/out-of-memory"
+out_of_memory_dir="$out_of_memory_base_dir"/$(uuidgen)
+out_of_memory_fork_dir="$out_of_memory_base_dir"/$(uuidgen)
+
 echo "------------------------------------------------"
 echo "------------------------------------------------"
 echo "Neo4j version:       ${neo4j_version}"
@@ -101,10 +107,12 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    ${jvm_path} -XX:OnOutOfMemoryError="./on-out-of-memory.sh;--jvm-pid;%p;--output-dir;$ldbc_results_dir/out-of-memory" \
+    ${jvm_path} \
+    	-XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
+    	-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
         -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
-        --jvm-args "${ldbc_jvm_args}" \
+        --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${ldbc_jvm_args}" \
         --neo4j-package-for-jvm-args "${neo4j_tarball}" \
         --reads "${ldbc_read_params}" \
         --writes "${ldbc_write_params}" \
