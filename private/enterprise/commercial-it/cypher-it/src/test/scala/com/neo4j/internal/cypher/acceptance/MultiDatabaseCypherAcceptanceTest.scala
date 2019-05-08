@@ -99,16 +99,18 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     )
 
     // GIVEN
+    execute("DROP DATABASE baz") //online database
     execute("STOP DATABASE bar")
-    execute("DROP DATABASE bar")
+    execute("DROP DATABASE bar") //offline database
+    execute("DROP DATABASE bar") //deleted database
 
     // WHEN
     val result2 = execute("SHOW DATABASES")
 
     // THEN
     val databaseNames: Set[String] = result2.columnAs("name").toSet
-    databaseNames should contain allOf("foo", "baz")
-    databaseNames should not contain "bar"
+    databaseNames should contain("foo")
+    databaseNames should not contain allOf("bar", "baz")
   }
 
   test("should fail on dropping non-existing database") {
