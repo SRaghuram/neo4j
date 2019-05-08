@@ -27,7 +27,6 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.server.configuration.ServerSettings;
 
 import static java.util.Collections.synchronizedList;
 
@@ -284,8 +283,6 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "core," + "core" + coreId );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
 
-                builder.withConfig( ServerSettings.jmx_module_enabled.name(), Settings.FALSE );
-
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
                 config.forEach( builder::withConfig );
@@ -325,8 +322,6 @@ public class CausalClusterInProcessBuilder
 
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "replica," + "replica" + replicaId );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
-
-                builder.withConfig( ServerSettings.jmx_module_enabled.name(), Settings.FALSE );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 

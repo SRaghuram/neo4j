@@ -8,7 +8,6 @@ package com.neo4j.server.enterprise;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
-import com.neo4j.server.enterprise.modules.JMXManagementModule;
 import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
 import com.neo4j.server.rest.EnterpriseDiscoverableURIs;
 import org.eclipse.jetty.util.thread.ThreadPool;
@@ -34,8 +33,6 @@ import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
-
-import static org.neo4j.server.configuration.ServerSettings.jmx_module_enabled;
 
 public class CommercialNeoServer extends CommunityNeoServer
 {
@@ -107,10 +104,6 @@ public class CommercialNeoServer extends CommunityNeoServer
     {
         List<ServerModule> modules = new ArrayList<>();
         modules.add( new DatabaseRoleInfoServerModule( webServer, getConfig(), userLogProvider ) );
-        if ( getConfig().get( jmx_module_enabled ) )
-        {
-            modules.add( new JMXManagementModule( this ) );
-        }
         super.createServerModules().forEach( modules::add );
         return modules;
     }
