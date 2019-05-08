@@ -221,7 +221,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                             "MATCH (segment) WHERE id(segment) = $segment " +
                                     "UNWIND $labels AS label " +
                                     "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
-                    boolean success = queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
+                    boolean success =
+                            queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
 
                     if ( !success )
                     {
