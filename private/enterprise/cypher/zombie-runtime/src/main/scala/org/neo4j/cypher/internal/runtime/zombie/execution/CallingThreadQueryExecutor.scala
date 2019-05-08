@@ -55,9 +55,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                                this,
                                                queryContext,
                                                queryState,
-                                               resources,
-                                               subscriber,
-                                               subscription)
+                                               resources)
 
     executionState.initializeState()
 

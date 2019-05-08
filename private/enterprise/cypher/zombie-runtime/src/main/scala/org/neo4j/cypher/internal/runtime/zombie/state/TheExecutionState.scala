@@ -8,13 +8,12 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{DemandControlSubscription, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.{AlarmSink, WorkerWaker}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, Buffers, Sink}
-import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.util.Preconditions
 
 /**
@@ -26,11 +25,9 @@ class TheExecutionState(stateDefinition: StateDefinition,
                         workerWaker: WorkerWaker,
                         queryContext: QueryContext,
                         queryState: QueryState,
-                        resources: QueryResources,
-                        subscriber: QuerySubscriber,
-                        demandControlSubscription: DemandControlSubscription) extends ExecutionState {
+                        resources: QueryResources) extends ExecutionState {
 
-  private val tracker: QueryCompletionTracker = stateFactory.newTracker(subscriber, demandControlSubscription, queryContext)
+  private val tracker: QueryCompletionTracker = stateFactory.newTracker(queryState.subscriber, queryState.demandControlSubscription, queryContext)
 
   // Verify that IDs and offsets match
 
@@ -183,7 +180,7 @@ class TheExecutionState(stateDefinition: StateDefinition,
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
     val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
     if (pipeline.checkHasDemand) {
-      hasWork && demandControlSubscription.hasDemand
+      hasWork && queryState.demandControlSubscription.hasDemand
     } else {
       hasWork
     }

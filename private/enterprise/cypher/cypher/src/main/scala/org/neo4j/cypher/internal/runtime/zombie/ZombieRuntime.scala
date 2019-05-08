@@ -35,10 +35,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-      query.logicalPlan,
-      query.semanticTable,
-      ZombiePipelineBreakingPolicy,
-      allocateArgumentSlots = true)
+                                            query.logicalPlan,
+                                            query.semanticTable,
+                                            ZombiePipelineBreakingPolicy,
+                                            allocateArgumentSlots = true)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
