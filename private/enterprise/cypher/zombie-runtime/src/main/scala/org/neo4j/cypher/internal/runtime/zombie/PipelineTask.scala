@@ -24,7 +24,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                         pipelineState: PipelineState)
   extends Task[QueryResources] {
 
-  @volatile private var _output: MorselExecutionContext = _
+  private var _output: MorselExecutionContext = _
 
   override final def executeWorkUnit(resources: QueryResources, workUnitEvent: WorkUnitEvent): PreparedOutput = {
     if (_output == null) {
