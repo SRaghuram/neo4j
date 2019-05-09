@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_5.runtime
 
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.v3_5.logical.plans.{CachedNodeProperty, LogicalPlan}
 import org.neo4j.cypher.internal.v3_5.util.InternalException
@@ -148,8 +149,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   private val getters: mutable.Map[String, ExecutionContext => AnyValue] = new mutable.HashMap[String, ExecutionContext => AnyValue]()
   private val setters: mutable.Map[String, (ExecutionContext, AnyValue) => Unit] = new mutable.HashMap[String, (ExecutionContext, AnyValue) => Unit]()
-  private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
-  private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
+  private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long, EntityById) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long, EntityById) => Unit]()
+  private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long, EntityById) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long, EntityById) => Unit]()
 
   def addCachedPropertiesOf(other: SlotConfiguration, renames: Map[String, String]): Unit = {
     other.cachedProperties.foreach {
@@ -310,8 +311,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   def getCachedNodePropertyOffsetFor(key: CachedNodeProperty): Int = cachedProperties(key).offset
 
   def updateAccessorFunctions(key: String, getter: ExecutionContext => AnyValue, setter: (ExecutionContext, AnyValue) => Unit,
-                              primitiveNodeSetter: Option[(ExecutionContext, Long) => Unit],
-                              primitiveRelationshipSetter: Option[(ExecutionContext, Long) => Unit]) = {
+                              primitiveNodeSetter: Option[(ExecutionContext, Long, EntityById) => Unit],
+                              primitiveRelationshipSetter: Option[(ExecutionContext, Long, EntityById) => Unit]) = {
     getters += key -> getter
     setters += key -> setter
     primitiveNodeSetter.map(primitiveNodeSetters += key -> _)
@@ -334,11 +335,11 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     setters.get(key)
   }
 
-  def maybePrimitiveNodeSetter(key: String): Option[(ExecutionContext, Long) => Unit] = {
+  def maybePrimitiveNodeSetter(key: String): Option[(ExecutionContext, Long, EntityById) => Unit] = {
     primitiveNodeSetters.get(key)
   }
 
-  def maybePrimitiveRelationshipSetter(key: String): Option[(ExecutionContext, Long) => Unit] = {
+  def maybePrimitiveRelationshipSetter(key: String): Option[(ExecutionContext, Long, EntityById) => Unit] = {
     primitiveRelationshipSetters.get(key)
   }
 

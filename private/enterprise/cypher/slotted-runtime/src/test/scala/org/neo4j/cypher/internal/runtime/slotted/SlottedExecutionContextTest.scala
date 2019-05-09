@@ -52,7 +52,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     val leftSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
     SlottedPipeBuilder.generateSlotAccessorFunctions(leftSlots)
     val rightSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
-    SlottedExecutionContext(leftSlots).mergeWith(SlottedExecutionContext(rightSlots)) // should not fail
+    SlottedExecutionContext(leftSlots).mergeWith(SlottedExecutionContext(rightSlots), null) // should not fail
   }
 
   test("mergeWith - cached properties on rhs only") {
@@ -70,7 +70,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     rhsCtx.setCachedProperty(prop("n", "name"), stringValue("b"))
 
     // when
-    lhsCtx.mergeWith(rhsCtx)
+    lhsCtx.mergeWith(rhsCtx, null)
 
     // then
     def cachedPropAt(key: CachedNodeProperty, ctx: ExecutionContext) =
@@ -109,7 +109,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     arg.setCachedProperty(prop("c", "age"), stringValue("arg"))
 
     // when
-    result.mergeWith(arg)
+    result.mergeWith(arg, null)
 
     // then
     def cachedPropAt(key: CachedNodeProperty) =

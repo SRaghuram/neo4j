@@ -6,11 +6,12 @@
 package org.neo4j.cypher.internal.runtime.slotted.helpers
 
 import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.values.virtual._
 import org.neo4j.cypher.internal.v3_5.util.AssertionUtils._
 import org.neo4j.cypher.internal.v3_5.util.ParameterWrongTypeException
 import org.neo4j.cypher.internal.v3_5.util.symbols._
@@ -152,7 +153,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
     val context = SlottedExecutionContext(slots)
     val primitiveNodeSetter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
-    primitiveNodeSetter(context, id)
+    primitiveNodeSetter(context, id, TestEntityById)
     context.getLongAt(slot.offset) should equal(id)
   }
 
@@ -160,7 +161,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
     val context = SlottedExecutionContext(slots)
     val primitiveRelationshipSetter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
-    primitiveRelationshipSetter(context, id)
+    primitiveRelationshipSetter(context, id, TestEntityById)
     context.getLongAt(slot.offset) should equal(id)
   }
 
@@ -168,7 +169,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
     val context = SlottedExecutionContext(slots)
     val primitiveNodeSetter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
-    primitiveNodeSetter(context, id)
+    primitiveNodeSetter(context, id, TestEntityById)
     context.getRefAt(slot.offset) should equal(expected)
   }
 
@@ -176,7 +177,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
     val context = SlottedExecutionContext(slots)
     val primitiveRelationshipSetter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
-    primitiveRelationshipSetter(context, id)
+    primitiveRelationshipSetter(context, id, TestEntityById)
     context.getRefAt(slot.offset) should equal(expected)
   }
 
@@ -186,7 +187,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
 
     // The setter only throws if assertions are enabled
     ifAssertionsEnabled {
-      a[ParameterWrongTypeException] should be thrownBy (setter(context, id))
+      a[ParameterWrongTypeException] should be thrownBy (setter(context, id, TestEntityById))
     }
   }
 
@@ -196,7 +197,7 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
 
     // The setter only throws if assertions are enabled
     ifAssertionsEnabled {
-      a[ParameterWrongTypeException] should be thrownBy (setter(context, id))
+      a[ParameterWrongTypeException] should be thrownBy (setter(context, id, TestEntityById))
     }
   }
 
@@ -254,5 +255,10 @@ class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
 
   test("primitive relationship setter for non-nullable ref slot should throw") {
     assertPrimitiveRelationshipSetFails(slots("y"), -1L)
+  }
+
+  object TestEntityById extends EntityById {
+    override def nodeById(id: Long): NodeValue = VirtualValues.nodeValue(id, Values.EMPTY_TEXT_ARRAY, VirtualValues.EMPTY_MAP)
+    override def relationshipById(id: Long): RelationshipValue = VirtualValues.relationshipValue(id, nodeById(id * 100), nodeById(id * 1000), Values.EMPTY_STRING, VirtualValues.EMPTY_MAP)
   }
 }
