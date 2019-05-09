@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDirectoryExists;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -104,6 +103,11 @@ public class BenchmarkDirectory
     public String toAbsolutePath()
     {
         return dir.toAbsolutePath().toString();
+    }
+
+    public ForkDirectory findOrCreate( String forkName, List<ProfilerType> profilers )
+    {
+        return ForkDirectory.findOrCreateAt( dir, forkName, profilers );
     }
 
     public ForkDirectory create( String forkName, List<ProfilerType> profilers )
