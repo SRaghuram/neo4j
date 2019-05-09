@@ -29,8 +29,15 @@ class Worker(val workerId: Int,
              resources: QueryResources,
              sleeper: Sleeper = new Sleeper) extends Runnable {
 
+  @volatile private var stopped: Boolean = false
+
+  def stop(): Unit = {
+    stopped = true
+  }
+
   override def run(): Unit = {
-    while (!Thread.interrupted()) {
+    stopped = false
+    while (!stopped && !Thread.interrupted()) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {

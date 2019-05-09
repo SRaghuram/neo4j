@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
+import org.neo4j.kernel.lifecycle.Lifecycle
 import org.neo4j.values.AnyValue
 
 /**
@@ -26,20 +27,39 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 threadFactory: ThreadFactory,
                                 val numberOfWorkers: Int,
                                 transactionBinder: TransactionBinder,
-                                queryResourceFactory: () => QueryResources) extends QueryExecutor with WorkerWaker {
+                                queryResourceFactory: () => QueryResources)
+  extends QueryExecutor
+    with WorkerWaker
+    with Lifecycle {
 
   private val queryManager = new QueryManager
   private val workers =
     (for (workerId <- 0 until numberOfWorkers) yield {
       new Worker(workerId, queryManager, LazyScheduling, queryResourceFactory())
     }).toArray
-  private val workerThreads = workers.map(threadFactory.newThread(_))
 
-  /**
-    * Start all worker threads
-    */
-  // TODO: shouldn't be done in constructor: integrate with lifecycle properly instead
-  workerThreads.foreach(_.start())
+  // ========== LIFECYCLE ===========
+
+  @volatile private var workerThreads: Array[Thread] = _
+
+  override def init(): Unit = {}
+
+  override def start(): Unit = {
+    workerThreads = workers.map(threadFactory.newThread(_))
+    workerThreads.foreach(_.start())
+  }
+
+  override def stop(): Unit = {
+    workers.foreach(_.stop())
+    workerThreads.foreach(_.interrupt())
+    for (workerThread <- workerThreads) {
+      workerThread.join(1000)
+    }
+  }
+
+  override def shutdown(): Unit = {}
+
+  // ========== WORKER WAKER ===========
 
   override def wakeAll(): Unit = {
     var i = 0
@@ -48,6 +68,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
       i += 1
     }
   }
+
+  // ========== QUERY EXECUTOR ===========
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
