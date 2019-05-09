@@ -210,25 +210,12 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
             if ( segmentNodeId == -1 )
             {
-                assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+                assertRoleExists( roleName );
             }
             else
             {
                 Segment segment = resourcePrivilege.getSegment();
-                if ( !segment.equals( Segment.ALL ) )
-                {
-                    String qualifierQuery =
-                            "MATCH (segment) WHERE id(segment) = $segment " +
-                                    "UNWIND $labels AS label " +
-                                    "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
-                    boolean success =
-                            queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
-
-                    if ( !success )
-                    {
-                        tx.failure();
-                    }
-                }
+                addSegmentQualifierToPrivilege( tx, segmentNodeId, segment );
 
                 tx.success();
             }
@@ -260,28 +247,34 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
             if ( segmentNodeId == -1 )
             {
-                assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+                assertRoleExists( roleName );
                 assertDbExists( dbName );
             }
             else
             {
                 Segment segment = resourcePrivilege.getSegment();
-                if ( !segment.equals( Segment.ALL ) )
-                {
-                    String qualifierQuery =
-                            "MATCH (segment) WHERE id(segment) = $segment " +
-                            "UNWIND $labels AS label " +
-                            "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
-                    boolean success =
-                            queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
-
-                    if ( !success )
-                    {
-                        tx.failure();
-                    }
-                }
+                addSegmentQualifierToPrivilege( tx, segmentNodeId, segment );
 
                 tx.success();
+            }
+        }
+    }
+
+
+    private void addSegmentQualifierToPrivilege( Transaction tx, long segmentNodeId, Segment segment )
+    {
+        if ( !segment.equals( Segment.ALL ) )
+        {
+            String qualifierQuery =
+                    "MATCH (segment) WHERE id(segment) = $segment " +
+                    "UNWIND $labels AS label " +
+                    "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
+            boolean success =
+                    queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
+
+            if ( !success )
+            {
+                tx.failure();
             }
         }
     }
@@ -294,16 +287,11 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "action", resourcePrivilege.getAction().toString(),
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
-                "arg2", resource.getArg2()
+                "arg2", resource.getArg2(),
+                "labels", resourcePrivilege.getSegment().getLabels()
         );
-        String query =
-                "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), " +
-                "(p)-[:SCOPE]->(segment:Segment) " +
-                "WHERE role.name = $roleName AND p.action = $action AND " +
-                "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "AND NOT (segment)-[:FOR]->(:Database) " +
-                "DETACH DELETE p, segment RETURN 0";
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
+
+        boolean success = revokePrivilegeFromRole( params, true, resourcePrivilege.getSegment().equals( Segment.ALL ) );
 
         if ( !success )
         {
@@ -321,21 +309,57 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
-                "dbName", dbName
+                "dbName", dbName,
+                "labels", resourcePrivilege.getSegment().getLabels()
         );
-        String query =
-                "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), " +
-                "(p)-[:SCOPE]->(segment:Segment)-[:FOR]->(db:Database) " +
-                "WHERE role.name = $roleName AND p.action = $action AND db.name = $dbName AND " +
-                "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "DETACH DELETE p, segment RETURN 0";
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
+
+        boolean success = revokePrivilegeFromRole( params, false, resourcePrivilege.getSegment().equals( Segment.ALL ) );
 
         if ( !success )
         {
             assertRoleExists( roleName );
             assertDbExists( dbName );
         }
+    }
+
+    private boolean revokePrivilegeFromRole( Map<String,Object> params, boolean allDatabases, boolean fullSegment )
+    {
+        StringBuilder query = new StringBuilder();
+        query.append( "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]->(segment:Segment)" );
+
+        if ( !allDatabases )
+        {
+            query.append( ", (segment)-[:FOR]->(db:Database)" );
+        }
+
+        if ( !fullSegment )
+        {
+            query.append( ", (segment)-[:QUALIFIED]-(q)" );
+        }
+
+        query.append( " WHERE role.name = $roleName AND p.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " );
+
+        if ( allDatabases )
+        {
+            query.append( "AND NOT (segment)-[:FOR]->(:Database) " );
+        }
+        else
+        {
+            query.append( "AND db.name = $dbName " );
+        }
+
+        if ( fullSegment )
+        {
+            query.append( "AND NOT (segment)-[:QUALIFIED]-() " );
+            query.append( "DETACH DELETE p, segment RETURN 0" );
+        }
+        else
+        {
+            query.append( "AND q.label IN $labels " );
+            query.append( "DETACH DELETE p, segment, q RETURN 0" );
+        }
+
+        return queryExecutor.executeQueryWithParamCheck( query.toString(), params );
     }
 
     Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException

@@ -110,7 +110,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         userManager.newRole( "UserManager", "Alice" );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        DatabasePrivilege dbPriv = new DatabasePrivilege();
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
         userManager.grantPrivilegeToRole( "UserManager", dbPriv );
 
@@ -585,6 +585,40 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( subject, shortestBasic, r -> assertKeyIs( r, "length", 3 ) );
         assertEmpty( subject, shortestWithProperty );
+    }
+
+    @Test
+    void shouldKeepFullSegmentWhenAddingRestricted() throws Throwable
+    {
+        assertEmpty( adminSubject, "CREATE (n:A)" );
+
+        CommercialLoginContext subject = setupUserAndLogin(
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+        );
+
+        assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
+        assertSuccess( subject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
+    }
+
+    @Test
+    void shouldRemoveCorrectPrivilegeForDifferentSegments() throws Throwable
+    {
+        assertEmpty( adminSubject, "CREATE (n:A)" );
+
+        CommercialLoginContext subject = setupUserAndLogin(
+                "Alice", "custom",
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+        );
+
+        DatabasePrivilege privilege = new DatabasePrivilege();
+        privilege.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
+
+        userManager.revokePrivilegeFromRole( "custom", privilege );
+
+        assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
+        assertSuccess( subject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 1 ) );
     }
 
     @Test

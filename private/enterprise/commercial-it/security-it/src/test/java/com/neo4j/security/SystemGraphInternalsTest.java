@@ -9,6 +9,7 @@ import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.Segment;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -254,6 +255,27 @@ class SystemGraphInternalsTest
 
         // Then
         assertThat( privileges, containsInAnyOrder( dbPrivilege2 ) );
+    }
+
+    @Test
+    void shouldKeepFullSegmentWhenAddingSmaller() throws Exception
+    {
+        // Given
+        realm.newRole( "custom" );
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege();
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL ) );
+        DatabasePrivilege dbPriv2 = new DatabasePrivilege();
+        dbPriv2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Set.of( "A" ) ) ) );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
+        realm.grantPrivilegeToRole( "custom", dbPriv2 );
+
+        // Then
+        DatabasePrivilege expected = new DatabasePrivilege();
+        expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Set.of( "A" ) ) ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL ) );
+        assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( expected ) );
     }
 
     private void setupTwoReaders() throws InvalidArgumentsException
