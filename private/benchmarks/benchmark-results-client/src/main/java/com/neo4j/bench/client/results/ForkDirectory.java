@@ -44,6 +44,19 @@ public class ForkDirectory
     private final Path dir;
     private final ForkDescription forkDescription;
 
+    static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ProfilerType> profilers )
+    {
+        Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
+        if ( Files.exists( dir ) )
+        {
+            return openAt( dir );
+        }
+        else
+        {
+            return createAt( parentDir, name, profilers );
+        }
+    }
+
     static ForkDirectory createAt( Path parentDir, String name, List<ProfilerType> profilers )
     {
         try
