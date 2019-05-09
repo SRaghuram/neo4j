@@ -47,7 +47,8 @@ object ENTERPRISE {
                                   GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
 
   val PARALLEL_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
-                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
+                                    GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free",
+                                    GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false")
 
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
