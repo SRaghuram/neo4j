@@ -10,8 +10,6 @@ import org.neo4j.cypher.internal.CompilerFactory;
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration;
 import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Monitors;
 
 @ServiceProvider
 public class EnterpriseCypherEngineProvider extends CommunityCypherEngineProvider
@@ -28,9 +26,11 @@ public class EnterpriseCypherEngineProvider extends CommunityCypherEngineProvide
         return 1; // Lower means better. The enterprise version will have a lower number
     }
 
-    protected CompilerFactory makeCompilerFactory( GraphDatabaseCypherService queryService, Monitors monitors, LogProvider logProvider,
-            CypherPlannerConfiguration plannerConfig, CypherRuntimeConfiguration runtimeConfig )
+    protected CompilerFactory makeCompilerFactory( GraphDatabaseCypherService queryService,
+                                                   SPI spi,
+                                                   CypherPlannerConfiguration plannerConfig,
+                                                   CypherRuntimeConfiguration runtimeConfig )
     {
-        return new EnterpriseCompilerFactory( queryService, monitors, logProvider, plannerConfig, runtimeConfig );
+        return new EnterpriseCompilerFactory( queryService, spi, plannerConfig, runtimeConfig );
     }
 }

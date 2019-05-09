@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
 import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, NoSchedulerTracing, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 import org.scalatest.mock.MockitoSugar
@@ -46,7 +47,8 @@ object ContextHelper extends MockitoSugar {
              jobScheduler: JobScheduler,
              schemaRead: SchemaRead,
              cursors: CursorFactory,
-             txBridge: ThreadToStatementContextBridge): EnterpriseRuntimeContext = {
+             txBridge: ThreadToStatementContextBridge,
+             lifeSupport: LifeSupport): EnterpriseRuntimeContext = {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
@@ -55,7 +57,7 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport),
       compileExpressions = useCompiledExpressions)
   }
 }

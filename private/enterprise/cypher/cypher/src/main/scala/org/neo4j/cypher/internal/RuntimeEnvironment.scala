@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.zombie.execution.{CallingThreadQueryExe
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.scheduler.{Group, JobScheduler}
 
 /**
@@ -24,11 +25,12 @@ object RuntimeEnvironment {
   def of(config: CypherRuntimeConfiguration,
          jobScheduler: JobScheduler,
          cursors: CursorFactory,
-         txBridge: ThreadToStatementContextBridge): RuntimeEnvironment = {
+         txBridge: ThreadToStatementContextBridge,
+         lifeSupport: LifeSupport): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
                            createDispatcher(config, jobScheduler, cursors, txBridge),
-                           createQueryExecutor(config, jobScheduler, cursors, txBridge),
+                           createQueryExecutor(config, jobScheduler, cursors, txBridge, lifeSupport),
                            createTracer(config, jobScheduler),
                            cursors)
   }
@@ -56,7 +58,8 @@ object RuntimeEnvironment {
   def createQueryExecutor(config: CypherRuntimeConfiguration,
                           jobScheduler: JobScheduler,
                           cursors: CursorFactory,
-                          txBridge: ThreadToStatementContextBridge): QueryExecutor =
+                          txBridge: ThreadToStatementContextBridge,
+                          lifeSupport: LifeSupport): QueryExecutor =
     config.scheduler match {
       case SingleThreaded =>
         new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)

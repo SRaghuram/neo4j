@@ -42,6 +42,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, TransactionalContext}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
+import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.monitoring.Monitors
 import org.neo4j.resources.{CpuClock, HeapAllocation}
 import org.neo4j.scheduler.JobScheduler
@@ -110,7 +111,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val schemaRead = transactionalContext.kernelTransaction().schemaRead()
       val cursors = dependencyResolver.resolveDependency(classOf[Kernel]).cursors()
       val txBridge = dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge)
+      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, new LifeSupport)
       val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
       solve(logicalPlan)
       val compilationStateBefore = getLogicalQuery(logicalPlan, semanticTable, resultColumns)
@@ -129,7 +130,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          useCompiledExpressions: Boolean = true,
                          schemaRead            : SchemaRead,
                          cursors               : CursorFactory,
-                         txBridge              : ThreadToStatementContextBridge): EnterpriseRuntimeContext =
+                         txBridge              : ThreadToStatementContextBridge,
+                         lifeSupport           : LifeSupport): EnterpriseRuntimeContext =
     ContextHelper.create(
       codeStructure = GeneratedQueryStructure,
       planContext = planContext,
@@ -138,7 +140,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       jobScheduler = jobScheduler,
       schemaRead = schemaRead,
       cursors = cursors,
-      txBridge = txBridge)
+      txBridge = txBridge,
+      lifeSupport = lifeSupport)
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(

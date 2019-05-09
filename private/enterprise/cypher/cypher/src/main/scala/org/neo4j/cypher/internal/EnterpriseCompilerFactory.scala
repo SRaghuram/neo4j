@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
+import org.neo4j.common.DependencyResolver.SelectionStrategy
 import org.neo4j.cypher.internal.compatibility.v3_5.Cypher3_5Planner
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
@@ -15,16 +16,14 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
-import org.neo4j.internal.kernel.api.{Kernel, SchemaRead}
+import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.logging.{Log, LogProvider}
-import org.neo4j.monitoring.Monitors
-import org.neo4j.scheduler.JobScheduler
+import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
+import org.neo4j.logging.Log
 
 class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
-                                kernelMonitors: Monitors,
-                                logProvider: LogProvider,
+                                spi: SPI,
                                 plannerConfig: CypherPlannerConfiguration,
                                 runtimeConfig: CypherRuntimeConfiguration
                                ) extends CompilerFactory {
@@ -35,13 +34,11 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
-    val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
-    val kernel = resolver.resolveDependency(classOf[Kernel])
-    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-    RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), txBridge)
+    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), txBridge, spi.lifeSupport)
   }
 
-  private val log: Log = logProvider.getLog(getClass)
+  private val log: Log = spi.logProvider().getLog(getClass)
 
   override def createCompiler(cypherVersion: CypherVersion,
                               cypherPlanner: CypherPlannerOption,
@@ -54,7 +51,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
         Cypher3_5Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
-          kernelMonitors,
+          spi.monitors(),
           log,
           cypherPlanner,
           cypherUpdateStrategy,
@@ -64,7 +61,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
         Cypher4_0Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
-          kernelMonitors,
+          spi.monitors(),
           log,
           cypherPlanner,
           cypherUpdateStrategy,
@@ -80,7 +77,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
       planner,
       runtime,
       EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
-      kernelMonitors)
+      spi.monitors())
   }
 }
 

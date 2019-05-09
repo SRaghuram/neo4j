@@ -18,7 +18,7 @@ import org.neo4j.scheduler.JobScheduler
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
     () => new TestCommercialDatabaseManagementServiceBuilder(),
-    (runtimeConfig,resolver) => {
+    (runtimeConfig, resolver, lifeSupport) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
@@ -28,7 +28,7 @@ object ENTERPRISE {
         NullLog.getInstance(),
         runtimeConfig,
         RuntimeEnvironment.createDispatcher(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
-        RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
+        RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge, lifeSupport),
         kernel.cursors(),
         () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler),
                                            new ParallelismTracer))
