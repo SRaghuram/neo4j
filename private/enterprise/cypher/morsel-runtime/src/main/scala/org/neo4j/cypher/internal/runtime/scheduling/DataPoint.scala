@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.scheduling
 
+import java.io.IOException
+
 case class DataPoint(id: Long,
                      upstreamIds: Seq[Long],
                      queryId: Int,
@@ -48,5 +50,12 @@ trait DataPointFlusher extends DataPointWriter {
     * Flush buffered data points
     */
   def flush(): Unit
+
+  /**
+    * Close any underlying resources.
+    *
+    * @throws IOException on failure to close some underlying resource
+    */
+  def close(): Unit
 }
 

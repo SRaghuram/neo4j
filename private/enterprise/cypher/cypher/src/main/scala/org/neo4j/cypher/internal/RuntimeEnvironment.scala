@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal
 
+import java.io.IOException
 import java.util.concurrent.ExecutorService
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
@@ -92,7 +93,13 @@ object RuntimeEnvironment {
             try {
               Thread.sleep(1)
             } catch {
-              case _:InterruptedException =>
+              case _: InterruptedException =>
+                try {
+                  dataWriter.close()
+                } catch {
+                  case _: IOException =>
+                    // best effort, we can't do more
+                }
                 return
             }
           }

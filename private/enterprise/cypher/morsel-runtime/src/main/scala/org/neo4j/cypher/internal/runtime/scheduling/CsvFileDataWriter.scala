@@ -15,7 +15,9 @@ class CsvFileDataWriter(file: File) extends CsvDataWriter {
   private val out = new BufferedWriter(new FileWriter(file))
   writeRow(header)
 
-  def flush(): Unit = out.flush()
+  override def flush(): Unit = out.flush()
+
+  override def close(): Unit = out.close()
 
   override def writeRow(row: String): Unit =
     out.write(row)

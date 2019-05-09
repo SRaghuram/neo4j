@@ -12,11 +12,13 @@ class CsvStdOutDataWriter extends CsvDataWriter {
 
   private val sb = new StringBuilder(header)
 
-  def flush(): Unit = {
+  override def flush(): Unit = {
     val result = sb.result()
     sb.clear()
     print(result)
   }
+
+  override def close(): Unit = {}
 
   override def writeRow(row: String): Unit = sb ++= row
 }

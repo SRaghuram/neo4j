@@ -63,6 +63,8 @@ class SingleConsumerDataBuffersTest extends CypherFunSuite {
     override def write(dataPoint: DataPoint): Unit = points += dataPoint
 
     override def flush(): Unit = {}
+
+    override def close(): Unit = {}
   }
 
   class ProduceThread(val min: Int,
