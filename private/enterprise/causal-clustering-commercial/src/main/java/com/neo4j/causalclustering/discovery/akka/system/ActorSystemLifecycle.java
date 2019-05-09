@@ -111,6 +111,7 @@ public class ActorSystemLifecycle
         }
     }
 
+    @VisibleForTesting
     void doShutdown( ActorSystemComponents actorSystemComponents ) throws Exception
     {
         actorSystemComponents

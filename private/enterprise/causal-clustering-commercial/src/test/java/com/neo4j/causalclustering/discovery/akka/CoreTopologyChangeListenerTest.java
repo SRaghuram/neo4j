@@ -28,7 +28,8 @@ import static org.mockito.Mockito.verify;
 public class CoreTopologyChangeListenerTest
 {
     MemberId myself = new MemberId( UUID.randomUUID() );
-    RetryStrategy  topologyServiceRetryStrategy = new NoRetriesStrategy();
+    RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
+    RetryStrategy  discoveryRestartRetryStrategy = new NoRetriesStrategy();
     ExecutorService executor = Executors.newSingleThreadExecutor();
 
     ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
@@ -39,7 +40,8 @@ public class CoreTopologyChangeListenerTest
             actorSystemLifecycle,
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
-            topologyServiceRetryStrategy,
+            catchupAddressRetryStrategy,
+            discoveryRestartRetryStrategy,
             executor,
             Clocks.systemClock() );
 

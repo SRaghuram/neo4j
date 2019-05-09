@@ -33,6 +33,7 @@ import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.BoltConnector;
@@ -240,6 +241,7 @@ public class AkkaCoreTopologyDowningIT
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
+                new RetryStrategy( 0L, 10L ),
                 pool,
                 Clocks.systemClock()
         );

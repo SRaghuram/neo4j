@@ -40,10 +40,10 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.RoleInfo;
-import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -61,19 +61,22 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private Optional<ActorRef> directoryActorRef = Optional.empty();
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
-    private final RetryStrategy retryStrategy;
+    private final RetryStrategy catchupAddressRetryStrategy;
     private final TopologyState topologyState;
+    private final RetryStrategy restartRetryStrategy;
     private final ExecutorService executor;
     private final Clock clock;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, ExecutorService executor, Clock clock )
+            LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
+            ExecutorService executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
-        this.retryStrategy = topologyServiceRetryStrategy;
+        this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
+        this.restartRetryStrategy = restartRetryStrategy;
         this.executor = executor;
         this.clock = clock;
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
@@ -214,14 +217,28 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
         try
         {
+            restartRetryStrategy.apply( this::doRestart, r -> r );
+        }
+        catch ( TimeoutException e )
+        {
+            log.error( "Unable to restart discovery system", e );
+            throw new IllegalStateException( e );
+        }
+    }
+
+    private boolean doRestart()
+    {
+        try
+        {
             stop();
             start();
             userLog.info( "Successfully restarted discovery system" );
+            return true;
         }
         catch ( Throwable t )
         {
-            userLog.error( "Failed to restart discovery system", t );
-            throw new IllegalStateException( t );
+            userLog.warn( "Failed to restart discovery system", t );
+            return false;
         }
     }
 
@@ -276,7 +293,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         try
         {
-            return retryStrategy.apply( () -> topologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
+            return catchupAddressRetryStrategy.apply( () -> topologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
         }
         catch ( TimeoutException e )
         {

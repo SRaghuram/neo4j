@@ -27,14 +27,18 @@ import org.neo4j.scheduler.JobScheduler;
 
 public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
-   protected abstract ActorSystemFactory actorSystemFactory( ExecutorService executor, Config config, LogProvider logProvider );
+    private static final long RESTART_RETRY_DELAY_MS = 1000L;
+    private static final long RESTART_RETRIES = 10L;
+
+    protected abstract ActorSystemFactory actorSystemFactory( ExecutorService executor, Config config, LogProvider logProvider );
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
             Monitors monitors, Clock clock )
     {
         ExecutorService executor = executorService( config, jobScheduler );
+        RetryStrategy restartRetryStrategy = new RetryStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRIES );
 
         return new AkkaCoreTopologyService(
                 config,
@@ -42,7 +46,8 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 actorSystemLifecycle( config, executor, logProvider, remoteMembersResolver ),
                 logProvider,
                 userLogProvider,
-                topologyServiceRetryStrategy,
+                catchupAddressRetryStrategy,
+                restartRetryStrategy,
                 executor,
                 clock );
     }
