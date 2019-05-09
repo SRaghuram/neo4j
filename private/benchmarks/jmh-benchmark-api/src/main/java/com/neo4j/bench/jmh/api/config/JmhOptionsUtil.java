@@ -26,7 +26,7 @@ import static java.lang.String.format;
 public class JmhOptionsUtil
 {
     // global JMH params
-    private static final String PARAM_WORK_DIR = "workDir";
+    public static final String PARAM_WORK_DIR = "workDir";
     public static final Set<String> GLOBAL_PARAMS = Sets.newHashSet( PARAM_WORK_DIR );
 
     private static final TimeValue DEFAULT_ITERATION_DURATION = TimeValue.seconds( 5 );
@@ -34,7 +34,6 @@ public class JmhOptionsUtil
     private static final int DEFAULT_FORK_COUNT = 3;
 
     public static ChainedOptionsBuilder baseBuilder(
-            String neo4jConfigString,
             Path workDir,
             BenchmarkDescription benchmark,
             int threadCount,

@@ -58,7 +58,7 @@ public class RuntimeEstimator
                          .flatMap( benchmark -> benchmark.explode().stream() )
                          .mapToLong( b ->
                                      {
-                                         ChainedOptionsBuilder builder = baseBuilder( "", workDir, b, 1, jvm, "" );
+                                         ChainedOptionsBuilder builder = baseBuilder( workDir, b, 1, jvm, "" );
                                          try
                                          {
                                              applyOptions( builder, new CommandLineOptions( jmhArgs ) );
