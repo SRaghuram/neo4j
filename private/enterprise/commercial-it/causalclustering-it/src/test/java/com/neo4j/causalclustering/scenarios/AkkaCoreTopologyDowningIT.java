@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
@@ -241,6 +242,7 @@ public class AkkaCoreTopologyDowningIT
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
+                new RetryStrategy( 0L, 10L ),
                 pool,
                 Clocks.systemClock()
         );

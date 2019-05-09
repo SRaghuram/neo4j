@@ -35,7 +35,8 @@ class CoreTopologyChangeListenerTest
 {
     private final DatabaseId databaseId = new DatabaseId( "my_db" );
     private final DiscoveryMember myself = new TestDiscoveryMember( Set.of( databaseId ) );
-    private final RetryStrategy topologyServiceRetryStrategy = new NoRetriesStrategy();
+    private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
+    private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
@@ -46,7 +47,8 @@ class CoreTopologyChangeListenerTest
             actorSystemLifecycle,
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
-            topologyServiceRetryStrategy,
+            catchupAddressRetryStrategy,
+            discoveryRestartRetryStrategy,
             executor,
             Clocks.systemClock() );
 

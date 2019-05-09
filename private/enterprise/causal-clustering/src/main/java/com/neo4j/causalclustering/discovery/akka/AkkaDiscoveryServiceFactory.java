@@ -32,12 +32,16 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
+    private static final long RESTART_RETRY_DELAY_MS = 1000L;
+    private static final long RESTART_RETRIES = 10L;
+
     @Override
     public final CoreTopologyService coreTopologyService( Config config, DiscoveryMember myself, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
             SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
         Executor executor = executorService( config, jobScheduler );
+        RetryStrategy restartRetryStrategy = new RetryStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRIES );
 
         return new AkkaCoreTopologyService(
                 config,
@@ -45,7 +49,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 actorSystemLifecycle( config, executor, logProvider, remoteMembersResolver, sslPolicyLoader ),
                 logProvider,
                 userLogProvider,
-                topologyServiceRetryStrategy,
+                catchupAddressRetryStrategy,
+                restartRetryStrategy,
                 executor,
                 clock );
     }

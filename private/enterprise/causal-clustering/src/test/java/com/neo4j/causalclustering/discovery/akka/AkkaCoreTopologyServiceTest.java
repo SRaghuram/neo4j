@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
+import akka.actor.Address;
+import akka.remote.ThisActorSystemQuarantinedEvent;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
@@ -19,6 +21,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -42,24 +45,38 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
-class AkkaCoreTopologyServiceTest
+public class AkkaCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
     private DiscoveryMember myself = new TestDiscoveryMember();
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
-    private RetryStrategy retryStrategy = new NoRetriesStrategy();
+    private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, Answers.RETURNS_DEEP_STUBS );
 
-    private AkkaCoreTopologyService service =
-            new AkkaCoreTopologyService( config, myself, system, logProvider, userLogProvider, retryStrategy, executor, clock );
+    private RetryStrategy restartRetryStrategy = new RetryStrategy( 0L, 10L );
 
+    private AkkaCoreTopologyService service = new AkkaCoreTopologyService(
+            config,
+            myself,
+            system,
+            logProvider,
+            userLogProvider,
+            catchupAddressretryStrategy,
+            restartRetryStrategy,
+            executor,
+            clock );
+
+    private ThisActorSystemQuarantinedEvent event = ThisActorSystemQuarantinedEvent.apply(
+            new Address( "protocol", "system", "host1", 1 ),
+            new Address( "protocol", "system", "host2",2 ) );
     @Test
     void shouldLifecycle() throws Throwable
     {
@@ -221,5 +238,37 @@ class AkkaCoreTopologyServiceTest
 
         var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, coreMembers );
         topologyState.onTopologyUpdate( coreTopology );
+    }
+
+    @Test
+    void shouldRetryRestartIfStopFails() throws Throwable
+    {
+        service.init();
+        service.start();
+        reset( system );
+
+        Mockito.doThrow( new RuntimeException() ).when( system ).shutdown();
+
+        service.restart();
+
+        InOrder inOrder = inOrder( system );
+        inOrder.verify( system ).shutdown();
+        inOrder.verify( system ).createClusterActorSystem();
+    }
+
+    @Test
+    void shouldRetryRestartIfStartFails() throws Throwable
+    {
+        service.init();
+        service.start();
+        reset( system );
+
+        Mockito.doThrow( new RuntimeException() ).doNothing().when( system ).createClusterActorSystem();
+
+        service.restart();
+
+        InOrder inOrder = inOrder( system );
+        inOrder.verify( system ).shutdown();
+        inOrder.verify( system, times( 2 ) ).createClusterActorSystem();
     }
 }

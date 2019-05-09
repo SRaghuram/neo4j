@@ -55,18 +55,21 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private Optional<ActorRef> directoryActorRef = Optional.empty();
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
-    private final RetryStrategy retryStrategy;
+    private final RetryStrategy catchupAddressRetryStrategy;
+    private final RetryStrategy restartRetryStrategy;
     private final GlobalTopologyState globalTopologyState;
     private final Executor executor;
     private final Clock clock;
 
     public AkkaCoreTopologyService( Config config, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, Executor executor, Clock clock )
+            LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
+            Executor executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
-        this.retryStrategy = topologyServiceRetryStrategy;
+        this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
+        this.restartRetryStrategy = restartRetryStrategy;
         this.executor = executor;
         this.clock = clock;
         this.globalTopologyState = new GlobalTopologyState( logProvider, listenerService::notifyListeners );
@@ -173,14 +176,28 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
         try
         {
+            restartRetryStrategy.apply( this::doRestart, r -> r );
+        }
+        catch ( TimeoutException e )
+        {
+            log.error( "Unable to restart discovery system", e );
+            throw new IllegalStateException( e );
+        }
+    }
+
+    private boolean doRestart()
+    {
+        try
+        {
             stop();
             start();
             userLog.info( "Successfully restarted discovery system" );
+            return true;
         }
         catch ( Throwable t )
         {
-            userLog.error( "Failed to restart discovery system", t );
-            throw new IllegalStateException( t );
+            userLog.warn( "Failed to restart discovery system", t );
+            return false;
         }
     }
 
@@ -234,7 +251,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         try
         {
-            return retryStrategy.apply( () -> globalTopologyState.retrieveCatchupServerAddress( upstream ), Objects::nonNull );
+            return catchupAddressRetryStrategy.apply( () -> globalTopologyState.retrieveCatchupServerAddress( upstream ), Objects::nonNull );
         }
         catch ( TimeoutException e )
         {
