@@ -36,6 +36,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     val (withSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
     //TODO: Test this with overlapping commands
+    // SHOW USERS is the only case that exists in both runtimes
+    // Set up test to confirm that you get the correct thing from community
+    //  enterprise already have a test
     (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable)
       .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
   }

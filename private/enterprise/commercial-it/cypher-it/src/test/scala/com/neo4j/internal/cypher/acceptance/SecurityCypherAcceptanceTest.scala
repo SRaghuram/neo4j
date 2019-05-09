@@ -656,6 +656,27 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
 
+  test("should alter user password and status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS SUSPENDED")
+
+    // THEN
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    val user = systemGraphRealm.getUser("foo")
+    user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
+    user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+  }
+
   test("should alter user password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
