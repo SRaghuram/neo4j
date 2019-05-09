@@ -8,11 +8,12 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
+import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.graphdb.NotFoundException
+import org.neo4j.internal.kernel.api.QueryContext
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -235,7 +236,7 @@ class MorselExecutionContext(private val morsel: Morsel,
       .apply(this, value1)
   }
 
-  override def mergeWith(other: ExecutionContext): Unit = fail()
+  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = fail()
 
   override def createClone(): ExecutionContext = {
     // This is used by some expressions with the expectation of being able to overwrite an

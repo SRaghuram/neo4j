@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
@@ -209,7 +210,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   def getRefAtWithoutCheckingInitialized(offset: Int): AnyValue =
     refs(offset)
 
-  override def mergeWith(other: ExecutionContext): Unit = other match {
+  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = other match {
     case slottedOther: SlottedExecutionContext =>
       slottedOther.slots.foreachSlot({
         case (key, otherSlot @ LongSlot(offset, _, CTNode)) =>
@@ -217,14 +218,14 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             throw new InternalException(s"Tried to merge primitive node slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-          thisSlotSetter.apply(this, other.getLongAt(offset))
+          thisSlotSetter.apply(this, other.getLongAt(offset), entityById)
 
         case (key, otherSlot @ LongSlot(offset, _, CTRelationship)) =>
           val thisSlotSetter = slots.maybePrimitiveRelationshipSetter(key).getOrElse(
             throw new InternalException(s"Tried to merge primitive relationship slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-          thisSlotSetter.apply(this, other.getLongAt(offset))
+          thisSlotSetter.apply(this, other.getLongAt(offset), entityById)
 
         case (key, otherSlot @ RefSlot(offset, _, _)) if slottedOther.isRefInitialized(offset)  =>
           val thisSlotSetter = slots.maybeSetter(key).getOrElse(
@@ -293,7 +294,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         if (entityId >= 0)
           entities += key -> materializeRelationship(getLongAt(offset))
       case _ => // Do nothing
-    }, ignoreCachedNodeProperties => null)
+    }, ignoreCachedNodeProperties => ())
     entities.toMap
   }
 

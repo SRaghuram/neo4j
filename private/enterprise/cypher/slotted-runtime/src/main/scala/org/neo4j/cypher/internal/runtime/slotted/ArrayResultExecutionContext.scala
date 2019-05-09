@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber, ValuePopulation}
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb.NotFoundException
@@ -128,7 +128,7 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = fail()
 
-  override def mergeWith(other: ExecutionContext): Unit = fail()
+  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = fail()
 
   override def createClone(): ExecutionContext = fail()
 

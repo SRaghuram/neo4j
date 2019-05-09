@@ -10,6 +10,7 @@ import java.util.function.ToLongFunction
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
 import org.neo4j.cypher.internal.v4_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue, VirtualValues}
@@ -194,71 +195,72 @@ object SlotConfigurationUtils {
     * Use this to make a specialized setter function for a slot,
     * that takes as input an ExecutionContext and a primitive long value.
     */
-  def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (ExecutionContext, Long) => Unit =
+  def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (ExecutionContext, Long, EntityById) => Unit =
     (slot, valueType) match {
       case (LongSlot(offset, nullable, CTNode), CTNode) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
         else {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, _: EntityById) =>
             context.setLongAt(offset, value)
         }
 
       case (LongSlot(offset, nullable, CTRelationship), CTRelationship) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
         else {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, _: EntityById) =>
             context.setLongAt(offset, value)
         }
 
       case (RefSlot(offset, false, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
         if (AssertionUtils.assertionsEnabled) {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, entityById: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
-            context.setRefAt(offset, VirtualValues.node(value))
+            context.setRefAt(offset, entityById.nodeById(value))
         }
         else {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, entityById: EntityById) =>
             // NOTE: Slot allocation needs to guarantee that we can never get nulls in here
-            context.setRefAt(offset, VirtualValues.node(value))
+            context.setRefAt(offset, entityById.nodeById(value))
         }
 
       case (RefSlot(offset, false, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
         if (AssertionUtils.assertionsEnabled) {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, entityById: EntityById) =>
+            if (value == -1L)
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
-            context.setRefAt(offset, VirtualValues.relationship(value))
+            context.setRefAt(offset, entityById.relationshipById(value))
         }
         else {
-          (context: ExecutionContext, value: Long) =>
+          (context: ExecutionContext, value: Long, entityById: EntityById) =>
             // NOTE: Slot allocation needs to guarantee that we can never get nulls in here
-            context.setRefAt(offset, VirtualValues.relationship(value))
+            context.setRefAt(offset, entityById.relationshipById(value))
         }
 
       case (RefSlot(offset, true, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
-        (context: ExecutionContext, value: Long) =>
+        (context: ExecutionContext, value: Long, entityById: EntityById) =>
           if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
-            context.setRefAt(offset, VirtualValues.node(value))
+            context.setRefAt(offset, entityById.nodeById(value))
 
       case (RefSlot(offset, true, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
-        (context: ExecutionContext, value: Long) =>
+        (context: ExecutionContext, value: Long, entityById: EntityById) =>
           if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
-            context.setRefAt(offset, VirtualValues.relationship(value))
+            context.setRefAt(offset, entityById.relationshipById(value))
 
       case _ =>
         throw new InternalException(s"Do not know how to make a primitive $valueType setter for slot $slot")
@@ -268,14 +270,14 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the node id.
     */
-  def makeSetPrimitiveNodeInSlotFunctionFor(slot: Slot): (ExecutionContext, Long) => Unit =
+  def makeSetPrimitiveNodeInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTNode)
 
   /**
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the relationship id.
     */
-  def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (ExecutionContext, Long) => Unit =
+  def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTRelationship)
 
   /**
