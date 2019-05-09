@@ -99,12 +99,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def await(): Boolean = {
-
     if (throwable != null) {
       throw throwable
-    }
-    if (count != 0 && !cancelled) {
-      throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
     }
 
     count > 0 && !cancelled
