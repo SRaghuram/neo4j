@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.morsel.FlowControl
@@ -116,7 +116,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
-  private val latch = new CountDownLatch(1)
+  private val latch = new AtomicReference[CountDownLatch](new CountDownLatch(1))
   private val demand = new AtomicLong(0)
   private val cancelled = new AtomicBoolean(false)
 
@@ -130,8 +130,11 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     val newCount = count.decrementAndGet()
     Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
-      latch.countDown()
-      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      try {
+        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      } finally {
+        releaseLatch()
+      }
     }
     else if (newCount < 0)
       throw new IllegalStateException("Cannot count below 0")
@@ -139,14 +142,18 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def error(throwable: Throwable): Unit = {
-    errors.add(throwable)
-    synchronized {
-      subscriber.onError(throwable)
+    try {
+      errors.add(throwable)
+      synchronized {
+        subscriber.onError(throwable)
+      }
     }
-    latch.countDown()
+    finally {
+      releaseLatch()
+    }
   }
 
-  override def isCompleted: Boolean = latch.getCount == 0 || cancelled.get()
+  override def isCompleted: Boolean = count.get == 0 || cancelled.get()
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 
@@ -155,37 +162,66 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   override def hasDemand: Boolean = getDemand > 0
 
   override def addServed(newlyServed: Long): Unit = {
-    demand.addAndGet(-newlyServed)
+    val newDemand = demand.addAndGet(-newlyServed)
+    if (newDemand == 0) {
+      releaseLatch()
+    }
   }
 
   // -------- Subscription Methods --------
 
   override def request(numberOfRecords: Long): Unit = {
-    demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
-      val newDemand = oldVal + newVal
-      //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
-      if (newDemand < 0) {
-        Long.MaxValue
-      } else {
-        newDemand
-      }
-    })
+    if (!isCompleted) {
+      //allocate on the outside to avoid allocation inside CAS
+      val newLatch = new CountDownLatch(1)
+      demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
+        //there is new demand make sure to reset the latch
+        if (numberOfRecords > 0) {
+          resetLatch(newLatch)
+        }
+
+        val newDemand = oldVal + newVal
+        //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+        if (newDemand < 0) {
+          Long.MaxValue
+        } else {
+          newDemand
+        }
+      })
+    }
   }
 
-  override def cancel(): Unit = cancelled.set(true)
+  override def cancel(): Unit = {
+    try {
+      cancelled.set(true)
+    } finally {
+      releaseLatch()
+    }
+  }
 
   override def await(): Boolean = {
-    var done = isCompleted
-    while (demand.get() > 0 && (!done)) {
-      // TODO reviewer: is this sleep too long?
-      Thread.sleep(10)
-      done = isCompleted
-    }
+    latch.get().await()
     if (!errors.isEmpty) {
       val firstException = errors.poll()
       errors.forEach(t => firstException.addSuppressed(t))
       throw firstException
     }
-    !done
+    !isCompleted
+  }
+
+  private def releaseLatch(): Unit = {
+    latch.getAndUpdate((t: CountDownLatch) => {
+      t.countDown()
+      t
+    })
+  }
+
+  private def resetLatch(newLatch: CountDownLatch): Unit = {
+    latch.getAndUpdate((oldLatch: CountDownLatch) => {
+      if (oldLatch.getCount == 0) {
+        newLatch
+      }
+      else oldLatch
+    })
   }
 }
