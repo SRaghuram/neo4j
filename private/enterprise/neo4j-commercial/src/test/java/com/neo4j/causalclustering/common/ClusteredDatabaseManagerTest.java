@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Clock;
 
@@ -19,10 +20,13 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,8 +36,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
+@ExtendWith( LifeExtension.class )
 class ClusteredDatabaseManagerTest
 {
+
+    @Inject
+    private LifeSupport lifeSupport;
 
     @Test
     void availabilityGuardRaisedOnCreation()
@@ -140,10 +148,13 @@ class ClusteredDatabaseManagerTest
 //        verify( databaseManager, never() ).start();
 //    }
 
-    private static DatabaseAvailabilityGuard newAvailabilityGuard()
+    private DatabaseAvailabilityGuard newAvailabilityGuard()
     {
-        return new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clock.systemUTC(), NullLog.getInstance(), 0,
-                mock( CompositeDatabaseAvailabilityGuard.class ) );
+        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard( databaseId, Clock.systemUTC(), NullLog.getInstance(), 0,
+                        mock( CompositeDatabaseAvailabilityGuard.class ) );
+        lifeSupport.add( availabilityGuard );
+        return availabilityGuard;
     }
 
     private static ClusteredDatabaseManager newDatabaseManager( AvailabilityGuard availabilityGuard )

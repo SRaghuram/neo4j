@@ -14,6 +14,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -38,11 +39,14 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_INVALID_REQUEST;
@@ -64,23 +68,27 @@ import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
+@ExtendWith( LifeExtension.class )
 class TxPullRequestHandlerTest
 {
     private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
-    private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
-    private Database database = mock( Database.class );
-    private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
+    private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
+    private final Database database = mock( Database.class );
+    private final DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
             DATABASE_ID,
             new FakeClock(),
             NullLog.getInstance(), 0,
             mock( CompositeDatabaseAvailabilityGuard.class ) );
-    private LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
-    private TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
+    private final LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
+    private final TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
 
     private TxPullRequestHandler txPullRequestHandler;
+
+    @Inject
+    private LifeSupport lifeSupport;
 
     @BeforeEach
     void setUp()
@@ -94,6 +102,7 @@ class TxPullRequestHandlerTest
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
         txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        lifeSupport.add( availabilityGuard );
     }
 
     @Test

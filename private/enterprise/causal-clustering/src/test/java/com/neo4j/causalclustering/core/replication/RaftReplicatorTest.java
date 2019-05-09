@@ -23,6 +23,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.UUID;
 
@@ -30,10 +31,13 @@ import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -54,18 +58,22 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@ExtendWith( LifeExtension.class )
 class RaftReplicatorTest
 {
     private static final int DEFAULT_TIMEOUT_MS = 15_000;
 
-    private LeaderLocator leaderLocator = mock( LeaderLocator.class );
-    private MemberId myself = new MemberId( UUID.randomUUID() );
-    private LeaderInfo leaderInfo = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
-    private GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
-    private LocalSessionPool sessionPool = new LocalSessionPool( session );
-    private TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
+    private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
+    private final MemberId myself = new MemberId( UUID.randomUUID() );
+    private final LeaderInfo leaderInfo = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
+    private final GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
+    private final LocalSessionPool sessionPool = new LocalSessionPool( session );
+    private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
     private DatabaseAvailabilityGuard availabilityGuard;
     private StubClusteredDatabaseManager clusteredDatabaseManager;
+
+    @Inject
+    private LifeSupport lifeSupport;
 
     @BeforeEach
     void setUp()
@@ -73,6 +81,7 @@ class RaftReplicatorTest
         availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
         clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
+        lifeSupport.add( availabilityGuard );
     }
 
     @Test
