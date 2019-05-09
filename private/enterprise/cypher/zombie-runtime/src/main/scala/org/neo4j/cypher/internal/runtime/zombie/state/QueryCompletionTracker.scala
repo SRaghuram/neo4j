@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.morsel.FlowControl
@@ -116,7 +116,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
-  private val latch = new AtomicReference[CountDownLatch](new CountDownLatch(1))
+  private var latch = new CountDownLatch(1)
   private val demand = new AtomicLong(0)
   private val cancelled = new AtomicBoolean(false)
 
@@ -130,10 +130,12 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     val newCount = count.decrementAndGet()
     Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
-      try {
-        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
-      } finally {
-        releaseLatch()
+      synchronized {
+        try {
+          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        } finally {
+          releaseLatch()
+        }
       }
     }
     else if (newCount < 0)
@@ -172,23 +174,25 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def request(numberOfRecords: Long): Unit = {
     if (!isCompleted) {
-      //allocate on the outside to avoid allocation inside CAS
-      val newLatch = new CountDownLatch(1)
-      demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
-        //there is new demand make sure to reset the latch
-        if (numberOfRecords > 0) {
-          resetLatch(newLatch)
+      //there is new demand make sure to reset the latch
+      if (numberOfRecords > 0) {
+        synchronized {
+          if (latch.getCount == 0) {
+            latch = new CountDownLatch(1)
+          }
         }
-
-        val newDemand = oldVal + newVal
-        //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
-        if (newDemand < 0) {
-          Long.MaxValue
-        } else {
-          newDemand
-        }
-      })
+        demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
+          val newDemand = oldVal + newVal
+          //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+          if (newDemand < 0) {
+            Long.MaxValue
+          } else {
+            newDemand
+          }
+        })
+      }
     }
+
   }
 
   override def cancel(): Unit = {
@@ -200,7 +204,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def await(): Boolean = {
-    latch.get().await()
+    latch.await()
     if (!errors.isEmpty) {
       val firstException = errors.poll()
       errors.forEach(t => firstException.addSuppressed(t))
@@ -210,18 +214,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   private def releaseLatch(): Unit = {
-    latch.getAndUpdate((t: CountDownLatch) => {
-      t.countDown()
-      t
-    })
-  }
-
-  private def resetLatch(newLatch: CountDownLatch): Unit = {
-    latch.getAndUpdate((oldLatch: CountDownLatch) => {
-      if (oldLatch.getCount == 0) {
-        newLatch
-      }
-      else oldLatch
-    })
+    synchronized {
+      latch.countDown()
+    }
   }
 }
