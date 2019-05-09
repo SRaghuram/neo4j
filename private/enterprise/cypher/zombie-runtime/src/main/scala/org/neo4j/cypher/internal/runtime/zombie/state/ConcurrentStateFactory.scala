@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{ConcurrentDemandControlSubscription, DemandControlSubscription}
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.{Buffer, ConcurrentBuffer}
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -19,9 +18,8 @@ object ConcurrentStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new ConcurrentBuffer[T]
 
   override def newTracker(subscriber: QuerySubscriber,
-                          demandControlSubscription: DemandControlSubscription,
                           queryContext: QueryContext): QueryCompletionTracker =
-    new ConcurrentQueryCompletionTracker(subscriber, demandControlSubscription, queryContext)
+    new ConcurrentQueryCompletionTracker(subscriber, queryContext)
 
   override def newIdAllocator(): IdAllocator = new ConcurrentIdAllocator
 
@@ -32,6 +30,4 @@ object ConcurrentStateFactory extends StateFactory {
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
   }
-
-  override def newDemandControlSubscription: DemandControlSubscription = new ConcurrentDemandControlSubscription
 }

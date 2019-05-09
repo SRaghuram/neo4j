@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
-import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
+import org.neo4j.cypher.internal.runtime.morsel.FlowControl
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -17,7 +17,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
   * count of events. When the count is zero the query has completed.
   */
-trait QueryCompletionTracker {
+trait QueryCompletionTracker extends FlowControl {
   /**
     * Increment the tracker count.
     */
@@ -34,14 +34,6 @@ trait QueryCompletionTracker {
   def error(throwable: Throwable): Unit
 
   /**
-    * Await query completion.
-    *
-    * @return when the query has completed successfully
-    * @throws Throwable if an exception has occurred
-    */
-  def await(): Unit
-
-  /**
     * Query completion state. Non-blocking.
     *
     * @return true iff the query has completed
@@ -53,10 +45,11 @@ trait QueryCompletionTracker {
   * Not thread-safe implementation of [[QueryCompletionTracker]].
   */
 class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
-                                     demandControlSubscription: DemandControlSubscription,
                                      queryContext: QueryContext) extends QueryCompletionTracker {
   private var count = 0L
   private var throwable: Throwable = _
+  private var demand = 0L
+  private var cancelled = false
 
   override def increment(): Long = {
     count += 1
@@ -69,9 +62,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
     if (count == 0) {
-      val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
-      subscriber.onResultCompleted(statistics)
-      demandControlSubscription.setCompleted()
+      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
     }
     count
   }
@@ -81,16 +72,43 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     subscriber.onError(throwable)
   }
 
-  override def await(): Unit = {
-    if (throwable != null) {
-      throw throwable
-    }
-    if (count != 0 && !demandControlSubscription.isCompleteOrCancelled) {
-      throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
+  override def getDemand: Long = demand
+
+  override def hasDemand: Boolean = getDemand > 0
+
+  override def addServed(newlyServed: Long): Unit = {
+    demand -= newlyServed
+  }
+
+  override def isCompleted: Boolean = throwable != null || count == 0 || cancelled
+
+  // -------- Subscription Methods --------
+
+  override def request(numberOfRecords: Long): Unit = {
+    val newDemand = demand + numberOfRecords
+    //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+    demand = if (newDemand < 0) {
+      Long.MaxValue
+    } else {
+      newDemand
     }
   }
 
-  override def isCompleted: Boolean = throwable != null || count == 0 || demandControlSubscription.isCompleteOrCancelled
+  override def cancel(): Unit = {
+    cancelled = true
+  }
+
+  override def await(): Boolean = {
+
+    if (throwable != null) {
+      throw throwable
+    }
+    if (count != 0 && !cancelled) {
+      throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
+    }
+
+    count > 0 && !cancelled
+  }
 
   override def toString: String = s"StandardQueryCompletionTracker($count)"
 }
@@ -99,11 +117,12 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   * Concurrent implementation of [[QueryCompletionTracker]].
   */
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
-                                       demandControlSubscription: DemandControlSubscription,
                                        queryContext: QueryContext) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
   private val latch = new CountDownLatch(1)
+  private val demand = new AtomicLong(0)
+  private val cancelled = new AtomicBoolean(false)
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
@@ -116,9 +135,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
       latch.countDown()
-      val statistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
-      subscriber.onResultCompleted(statistics)
-      demandControlSubscription.setCompleted()
+      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
     }
     else if (newCount < 0)
       throw new IllegalStateException("Cannot count below 0")
@@ -133,16 +150,46 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     latch.countDown()
   }
 
-  override def await(): Unit = {
-    latch.await()
+  override def isCompleted: Boolean = latch.getCount == 0 || cancelled.get()
+
+  override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
+
+  override def getDemand: Long = demand.get()
+
+  override def hasDemand: Boolean = getDemand > 0
+
+  override def addServed(newlyServed: Long): Unit = {
+    demand.addAndGet(-newlyServed)
+  }
+
+  // -------- Subscription Methods --------
+
+  override def request(numberOfRecords: Long): Unit = {
+    demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
+      val newDemand = oldVal + newVal
+      //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+      if (newDemand < 0) {
+        Long.MaxValue
+      } else {
+        newDemand
+      }
+    })
+  }
+
+  override def cancel(): Unit = cancelled.set(true)
+
+  override def await(): Boolean = {
+    var done = isCompleted
+    while (demand.get() > 0 && (!done)) {
+      // TODO reviewer: is this sleep too long?
+      Thread.sleep(10)
+      done = isCompleted
+    }
     if (!errors.isEmpty) {
       val firstException = errors.poll()
       errors.forEach(t => firstException.addSuppressed(t))
       throw firstException
     }
+    !done
   }
-
-  override def isCompleted: Boolean = latch.getCount == 0 || demandControlSubscription.isCompleteOrCancelled
-
-  override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 }

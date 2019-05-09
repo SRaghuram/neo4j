@@ -40,7 +40,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def pipelineStates: Array[PipelineState]
 
   /**
-    * The sink with if `bufferId` of the pipeline with id fromPipeline`.
+    * The sink with if `bufferId` of the pipeline with id `fromPipeline`.
     */
   def getSink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T]
 
@@ -180,14 +180,6 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * Fail the query.
     */
   def failQuery(throwable: Throwable): Unit
-
-  /**
-    * Await the completion of this query execution.
-    *
-    * @return normally when the query has produced all results successfully
-    * @throws Throwable if an exception has occurred during query execution
-    */
-  def awaitCompletion(): Unit
 
   /**
     * Check whether this query has completed. A query is completed if it has

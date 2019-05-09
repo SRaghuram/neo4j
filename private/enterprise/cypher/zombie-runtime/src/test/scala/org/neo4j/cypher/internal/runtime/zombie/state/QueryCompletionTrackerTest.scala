@@ -7,19 +7,16 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{ConcurrentDemandControlSubscription, StandardDemandControlSubscription}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         new StandardDemandControlSubscription,
                                                                                          mock[QueryContext](RETURNS_DEEP_STUBS))
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         new ConcurrentDemandControlSubscription,
                                                                                          mock[QueryContext](RETURNS_DEEP_STUBS))
 }
 

@@ -104,10 +104,10 @@ class ZombieReactiveSingleThreadedStressTest extends ReactiveResultStressTestBas
 class ZombieReactiveSingleThreadedNoFusingStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, ZombieRuntime, SIZE_HINT)
 class ZombieReactiveParallelThreadedStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL, ZombieRuntime,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduces size
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 class ZombieReactiveParallelThreadedNoFusingStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, ZombieRuntime,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduces size
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieSingleThreadedNoFusingTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)

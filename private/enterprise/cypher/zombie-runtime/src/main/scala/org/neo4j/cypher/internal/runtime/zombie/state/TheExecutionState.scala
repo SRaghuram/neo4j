@@ -25,9 +25,9 @@ class TheExecutionState(stateDefinition: StateDefinition,
                         workerWaker: WorkerWaker,
                         queryContext: QueryContext,
                         queryState: QueryState,
-                        resources: QueryResources) extends ExecutionState {
+                        resources: QueryResources,
+                        tracker: QueryCompletionTracker) extends ExecutionState {
 
-  private val tracker: QueryCompletionTracker = stateFactory.newTracker(queryState.subscriber, queryState.demandControlSubscription, queryContext)
 
   // Verify that IDs and offsets match
 
@@ -180,7 +180,7 @@ class TheExecutionState(stateDefinition: StateDefinition,
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
     val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
     if (pipeline.checkHasDemand) {
-      hasWork && queryState.demandControlSubscription.hasDemand
+      hasWork && queryState.flowControl.hasDemand
     } else {
       hasWork
     }
@@ -196,10 +196,6 @@ class TheExecutionState(stateDefinition: StateDefinition,
 
   override def failQuery(throwable: Throwable): Unit = {
     tracker.error(throwable)
-  }
-
-  override def awaitCompletion(): Unit = {
-    tracker.await()
   }
 
   override def isCompleted: Boolean = tracker.isCompleted

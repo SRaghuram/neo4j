@@ -56,10 +56,10 @@ object OperatorCodeGenHelperTemplates {
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
                                                             invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
-  val SUBSCRIPTION: LocalVariable = variable[DemandControlSubscription]("subscription",
-                                                                        invoke(QUERY_STATE, method[QueryState, DemandControlSubscription]("demandControlSubscription")))
+  val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
+                                                          invoke(QUERY_STATE, method[QueryState, FlowControl]("flowControl")))
   val DEMAND: LocalVariable = variable[Long]("demand",
-                                             invoke(load(SUBSCRIPTION), method[DemandControlSubscription, Long]("getDemand")))
+                                             invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
 
   val SERVED: LocalVariable = variable[Long]("served", constant(0L))
 
@@ -82,7 +82,7 @@ object OperatorCodeGenHelperTemplates {
   val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("finishedWriting"))
   val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
   val UPDATE_DEMAND: IntermediateRepresentation =
-    invokeSideEffect(load(SUBSCRIPTION), method[DemandControlSubscription, Unit, Long]("addServed"), load(SERVED))
+    invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
 
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(

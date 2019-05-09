@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.zombie.ExecutionState
 import org.neo4j.cypher.internal.runtime.zombie.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Buffer
@@ -21,12 +20,10 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 trait StateFactory {
   def newBuffer[T <: AnyRef](): Buffer[T]
   def newTracker(subscriber: QuerySubscriber,
-                 demandControlSubscription: DemandControlSubscription,
                  queryContext: QueryContext): QueryCompletionTracker
   def newIdAllocator(): IdAllocator
   def newLock(id: String): Lock
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
-  def newDemandControlSubscription: DemandControlSubscription
 }

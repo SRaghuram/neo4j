@@ -16,7 +16,7 @@ import org.neo4j.values.AnyValue
   */
 case class QueryState(params: Array[AnyValue],
                       subscriber: QuerySubscriber,
-                      demandControlSubscription: DemandControlSubscription,
+                      flowControl: FlowControl,
                       visitor: QueryResultVisitor[_ <: Exception],
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],

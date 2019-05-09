@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
-import org.neo4j.cypher.internal.runtime.morsel.DemandControlSubscription
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.zombie.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}

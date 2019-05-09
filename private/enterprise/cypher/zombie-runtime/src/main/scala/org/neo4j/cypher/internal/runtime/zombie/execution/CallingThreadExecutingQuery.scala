@@ -18,28 +18,26 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   worker: Worker)
   extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer)
   with QuerySubscription {
+  private val flowControl = queryState.flowControl
 
   override def request(numberOfRecords: Long): Unit = {
-    queryState.demandControlSubscription.request(numberOfRecords)
+    flowControl.request(numberOfRecords)
   }
 
   override def cancel(): Unit = {
-    queryState.demandControlSubscription.cancel()
+    flowControl.cancel()
   }
 
   override def await(): Boolean = {
-    while (!executionState.isCompleted && queryState.demandControlSubscription.hasDemand) {
+    //TODO: move this to request? (this is consistent to how it is done in ReactiveIterator)
+    while (!executionState.isCompleted && flowControl.hasDemand) {
       worker.workOnQuery(this)
     }
 
-    if (executionState.isCompleted) {
-      try {
-        executionState.awaitCompletion()
-      } finally {
-        queryExecutionTracer.stopQuery()
-      }
+    val hasMore = flowControl.await()
+    if (!hasMore) {
+      queryExecutionTracer.stopQuery()
     }
-
-    !executionState.isCompleted
+    hasMore
   }
 }
