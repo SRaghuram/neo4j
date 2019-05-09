@@ -85,38 +85,6 @@ public class DumpIndexStatisticsStore
             this.schema = schema;
         }
 
-        @Override
-        public void visitIndexStatistics( long indexId, long updates, long size )
-        {
-            if ( schema != null )
-            {
-                SchemaDescriptor descriptor = schema.indexes.get( indexId ).schema();
-                String tokenIds = getTokenIds( descriptor );
-                out.printf( "\tIndexStatistics[(%s {%s})]:\tupdates=%d, size=%d%n", tokenIds,
-                        schema.tokens( schema.propertyKeyTokens, "propertyKey", descriptor.getPropertyIds() ), updates, size );
-            }
-            else
-            {
-                out.printf( "\tIndexStatistics[%d]:\tupdates=%d, size=%d%n", indexId, updates, size );
-            }
-        }
-
-        @Override
-        public void visitIndexSample( long indexId, long unique, long size )
-        {
-            if ( schema != null )
-            {
-                SchemaDescriptor descriptor = schema.indexes.get( indexId ).schema();
-                String tokenIds = getTokenIds( descriptor );
-                out.printf( "\tIndexSample[(%s {%s})]:\tunique=%d, size=%d%n", tokenIds,
-                        schema.tokens( schema.propertyKeyTokens, "propertyKey", descriptor.getPropertyIds() ), unique, size );
-            }
-            else
-            {
-                out.printf( "\tIndexSample[%d]:\tunique=%d, size=%d%n", indexId, unique, size );
-            }
-        }
-
         private String getTokenIds( SchemaDescriptor descriptor )
         {
             String tokenIds;
@@ -132,6 +100,24 @@ public class DumpIndexStatisticsStore
                 throw new IllegalStateException( "Indexing is not supported for EntityType: " + descriptor.entityType() );
             }
             return tokenIds;
+        }
+
+        @Override
+        public void visitIndexStatistics( long indexId, long sampleUniqueValues, long sampleSize, long updatesCount, long indexSize )
+        {
+            if ( schema != null )
+            {
+                SchemaDescriptor descriptor = schema.indexes.get( indexId ).schema();
+                String tokenIds = getTokenIds( descriptor );
+                out.printf( "\tIndexStatistics[(%s {%s})]:\tunique=%d, sampleSize=%d, updates=%d, indexSize=%d%n", tokenIds,
+                        schema.tokens( schema.propertyKeyTokens, "propertyKey", descriptor.getPropertyIds() ),
+                        sampleUniqueValues, sampleSize, updatesCount, indexSize );
+            }
+            else
+            {
+                out.printf( "\tIndexStatistics[%d]:\tunique=%d, sampleSize=%d, updates=%d, indexSize=%d%n",
+                        indexId, sampleUniqueValues, sampleSize, updatesCount, indexSize );
+            }
         }
     }
 }
