@@ -174,26 +174,10 @@ public class UserManagementProcedures extends AuthProceduresBase
     public void grantPrivilegeToRole(
             @Name( "roleName" ) String roleName,
             @Name( "action" ) String action,
-            @Name( "resource" ) String resource ) throws InvalidArgumentsException
-    {
-        DatabasePrivilege privilege = new DatabasePrivilege();
-        privilege.addPrivilege( new ResourcePrivilege(
-                asAction( action ),
-                Resource.parse( resource, null, null ) )
-        );
-        userManager.grantPrivilegeToRole( roleName, privilege );
-    }
-
-    @Admin
-    @Description( "Grant privilege to role." )
-    @Procedure( name = "dbms.security.grantPrivilegeToRole", mode = DBMS )
-    public void grantPrivilegeToRole(
-            @Name( "roleName" ) String roleName,
-            @Name( "action" ) String action,
             @Name( "resource" ) String resource,
-            @Name( "database" ) String database ) throws InvalidArgumentsException
+            @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
         privilege.addPrivilege( new ResourcePrivilege(
                 asAction( action ),
                 Resource.parse( resource, null, null ) )
@@ -207,26 +191,10 @@ public class UserManagementProcedures extends AuthProceduresBase
     public void revokePrivilegeFromRole(
             @Name( "roleName" ) String roleName,
             @Name( "action" ) String action,
-            @Name( "resource" ) String resource ) throws InvalidArgumentsException
-    {
-        DatabasePrivilege privilege = new DatabasePrivilege();
-        privilege.addPrivilege( new ResourcePrivilege(
-                asAction( action ),
-                Resource.parse( resource, null, null ) )
-        );
-        userManager.revokePrivilegeFromRole( roleName, privilege );
-    }
-
-    @Admin
-    @Description( "Revoke privilege from role." )
-    @Procedure( name = "dbms.security.revokePrivilegeFromRole", mode = DBMS )
-    public void revokePrivilegeFromRole(
-            @Name( "roleName" ) String roleName,
-            @Name( "action" ) String action,
             @Name( "resource" ) String resource,
-            @Name( "database" ) String database ) throws InvalidArgumentsException
+            @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege( database );
+        DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
         privilege.addPrivilege( new ResourcePrivilege(
                 asAction( action ),
                 Resource.parse( resource, null, null ) )

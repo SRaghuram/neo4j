@@ -524,10 +524,10 @@ class UserManagementProceduresLoggingTest
         log.clear();
 
         // When
-        authProcedures.grantPrivilegeToRole( "foo", "read", "graph", "*" );
+        authProcedures.grantPrivilegeToRole( "foo", "read", "graph", "" );
 
         // Then
-        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, "graph", "*", "foo" ) );
+        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for %s to role `%s`", Action.READ, "graph", "all databases", "foo" ) );
     }
 
     @Test
@@ -539,19 +539,19 @@ class UserManagementProceduresLoggingTest
 
         // When
         InvalidArgumentsException exception =
-                assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "bar", "read", "graph", "*" ) );
+                assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "bar", "read", "graph", "" ) );
         assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "bar", "graph", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "bar", "graph", "" ) );
         assertThat( exception.getMessage(), equalTo( "'bar' is not a valid action" ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "write", "bar", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "write", "bar", "" ) );
         assertThat( exception.getMessage(), equalTo( "'bar' is not a valid resource" ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "execute", "schema", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "execute", "schema", "" ) );
         assertThat( exception.getMessage(), equalTo( "Schema resource cannot be combined with action 'execute'" ) );
 
         // Then
         log.assertExactly(
-                error( "[admin]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                        Action.READ, "graph", "*", "bar", "Role 'bar' does not exist." )
+                error( "[admin]: tried to grant `%s` privilege on `%s` for %s to role `%s`: %s",
+                        Action.READ, "graph", "all databases", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -564,12 +564,12 @@ class UserManagementProceduresLoggingTest
         log.clear();
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.grantPrivilegeToRole( "foo", "write", "graph", "*" ) );
+        catchAuthorizationViolation( () -> authProcedures.grantPrivilegeToRole( "foo", "write", "graph", "" ) );
 
         // Then
         log.assertExactly(
-                error( "[mats]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                        Action.WRITE, "graph", "*", "foo", "Permission denied." )
+                error( "[mats]: tried to grant `%s` privilege on `%s` for %s to role `%s`: %s",
+                        Action.WRITE, "graph", "all databases", "foo", "Permission denied." )
         );
     }
 
@@ -581,10 +581,10 @@ class UserManagementProceduresLoggingTest
         log.clear();
 
         // When
-        authProcedures.revokePrivilegeFromRole( "foo", "read", "graph", "*" );
+        authProcedures.revokePrivilegeFromRole( "foo", "read", "graph", "" );
 
         // Then
-        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, "graph", "*", "foo" ) );
+        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for %s from role `%s`", Action.READ, "graph", "all databases", "foo" ) );
     }
 
     @Test
@@ -596,19 +596,19 @@ class UserManagementProceduresLoggingTest
 
         // When
         InvalidArgumentsException exception =
-                assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "bar", "read", "graph", "*" ) );
+                assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "bar", "read", "graph", "" ) );
         assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "bar", "graph", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "bar", "graph", "" ) );
         assertThat( exception.getMessage(), equalTo( "'bar' is not a valid action" ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "bar", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "bar", "" ) );
         assertThat( exception.getMessage(), equalTo( "'bar' is not a valid resource" ) );
-        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "execute", "schema", "*" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "execute", "schema", "" ) );
         assertThat( exception.getMessage(), equalTo( "Schema resource cannot be combined with action 'execute'" ) );
 
         // Then
         log.assertExactly(
-                error( "[admin]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                        Action.READ, "graph", "*", "bar", "Role 'bar' does not exist." )
+                error( "[admin]: tried to revoke `%s` privilege on `%s` for %s from role `%s`: %s",
+                        Action.READ, "graph", "all databases", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -621,12 +621,12 @@ class UserManagementProceduresLoggingTest
         log.clear();
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "graph", "*" ) );
+        catchAuthorizationViolation( () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "graph", "" ) );
 
         // Then
         log.assertExactly(
-                error( "[mats]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                        Action.WRITE, "graph", "*", "foo", "Permission denied." )
+                error( "[mats]: tried to revoke `%s` privilege on `%s` for %s from role `%s`: %s",
+                        Action.WRITE, "graph", "all databases", "foo", "Permission denied." )
         );
     }
 
