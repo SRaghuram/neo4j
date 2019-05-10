@@ -3,33 +3,26 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.jmh.api.benchmarks.test_only;
+package com.neo4j.bench.jmh.api.benchmarks.valid;
 
 import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.Param;
 
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
-import static org.openjdk.jmh.annotations.Mode.SampleTime;
-import static org.openjdk.jmh.annotations.Mode.Throughput;
 
 @BenchmarkEnabled( true )
-public class ValidEnabledBenchmark1 extends BaseBenchmark
+public class ValidEnabledGroupBenchmark extends BaseBenchmark
 {
-    @ParamValues(
-            allowed = {"1", "2"},
-            base = {"1"} )
-    @Param( {} )
-    public int ValidEnabledBenchmark1_number;
-
     @ParamValues(
             allowed = {"a", "b"},
             base = {"a", "b"} )
     @Param( {} )
-    public String ValidEnabledBenchmark1_string;
+    public String ValidEnabledGroupBenchmark_string;
 
     @Override
     public String benchmarkGroup()
@@ -49,14 +42,16 @@ public class ValidEnabledBenchmark1 extends BaseBenchmark
         return false;
     }
 
+    @Group( "group" )
     @Benchmark
-    @BenchmarkMode( {SampleTime} )
+    @BenchmarkMode( {AverageTime} )
     public void methodOne()
     {
     }
 
+    @Group( "group" )
     @Benchmark
-    @BenchmarkMode( {Throughput, AverageTime} )
+    @BenchmarkMode( {AverageTime} )
     public void methodTwo()
     {
     }
