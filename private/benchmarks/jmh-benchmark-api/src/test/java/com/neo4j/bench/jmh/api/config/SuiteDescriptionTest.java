@@ -97,7 +97,7 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         assertThat( groupBenchmarks.toString(), groupBenchmarks.size(), equalTo( 1 ) );
 
         List<String> exampleBenchmarks = groupBenchmarks.get( "Example" );
-        assertThat( exampleBenchmarks.size(), equalTo( 8 ) );
+        assertThat( exampleBenchmarks.size(), equalTo( 9 ) );
         getAnnotations().getBenchmarks().forEach(
                 benchmark -> assertTrue( exampleBenchmarks.contains( benchmark.getName() ) ) );
     }
