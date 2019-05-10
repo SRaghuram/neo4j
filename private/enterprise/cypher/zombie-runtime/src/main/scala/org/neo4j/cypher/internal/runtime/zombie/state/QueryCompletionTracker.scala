@@ -134,13 +134,11 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     val newCount = count.decrementAndGet()
     Zombie.debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
-      synchronized {
         try {
           tracer.stopQuery()
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         } finally {
           releaseLatch()
-        }
       }
     }
     else if (newCount < 0)
@@ -181,11 +179,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (!isCompleted) {
       //there is new demand make sure to reset the latch
       if (numberOfRecords > 0) {
-        synchronized {
-          if (latch.getCount == 0) {
-            latch = new CountDownLatch(1)
-          }
-        }
+        resetLatch()
         demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
           val newDemand = oldVal + newVal
           //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
@@ -218,9 +212,13 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     !isCompleted
   }
 
-  private def releaseLatch(): Unit = {
-    synchronized {
-      latch.countDown()
+  private def releaseLatch(): Unit = synchronized {
+    latch.countDown()
+  }
+
+  private def resetLatch(): Unit = synchronized {
+    if (latch.getCount == 0) {
+      latch = new CountDownLatch(1)
     }
   }
 }
