@@ -113,36 +113,24 @@ class Worker(val workerId: Int,
 }
 
 class Sleeper(val workerId: Int,
-              private val idleThreshold: Int = 1,
               private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
+
   private val sleepNs = sleepDuration.toNanos
-  private var idleCounter = 0
+  private var isIdle = false
   private var workStreak = 0
   @volatile private var sleepy: Boolean = false
 
   def reportWork(): Unit = {
-    if (idleCounter > 0) {
-      DebugSupport.logWorker(s"Worker($workerId) worked after idling $idleCounter times")
-      idleCounter = 0
-      sleepy = false
-    } else {
-      workStreak += 1
-    }
+    workStreak += 1
   }
 
   def reportIdle(): Unit = {
-    if (idleCounter == 0) {
-      DebugSupport.logWorker(s"Worker($workerId) idling after working $workStreak times")
-      workStreak = 0
-    }
-    idleCounter += 1
-    if (idleCounter == idleThreshold) {
-      sleepy = true
-    } else if (idleCounter > idleThreshold) {
-      DebugSupport.logWorker(s"Worker($workerId) parked")
-      LockSupport.parkNanos(sleepNs)
-      DebugSupport.logWorker(s"Worker($workerId) unparked")
-    }
+    DebugSupport.logWorker(s"Worker($workerId) parked after working $workStreak times")
+    workStreak = 0
+    sleepy = true
+    LockSupport.parkNanos(sleepNs)
+    DebugSupport.logWorker(s"Worker($workerId) unparked")
+    sleepy = false
   }
 
   def isSleepy: Boolean = sleepy
