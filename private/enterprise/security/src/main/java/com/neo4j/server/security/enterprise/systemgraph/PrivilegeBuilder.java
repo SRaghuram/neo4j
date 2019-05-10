@@ -60,9 +60,6 @@ class PrivilegeBuilder
 
     PrivilegeBuilder onResource( NodeValue resource ) throws InvalidArgumentsException
     {
-//        TextArray labels = resource.labels();
-//        assert (labels.length() == 1);
-//        String type = labels.stringValue( 0 );
         String type = ((TextValue) resource.properties().get( "type" )).stringValue();
         Resource.Type resourceType = asResourceType( type );
         switch ( resourceType )

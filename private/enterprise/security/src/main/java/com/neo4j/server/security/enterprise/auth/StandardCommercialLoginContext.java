@@ -111,15 +111,17 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final Set<String> roles;
         private final boolean allowsReadAllPropertiesAllLabels;
         private final Set<Integer> whitelistedNodeProperties;
+        private final Set<Integer> whitelistedLabelsForAllProperties;
         private final Map<Integer, Set<Integer>> whitelistedLabelsForProperty;
-        private final IntPredicate propertyPermissions; // TODO translate this to blacklistedPropertiesForAllLabels
+        private final IntPredicate propertyPermissions;
         private final boolean isAdmin;
         private final boolean allowsTraverseAllLabels;
         private final Set<Integer> whitelistTraverseLabels;
 
         StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
                 boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions,
-                boolean allowsReadAllPropertiesAllLabels, Map<Integer,Set<Integer>> whitelistedLabelsForProperty, Set<Integer> whitelistedNodeProperties,
+                boolean allowsReadAllPropertiesAllLabels, Set<Integer> whitelistedLabelsForAllProperties,
+                Map<Integer,Set<Integer>> whitelistedLabelsForProperty, Set<Integer> whitelistedNodeProperties,
                 boolean allowsTraverseAllLabels, Set<Integer> whitelistTraverseLabels )
         {
             this.allowsReads = allowsReads;
@@ -131,6 +133,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
             this.allowsReadAllPropertiesAllLabels = allowsReadAllPropertiesAllLabels;
+            this.whitelistedLabelsForAllProperties = whitelistedLabelsForAllProperties;
             this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
             this.whitelistedNodeProperties = whitelistedNodeProperties;
             this.allowsTraverseAllLabels = allowsTraverseAllLabels;
@@ -191,7 +194,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             IntStream labels = Arrays.stream( labelSupplier.get() );
             return allowsReadPropertyAllLabels( propertyKey ) ||
                     labels.anyMatch( l1 -> whitelistedLabelsForProperty.getOrDefault( propertyKey, Collections.emptySet() ).contains( l1 ) ) ||
-                    Arrays.stream( labelSupplier.get() ).anyMatch( l -> whitelistedLabelsForProperty.getOrDefault( -1, Collections.emptySet() ).contains( l ) );
+                    Arrays.stream( labelSupplier.get() ).anyMatch( whitelistedLabelsForAllProperties::contains );
         }
 
         @Override
@@ -252,6 +255,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean admin;
             private IntPredicate propertyPermissions;
             private boolean whitelistAllPropertiesInWholeGraph;
+            private Set<Integer> allowedSegmentForAllProperties = new HashSet<>();
             private Map<Integer, Set<Integer>> allowedSegmentForProperty = new HashMap<>();
             private Set<Integer> whitelistNodeProperties = new HashSet<>();
             private boolean allowsTraverseAllLabels;
@@ -283,6 +287,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         roles,
                         propertyPermissions,
                         whitelistAllPropertiesInWholeGraph,
+                        allowedSegmentForAllProperties,
                         allowedSegmentForProperty,
                         whitelistNodeProperties,
                         allowsTraverseAllLabels,
@@ -343,12 +348,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                // TODO replace with another Set<>?
-                                Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( -1, label -> new HashSet<>() ); // TODO MAGIC
                                 for ( String label : privilege.getSegment().getLabels() )
                                 {
                                     int labelId = resolveLabelId( label );
-                                    allowedNodesWithLabels.add( labelId );
+                                    allowedSegmentForAllProperties.add( labelId );
                                 }
                             }
                             break;

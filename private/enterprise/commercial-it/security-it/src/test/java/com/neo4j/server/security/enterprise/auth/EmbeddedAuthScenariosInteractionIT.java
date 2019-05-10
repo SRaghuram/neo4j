@@ -494,20 +494,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( subject, "MATCH (n:A) return count(n)", r -> assertKeyIs( r, "count(n)", 2 ) );
         assertSuccess( adminSubject, "MATCH (n:Node) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
         assertSuccess( subject, "MATCH (n:Node) return count(n)", r -> assertKeyIs( r, "count(n)", 1 ) );
-    }
-
-    @Test
-    void shouldOnlyShowLabelsForScope() throws Throwable
-    {
-        CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
-        );
-
-        assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
-        assertEmpty( adminSubject, "CREATE (:A), (:B), (:A:B), ()" );
-
-        assertSuccess( subject, "MATCH (n) RETURN labels(n)",
-                r -> assertKeyIs( r, "labels(n)", Collections.singletonList( "A" ), List.of( "A", "B" ) ) );
+        assertSuccess( adminSubject, "MATCH (n:NonExistent) return count(n)", r -> assertKeyIs( r, "count(n)", 0 ) );
+        assertSuccess( subject, "MATCH (n:NonExistent) return count(n)", r -> assertKeyIs( r, "count(n)", 0 ) );
     }
 
     @Test

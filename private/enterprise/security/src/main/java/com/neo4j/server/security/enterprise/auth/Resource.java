@@ -11,7 +11,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 public interface Resource
 {
-    // Only used by procedures, should be removed as soon as the DDL is in place
+    // TODO Only used by procedures, should be removed as soon as the DDL is in place
     static Resource parse( String type, String arg1, String arg2 ) throws InvalidArgumentsException
     {
         try

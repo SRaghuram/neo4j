@@ -45,4 +45,10 @@ public class Segment
         }
         return false;
     }
+
+    @Override
+    public String toString()
+    {
+        return labels.isEmpty() ? "All labels" : "labels: " + String.join( ",", labels );
+    }
 }

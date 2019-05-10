@@ -371,7 +371,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
     Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
-        // TODO add existenceConstraint on :Action(action)
         String query =
                 "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment)," +
                 "(a)-[:APPLIES_TO]->(res) " +

@@ -13,7 +13,6 @@ public class ResourcePrivilege
     private final Resource resource;
     private final Segment segment;
 
-    // Used for testing only
     public ResourcePrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
         this( action, resource, Segment.ALL );
@@ -45,7 +44,7 @@ public class ResourcePrivilege
     @Override
     public String toString()
     {
-        return String.format( "(%s, %s)", getAction(), getResource() );
+        return String.format( "(%s, %s, %s)", getAction(), getResource(), getSegment() );
     }
 
     @Override
@@ -70,19 +69,10 @@ public class ResourcePrivilege
         /** MATCH element and read labels */
         FIND,
 
-        /** Create new element and properties */
-        CREATE,
-
         /** Read properties of element */
         READ,
 
-        /** Change value of existing property (later on change label) */
-        UPDATE,
-
-        /** Delete property/element */
-        DELETE,
-
-        /** CREATE + UPDATE + DELETE */
+        /** Create, update and delete elements and properties */
         WRITE,
 
         /** Execute procedure/view with elevated access */

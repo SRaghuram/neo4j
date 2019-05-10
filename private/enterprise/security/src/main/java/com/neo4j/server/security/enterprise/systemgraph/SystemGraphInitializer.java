@@ -73,6 +73,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
             queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
             queryExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+            queryExecutor.executeQuery( "CREATE CONSTRAINT ON (a:Action) ASSERT exists(a.action)", Collections.emptyMap(), resultVisitor );
 
             ensureDefaultDatabases();
 
