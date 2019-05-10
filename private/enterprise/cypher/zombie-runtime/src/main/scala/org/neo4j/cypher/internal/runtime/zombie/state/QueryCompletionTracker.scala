@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.morsel.FlowControl
+import org.neo4j.cypher.internal.runtime.scheduling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.zombie.Zombie
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -45,7 +46,8 @@ trait QueryCompletionTracker extends FlowControl {
   * Not thread-safe implementation of [[QueryCompletionTracker]].
   */
 class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
-                                     queryContext: QueryContext) extends QueryCompletionTracker {
+                                     queryContext: QueryContext,
+                                     tracer: QueryExecutionTracer) extends QueryCompletionTracker {
   private var count = 0L
   private var throwable: Throwable = _
   private var demand = 0L
@@ -62,6 +64,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
     if (count == 0) {
+      tracer.stopQuery()
       subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
     }
     count
@@ -113,7 +116,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   * Concurrent implementation of [[QueryCompletionTracker]].
   */
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
-                                       queryContext: QueryContext) extends QueryCompletionTracker {
+                                       queryContext: QueryContext,
+                                       tracer: QueryExecutionTracer) extends QueryCompletionTracker {
   private val count = new AtomicLong(0)
   private val errors = new ConcurrentLinkedQueue[Throwable]()
   private var latch = new CountDownLatch(1)
@@ -132,6 +136,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (newCount == 0) {
       synchronized {
         try {
+          tracer.stopQuery()
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         } finally {
           releaseLatch()

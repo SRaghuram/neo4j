@@ -60,7 +60,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber): QuerySubscription = {
 
-    val tracker = ConcurrentStateFactory.newTracker(subscriber, queryContext)
+    val tracer = schedulerTracer.traceQuery()
+    val tracker = ConcurrentStateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
                                 subscriber,
                                 tracker,
@@ -91,7 +92,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
     val executingQuery = new ExecutingQuery(executionState,
                                             queryContext,
                                             queryState,
-                                            schedulerTracer.traceQuery())
+                                            tracer)
 
     queryManager.addQuery(executingQuery)
     tracker

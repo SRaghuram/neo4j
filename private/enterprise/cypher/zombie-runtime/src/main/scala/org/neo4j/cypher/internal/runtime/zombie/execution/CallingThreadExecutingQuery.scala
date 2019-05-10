@@ -34,10 +34,6 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
       worker.workOnQuery(this)
     }
 
-    val hasMore = flowControl.await()
-    if (!hasMore) {
-      queryExecutionTracer.stopQuery()
-    }
-    hasMore
+    flowControl.await()
   }
 }

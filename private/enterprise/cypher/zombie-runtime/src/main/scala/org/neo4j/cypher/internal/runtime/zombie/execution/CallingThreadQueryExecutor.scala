@@ -36,7 +36,8 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        subscriber: QuerySubscriber): QuerySubscription = {
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
-    val tracker = StandardStateFactory.newTracker(subscriber, queryContext)
+    val tracer = schedulerTracer.traceQuery()
+    val tracker = StandardStateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
                                 subscriber,
                                 tracker,
@@ -64,7 +65,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
     new CallingThreadExecutingQuery(executionState,
                                     queryContext,
                                     queryState,
-                                    schedulerTracer.traceQuery(),
+                                    tracer,
                                     worker)
   }
 }
