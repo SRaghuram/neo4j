@@ -53,7 +53,7 @@ public class BenchmarkGroupBenchmarkMetrics
         benchmarkMetrics.put( benchmark, new AnnotatedMetrics( metrics, neo4jConfig ) );
     }
 
-    List<BenchmarkGroupBenchmark> benchmarkGroupBenchmarks()
+    public List<BenchmarkGroupBenchmark> benchmarkGroupBenchmarks()
     {
         return inner.keySet().stream()
                     .flatMap( group -> inner.get( group ).keySet().stream()

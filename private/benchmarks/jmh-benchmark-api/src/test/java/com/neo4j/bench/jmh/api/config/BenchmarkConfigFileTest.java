@@ -5,9 +5,8 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidDisabledBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark1;
-import org.junit.Before;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -29,16 +28,6 @@ import static org.junit.Assert.assertTrue;
 
 public class BenchmarkConfigFileTest extends AnnotationsFixture
 {
-    private SuiteDescription suiteDescription;
-
-    @Before
-    public void setup()
-    {
-        Validation validation = new Validation();
-        suiteDescription = SuiteDescription.byReflection( getAnnotations(), validation );
-        assertTrue( validation.report(), validation.isValid() );
-    }
-
     // READ
 
     @Test
@@ -173,6 +162,8 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteBenchmark()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
                 newHashSet( ValidEnabledBenchmark1.class.getName() ),
@@ -187,6 +178,8 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteTwoBenchmarks()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
                 newHashSet( ValidEnabledBenchmark1.class.getName(), ValidDisabledBenchmark.class.getName() ),
@@ -203,6 +196,8 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteVerboseBenchmark()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
                 newHashSet( ValidEnabledBenchmark1.class.getName() ),
@@ -226,6 +221,8 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteDisabledBenchmarks()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+
         Set<String> enabled = newHashSet( ValidEnabledBenchmark1.class.getName() );
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
@@ -243,6 +240,8 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteVerboseDisabledBenchmark()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
                 new HashSet<>(),

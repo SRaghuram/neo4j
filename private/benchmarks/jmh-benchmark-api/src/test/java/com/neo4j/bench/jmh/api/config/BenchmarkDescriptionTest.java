@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.jmh.api.benchmarks.test_only.DuplicateAllowedBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.DuplicateBaseBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidDisabledBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark1;
+import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateAllowedBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateBaseBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.Test;
 import org.openjdk.jmh.annotations.Mode;
 
@@ -788,7 +788,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     public void shouldExplodeEqualNumberOfElementsToExecutionCount()
     {
         Validation validation = new Validation();
-        for ( Class benchmarkClass : getAnnotations().benchmarks() )
+        for ( Class benchmarkClass : getValidAnnotations().getBenchmarks() )
         {
             BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, getAnnotations() );
             int executionCount = benchmark.executionCount( 1 );

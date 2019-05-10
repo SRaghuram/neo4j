@@ -26,9 +26,9 @@ import static java.util.stream.Collectors.toSet;
  */
 public class SuiteDescription
 {
-    public static SuiteDescription byReflection( Annotations annotations, Validation validation )
+    public static SuiteDescription fromAnnotations( Annotations annotations, Validation validation )
     {
-        Map<String,BenchmarkDescription> benchmarkDescriptions = annotations.benchmarks().stream()
+        Map<String,BenchmarkDescription> benchmarkDescriptions = annotations.getBenchmarks().stream()
                                                                             .map( clazz -> BenchmarkDescription.of( clazz, validation, annotations ) )
                                                                             .collect( toMap( BenchmarkDescription::className, identity() ) );
         return new SuiteDescription( benchmarkDescriptions );
