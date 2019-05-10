@@ -85,6 +85,41 @@ abstract class Runner
         return finalBenchmarks;
     }
 
+    /**
+     * This method is intended for running individual Benchmark classes from your dev. environment.
+     * It therefore honours more JMH annotations than full standalone execution, and also allows selection of only
+     * some of the benchmarks within a class.
+     */
+    public static SuiteDescription createSuiteDescriptionFor( Class<? extends BaseBenchmark> benchmarkClass, String... methods )
+    {
+        String packageName = benchmarkClass.getPackage().getName();
+
+        Annotations annotations = new Annotations( packageName );
+        AnnotationsValidationResult annotationsValidationResult = annotations.validate();
+        if ( !annotationsValidationResult.isValid() )
+        {
+            throw new RuntimeException( annotationsValidationResult.message() );
+        }
+
+        Validation validation = new Validation();
+        // force enable the benchmark, in case it is disabled by default
+        BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, annotations ).copyAndEnable();
+        assertValid( validation );
+        if ( methods != null && methods.length != 0 )
+        {
+            benchmark = benchmark.copyRetainingMethods( methods );
+        }
+
+        SuiteDescription finalBenchmarks = SuiteDescription.fromBenchmarkDescription( benchmark );
+
+        // TODO maybe move that into Validation
+        if ( finalBenchmarks.count() == 0 )
+        {
+            throw new RuntimeException( "No benchmarks were enabled" );
+        }
+        return finalBenchmarks;
+    }
+
     public BenchmarkGroupBenchmarkMetrics run(
             SuiteDescription suiteDescription,
             List<ProfilerType> profilerTypes,
@@ -187,57 +222,6 @@ abstract class Runner
             throw new RuntimeException( e );
         }
     }
-
-    /**
-     * This method is intended for running individual Benchmark classes from your dev. environment.
-     * It therefore honours more JMH annotations than full standalone execution, and also allows selection of only
-     * some of the benchmarks within a class.
-     */
-//    static void runBenchmark(
-//            Class<?> benchmarkClass,
-//            List<ProfilerType> profilerTypes,
-//            Path workDir,
-//            boolean generateStoresInFork,
-//            int executeForks,
-//            ErrorPolicy errorPolicy,
-//            Jvm jvm,
-//            String... methods )
-//    {
-//        Annotations.AnnotationsValidationResult annotationsValidationResult = new Annotations().validate();
-//        if ( !annotationsValidationResult.isValid() )
-//        {
-//            throw new RuntimeException( annotationsValidationResult.message() );
-//        }
-//
-//        Validation validation = new Validation();
-//        // force enable the benchmark, in case it is disabled by default
-//        BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation ).copyAndEnable();
-//        assertValid( validation );
-//        if ( methods != null && methods.length != 0 )
-//        {
-//            benchmark = benchmark.copyRetainingMethods( methods );
-//        }
-//        List<BenchmarkDescription> benchmarks = Collections.singletonList( benchmark );
-//
-//        String[] noJvmArgs = {};
-//        ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
-//        int[] threadCounts = {1};
-//        String[] jmhArgs = new String[]{"-f", Integer.toString( executeForks )};
-//
-//        runBenchmarks(
-//                new BenchmarkGroupBenchmarkMetrics(),
-//                benchmarks,
-//                profileDescriptor,
-//                neo4jConfig,
-//                threadCounts,
-//                jvm,
-//                noJvmArgs,
-//                jmhArgs,
-//                workDir,
-//                generateStoresInFork,
-//                errorReporter,
-//                ( builder, className ) -> applyAnnotations( benchmarkClassForName( className ), builder ) );
-//    }
 
     //------------------------------------- CALLBACKS -------------------------------------
 
