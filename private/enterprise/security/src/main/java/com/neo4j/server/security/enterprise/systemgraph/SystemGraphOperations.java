@@ -260,7 +260,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
     }
 
-
     private void addSegmentQualifierToPrivilege( Transaction tx, long segmentNodeId, Segment segment )
     {
         if ( !segment.equals( Segment.ALL ) )
