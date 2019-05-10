@@ -43,8 +43,6 @@ import java.util.function.BiConsumer;
 import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromFile;
 import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
-import static com.neo4j.bench.jmh.api.config.RuntimeEstimator.estimatedRuntimeFor;
-import static com.neo4j.bench.jmh.api.config.RuntimeEstimator.storeGenerationFor;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.jmh.api.config.Validation.assertValid;
 import static java.lang.String.format;
@@ -131,16 +129,6 @@ abstract class Runner
             Jvm jvm,
             Path recordingsOutputDir )
     {
-        Duration durationEstimate = estimatedRuntimeFor( suiteDescription.benchmarks(), threadCounts, jmhArgs );
-        Duration storeGenerationDurationEstimate = storeGenerationFor( suiteDescription.benchmarks() );
-        Duration benchmarkDurationEstimateMs = durationEstimate.minus( storeGenerationDurationEstimate );
-        System.out.println( format( "ESTIMATED RUNTIME:     %s\n" +
-                                    "\t* Store Generation:     %s\n" +
-                                    "\t* Benchmark Execution:  %s\n",
-                                    durationToString( durationEstimate ),
-                                    durationToString( storeGenerationDurationEstimate ),
-                                    durationToString( benchmarkDurationEstimateMs ) ) );
-
         Instant start = Instant.now();
 
         try
