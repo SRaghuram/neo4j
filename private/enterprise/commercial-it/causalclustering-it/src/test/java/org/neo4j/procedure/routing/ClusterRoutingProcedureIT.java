@@ -27,7 +27,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;

@@ -42,7 +42,7 @@ public class ReadReplicaToReadReplicaCatchupIT
                     .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
                     .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" )
                     .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withDiscoveryServiceType( DiscoveryServiceType.AKKA );
+                    .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA );
 
     @Test
     public void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable

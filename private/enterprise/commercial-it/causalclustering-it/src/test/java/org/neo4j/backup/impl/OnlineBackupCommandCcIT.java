@@ -56,7 +56,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_topology_refresh;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV6;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;

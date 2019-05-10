@@ -20,7 +20,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 

@@ -18,7 +18,7 @@ class SecureClusterIpFamilyIT
     {
         AkkaIpv4NoWildcard()
         {
-            super( DiscoveryServiceType.AKKA, IPV4, false );
+            super( DiscoveryServiceType.Reliable.AKKA, IPV4, false );
         }
     }
 
@@ -27,7 +27,7 @@ class SecureClusterIpFamilyIT
     {
         AkkaIpv6NoWildcard()
         {
-            super( DiscoveryServiceType.AKKA, IPV6, false );
+            super( DiscoveryServiceType.Reliable.AKKA, IPV6, false );
         }
     }
 
@@ -36,7 +36,7 @@ class SecureClusterIpFamilyIT
     {
         AkkaIpv4Wildcard()
         {
-            super( DiscoveryServiceType.AKKA, IPV4, true );
+            super( DiscoveryServiceType.Reliable.AKKA, IPV4, true );
         }
     }
 
@@ -45,7 +45,7 @@ class SecureClusterIpFamilyIT
     {
         AkkaIpv6Wildcard()
         {
-            super( DiscoveryServiceType.AKKA, IPV6, true );
+            super( DiscoveryServiceType.Reliable.AKKA, IPV6, true );
         }
     }
 }

@@ -9,21 +9,36 @@ import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 
 import java.util.function.Supplier;
 
-public enum DiscoveryServiceType
+public interface DiscoveryServiceType
 {
-    AKKA( AkkaDiscoveryServiceFactory::new ),
-    AKKA_UNCLEAN_SHUTDOWN( AkkaUncleanShutdownDiscoveryServiceFactory::new ),
-    SHARED( SharedDiscoveryServiceFactory::new );
+    DiscoveryServiceFactory createFactory();
 
-    private final Supplier<DiscoveryServiceFactory> supplier;
-
-    DiscoveryServiceType( Supplier<DiscoveryServiceFactory> supplier )
+    enum Reliable implements DiscoveryServiceType
     {
-        this.supplier = supplier;
+        AKKA( AkkaDiscoveryServiceFactory::new ),
+        SHARED( SharedDiscoveryServiceFactory::new );
+
+        private final Supplier<DiscoveryServiceFactory> supplier;
+
+        Reliable( Supplier<DiscoveryServiceFactory> supplier )
+        {
+            this.supplier = supplier;
+        }
+
+        @Override
+        public DiscoveryServiceFactory createFactory()
+        {
+            return supplier.get();
+        }
     }
 
-    public DiscoveryServiceFactory createFactory()
+    interface Unreliable
     {
-        return supplier.get();
+        /**
+         * A version of Akka discovery service that does not cleanly shutdown cluster members. They just stop, and must be removed by the rest of the cluster.
+         * Intended to simulate a member crash or network partition, and only for use in tests that test recovery of clusters from such situations.
+         */
+        DiscoveryServiceType AKKA_UNCLEAN_SHUTDOWN = AkkaUncleanShutdownDiscoveryServiceFactory::new;
     }
 }
+

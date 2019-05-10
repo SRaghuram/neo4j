@@ -31,7 +31,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;

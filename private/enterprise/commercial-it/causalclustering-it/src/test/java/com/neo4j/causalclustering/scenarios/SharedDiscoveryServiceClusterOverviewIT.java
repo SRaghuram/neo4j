@@ -11,6 +11,6 @@ class SharedDiscoveryServiceClusterOverviewIT extends BaseClusterOverviewIT
 {
     SharedDiscoveryServiceClusterOverviewIT()
     {
-        super( DiscoveryServiceType.SHARED );
+        super( DiscoveryServiceType.Reliable.SHARED );
     }
 }

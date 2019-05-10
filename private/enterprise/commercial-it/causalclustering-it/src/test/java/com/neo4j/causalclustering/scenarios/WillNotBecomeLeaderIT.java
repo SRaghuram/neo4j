@@ -33,7 +33,7 @@ class WillNotBecomeLeaderIT
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
-            .withDiscoveryServiceType( DiscoveryServiceType.AKKA )
+            .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA )
             .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
 
     @Test

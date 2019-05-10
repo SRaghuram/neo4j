@@ -11,6 +11,6 @@ class AkkaDiscoveryServiceClusterOverviewIT extends BaseClusterOverviewIT
 {
     AkkaDiscoveryServiceClusterOverviewIT()
     {
-        super( DiscoveryServiceType.AKKA );
+        super( DiscoveryServiceType.Reliable.AKKA );
     }
 }

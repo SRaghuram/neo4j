@@ -66,7 +66,7 @@ class TokenReplicationStressIT
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withDiscoveryServiceType( DiscoveryServiceType.SHARED )
+                .withDiscoveryServiceType( DiscoveryServiceType.Reliable.SHARED )
                 .withSharedCoreParam( leader_election_timeout, "2s" ) );
 
         cluster.start();

@@ -13,7 +13,7 @@ class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
 {
     AkkaCoreTopologyServiceIT()
     {
-        super( DiscoveryServiceType.AKKA );
+        super( DiscoveryServiceType.Reliable.AKKA );
     }
 
     @Test

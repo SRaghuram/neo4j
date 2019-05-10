@@ -59,7 +59,7 @@ public class AkkaDiscoveryUncleanShutdownIT
     @Rule
     public ClusterRule clusterRule = new ClusterRule()
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
-            .withDiscoveryServiceType( DiscoveryServiceType.AKKA_UNCLEAN_SHUTDOWN )
+            .withDiscoveryServiceType( DiscoveryServiceType.Unreliable.AKKA_UNCLEAN_SHUTDOWN )
             .withNumberOfCoreMembers( coreMembers )
             .withNumberOfReadReplicas( 0 );
 
@@ -115,6 +115,7 @@ public class AkkaDiscoveryUncleanShutdownIT
             CoreClusterMember toRestart = shutdownCore( 0 );
             Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
             shutdownCore( 1 );
+            Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
             startCore( toRestart );
         } );
     }

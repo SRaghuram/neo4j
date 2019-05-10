@@ -101,7 +101,7 @@ public class ReadReplicaReplicationIT
     public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( NR_CORE_MEMBERS )
             .withNumberOfReadReplicas( NR_READ_REPLICAS )
             .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-            .withDiscoveryServiceType( DiscoveryServiceType.AKKA );
+            .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA );
 
     @Test
     public void shouldNotBeAbleToWriteToReadReplica() throws Exception

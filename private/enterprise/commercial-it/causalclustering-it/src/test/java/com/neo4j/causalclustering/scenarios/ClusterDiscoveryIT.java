@@ -29,7 +29,7 @@ import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;

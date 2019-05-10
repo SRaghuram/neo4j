@@ -28,7 +28,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.AKKA;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
