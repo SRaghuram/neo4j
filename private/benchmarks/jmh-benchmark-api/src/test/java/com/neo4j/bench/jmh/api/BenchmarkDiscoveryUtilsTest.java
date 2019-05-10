@@ -1,8 +1,8 @@
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidDisabledBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark1;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark2;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.equalTo;
