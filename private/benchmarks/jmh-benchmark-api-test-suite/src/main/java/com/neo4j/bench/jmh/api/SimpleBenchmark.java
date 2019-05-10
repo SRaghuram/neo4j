@@ -20,14 +20,6 @@ public class SimpleBenchmark extends BaseBenchmark
     @Param( {} )
     public Integer SimpleBenchmark_range;
 
-    @Benchmark
-    @BenchmarkMode( Mode.AverageTime )
-    public void myBenchmark( Blackhole bh )
-    {
-        OptionalInt reduce = IntStream.range( 1, SimpleBenchmark_range ).reduce( ( i, x ) -> (x + (i * (i - 1))) );
-        bh.consume( reduce.orElse( 0 ) ) ;
-    }
-
     @Override
     public String description()
     {
@@ -44,5 +36,20 @@ public class SimpleBenchmark extends BaseBenchmark
     public boolean isThreadSafe()
     {
         return true;
+    }
+
+    @Benchmark
+    @BenchmarkMode( Mode.AverageTime )
+    public void count( Blackhole bh )
+    {
+        OptionalInt reduce = IntStream.range( 1, SimpleBenchmark_range ).reduce( ( i, x ) -> (x + (i * (i - 1))) );
+        bh.consume( reduce.orElse( 0 ) ) ;
+    }
+
+    @Benchmark
+    @BenchmarkMode( Mode.AverageTime )
+    public void sleep( ) throws InterruptedException
+    {
+        Thread.sleep( 1 );
     }
 }

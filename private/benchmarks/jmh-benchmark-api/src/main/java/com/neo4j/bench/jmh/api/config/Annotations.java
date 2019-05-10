@@ -109,17 +109,17 @@ public class Annotations
                                                                                            .collect( toList() ) ) );
     }
 
-    List<Method> getBenchmarkMethodsFor( Class benchmarkClass )
+    public List<Method> getBenchmarkMethodsFor( Class benchmarkClass )
     {
         return benchmarkMethods.getOrDefault( benchmarkClass, emptyList() );
     }
 
-    Set<Class> getBenchmarks()
+    public Set<Class> getBenchmarks()
     {
         return benchmarkMethods.keySet();
     }
 
-    List<Field> getParamFieldsFor( Class clazz )
+    public List<Field> getParamFieldsFor( Class clazz )
     {
         return Stream.of( clazz.getDeclaredFields() )
                      .filter( field -> field.isAnnotationPresent( Param.class ) )

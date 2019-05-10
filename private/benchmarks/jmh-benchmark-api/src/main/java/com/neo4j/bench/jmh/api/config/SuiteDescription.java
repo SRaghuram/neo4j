@@ -45,6 +45,12 @@ public class SuiteDescription
         return new SuiteDescription( finalBenchmarks );
     }
 
+    public static SuiteDescription fromBenchmarkDescription( BenchmarkDescription benchmarkDescription )
+    {
+        Map<String,BenchmarkDescription> benchmarks = Collections.singletonMap( benchmarkDescription.className(), benchmarkDescription );
+        return new SuiteDescription( benchmarks );
+    }
+
     private static void addBenchmarkEntryToSuite( BenchmarkConfigFileEntry entry,
                                                   SuiteDescription suite,
                                                   Map<String,BenchmarkDescription> benchmarks,
