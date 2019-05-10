@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +26,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
@@ -136,7 +138,7 @@ public class CoreToCoreCopySnapshotIT
         firstServer.start();
 
         // then
-        Cluster.dataOnMemberEventuallyLooksLike( firstServer, secondServer );
+        dataMatchesEventually( firstServer, List.of( secondServer ) );
     }
 
     private class Timeout

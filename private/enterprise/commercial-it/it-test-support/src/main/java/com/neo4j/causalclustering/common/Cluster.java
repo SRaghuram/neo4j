@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,12 +45,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
@@ -69,6 +72,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.neo4j.function.Predicates.await;
@@ -406,12 +410,12 @@ public class Cluster
 
     public CoreClusterMember awaitLeader() throws TimeoutException
     {
-        return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     public CoreClusterMember awaitLeader( DatabaseId databaseId ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( databaseId, Role.LEADER, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return awaitCoreMemberWithRole( databaseId, Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     public CoreClusterMember awaitLeader( DatabaseId databaseId, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -426,7 +430,7 @@ public class Cluster
 
     public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( role, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return awaitCoreMemberWithRole( role, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     public CoreClusterMember awaitCoreMemberWithRole( Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -483,7 +487,7 @@ public class Cluster
      */
     public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     /**
@@ -683,62 +687,27 @@ public class Cluster
     }
 
     /**
-     * Waits for {@link #DEFAULT_TIMEOUT_MS} for the <code>memberThatChanges</code> to match the contents of
-     * <code>memberToLookLike</code>. After calling this method, changes both in <code>memberThatChanges</code> and
-     * <code>memberToLookLike</code> are picked up.
+     * Awaits for all given members to eventually have database content equivalent to the given other cluster member.
+     * Timeout of {@link #DEFAULT_TIMEOUT_MS} milliseconds is used.
+     *
+     * @param expectedMember cluster member to match database representation with.
+     * @param targets cluster members to check.
      */
-    public static void dataOnMemberEventuallyLooksLike( CoreClusterMember memberThatChanges,
-            CoreClusterMember memberToLookLike )
-            throws TimeoutException
+    public static void dataMatchesEventually( ClusterMember expectedMember, Collection<? extends ClusterMember> targets ) throws TimeoutException
     {
-        await( () ->
-                {
-                    try
-                    {
-                        // We recalculate the DbRepresentation of both source and target, so changes can be picked up
-                        DbRepresentation representationToLookLike = DbRepresentation.of( memberToLookLike.defaultDatabase() );
-                        DbRepresentation representationThatChanges = DbRepresentation.of( memberThatChanges.defaultDatabase() );
-                        return representationToLookLike.equals( representationThatChanges );
-                    }
-                    catch ( DatabaseShutdownException e )
-                    {
-                    /*
-                     * This can happen if the database is still in the process of starting. Yes, the naming
-                     * of the exception is unfortunate, since it is thrown when the database lifecycle is not
-                     * in RUNNING state and therefore signals general unavailability (e.g still starting) and not
-                     * necessarily a database that is shutting down.
-                     */
-                    }
-                    return false;
-                },
-                DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
-    }
-
-    public static <T extends ClusterMember> void dataMatchesEventually( ClusterMember source, Collection<T> targets )
-            throws TimeoutException
-    {
-        dataMatchesEventually( DbRepresentation.of( source.defaultDatabase() ), targets );
+        dataMatchesEventually( () -> buildDbRepresentation( expectedMember ), targets );
     }
 
     /**
-     * Waits for {@link #DEFAULT_TIMEOUT_MS} for the <code>targetDBs</code> to have the same content as the
-     * <code>member</code>. Changes in the <code>member</code> database contents after this method is called do not get
-     * picked up and are not part of the comparison.
+     * Awaits for all given members to eventually have database content equivalent to the given {@link DbRepresentation}.
+     * Timeout of {@link #DEFAULT_TIMEOUT_MS} milliseconds is used.
      *
-     * @param source  The database to check against
-     * @param targets The databases expected to match the contents of <code>member</code>
+     * @param expected expected database representation.
+     * @param targets cluster members to check.
      */
-    public static <T extends ClusterMember> void dataMatchesEventually( DbRepresentation source, Collection<T> targets )
-            throws TimeoutException
+    public static void dataMatchesEventually( DbRepresentation expected, Collection<? extends ClusterMember> targets ) throws TimeoutException
     {
-        for ( ClusterMember targetDB : targets )
-        {
-            await( () ->
-            {
-                DbRepresentation representation = DbRepresentation.of( targetDB.defaultDatabase() );
-                return source.equals( representation );
-            }, DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
-        }
+        dataMatchesEventually( () -> expected, targets );
     }
 
     public Optional<ClusterMember> randomMember( boolean mustBeStarted )
@@ -769,7 +738,7 @@ public class Cluster
 
     private static <T> Optional<T> random( List<T> list )
     {
-        if ( list.size() == 0 )
+        if ( list.isEmpty() )
         {
             return Optional.empty();
         }
@@ -780,5 +749,32 @@ public class Cluster
     public Stream<ClusterMember> allMembers()
     {
         return Stream.concat( coreMembers.values().stream(), readReplicas.values().stream() );
+    }
+
+    private static void dataMatchesEventually( Supplier<DbRepresentation> expected, Collection<? extends ClusterMember> members ) throws TimeoutException
+    {
+        for ( ClusterMember member : members )
+        {
+            Predicates.await( () -> Objects.equals( expected.get(), buildDbRepresentation( member ) ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        }
+    }
+
+    private static DbRepresentation buildDbRepresentation( ClusterMember member )
+    {
+        try
+        {
+            var db = member.defaultDatabase();
+            if ( db == null )
+            {
+                // cluster member is shutdown
+                return null;
+            }
+            return DbRepresentation.of( db );
+        }
+        catch ( DatabaseShutdownException e )
+        {
+            // this can happen if the database is still in the process of starting or doing a store copy
+            return null;
+        }
     }
 }

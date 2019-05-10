@@ -51,6 +51,7 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILAB
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static java.lang.Math.toIntExact;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -158,7 +159,7 @@ class TxPullRequestHandlerTest
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_TRANSACTION_PRUNED, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist.", 14L ) );
+                .info( containsString( "Failed to serve TxPullRequest for tx %d because the transaction does not exist. Last committed tx %d" ), 14L, 15L ) );
     }
 
     @Test
