@@ -59,6 +59,12 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     }
 
     @Override
+    public boolean canBootstrapCluster( DatabaseId databaseId )
+    {
+        return sharedDiscoveryService.canBeBootstrapped( databaseId, this );
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return sharedDiscoveryService.allCoreServers();
@@ -67,7 +73,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return sharedDiscoveryService.getCoreTopology( databaseId, this );
+        return sharedDiscoveryService.getCoreTopology( databaseId );
     }
 
     @Override

@@ -52,7 +52,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), true, allCoreServers() );
+        return new DatabaseCoreTopology( DATABASE_ID, new ClusterId( new UUID( 99, 88 ) ), allCoreServers() );
     }
 
     @Override

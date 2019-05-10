@@ -35,9 +35,9 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
     public static Collection<DatabaseCoreTopology> data()
     {
         return Arrays.asList(
-                new DatabaseCoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), true, coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), true, coreServerInfos( 3 ) ),
-                new DatabaseCoreTopology( new DatabaseId( "cars" ), null, false, coreServerInfos( 4 ) )
+                new DatabaseCoreTopology( new DatabaseId( "orders" ), new ClusterId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "customers" ), new ClusterId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( new DatabaseId( "cars" ), null, coreServerInfos( 4 ) )
         );
     }
 

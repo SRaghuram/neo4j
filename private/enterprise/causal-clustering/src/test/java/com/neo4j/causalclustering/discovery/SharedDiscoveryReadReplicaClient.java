@@ -56,7 +56,7 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return sharedDiscoveryService.getCoreTopology( databaseId, false );
+        return sharedDiscoveryService.getCoreTopology( databaseId );
     }
 
     @Override

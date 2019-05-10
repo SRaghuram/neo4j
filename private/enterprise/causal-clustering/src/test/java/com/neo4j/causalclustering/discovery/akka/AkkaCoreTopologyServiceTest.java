@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -40,6 +41,8 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
@@ -48,6 +51,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class AkkaCoreTopologyServiceTest
 {
@@ -216,6 +222,31 @@ public class AkkaCoreTopologyServiceTest
         assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, unknownId ) );
     }
 
+    @Test
+    void shouldNotBootstrapWhenEmpty()
+    {
+        assertFalse( service.canBootstrapCluster( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapCluster( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapCluster( new DatabaseId( "customers" ) ) );
+        assertFalse( service.canBootstrapCluster( new DatabaseId( "orders" ) ) );
+    }
+
+    @Test
+    void shouldBootstrapKnownDatabase()
+    {
+        var databaseId = new DatabaseId( "cars" );
+
+        var bootstrapState = mock( BootstrapState.class );
+        when( bootstrapState.canBootstrapCluster( databaseId ) ).thenReturn( true );
+        service.topologyState().onBootstrapStateUpdate( bootstrapState );
+
+        assertTrue( service.canBootstrapCluster( databaseId ) );
+
+        assertFalse( service.canBootstrapCluster( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapCluster( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        assertFalse( service.canBootstrapCluster( new DatabaseId( "customers" ) ) );
+    }
+
     private void setupGlobalTopologyState( DatabaseId databaseId, MemberId leaderId, MemberId... followerIds )
     {
         var topologyState = service.topologyState();
@@ -236,7 +267,7 @@ public class AkkaCoreTopologyServiceTest
             }
         }
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), coreMembers );
         topologyState.onTopologyUpdate( coreTopology );
     }
 

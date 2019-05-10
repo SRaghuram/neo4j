@@ -25,7 +25,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import static java.util.Collections.unmodifiableMap;
 import static org.neo4j.helpers.collection.CollectorsUtil.entriesToMap;
 
-public final class SharedDiscoveryService
+final class SharedDiscoveryService
 {
     private static final int MIN_DISCOVERY_MEMBERS = 2;
 
@@ -41,19 +41,14 @@ public final class SharedDiscoveryService
         enoughMembersLatch( databaseId ).await();
     }
 
-    DatabaseCoreTopology getCoreTopology( DatabaseId databaseId, SharedDiscoveryCoreClient client )
-    {
-        return getCoreTopology( databaseId, canBeBootstrapped( databaseId, client ) );
-    }
-
-    DatabaseCoreTopology getCoreTopology( DatabaseId databaseId, boolean canBeBootstrapped )
+    DatabaseCoreTopology getCoreTopology( DatabaseId databaseId )
     {
         Map<MemberId,CoreServerInfo> databaseCoreMembers = coreMembers.entrySet()
                 .stream()
                 .filter( entry -> entry.getValue().getDatabaseIds().contains( databaseId ) )
                 .collect( entriesToMap() );
 
-        return new DatabaseCoreTopology( databaseId, clusterIdDbNames.get( databaseId ), canBeBootstrapped, databaseCoreMembers );
+        return new DatabaseCoreTopology( databaseId, clusterIdDbNames.get( databaseId ), databaseCoreMembers );
     }
 
     DatabaseReadReplicaTopology getReadReplicaTopology( DatabaseId databaseId )
@@ -64,6 +59,16 @@ public final class SharedDiscoveryService
                 .collect( entriesToMap() );
 
         return new DatabaseReadReplicaTopology( databaseId, databaseReadReplicas );
+    }
+
+    boolean canBeBootstrapped( DatabaseId databaseId, SharedDiscoveryCoreClient client )
+    {
+        Optional<SharedDiscoveryCoreClient> firstAppropriateClient = listeningClients.stream()
+                .filter( c -> !c.refusesToBeLeader() )
+                .filter( c -> c.getDatabaseIds().contains( databaseId ) )
+                .findFirst();
+
+        return firstAppropriateClient.map( c -> c.equals( client ) ).orElse( false );
     }
 
     synchronized void registerCoreMember( SharedDiscoveryCoreClient client )
@@ -193,21 +198,11 @@ public final class SharedDiscoveryService
 
     private synchronized void notifyCoreClients( DatabaseId databaseId )
     {
-        listeningClients.forEach( client -> client.onCoreTopologyChange( getCoreTopology( databaseId, client ) ) );
+        listeningClients.forEach( client -> client.onCoreTopologyChange( getCoreTopology( databaseId ) ) );
     }
 
     private CountDownLatch enoughMembersLatch( DatabaseId databaseId )
     {
         return enoughMembersByDatabaseName.computeIfAbsent( databaseId, ignore -> new CountDownLatch( MIN_DISCOVERY_MEMBERS ) );
-    }
-
-    private boolean canBeBootstrapped( DatabaseId databaseId, SharedDiscoveryCoreClient client )
-    {
-        Optional<SharedDiscoveryCoreClient> firstAppropriateClient = listeningClients.stream()
-                .filter( c -> !c.refusesToBeLeader() )
-                .filter( c -> c.getDatabaseIds().contains( databaseId ) )
-                .findFirst();
-
-        return firstAppropriateClient.map( c -> c.equals( client ) ).orElse( false );
     }
 }

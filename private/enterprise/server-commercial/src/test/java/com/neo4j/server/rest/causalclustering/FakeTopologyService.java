@@ -103,7 +103,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( databaseId, clusterId, true, coreMembers );
+        return new DatabaseCoreTopology( databaseId, clusterId, coreMembers );
     }
 
     @Override

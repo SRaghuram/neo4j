@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
@@ -83,11 +84,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
         SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<BootstrapState> bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
         ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink );
-        ActorRef coreTopologyActor = coreTopologyActor( cluster, replicator, coreTopologySink, rrTopologyActor );
+        ActorRef coreTopologyActor = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
         ActorRef directoryActor = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         startRestartNeededListeningActor( cluster );
 
@@ -96,18 +98,19 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
-            ActorRef rrTopologyActor )
+            SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
-        TopologyBuilder topologyBuilder = new TopologyBuilder( config, cluster.selfUniqueAddress(), logProvider );
+        TopologyBuilder topologyBuilder = new TopologyBuilder( cluster.selfUniqueAddress(), logProvider );
         Props coreTopologyProps = CoreTopologyActor.props(
                 myself,
                 topologySink,
+                bootstrapStateSink,
                 rrTopologyActor,
                 replicator,
                 cluster,
                 topologyBuilder,
                 config,
-                logProvider);
+                logProvider );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
@@ -161,6 +164,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         {
             return false;
         }
+    }
+
+    @Override
+    public boolean canBootstrapCluster( DatabaseId databaseId )
+    {
+        return globalTopologyState.bootstrapState().canBootstrapCluster( databaseId );
     }
 
     @VisibleForTesting

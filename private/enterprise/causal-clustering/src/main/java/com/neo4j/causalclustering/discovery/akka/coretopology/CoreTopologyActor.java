@@ -11,6 +11,7 @@ import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
+import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
@@ -29,21 +30,25 @@ import static java.util.stream.Collectors.toSet;
 
 public class CoreTopologyActor extends AbstractActorWithTimers
 {
-    public static Props props( DiscoveryMember myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor,
-            ActorRef replicator, Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
+    public static Props props( DiscoveryMember myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
+            SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor, ActorRef replicator,
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         return Props.create( CoreTopologyActor.class,
-                () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config, logProvider ) );
+                () -> new CoreTopologyActor( myself, topologyUpdateSink, bootstrapStateSink, rrTopologyActor, replicator,
+                        cluster, topologyBuilder, config, logProvider ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
 
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
+    private final SourceQueueWithComplete<BootstrapState> bootstrapStateSink;
     private final TopologyBuilder topologyBuilder;
 
-    private final Address myAddress;
+    private final UniqueAddress myClusterAddress;
 
     private final Log log;
+    private final Config config;
 
     private Set<DatabaseId> knownDatabaseIds = emptySet();
 
@@ -57,6 +62,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private CoreTopologyActor( DiscoveryMember myself,
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
+            SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
             ActorRef readReplicaTopologyActor,
             ActorRef replicator,
             Cluster cluster,
@@ -65,13 +71,15 @@ public class CoreTopologyActor extends AbstractActorWithTimers
             LogProvider logProvider )
     {
         this.topologyUpdateSink = topologyUpdateSink;
+        this.bootstrapStateSink = bootstrapStateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
         this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
-        this.myAddress = cluster.selfAddress();
+        this.myClusterAddress = cluster.selfUniqueAddress();
+        this.config = config;
 
         // Children, who will be sending messages to us
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
@@ -140,10 +148,11 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         Collection<Address> akkaMemberAddresses = clusterView.members()
                 .stream()
                 .map( Member::address )
-                .filter( addr -> !addr.equals( myAddress ) )
+                .filter( addr -> !addr.equals( myClusterAddress.address() ) )
                 .collect( Collectors.toList() );
 
         topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
         readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
+        bootstrapStateSink.offer( new BootstrapState( clusterView, memberData, myClusterAddress, config ) );
     }
 }

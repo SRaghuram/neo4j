@@ -27,7 +27,7 @@ import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
 
-class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
+class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
   "CoreTopologyActor" when {
     "receiving messages" should {
@@ -84,7 +84,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
-          val nullClusterIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
+          val nullClusterIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.members())
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
           topologyActorRef ! clusterView
@@ -106,8 +106,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           makeTopologyActorKnowAboutCoreMember()
 
           val otherDatabaseId = new DatabaseId("non-default")
-          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, clusterId, false, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
-          val emptyTopology = new DatabaseCoreTopology(databaseId, clusterId, false, Map.empty[MemberId, CoreServerInfo].asJava)
+          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, clusterId, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
+          val emptyTopology = new DatabaseCoreTopology(databaseId, clusterId, Map.empty[MemberId, CoreServerInfo].asJava)
 
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(otherDatabaseId), any(), any(), any())).thenReturn(otherTopology)
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any())).thenReturn(emptyTopology)
@@ -121,16 +121,70 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
           awaitExpectedCoreTopology(otherTopology) // receive non-empty topology for non-default database because it was added
         }
       }
+
+      "update bootstrap state" when {
+
+        "metadata updated" in new Fixture {
+          Given("metadata message")
+          val metadataMessage = newMetadataMessage()
+
+          When("message received")
+          topologyActorRef ! metadataMessage
+
+          Then("update bootstrap state")
+          val expectedBootstrapState = new BootstrapState(ClusterViewMessage.EMPTY, metadataMessage, myUniqueAddress, config)
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
+        }
+
+        "cluster id updated" in new Fixture {
+          Given("metadata and cluster ID messages")
+          val metadataMessage = newMetadataMessage(databaseId)
+          val clusterIdMessage = new ClusterIdDirectoryMessage(Map(databaseId -> clusterId).asJava)
+
+          When("messages received")
+          topologyActorRef ! metadataMessage
+          topologyActorRef ! clusterIdMessage
+
+          Then("update bootstrap state")
+          val expectedBootstrapState = new BootstrapState(ClusterViewMessage.EMPTY, metadataMessage, myUniqueAddress, config)
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
+        }
+
+        "cluster view updated" in new Fixture {
+          Given("metadata and cluster view messages")
+          val metadataMessage = newMetadataMessage(databaseId)
+          val members = new util.TreeSet[Member](Member.ordering)
+          members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
+          val clusterViewMessage = new ClusterViewMessage(false, members, Collections.emptySet())
+
+          When("messages received")
+          topologyActorRef ! metadataMessage
+          topologyActorRef ! clusterViewMessage
+
+          Then("update bootstrap state")
+          val expectedBootstrapState1 = new BootstrapState(ClusterViewMessage.EMPTY, metadataMessage, myUniqueAddress, config)
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState1)
+
+          val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage, myUniqueAddress, config)
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState2)
+        }
+      }
     }
   }
 
   trait Fixture {
     val coreTopologyReceiver = TestProbe("CoreTopologyReceiver")
+    val bootstrapStateReceiver = TestProbe("BootstrapStateReceiver")
 
     val materializer = ActorMaterializer()
 
     val topologySink = Source.queue[CoreTopologyMessage](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(msg => coreTopologyReceiver.ref ! msg.coreTopology()))
+      .run(materializer)
+
+    val bootstrapStateSink = Source.queue[BootstrapState](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(msg => bootstrapStateReceiver.ref ! msg))
       .run(materializer)
 
     val config = {
@@ -152,7 +206,6 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val expectedCoreTopology = new DatabaseCoreTopology(
       databaseId,
       clusterId,
-      false,
       Map(
         new MemberId(UUID.randomUUID()) -> coreServerInfo(0),
         new MemberId(UUID.randomUUID()) -> coreServerInfo(1)
@@ -164,11 +217,14 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val readReplicaProbe = TestProbe("readReplicaActor")
     val cluster = mock[Cluster]
     val myAddress = Address("akka", system.name, "myHost", 12)
+    val myUniqueAddress = UniqueAddress(myAddress, 42L)
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
+    Mockito.when(cluster.selfUniqueAddress).thenReturn(myUniqueAddress)
 
     val props = CoreTopologyActor.props(
       new TestDiscoveryMember(),
       topologySink,
+      bootstrapStateSink,
       readReplicaProbe.ref,
       replicatorProbe.ref,
       cluster,

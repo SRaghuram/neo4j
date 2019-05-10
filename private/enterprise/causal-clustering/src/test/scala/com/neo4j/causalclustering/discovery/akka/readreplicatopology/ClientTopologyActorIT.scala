@@ -52,7 +52,6 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         val newCoreTopology = new DatabaseCoreTopology(
           new DatabaseId(DEFAULT_DATABASE_NAME),
           new ClusterId(UUID.randomUUID()),
-          false,
           Map(
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)

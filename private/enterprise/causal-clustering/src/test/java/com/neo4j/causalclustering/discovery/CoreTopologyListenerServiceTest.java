@@ -38,8 +38,8 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.addCoreTopologyListener( listener3 );
 
-        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), false, Map.of() );
-        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, new ClusterId( UUID.randomUUID() ), false, Map.of() );
+        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, new ClusterId( UUID.randomUUID() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology1 );
         listenerService.notifyListeners( coreTopology2 );
@@ -63,7 +63,7 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.removeCoreTopologyListener( listener1 );
 
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), false, Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, new ClusterId( UUID.randomUUID() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology );
 

@@ -80,7 +80,7 @@ class ReadReplicaStartupProcessTest
         when( topologyService.allCoreServers() ).thenReturn( members );
         for ( DatabaseId databaseId : databaseIds )
         {
-            when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, false, members ) );
+            when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, members ) );
         }
         when( topologyService.findCatchupAddress( memberId ) ).thenReturn( fromAddress );
         //I know ... I'm sorry

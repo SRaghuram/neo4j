@@ -123,7 +123,7 @@ class ServerShufflingTest
         when( leaderService.getLeaderId( databaseId ) ).thenReturn( Optional.of( leaderId ) );
         when( leaderService.getLeaderBoltAddress( databaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), coreMembers );
         when( coreTopologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( coreTopology );
         when( coreTopologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, emptyMap() ) );
 

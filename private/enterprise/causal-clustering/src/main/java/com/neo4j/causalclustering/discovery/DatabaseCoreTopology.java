@@ -17,18 +17,16 @@ import static java.util.Collections.emptyMap;
 
 public class DatabaseCoreTopology implements Topology<CoreServerInfo>
 {
-    public static final DatabaseCoreTopology EMPTY = new DatabaseCoreTopology( null, null, false, emptyMap() );
+    public static final DatabaseCoreTopology EMPTY = new DatabaseCoreTopology( null, null, emptyMap() );
 
     private final DatabaseId databaseId;
     private final ClusterId clusterId;
-    private final boolean canBeBootstrapped;
     private final Map<MemberId,CoreServerInfo> coreMembers;
 
-    public DatabaseCoreTopology( DatabaseId databaseId, ClusterId clusterId, boolean canBeBootstrapped, Map<MemberId,CoreServerInfo> coreMembers )
+    public DatabaseCoreTopology( DatabaseId databaseId, ClusterId clusterId, Map<MemberId,CoreServerInfo> coreMembers )
     {
         this.databaseId = databaseId;
         this.clusterId = clusterId;
-        this.canBeBootstrapped = canBeBootstrapped;
         this.coreMembers = Map.copyOf( coreMembers );
     }
 
@@ -49,11 +47,6 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         return clusterId;
     }
 
-    public boolean canBeBootstrapped()
-    {
-        return canBeBootstrapped;
-    }
-
     @Override
     public boolean equals( Object o )
     {
@@ -66,8 +59,7 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
             return false;
         }
         var that = (DatabaseCoreTopology) o;
-        return canBeBootstrapped == that.canBeBootstrapped &&
-               Objects.equals( databaseId, that.databaseId ) &&
+        return Objects.equals( databaseId, that.databaseId ) &&
                Objects.equals( clusterId, that.clusterId ) &&
                Objects.equals( coreMembers, that.coreMembers );
     }
@@ -75,16 +67,15 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, clusterId, canBeBootstrapped, coreMembers );
+        return Objects.hash( databaseId, clusterId, coreMembers );
     }
 
     @Override
     public String toString()
     {
         return "DatabaseCoreTopology{" +
-               "databaseId='" + databaseId + '\'' +
+               "databaseId=" + databaseId +
                ", clusterId=" + clusterId +
-               ", canBeBootstrapped=" + canBeBootstrapped +
                ", coreMembers=" + coreMembers +
                '}';
     }

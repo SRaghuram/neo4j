@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
@@ -85,40 +84,6 @@ class TopologyBuilderTest
       topology.members() should have size clusterSize
     }
 
-    "correctly identify canBeBootStrapped" when {
-
-      "none refuse to be leader and this server is the first member" in new Fixture {
-        val memberData = memberMetaData(3)
-        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
-        topology.canBeBootstrapped shouldBe true
-      }
-
-      "none refuse to be leader but this server is not first member" in new Fixture {
-        val thisServerId = 1
-        val thisServerUniqueAddress = uniqueAddressStream.drop(thisServerId).head
-        val memberData = memberMetaData(3)
-        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
-        topology.canBeBootstrapped shouldBe false
-      }
-
-      "this server is the first non-'refuse to be leader' member" in new Fixture {
-        val thisServerId = 2
-        val thisServerUniqueAddress = uniqueAddressStream.drop(thisServerId).head
-        val whichRefuse: Int => Boolean = id => id < thisServerId
-        val memberData = memberMetaData(5, refusesToBeLeader = whichRefuse)
-        val topology = topologyBuilder(self = thisServerUniqueAddress).buildCoreTopology(databaseId, clusterId, clusterState(5), memberData)
-        topology.canBeBootstrapped shouldBe true
-      }
-
-      "this server refuses to be leader" in new Fixture {
-        val thisServerId = 0
-        val whichRefuse: Int => Boolean = id => id == thisServerId
-        val memberData = memberMetaData(3, refusesToBeLeader = whichRefuse)
-        val topology = topologyBuilder().buildCoreTopology(databaseId, clusterId, clusterState(3), memberData)
-        topology.canBeBootstrapped shouldBe false
-      }
-    }
-
     "correctly associate cluster members and meta data by unique address" in new Fixture {
       val clusterMembers = clusterState(4)
       val metadata = memberMetaData(4, 2)
@@ -136,9 +101,9 @@ class TopologyBuilderTest
     implicit val cluster = mock[Cluster]
     val databaseId = new DatabaseId("my_database")
     val clusterId = new ClusterId(UUID.randomUUID)
-    
-    def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head, config: Config = Config.defaults) =
-      new TopologyBuilder(config, self, NullLogProvider.getInstance())
+
+    def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head) =
+      new TopologyBuilder(self, NullLogProvider.getInstance())
 
     def clusterState(numMembers: Int, numUnreachable: Int = 0): ClusterViewMessage = {
       require(numMembers >= numUnreachable)

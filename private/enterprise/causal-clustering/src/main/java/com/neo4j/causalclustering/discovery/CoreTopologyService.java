@@ -49,6 +49,14 @@ public interface CoreTopologyService extends TopologyService
      */
     void handleStepDown( long term, DatabaseId databaseId );
 
+    /**
+     * Check if this cluster member can bootstrap a cluster (Raft group) for the specified database.
+     *
+     * @param databaseId the database to bootstrap.
+     * @return {@code true} if this cluster member can bootstrap, {@code false} otherwise.
+     */
+    boolean canBootstrapCluster( DatabaseId databaseId );
+
     interface Listener
     {
         void onCoreTopologyChange( DatabaseCoreTopology coreTopology );

@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
@@ -34,7 +33,6 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
     {
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         ClusterId clusterId = clusterIdMarshal.unmarshal( channel );
-        boolean canBeBootstrapped = BooleanMarshal.unmarshal( channel );
 
         int memberCount = channel.getInt();
         HashMap<MemberId,CoreServerInfo> members = new HashMap<>( memberCount );
@@ -45,7 +43,7 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
             members.put( memberId, coreServerInfo );
         }
 
-        return new DatabaseCoreTopology( databaseId, clusterId, canBeBootstrapped, members );
+        return new DatabaseCoreTopology( databaseId, clusterId, members );
     }
 
     @Override
@@ -53,7 +51,6 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
     {
         DatabaseIdMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
         clusterIdMarshal.marshal( coreTopology.clusterId(), channel );
-        BooleanMarshal.marshal( channel, coreTopology.canBeBootstrapped() );
 
         channel.putInt( coreTopology.members().size() );
         for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.members().entrySet() )

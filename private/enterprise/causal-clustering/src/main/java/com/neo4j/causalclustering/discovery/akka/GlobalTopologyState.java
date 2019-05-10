@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
+import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.HashMap;
@@ -28,14 +29,16 @@ import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNull;
 
-public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink
+public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink
 {
     private final Log log;
     private final Consumer<DatabaseCoreTopology> callback;
     private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
     private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
     private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
+    private volatile BootstrapState bootstrapState = BootstrapState.EMPTY;
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
 
@@ -54,7 +57,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         DatabaseId databaseId = newCoreTopology.databaseId();
         DatabaseCoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
 
-        if ( haveDifferentMembers( currentCoreTopology, newCoreTopology ) )
+        if ( !Objects.equals( currentCoreTopology, newCoreTopology ) )
         {
             this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
             log.info( "Core topology for database %s changed from %s to %s", databaseId, currentCoreTopology, newCoreTopology );
@@ -97,6 +100,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         }
     }
 
+    @Override
+    public void onBootstrapStateUpdate( BootstrapState newBootstrapState )
+    {
+        bootstrapState = requireNonNull( newBootstrapState );
+    }
+
     public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
         var coreTopology = coreTopologiesByDatabase.get( databaseId );
@@ -132,7 +141,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return readReplicaTopologiesByDatabase.getOrDefault( databaseId, DatabaseReadReplicaTopology.EMPTY );
     }
 
-    public AdvertisedSocketAddress retrieveCatchupServerAddress( MemberId memberId )
+    AdvertisedSocketAddress retrieveCatchupServerAddress( MemberId memberId )
     {
         CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );
         if ( coreServerInfo != null )
@@ -152,6 +161,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return null;
     }
 
+    BootstrapState bootstrapState()
+    {
+        return bootstrapState;
+    }
+
     private static <T extends DiscoveryServerInfo> Map<MemberId,T> extractServerInfos( Map<DatabaseId,? extends Topology<T>> topologies )
     {
         Map<MemberId,T> result = new HashMap<>();
@@ -163,11 +177,6 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             }
         }
         return unmodifiableMap( result );
-    }
-
-    private static boolean haveDifferentMembers( DatabaseCoreTopology oldTopology, DatabaseCoreTopology newTopology )
-    {
-        return oldTopology == null || !oldTopology.members().equals( newTopology.members() );
     }
 
     private static boolean hasNoMembers( Topology<?> topology )

@@ -95,6 +95,6 @@ class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new DatabaseCoreTopology( DATABASE_ID, clusterId, false, coreMembers );
+        return new DatabaseCoreTopology( DATABASE_ID, clusterId, coreMembers );
     }
 }

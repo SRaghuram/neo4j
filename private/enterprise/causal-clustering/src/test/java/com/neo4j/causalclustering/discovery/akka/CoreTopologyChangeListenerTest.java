@@ -55,7 +55,7 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), false, Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, new ClusterId( UUID.randomUUID() ), Map.of() );
         Listener listener = mock( Listener.class );
         when( listener.databaseId() ).thenReturn( databaseId );
         service.addLocalCoreTopologyListener( listener );

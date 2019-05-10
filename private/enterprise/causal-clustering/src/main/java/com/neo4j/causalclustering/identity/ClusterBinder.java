@@ -85,7 +85,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             monitor.waitingForCoreMembers( minCoreHosts );
             return false;
         }
-        else if ( !coreTopology.canBeBootstrapped() )
+        else if ( !topologyService.canBootstrapCluster( databaseId ) )
         {
             monitor.waitingForBootstrap();
             return false;

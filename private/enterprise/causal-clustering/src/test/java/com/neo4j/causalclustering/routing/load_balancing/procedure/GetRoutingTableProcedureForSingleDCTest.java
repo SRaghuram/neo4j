@@ -468,7 +468,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         when( topologyService.allCoreServers() ).thenReturn( cores );
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
-        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, false, cores ) );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, clusterId, cores ) );
         when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, readReplicas ) );
     }
 
