@@ -11,6 +11,7 @@ import java.util.concurrent.locks.LockSupport
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -45,16 +46,20 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   override def init(): Unit = {}
 
   override def start(): Unit = {
+    DebugLog.log("starting worker threads")
     workerThreads = workers.map(threadFactory.newThread(_))
     workerThreads.foreach(_.start())
+    DebugLog.logDiff("done")
   }
 
   override def stop(): Unit = {
+    DebugLog.log("stopping worker threads")
     workers.foreach(_.stop())
     workerThreads.foreach(_.interrupt())
     for (workerThread <- workerThreads) {
       workerThread.join(1000)
     }
+    DebugLog.logDiff("done")
   }
 
   override def shutdown(): Unit = {}
@@ -82,8 +87,11 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber): QuerySubscription = {
 
+    DebugLog.log("FixedWorkersQueryExecutor.execute()")
+
     val tracer = schedulerTracer.traceQuery()
     val tracker = ConcurrentStateFactory.newTracker(subscriber, queryContext, tracer)
+
     val queryState = QueryState(params,
                                 subscriber,
                                 tracker,

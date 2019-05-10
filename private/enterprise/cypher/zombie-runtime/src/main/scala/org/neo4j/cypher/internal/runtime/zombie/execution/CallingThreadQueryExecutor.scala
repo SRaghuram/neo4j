@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.zombie.state.{StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -34,6 +35,8 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber): QuerySubscription = {
+
+    DebugLog.log("CallingThreadQueryExecutor.execute()")
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
     val tracer = schedulerTracer.traceQuery()

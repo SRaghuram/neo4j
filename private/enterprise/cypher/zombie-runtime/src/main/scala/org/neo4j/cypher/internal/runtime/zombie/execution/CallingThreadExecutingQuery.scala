@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.QueryState
 import org.neo4j.cypher.internal.runtime.scheduling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutionState, Worker}
