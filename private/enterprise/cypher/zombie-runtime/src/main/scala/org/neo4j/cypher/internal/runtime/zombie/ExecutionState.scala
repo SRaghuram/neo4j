@@ -150,7 +150,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
     * Put `task` to the continuation queue for its pipeline, so we can continue executing it later.
     */
-  def putContinuation(task: PipelineTask): Unit
+  def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit
 
   /**
     * Try to lock execution of the given pipeline.

@@ -88,7 +88,7 @@ class Worker(val workerId: Int,
           // Put the continuation before unlocking (closeWorkUnit)
           // so that in serial pipelines we can guarantee that the continuation
           // is the next thing which is picked up
-          state.putContinuation(task)
+          state.putContinuation(task, false)
           state.closeWorkUnit()
         } else {
           task.close()

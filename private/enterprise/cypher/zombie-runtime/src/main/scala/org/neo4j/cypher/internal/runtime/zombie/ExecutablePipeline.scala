@@ -122,7 +122,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
                                                             state,
                                                             this))
       for (task <- tasks.tail)
-        putContinuation(task)
+        putContinuation(task, true)
       tasks.head
     } else {
       null
@@ -134,8 +134,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
     * this method it will be placed in the continuation queue for this pipeline.
     * @param task the task that can be executed (again),
     */
-  def putContinuation(task: PipelineTask): Unit = {
-    executionState.putContinuation(task)
+  def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit = {
+    executionState.putContinuation(task, wakeUp)
   }
 
   /**

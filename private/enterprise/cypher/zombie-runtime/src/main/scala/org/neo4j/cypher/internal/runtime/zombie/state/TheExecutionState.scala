@@ -159,9 +159,9 @@ class TheExecutionState(stateDefinition: StateDefinition,
     isCancelled
   }
 
-  override def putContinuation(task: PipelineTask): Unit = {
+  override def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit = {
     continuations(task.pipelineState.pipeline.id.x).put(task)
-    if (!task.pipelineState.pipeline.serial) {
+    if (wakeUp && !task.pipelineState.pipeline.serial) {
       // We only wake up other Threads if this pipeline is not serial.
       // Otherwise they will all race to get this continuation while
       // this Thread can just as well continue on its own.
