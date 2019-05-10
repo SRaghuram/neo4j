@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.QueryResources
 import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, QueryManager, SchedulingPolicy}
@@ -35,8 +36,8 @@ class Worker(val workerId: Int,
   def isSleepy: Boolean = sleeper.isSleepy
 
   override def run(): Unit = {
-    stopped = false
-    while (!stopped && !Thread.interrupted()) {
+    DebugSupport.logWorker(s"Worker($workerId) started")
+    while (!Thread.interrupted()) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {
@@ -52,10 +53,12 @@ class Worker(val workerId: Int,
       } catch {
         // Failure in QueryManager. Crash horribly.
         case error: Throwable =>
+          DebugSupport.logWorker(s"Worker($workerId) crashed horribly")
           error.printStackTrace()
           throw error
       }
     }
+    DebugSupport.logWorker(s"Worker($workerId) stopped")
   }
 
   /**
@@ -109,25 +112,36 @@ class Worker(val workerId: Int,
   }
 }
 
-class Sleeper(private val idleThreshold: Int = 10000,
+class Sleeper(val workerId: Int,
+              private val idleThreshold: Int = 1,
               private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
   private val sleepNs = sleepDuration.toNanos
   private var idleCounter = 0
+  private var workStreak = 0
   @volatile private var sleepy: Boolean = false
 
   def reportWork(): Unit = {
     if (idleCounter > 0) {
+      DebugSupport.logWorker(s"Worker($workerId) worked after idling $idleCounter times")
       idleCounter = 0
       sleepy = false
+    } else {
+      workStreak += 1
     }
   }
 
   def reportIdle(): Unit = {
+    if (idleCounter == 0) {
+      DebugSupport.logWorker(s"Worker($workerId) idling after working $workStreak times")
+      workStreak = 0
+    }
     idleCounter += 1
     if (idleCounter == idleThreshold) {
       sleepy = true
     } else if (idleCounter > idleThreshold) {
+      DebugSupport.logWorker(s"Worker($workerId) parked")
       LockSupport.parkNanos(sleepNs)
+      DebugSupport.logWorker(s"Worker($workerId) unparked")
     }
   }
 
