@@ -18,6 +18,7 @@ import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.AnnotationsValidator.AnnotationsValidationResult;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -31,7 +32,6 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.CommandLineOptions;
 import org.openjdk.jmh.runner.options.Options;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,11 +52,11 @@ import static java.util.stream.Collectors.toList;
 
 abstract class Runner
 {
-    public SuiteDescription createSuiteDescriptionFor( String packageName, File benchConfigFile )
+    public static SuiteDescription createSuiteDescriptionFor( String packageName, Path benchConfigFile )
     {
         Annotations annotations = new Annotations( packageName );
 
-        Annotations.AnnotationsValidationResult annotationsValidationResult = annotations.validate();
+        AnnotationsValidationResult annotationsValidationResult = annotations.validate();
 
         if ( !annotationsValidationResult.isValid() )
         {
@@ -64,7 +64,7 @@ abstract class Runner
         }
 
         Validation validation = new Validation();
-        SuiteDescription defaultBenchmarks = SuiteDescription.byReflection( annotations, validation );
+        SuiteDescription defaultBenchmarks = SuiteDescription.fromAnnotations( annotations, validation );
         assertValid( validation );
 
         SuiteDescription finalBenchmarks = (benchConfigFile == null)
@@ -73,7 +73,7 @@ abstract class Runner
                                            // config file provided, execute exact contents of config file
                                            : fromConfig(
                                                    defaultBenchmarks,
-                                                   fromFile( benchConfigFile.toPath(), validation, annotations ),
+                                                   fromFile( benchConfigFile, validation, annotations ),
                                                    validation );
         assertValid( validation );
 

@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark1;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark2;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import org.junit.Test;
 
 import java.time.Duration;

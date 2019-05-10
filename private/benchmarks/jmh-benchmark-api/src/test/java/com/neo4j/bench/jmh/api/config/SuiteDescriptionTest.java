@@ -5,10 +5,8 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidDisabledBenchmark;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark1;
-import com.neo4j.bench.jmh.api.benchmarks.test_only.ValidEnabledBenchmark2;
-import org.junit.Before;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -27,16 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 public class SuiteDescriptionTest extends AnnotationsFixture
 {
-    private SuiteDescription suiteDescription;
-
-    @Before
-    public void setup()
-    {
-        Validation validation = new Validation();
-        suiteDescription = SuiteDescription.byReflection( getAnnotations(), validation );
-        assertTrue( validation.report(), validation.isValid() );
-    }
-
     @Test
     public void shouldFailValidationWhenOnlySomeParametersAreSet()
     {
@@ -61,6 +49,7 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         assertTrue( configFile.getEntry( benchmarkName ).isEnabled() );
         assertThat( configFile.getEntry( benchmarkName ).values().size(), equalTo( 2 ) );
 
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
         assertTrue( validation.report(),
@@ -91,6 +80,7 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         assertThat( configFile.getEntry( benchmarkName ).values().size(), equalTo( 1 ) );
         assertTrue( configFile.getEntry( benchmarkName ).values().containsKey( paramName ) );
 
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
         assertTrue( validation.report(),
@@ -101,14 +91,14 @@ public class SuiteDescriptionTest extends AnnotationsFixture
     @Test
     public void shouldReturnCorrectGroupBenchmarkNames()
     {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
         Map<String,List<String>> groupBenchmarks = suiteDescription.getGroupBenchmarkNames();
         // contains 'Example' group only
         assertThat( groupBenchmarks.toString(), groupBenchmarks.size(), equalTo( 1 ) );
 
         List<String> exampleBenchmarks = groupBenchmarks.get( "Example" );
-        assertThat( exampleBenchmarks.size(), equalTo( 3 ) );
-        assertTrue( exampleBenchmarks.contains( ValidDisabledBenchmark.class.getName() ) );
-        assertTrue( exampleBenchmarks.contains( ValidEnabledBenchmark1.class.getName() ) );
-        assertTrue( exampleBenchmarks.contains( ValidEnabledBenchmark2.class.getName() ) );
+        assertThat( exampleBenchmarks.size(), equalTo( 8 ) );
+        getAnnotations().getBenchmarks().forEach(
+                benchmark -> assertTrue( exampleBenchmarks.contains( benchmark.getName() ) ) );
     }
 }

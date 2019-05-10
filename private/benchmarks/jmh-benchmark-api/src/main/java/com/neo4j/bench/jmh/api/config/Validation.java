@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
+import org.openjdk.jmh.annotations.BenchmarkMode;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -17,6 +21,8 @@ import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGUR
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_VALUE_IS_NOT_ALLOWED;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICATE_ALLOWED_VALUE;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICATE_BASE_VALUE;
+import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.MISSING_BENCHMARK_MODE;
+import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.MISSING_PARAMETER_VALUE;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.UNRECOGNIZED_CONFIG_FILE_ENTRY;
@@ -38,7 +44,9 @@ public class Validation
         CONFIGURED_PARAMETER_DOES_NOT_EXIST,
         CONFIGURED_VALUE_IS_NOT_ALLOWED,
         DUPLICATE_ALLOWED_VALUE,
-        DUPLICATE_BASE_VALUE
+        DUPLICATE_BASE_VALUE,
+        MISSING_BENCHMARK_MODE,
+        MISSING_PARAMETER_VALUE
     }
 
     private final List<String> paramConfiguredWithoutEnablingDisablingBenchmarkErrs = new ArrayList<>();
@@ -49,6 +57,8 @@ public class Validation
     private final List<String> configuredValueIsNotAllowedErrs = new ArrayList<>();
     private final List<String> duplicateAllowedValueErrs = new ArrayList<>();
     private final List<String> duplicateBaseValueErrs = new ArrayList<>();
+    private final List<String> missingBenchmarkModeErrs = new ArrayList<>();
+    private final List<String> missingParameterValueErrs = new ArrayList<>();
     private final Set<ValidationError> validationErrors = new HashSet<>();
 
     public static void assertValid( Validation validation )
@@ -62,7 +72,7 @@ public class Validation
     void duplicateAllowedValue( String benchmarkName, String paramName, String[] allowed )
     {
         duplicateAllowedValueErrs.add( format( "%s.%s, allowed = %s",
-                benchmarkName, paramName, Arrays.toString( allowed ) ) );
+                                               benchmarkName, paramName, Arrays.toString( allowed ) ) );
         validationErrors.add( DUPLICATE_ALLOWED_VALUE );
     }
 
@@ -108,6 +118,18 @@ public class Validation
                 format( "%s.%s = %s ALLOWED: %s",
                         benchmarkName, paramName, value, Arrays.toString( allowedValues.toArray() ) ) );
         validationErrors.add( CONFIGURED_VALUE_IS_NOT_ALLOWED );
+    }
+
+    void missingBenchmarkMode( Method benchmarkMethod )
+    {
+        missingBenchmarkModeErrs.add( format( "%s.%s", benchmarkMethod.getDeclaringClass().getName(), benchmarkMethod.getName() ) );
+        validationErrors.add( MISSING_BENCHMARK_MODE );
+    }
+
+    void missingParameterValue( Field param )
+    {
+        missingParameterValueErrs.add( format( "%s.%s", param.getDeclaringClass().getName(), param.getName() ) );
+        validationErrors.add( MISSING_PARAMETER_VALUE );
     }
 
     public boolean errorsEqual( ValidationError... errors )
@@ -168,6 +190,16 @@ public class Validation
             {
                 sb.append( "\tUnrecognized configuration file entries:\n" );
                 appendErrors( sb, unrecognizedConfigFileEntryErrs );
+            }
+            if ( !missingBenchmarkModeErrs.isEmpty() )
+            {
+                sb.append( "\tMissing annotation '" + BenchmarkMode.class.getSimpleName() + "':\n" );
+                appendErrors( sb, missingBenchmarkModeErrs );
+            }
+            if ( !missingParameterValueErrs.isEmpty() )
+            {
+                sb.append( "\tMissing annotation '" + ParamValues.class.getSimpleName() + "':\n" );
+                appendErrors( sb, missingParameterValueErrs );
             }
             return sb.toString();
         }
