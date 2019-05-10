@@ -1,41 +1,27 @@
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
-import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.nio.file.Path;
 import java.util.List;
 
 public class SimpleRunner extends Runner
 {
-    public static BenchmarkGroupBenchmarkMetrics configureAndRun( Path benchmarkConfig,
-                                                                  Path workDir,
-                                                                  Path profilerRecordingsOutputDir,
-                                                                  List<ProfilerType> profilers,
-                                                                  ErrorReporter errorReporter)
+
+    private final int forkCount;
+    private final int iterations;
+    private final TimeValue duration;
+
+    public SimpleRunner( int forkCount, int iterations, TimeValue duration )
     {
-        SimpleRunner simpleRunner = new SimpleRunner();
-
-        SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( "com.neo4j.bench.jmh.api", benchmarkConfig );
-
-        String[] jvmArgs = {};
-        String[] jmhArgs = {};
-
-        return simpleRunner.run(
-                suiteDescription,
-                profilers,
-                jvmArgs,
-                suiteDescription.benchmarks().stream().mapToInt( x -> 1 ).toArray(),
-                workDir,
-                errorReporter,
-                jmhArgs,
-                Jvm.defaultJvm(),
-                profilerRecordingsOutputDir );
+        this.forkCount = forkCount;
+        this.iterations = iterations;
+        this.duration = duration;
     }
 
     @Override
@@ -45,10 +31,13 @@ public class SimpleRunner extends Runner
     }
 
     @Override
-    protected ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark, ProfilerType profilerType, Path workDir, ErrorReporter errorReporter,
+    protected ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
+                                                       ProfilerType profilerType,
+                                                       Path workDir,
+                                                       ErrorReporter errorReporter,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
-        return optionsBuilder;
+        return augmentOptions( optionsBuilder );
     }
 
     @Override
@@ -58,15 +47,27 @@ public class SimpleRunner extends Runner
     }
 
     @Override
-    protected ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark, Path workDir, ErrorReporter errorReporter,
+    protected ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
+                                                          Path workDir,
+                                                          ErrorReporter errorReporter,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
-        return optionsBuilder;
+        return augmentOptions( optionsBuilder );
     }
 
     @Override
     protected void afterMeasurementRun( BenchmarkDescription benchmark, Path workDir, ErrorReporter errorReporter )
     {
 
+    }
+
+    private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder )
+    {
+        return optionsBuilder
+                .forks( forkCount )
+                .warmupIterations( iterations )
+                .warmupTime( duration )
+                .measurementIterations( iterations )
+                .measurementTime( duration );
     }
 }
