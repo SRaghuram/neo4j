@@ -27,13 +27,12 @@ class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
              resources: QueryResources,
-             sleeper: Sleeper = new Sleeper) extends Runnable {
+             var sleeper: Sleeper = null) extends Runnable {
 
-  @volatile private var stopped: Boolean = false
+  if (sleeper == null)
+    sleeper = new Sleeper(workerId)
 
-  def stop(): Unit = {
-    stopped = true
-  }
+  def isSleepy: Boolean = sleeper.isSleepy
 
   override def run(): Unit = {
     stopped = false
@@ -45,7 +44,7 @@ class Worker(val workerId: Int,
           if (!worked) {
             sleeper.reportIdle()
           } else {
-            sleeper.reset()
+            sleeper.reportWork()
           }
         } else {
           sleeper.reportIdle()
@@ -114,15 +113,23 @@ class Sleeper(private val idleThreshold: Int = 10000,
               private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
   private val sleepNs = sleepDuration.toNanos
   private var idleCounter = 0
+  @volatile private var sleepy: Boolean = false
 
-  def reset(): Unit = {
-    idleCounter = 0
+  def reportWork(): Unit = {
+    if (idleCounter > 0) {
+      idleCounter = 0
+      sleepy = false
+    }
   }
 
   def reportIdle(): Unit = {
     idleCounter += 1
-    if (idleCounter > idleThreshold) {
+    if (idleCounter == idleThreshold) {
+      sleepy = true
+    } else if (idleCounter > idleThreshold) {
       LockSupport.parkNanos(sleepNs)
     }
   }
+
+  def isSleepy: Boolean = sleepy
 }

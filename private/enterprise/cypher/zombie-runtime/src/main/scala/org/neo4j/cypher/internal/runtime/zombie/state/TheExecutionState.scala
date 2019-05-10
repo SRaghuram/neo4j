@@ -94,7 +94,7 @@ class TheExecutionState(stateDefinition: StateDefinition,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
     buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
-    workerWaker.wakeAll()
+    workerWaker.wakeOne()
   }
 
   override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
@@ -165,7 +165,7 @@ class TheExecutionState(stateDefinition: StateDefinition,
       // We only wake up other Threads if this pipeline is not serial.
       // Otherwise they will all race to get this continuation while
       // this Thread can just as well continue on its own.
-      workerWaker.wakeAll()
+      workerWaker.wakeOne()
     }
   }
 

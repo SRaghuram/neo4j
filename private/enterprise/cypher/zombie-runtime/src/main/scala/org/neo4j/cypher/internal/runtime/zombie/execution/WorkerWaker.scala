@@ -12,7 +12,7 @@ trait WorkerWaker {
   /**
     * Wake up any idle workers.
     */
-  def wakeAll(): Unit
+  def wakeOne(): Unit
 }
 
 class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker) extends Sink[T] {
@@ -21,6 +21,6 @@ class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker) extends Sink[T
     */
   override def put(t: T): Unit = {
     inner.put(t)
-    waker.wakeAll()
+    waker.wakeOne()
   }
 }

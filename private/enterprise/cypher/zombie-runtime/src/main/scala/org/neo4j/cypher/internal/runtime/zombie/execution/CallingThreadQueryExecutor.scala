@@ -23,7 +23,7 @@ import org.neo4j.values.AnyValue
   */
 class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor with WorkerWaker {
 
-  override def wakeAll(): Unit = ()
+  override def wakeOne(): Unit = ()
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,

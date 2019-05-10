@@ -54,7 +54,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   override def stop(): Unit = {
     DebugLog.log("stopping worker threads")
-    workers.foreach(_.stop())
     workerThreads.foreach(_.interrupt())
     for (workerThread <- workerThreads) {
       workerThread.join(1000)
@@ -66,10 +65,13 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   // ========== WORKER WAKER ===========
 
-  override def wakeAll(): Unit = {
+  override def wakeOne(): Unit = {
     var i = 0
     while (i < workers.length) {
-      LockSupport.unpark(workerThreads(i))
+      if (workers(i).isSleepy) {
+        LockSupport.unpark(workerThreads(i))
+        return
+      }
       i += 1
     }
   }
