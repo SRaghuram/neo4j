@@ -262,6 +262,10 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
             raftMessageTimerResetMonitor.timerReset();
             leaderAvailabilityTimers.renewElection();
         }
+        else if ( outcome.isSteppingDown() )
+        {
+            raftMessageTimerResetMonitor.timerReset();
+        }
     }
 
     private void sendMessages( Outcome outcome )
