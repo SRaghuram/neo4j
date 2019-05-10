@@ -117,14 +117,13 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                initResources,
                                                tracker)
 
-    executionState.initializeState()
-
     val executingQuery = new ExecutingQuery(executionState,
                                             queryContext,
                                             queryState,
                                             tracer)
 
     queryManager.addQuery(executingQuery)
+    executionState.initializeState()
     tracker
   }
 }
