@@ -24,7 +24,7 @@ object SchedulerTracerTestBase {
 
 
 abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
-  extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.PARALLEL.copyWith(
+  extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.PARALLEL_NO_FUSING.copyWith(
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
     GraphDatabaseSettings.enable_morsel_runtime_trace -> "true",
@@ -68,6 +68,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
                              "pipelineId",
                              "pipelineDescription"))
 
+    //TODO: when running with fully fused pipelines this no longer holds
     dataRows.size should be >= expectedRowCount / MORSEL_SIZE
 
     val queryIds = mutable.Set[Long]()
