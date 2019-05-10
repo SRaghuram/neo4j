@@ -9,6 +9,7 @@ import com.neo4j.bench.client.model.TestRunError;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
+import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.jmh.api.config.Annotations;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -16,6 +17,7 @@ import com.neo4j.bench.jmh.api.config.Validation;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -51,11 +53,23 @@ public class RunIT
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
-        BenchmarkGroupBenchmarkMetrics results = SimpleRunner.configureAndRun( benchmarkConfig,
-                                                                               workDir,
-                                                                               profilerRecordingsOutputDir,
-                                                                               Lists.newArrayList( ProfilerType.JFR ),
-                                                                               errorReporter );
+        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 1 ));
+
+        SuiteDescription suiteDescription1 = Runner.createSuiteDescriptionFor( "com.neo4j.bench.jmh.api", benchmarkConfig );
+
+        String[] jvmArgs = {};
+        String[] jmhArgs = {};
+
+        BenchmarkGroupBenchmarkMetrics results = simpleRunner.run(
+                suiteDescription1,
+                Lists.newArrayList( ProfilerType.JFR ),
+                jvmArgs,
+                new int[]{1},
+                workDir,
+                errorReporter,
+                jmhArgs,
+                Jvm.defaultJvm(),
+                profilerRecordingsOutputDir );
 
         List<BenchmarkGroupBenchmark> benchmarks = results.benchmarkGroupBenchmarks();
         assertThat( benchmarks.size(), equalTo( 2 ) );
