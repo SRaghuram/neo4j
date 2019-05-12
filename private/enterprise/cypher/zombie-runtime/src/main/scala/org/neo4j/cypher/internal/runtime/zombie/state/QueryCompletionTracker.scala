@@ -106,6 +106,12 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
       throw throwable
     }
 
+    if (count != 0 && !cancelled && demand > 0) {
+      throw new IllegalStateException(
+        s"""Should not reach await until tracking is complete, cancelled or out-of demand,
+           |count: $count, cancelled: $cancelled, demand: $demand""".stripMargin)
+    }
+
     count > 0 && !cancelled
   }
 

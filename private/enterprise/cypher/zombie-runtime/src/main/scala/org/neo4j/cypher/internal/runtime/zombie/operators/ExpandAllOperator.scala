@@ -211,7 +211,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   /**
     * {{{
-    *     while (hasDemand && relationships.next()) {
+    *     while (hasDemand && this.canContinue) {
     *         val relId = relationships.relationshipReference()
     *         val otherSide = relationships.otherNodeReference()
     *
