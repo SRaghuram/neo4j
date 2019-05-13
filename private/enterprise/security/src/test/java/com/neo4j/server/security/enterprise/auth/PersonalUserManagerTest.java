@@ -332,7 +332,7 @@ class PersonalUserManagerTest
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "newRoleException" );
+                throw new IOException( "newRoleFromCopyException" );
             }
             delegate.newCopyOfRole( roleName, from );
         }

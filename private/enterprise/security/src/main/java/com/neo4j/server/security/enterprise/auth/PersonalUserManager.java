@@ -220,66 +220,32 @@ class PersonalUserManager implements EnterpriseUserManager
     @Override
     public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, IOException
     {
-        if ( subject.hasUsername( username ) )
+        try
         {
-            try
-            {
-                userManager.setUserRequirePasswordChange( username, requirePasswordChange );
-                securityLog.info( subject, "changed 'password change required'" );
-            }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change 'password change required': %s", e.getMessage() );
-                throw e;
-            }
+            assertUserManager();
+            userManager.setUserRequirePasswordChange( username, requirePasswordChange );
+            securityLog.info( subject, "changed 'password change required' for user `%s`", username );
         }
-        else
+        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
         {
-            try
-            {
-                assertUserManager();
-                userManager.setUserRequirePasswordChange( username, requirePasswordChange );
-                securityLog.info( subject, "changed 'password change required' for user `%s`", username);
-            }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change 'password change required' for user `%s`: %s", username,
-                        e.getMessage() );
-                throw e;
-            }
+            securityLog.error( subject, "tried to change 'password change required' for user `%s`: %s", username, e.getMessage() );
+            throw e;
         }
     }
 
     @Override
     public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException, IOException
     {
-        if ( subject.hasUsername( username ) )
+        try
         {
-            try
-            {
-                userManager.setUserStatus( username, isSuspended );
-                securityLog.info( subject, "changed user status" );
-            }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change user status: %s", e.getMessage() );
-                throw e;
-            }
+            assertUserManager();
+            userManager.setUserRequirePasswordChange( username, isSuspended );
+            securityLog.info( subject, "changed user status for user `%s`", username );
         }
-        else
+        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
         {
-            try
-            {
-                assertUserManager();
-                userManager.setUserRequirePasswordChange( username, isSuspended );
-                securityLog.info( subject, "changed user status for user `%s`", username);
-            }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change user status for user `%s`: %s", username,
-                        e.getMessage() );
-                throw e;
-            }
+            securityLog.error( subject, "tried to change user status for user `%s`: %s", username, e.getMessage() );
+            throw e;
         }
     }
 

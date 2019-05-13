@@ -44,9 +44,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
   }
 
   private lazy val userManager: EnterpriseUserManager = {
-    val supplier = resolver.resolveDependency(classOf[CommercialAuthAndUserManager])
-    //      val supplier = normalExecutionEngine.queryService.getDependencyResolver.resolveDependency(classOf[CommercialAuthAndUserManager])
-    supplier.getUserManager
+    resolver.resolveDependency(classOf[CommercialAuthAndUserManager]).getUserManager
   }
 
   val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, Int]) => ExecutionPlan] = {

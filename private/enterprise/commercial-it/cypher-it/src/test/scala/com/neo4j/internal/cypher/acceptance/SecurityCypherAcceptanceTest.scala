@@ -52,16 +52,15 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   private var systemGraphRealm: SystemGraphRealm = _
 
-  test("should list all roles") {
+  test("should list all default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE foo")
 
     // WHEN
-    val result = execute("SHOW ROLES")
+    val result = execute("SHOW ALL ROLES")
 
     // THEN
-    result.toSet should be(defaultRoles ++ Set(foo))
+    result.toSet should be(defaultRoles)
   }
 
   test("should list populated default roles") {
@@ -73,6 +72,18 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true)))
+  }
+
+  test("should create and list roles") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("CREATE ROLE foo")
+    val result = execute("SHOW ROLES")
+
+    // THEN
+    result.toSet should be(defaultRoles ++ Set(foo))
   }
 
   test("should list populated roles") {
@@ -93,6 +104,17 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   }
 
   test("should list default roles with users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW ROLES WITH USERS")
+
+    // THEN
+    result.toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should list all default roles with users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -129,19 +151,11 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW POPULATED ROLES WITH USERS")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"), foo ++ Map("member" -> "Bar"), foo ++ Map("member" -> "Baz")))
-  }
-
-  test("should create role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    execute("CREATE ROLE foo")
-
-    // THEN
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo))
+    result.toSet should be(Set(
+      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+      foo ++ Map("member" -> "Bar"),
+      foo ++ Map("member" -> "Baz")
+    ))
   }
 
   test("should fail on creating already existing role") {
@@ -256,6 +270,25 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     result2.toSet should be(defaultRoles ++ Set.empty)
   }
 
+  test("should fail on dropping default role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+
+    try {
+      // WHEN
+      execute(s"DROP ROLE ${PredefinedRoles.READER}")
+
+      fail("Expected error \"'%s' is a predefined role and can not be deleted or modified.\" but succeeded.".format(PredefinedRoles.READER))
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("'%s' is a predefined role and can not be deleted or modified.".format(PredefinedRoles.READER))
+    }
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+  }
+
   test("should fail on dropping non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -264,7 +297,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("DROP ROLE foo")
 
-      fail("Expected error \"Role 'foo' does not exist.\"")
+      fail("Expected error \"Role 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
       case e :Exception => e.getMessage should be("Role 'foo' does not exist.")
@@ -312,7 +345,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // THEN
     result.toSet should be(Set(
       Map("user" -> "neo4j", "roles" -> Seq("admin")),
-      Map("user" -> "Bar", "roles" -> Seq("fairy", "dragon")),
+      Map("user" -> "Bar", "roles" -> Seq("dragon", "fairy")),
       Map("user" -> "Baz", "roles" -> Seq.empty)
     ))
 
@@ -455,6 +488,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS SUSPENDED")
 
@@ -468,6 +502,27 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val user = systemGraphRealm.getUser("foo")
     user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
     user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+  }
+
+  test("should create user with all parameters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
+    // WHEN
+    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    val user = systemGraphRealm.getUser("foo")
+    user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
+    user.passwordChangeRequired() should equal(false)
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
   }
 
@@ -525,7 +580,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       // WHEN
       execute("DROP USER foo")
 
-      fail("Expected error \"User 'foo' does not exist.\"")
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
     } catch {
       // THEN
       case e :Exception => e.getMessage should be("User 'foo' does not exist.")
@@ -555,6 +610,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
+    user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
 
   test("should alter user password as parameter") {
@@ -574,9 +631,11 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
+    user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
 
-  test("should alter user password as missing parameter") {
+  test("should fail on altering user password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar'")
@@ -614,6 +673,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.passwordChangeRequired() should equal(false)
+    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
 
   test("should alter user status") {
@@ -633,6 +694,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
+    user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
+    user.passwordChangeRequired() should equal(true)
   }
 
   test("should alter user password and mode") {
