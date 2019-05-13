@@ -9,8 +9,6 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.List;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -23,6 +21,7 @@ import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -39,10 +38,12 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
     private static final String NAME_PROPERTY_NAME = "name";
 
     private final DatabaseManager<?> databaseManager;
+    private final DatabaseIdRepository databaseIdRepository;
 
-    MultiDatabaseTransactionEventListener( DatabaseManager databaseManager )
+    MultiDatabaseTransactionEventListener( DatabaseManager databaseManager, DatabaseIdRepository databaseIdRepository )
     {
         this.databaseManager = databaseManager;
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
@@ -57,7 +58,7 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
                 String name = getDatabaseName( node );
                 if ( STATUS_PROPERTY_NAME.equals( assignedNodeProperty.key() ) )
                 {
-                    DatabaseId databaseId = new DatabaseId( name );
+                    DatabaseId databaseId = databaseIdRepository.get( name );
                     String newStatus = (String) assignedNodeProperty.value();
                     switch ( newStatus )
                     {
@@ -78,7 +79,7 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
             if ( label.label().equals( DELETED_DATABASE_LABEL ) )
             {
                 String name = getDatabaseName( label.node() );
-                databaseManager.dropDatabase( new DatabaseId( name ) );
+                databaseManager.dropDatabase( databaseIdRepository.get( name ) );
             }
         }
         return null;
@@ -95,15 +96,15 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
         {
             if ( createdNode.hasLabel( DATABASE_LABEL ) )
             {
-                databaseManager.createDatabase( new DatabaseId( getDatabaseName( createdNode ) ) );
+                databaseManager.createDatabase( databaseIdRepository.get( getDatabaseName( createdNode ) ) );
             }
         }
     }
 
-    static void createDatabasesFromSystem( DatabaseManager<?> databaseManager, Config config )
+    static void createDatabasesFromSystem( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository )
     {
-        final String defaultDatabase = config.get( GraphDatabaseSettings.default_database );
-        var systemFacade = databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) )
+        final String defaultDatabase = databaseIdRepository.defaultDatabase().name();
+        var systemFacade = databaseManager.getDatabaseContext( databaseIdRepository.systemDatabase() )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( () -> new DatabaseNotFoundException( SYSTEM_DATABASE_NAME ) );
         try ( Transaction tx = systemFacade.beginTx() )
         {
@@ -118,8 +119,9 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
                     .filter( s -> !s.equals( defaultDatabase ) && !s.equals( SYSTEM_DATABASE_NAME ) )
                     .collect( toList() );
             executeAll(
-                    () -> safeForAll( name -> databaseManager.createDatabase( new DatabaseId( name ) ), databasesToCreate ),
-                    () -> safeForAll( name -> ((MultiDatabaseManager<?>) databaseManager).createStoppedDatabase( new DatabaseId( name ) ), stoppedDatabases ) );
+                    () -> safeForAll( name -> databaseManager.createDatabase( databaseIdRepository.get( name ) ), databasesToCreate ),
+                    () -> safeForAll( name ->
+                            ((MultiDatabaseManager<?>) databaseManager).createStoppedDatabase( databaseIdRepository.get( name ) ), stoppedDatabases ) );
             tx.success();
         }
         catch ( Exception e )

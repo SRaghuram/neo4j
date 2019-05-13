@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -48,7 +47,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 @ExtendWith( SuppressOutputExtension.class )
 abstract class BaseClusterOverviewIT
 {
-    private static final DatabaseId DB = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final String DB = DEFAULT_DATABASE_NAME;
 
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )

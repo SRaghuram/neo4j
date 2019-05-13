@@ -27,6 +27,8 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.ListValue;
@@ -52,6 +54,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 class ClusterOverviewProcedureTest
 {
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+
     @Test
     void shouldHaveCorrectSignature()
     {
@@ -130,7 +134,7 @@ class ClusterOverviewProcedureTest
     private static Set<DatabaseId> databaseIds( String... names )
     {
         return Arrays.stream( names )
-                .map( DatabaseId::new )
+                .map( DATABASE_ID_REPOSITORY::get )
                 .collect( toSet() );
     }
 
@@ -180,7 +184,7 @@ class ClusterOverviewProcedureTest
             for ( String key : mapValue.keySet() )
             {
                 TextValue value = (TextValue) mapValue.get( key );
-                recordDatabases.put( new DatabaseId( key ), valueOf( value.stringValue() ) );
+                recordDatabases.put( DATABASE_ID_REPOSITORY.get( key ), valueOf( value.stringValue() ) );
             }
             if ( !recordDatabases.equals( databases ) )
             {

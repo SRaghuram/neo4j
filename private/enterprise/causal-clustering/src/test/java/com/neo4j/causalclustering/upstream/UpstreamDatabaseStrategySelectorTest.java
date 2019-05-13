@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +31,7 @@ import static org.neo4j.internal.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "clients" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "clients" );
 
     @Test
     void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception

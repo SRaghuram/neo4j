@@ -32,6 +32,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -75,7 +76,7 @@ public class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
-    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( DEFAULT_DATABASE_NAME );
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();

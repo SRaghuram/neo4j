@@ -30,6 +30,7 @@ import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -66,7 +67,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -74,7 +74,7 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 @ExtendWith( LifeExtension.class )
 class TxPullRequestHandlerTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 

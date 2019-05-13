@@ -13,12 +13,16 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DefaultDiscoveryMemberTest
 {
+    DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+
     @Test
     void shouldReturnMemberId()
     {
@@ -32,9 +36,9 @@ class DefaultDiscoveryMemberTest
     @Test
     void shouldReturnHostedDatabases()
     {
-        DatabaseId databaseId1 = new DatabaseId( "one" );
-        DatabaseId databaseId2 = new DatabaseId( "two" );
-        DatabaseId databaseId3 = new DatabaseId( "three" );
+        DatabaseId databaseId1 = databaseIdRepository.get( "one" );
+        DatabaseId databaseId2 = databaseIdRepository.get( "two" );
+        DatabaseId databaseId3 = databaseIdRepository.get( "three" );
 
         StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
@@ -55,6 +59,6 @@ class DefaultDiscoveryMemberTest
 
         Set<DatabaseId> databaseIds = discoveryMember.hostedDatabases();
         assertEquals( Set.of(), databaseIds );
-        assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( new DatabaseId( "one" ) ) );
+        assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( databaseIdRepository.get( "one" ) ) );
     }
 }

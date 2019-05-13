@@ -42,6 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
@@ -51,7 +52,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
@@ -358,29 +358,27 @@ public class Cluster
         return getAllMembersWithAnyRole( role );
     }
 
-    private CoreClusterMember getMemberWithRole( DatabaseId databaseId, Role role )
+    private CoreClusterMember getMemberWithRole( String databaseName, Role role )
     {
-        return getMemberWithAnyRole( databaseId, role );
+        return getMemberWithAnyRole( databaseName, role );
     }
 
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
-        return getMemberWithAnyRole( databaseId, roles );
+        return getMemberWithAnyRole( DEFAULT_DATABASE_NAME, roles );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
-        return getAllMembersWithAnyRole( databaseId, roles );
+        return getAllMembersWithAnyRole( DEFAULT_DATABASE_NAME, roles );
     }
 
-    public CoreClusterMember getMemberWithAnyRole( DatabaseId databaseId, Role... roles )
+    public CoreClusterMember getMemberWithAnyRole( String databaseName, Role... roles )
     {
-        return getAllMembersWithAnyRole( databaseId, roles ).stream().findFirst().orElse( null );
+        return getAllMembersWithAnyRole( databaseName, roles ).stream().findFirst().orElse( null );
     }
 
-    private List<CoreClusterMember> getAllMembersWithAnyRole( DatabaseId databaseId, Role... roles )
+    private List<CoreClusterMember> getAllMembersWithAnyRole( String databaseName, Role... roles )
     {
         Set<Role> roleSet = Arrays.stream( roles ).collect( toSet() );
 
@@ -396,7 +394,7 @@ public class Cluster
 
             try
             {
-                var database = (GraphDatabaseFacade) managementService.database( databaseId.name() );
+                var database = (GraphDatabaseFacade) managementService.database( databaseName );
                 if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
                 {
                     list.add( m );
@@ -420,14 +418,14 @@ public class Cluster
         return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
-    public CoreClusterMember awaitLeader( DatabaseId databaseId ) throws TimeoutException
+    public CoreClusterMember awaitLeader( String databaseName ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( databaseId, Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return awaitCoreMemberWithRole( databaseName, Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
-    public CoreClusterMember awaitLeader( DatabaseId databaseId, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    public CoreClusterMember awaitLeader( String databaseName, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( databaseId, Role.LEADER, timeout, timeUnit );
+        return awaitCoreMemberWithRole( databaseName, Role.LEADER, timeout, timeUnit );
     }
 
     public CoreClusterMember awaitLeader( long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -446,24 +444,22 @@ public class Cluster
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember awaitCoreMemberWithRole( DatabaseId databaseId, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    private CoreClusterMember awaitCoreMemberWithRole( String databaseName, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        return await( () -> getMemberWithRole( databaseId, role ), notNull(), timeout, timeUnit );
+        return await( () -> getMemberWithRole( databaseName, role ), notNull(), timeout, timeUnit );
     }
 
     public int numberOfCoreMembersReportedByTopology( String databaseName )
     {
-        DatabaseId databaseId = new DatabaseId( databaseName );
-        return numberOfMembersReportedByCoreTopology( service -> service.coreTopologyForDatabase( databaseId ) );
+        return numberOfMembersReportedByCoreTopology( databaseName, CoreTopologyService::coreTopologyForDatabase );
     }
 
     public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
-        DatabaseId databaseId = new DatabaseId( databaseName );
-        return numberOfMembersReportedByCoreTopology( service -> service.readReplicaTopologyForDatabase( databaseId ) );
+        return numberOfMembersReportedByCoreTopology( databaseName, CoreTopologyService::readReplicaTopologyForDatabase );
     }
 
-    private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology<?>> topologySelector )
+    private int numberOfMembersReportedByCoreTopology( String databaseName, BiFunction<CoreTopologyService,DatabaseId,Topology<?>> topologySelector )
     {
         return coreMembers
                 .values()
@@ -473,9 +469,9 @@ public class Cluster
                 .findAny()
                 .map( coreClusterMember ->
                 {
-                    CoreTopologyService coreTopologyService =
-                            coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CoreTopologyService.class );
-                    return topologySelector.apply( coreTopologyService ).members().size();
+                    var coreTopologyService = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                    var databaseId = coreClusterMember.databaseIdRepository().get( databaseName );
+                    return topologySelector.apply( coreTopologyService, databaseId ).members().size();
                 } )
                 .orElse( 0 );
     }
@@ -485,8 +481,7 @@ public class Cluster
      */
     public CoreClusterMember coreTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
-        return coreTx( databaseId, op );
+        return coreTx( DEFAULT_DATABASE_NAME, op );
     }
 
     /**
@@ -494,28 +489,27 @@ public class Cluster
      */
     public CoreClusterMember systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        var databaseId = new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        return coreTx( databaseId, op );
+        return coreTx( DEFAULT_DATABASE_NAME, op );
     }
 
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( DatabaseId databaseId, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
+    public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return leaderTx( databaseId, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return leaderTx( databaseName, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     /**
      * Perform a transaction against the leader of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember leaderTx( DatabaseId databaseId, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+    private CoreClusterMember leaderTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
         {
-            CoreClusterMember member = awaitLeader( databaseId, timeout, timeUnit );
+            CoreClusterMember member = awaitLeader( databaseName, timeout, timeUnit );
             GraphDatabaseFacade db = member.defaultDatabase();
             if ( db == null )
             {

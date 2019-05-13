@@ -17,8 +17,8 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForM
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -29,12 +29,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class BaseAkkaSerializerTest
@@ -64,6 +63,7 @@ public class BaseAkkaSerializerTest
     public static Collection<Object[]> data()
     {
         String actorPath = String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name );
+        var databaseIdRepository = new TestDatabaseIdRepository();
         return Arrays.asList(
                 new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ),
                         new LeaderInfoSerializer()},
@@ -85,14 +85,14 @@ public class BaseAkkaSerializerTest
                         new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                         new ReadReplicaInfoSerializer()},
-                new Object[]{new DatabaseCoreTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), new RaftId( UUID.randomUUID() ),
+                new Object[]{new DatabaseCoreTopology( databaseIdRepository.defaultDatabase(), new RaftId( UUID.randomUUID() ),
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
                 new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                         new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
                 new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
-                new Object[]{new DatabaseId( "db name" ), new DatabaseIdSerializer()}
+                new Object[]{databaseIdRepository.get( "db name" ), new DatabaseIdSerializer()}
         );
     }
 

@@ -35,6 +35,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -64,7 +65,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_RO
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -80,7 +80,7 @@ class RaftBootstrapperIT
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
 
-    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
     private final DatabaseInitializer databaseInitializer = DatabaseInitializer.NO_INITIALIZATION;
@@ -309,7 +309,7 @@ class RaftBootstrapperIT
         for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get, nodeCount );
-            if ( databaseEntry.getKey().name().equals( SYSTEM_DATABASE_NAME ) )
+            if ( DatabaseId.isSystemDatabase( databaseEntry.getKey() ) )
             {
                 verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
             }

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
@@ -28,7 +29,7 @@ class RaftMonitorTest
     private final AssertableLogProvider user = new AssertableLogProvider();
     private final AssertableLogProvider debug = new AssertableLogProvider();
 
-    private final DatabaseId databaseId = new DatabaseId( "smurf" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "smurf" );
 
     private RaftBinder.Monitor raftBinderMonitor;
     private PersistentSnapshotDownloader.Monitor snapshotMonitor;

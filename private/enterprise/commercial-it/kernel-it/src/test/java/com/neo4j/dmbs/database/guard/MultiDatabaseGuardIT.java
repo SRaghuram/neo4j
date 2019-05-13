@@ -16,7 +16,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -63,18 +63,19 @@ class MultiDatabaseGuardIT
         String secondDatabase = "Lila";
         String thirdDatabase = "Bender";
 
-        databaseManager.createDatabase( new DatabaseId( firstDatabase ) );
+        var databaseIdRepository = new TestDatabaseIdRepository();
+        databaseManager.createDatabase( databaseIdRepository.get( firstDatabase ) );
         assertEquals( 3, compositeGuard.getGuards().size() );
 
-        databaseManager.createDatabase( new DatabaseId( secondDatabase ) );
-        databaseManager.createDatabase( new DatabaseId( thirdDatabase ) );
+        databaseManager.createDatabase( databaseIdRepository.get( secondDatabase ) );
+        databaseManager.createDatabase( databaseIdRepository.get( thirdDatabase ) );
         assertEquals( 5, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( new DatabaseId( thirdDatabase ) );
+        databaseManager.stopDatabase( databaseIdRepository.get( thirdDatabase ) );
         assertEquals( 4, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( new DatabaseId( firstDatabase ) );
-        databaseManager.stopDatabase( new DatabaseId( secondDatabase ) );
+        databaseManager.stopDatabase( databaseIdRepository.get( firstDatabase ) );
+        databaseManager.stopDatabase( databaseIdRepository.get( secondDatabase ) );
 
         assertEquals( 2, compositeGuard.getGuards().size() );
     }

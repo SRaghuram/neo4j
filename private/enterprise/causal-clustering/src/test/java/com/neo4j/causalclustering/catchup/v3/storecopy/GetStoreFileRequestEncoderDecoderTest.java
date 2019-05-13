@@ -13,14 +13,14 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class GetStoreFileRequestEncoderDecoderTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4, 5 );
     private static final File expectedFile = new File( "abc.123" );
     private static final Long expectedLastTransaction = 1234L;

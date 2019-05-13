@@ -31,7 +31,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -65,7 +65,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
 import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
@@ -187,7 +186,7 @@ class TransactionStatusResultTest
 
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, getTestConnectionInfo(), new DatabaseId( DEFAULT_DATABASE_NAME ), "testUser", "testQuery", EMPTY_MAP,
+        return new ExecutingQuery( queryId, getTestConnectionInfo(), new TestDatabaseIdRepository().defaultDatabase(), "testUser", "testQuery", EMPTY_MAP,
                 stringObjectEmptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );
@@ -246,7 +245,7 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ), new DatabaseId( DEFAULT_DATABASE_NAME ) )
+                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ), new TestDatabaseIdRepository().defaultDatabase() )
             {
                 @Override
                 public Statistics getStatistics()

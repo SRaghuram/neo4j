@@ -29,6 +29,8 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -39,12 +41,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class UserDefinedConfigurationStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "customers" );
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final DatabaseId DATABASE_ID = DATABASE_ID_REPOSITORY.get( "customers" );
 
     private final String northGroup = "north";
     private final String southGroup = "south";
@@ -175,7 +177,7 @@ class UserDefinedConfigurationStrategyTest
 
         Map<MemberId,ReadReplicaInfo> readReplicas = Stream.of( readReplicaIds ).collect( Collectors.toMap( Function.identity(), toReadReplicaInfo ) );
 
-        return new DatabaseReadReplicaTopology( new DatabaseId( DEFAULT_DATABASE_NAME ), readReplicas );
+        return new DatabaseReadReplicaTopology( DATABASE_ID_REPOSITORY.defaultDatabase(), readReplicas );
     }
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
@@ -184,7 +186,7 @@ class UserDefinedConfigurationStrategyTest
                 new ConnectorUri( bolt, new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
         AdvertisedSocketAddress catchupAddress = new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() );
         Set<String> groups = groupGenerator.apply( memberId );
-        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Set<DatabaseId> databaseIds = Set.of( DATABASE_ID_REPOSITORY.defaultDatabase() );
         return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
     }
 

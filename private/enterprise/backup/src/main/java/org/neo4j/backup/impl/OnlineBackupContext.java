@@ -11,12 +11,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 public class OnlineBackupContext
 {
@@ -90,7 +91,7 @@ public class OnlineBackupContext
     public static final class Builder
     {
         private AdvertisedSocketAddress address;
-        private DatabaseId databaseId;
+        private String databaseName;
         private Path backupDirectory;
         private Path reportsDirectory;
         private boolean fallbackToFullBackup = true;
@@ -116,9 +117,9 @@ public class OnlineBackupContext
             return this;
         }
 
-        public Builder withDatabaseId( DatabaseId databaseId )
+        public Builder withDatabaseName( String databaseName )
         {
-            this.databaseId = databaseId;
+            this.databaseName = databaseName;
             return this;
         }
 
@@ -178,13 +179,19 @@ public class OnlineBackupContext
 
         public OnlineBackupContext build()
         {
+            DatabaseId databaseId;
             if ( config == null )
             {
                 config = Config.defaults();
             }
-            if ( databaseId == null )
+            DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
+            if ( databaseName == null )
             {
-                databaseId = new DatabaseId( config.get( GraphDatabaseSettings.default_database ) );
+                databaseId = databaseIdRepository.defaultDatabase();
+            }
+            else
+            {
+                databaseId = databaseIdRepository.get( databaseName );
             }
             if ( backupDirectory == null )
             {

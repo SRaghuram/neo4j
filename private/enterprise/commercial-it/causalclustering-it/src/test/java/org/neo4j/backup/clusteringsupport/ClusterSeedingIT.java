@@ -29,7 +29,6 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
@@ -114,8 +113,8 @@ public class ClusterSeedingIT
             for ( CoreClusterMember member : cluster.coreMembers() )
             {
                 DefaultDatabasesBackup backups = backupsOpt.get();
-                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), member, new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
-                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), member, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), member, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), member, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             }
         }
 

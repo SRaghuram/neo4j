@@ -17,6 +17,7 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
@@ -29,14 +30,16 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
     private static final String[] PROCEDURE_NAMESPACE = {"dbms", "cluster"};
     private static final String OUTPUT_NAME = "role";
     private static final String PARAMETER_NAME = "database";
+    private final DatabaseIdRepository databaseIdRepository;
 
-    RoleProcedure()
+    RoleProcedure( DatabaseIdRepository databaseIdRepository )
     {
         super( procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )
                 .in( PARAMETER_NAME, Neo4jTypes.NTString )
                 .out( OUTPUT_NAME, Neo4jTypes.NTString )
                 .description( "The role of this instance in the cluster for the specified database." )
                 .build() );
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
@@ -49,7 +52,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
 
     abstract RoleInfo role( DatabaseId databaseId );
 
-    private static DatabaseId extractDatabaseId( AnyValue[] input )
+    private DatabaseId extractDatabaseId( AnyValue[] input )
     {
         if ( input.length != 1 )
         {
@@ -58,7 +61,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         var value = input[0];
         if ( value instanceof TextValue )
         {
-            return new DatabaseId( ((TextValue) value).stringValue() );
+            return databaseIdRepository.get( ((TextValue) value).stringValue() );
         }
         throw new IllegalArgumentException( "Parameter '" + PARAMETER_NAME + "' value should be a string: " + value );
     }

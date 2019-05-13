@@ -20,6 +20,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -27,7 +28,6 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
@@ -59,7 +59,7 @@ public class ClassicNeo4jDatabase
         private final File baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
-        private DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
         private boolean needRecover;
         private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;

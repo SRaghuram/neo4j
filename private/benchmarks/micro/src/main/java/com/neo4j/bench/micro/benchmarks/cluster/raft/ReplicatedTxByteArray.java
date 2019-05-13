@@ -19,6 +19,8 @@ import org.openjdk.jmh.annotations.Param;
 import java.util.concurrent.ExecutionException;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.bench.micro.Main.run;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
@@ -27,6 +29,8 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 @OutputTimeUnit( MICROSECONDS )
 public class ReplicatedTxByteArray extends AbstractRaftBenchmark
 {
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+
     @ParamValues( allowed = {"V1", "V2"}, base = "V2" )
     @Param( {} )
     public ProtocolVersion ReplicatedTxByteArray_protocolVersion;
@@ -57,7 +61,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     RaftMessages.RaftIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage()
     {
         byte[] bytes = new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )];
-        DatabaseId databaseId = new DatabaseId( "db-name" );
+        DatabaseId databaseId = databaseIdRepository.get( "db-name" );
         return RaftMessages.RaftIdAwareMessage.of(
                 AbstractRaftBenchmark.RAFT_ID,
                 new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,

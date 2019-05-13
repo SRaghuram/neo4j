@@ -17,6 +17,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -38,13 +39,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedTokenHolderTest
 {
     private StorageEngine storageEngine;
     private Supplier<StorageEngine> storageEngineSupplier = () -> storageEngine;
-    private DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     public void shouldStoreInitialTokens()

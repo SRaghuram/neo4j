@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -21,7 +21,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 @RunWith( Parameterized.class )
 public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
@@ -34,10 +34,11 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
     @Parameterized.Parameters
     public static Collection<DatabaseCoreTopology> data()
     {
+        var databaseIdRepository = new TestDatabaseIdRepository();
         return Arrays.asList(
-                new DatabaseCoreTopology( new DatabaseId( "orders" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( new DatabaseId( "customers" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
-                new DatabaseCoreTopology( new DatabaseId( "cars" ), null, coreServerInfos( 4 ) )
+                new DatabaseCoreTopology( databaseIdRepository.get( "orders" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( databaseIdRepository.get( "customers" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( databaseIdRepository.get( "cars" ), null, coreServerInfos( 4 ) )
         );
     }
 

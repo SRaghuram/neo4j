@@ -15,11 +15,11 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class LeaderOnlyStrategyTest
 {
@@ -43,7 +43,7 @@ class LeaderOnlyStrategyTest
         leaderOnlyStrategy.inject( topologyServiceNoRetriesStrategy, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( new TestDatabaseIdRepository().defaultDatabase() );
 
         // then
         assertTrue( resolved.isPresent() );

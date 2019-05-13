@@ -22,7 +22,6 @@ import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertEventualOverview;
@@ -100,28 +99,28 @@ class CausalClusteringProceduresIT
     @Test
     void clusterRoleProcedure() throws Exception
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var databaseName = DEFAULT_DATABASE_NAME;
         var leader = cluster.awaitLeader();
 
         for ( var member : cluster.coreMembers() )
         {
             var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-            assertEventually( roleReportedByProcedure( member, databaseId ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
         }
 
         for ( var member : cluster.readReplicas() )
         {
             var expectedRole = RoleInfo.READ_REPLICA;
-            assertEventually( roleReportedByProcedure( member, databaseId ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
         }
     }
 
     @Test
     void clusterRoleProcedureAfterFollowerShutdown() throws Exception
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var databaseName = DEFAULT_DATABASE_NAME;
         var leader = cluster.awaitLeader();
-        var follower = cluster.getMemberWithAnyRole( databaseId, Role.FOLLOWER );
+        var follower = cluster.getMemberWithAnyRole( databaseName, Role.FOLLOWER );
 
         assertThat( cluster.coreMembers(), hasSize( 2 ) );
 
@@ -129,7 +128,7 @@ class CausalClusteringProceduresIT
         {
             // shutdown the only follower and wait for the leader to become a follower
             follower.shutdown();
-            assertEventually( roleReportedByProcedure( leader, databaseId ), equalTo( RoleInfo.FOLLOWER ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( leader, databaseName ), equalTo( RoleInfo.FOLLOWER ), 2, MINUTES );
         }
         finally
         {
@@ -138,8 +137,8 @@ class CausalClusteringProceduresIT
 
             // await until follower views the correct cluster
             assertEventualOverview( allOf(
-                    containsRole( LEADER, databaseId, 1 ),
-                    containsRole( FOLLOWER, databaseId, 1 ) ), follower );
+                    containsRole( LEADER, databaseName, 1 ),
+                    containsRole( FOLLOWER, databaseName, 1 ) ), follower );
         }
     }
 
@@ -170,12 +169,12 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, DatabaseId databaseId )
+    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
     {
         return () ->
         {
             var db = member.defaultDatabase();
-            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseId.name() ) ) )
+            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseName ) ) )
             {
                 return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
             }

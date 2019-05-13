@@ -16,6 +16,8 @@ import java.util.UUID;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +31,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 class CoreRoleProcedureTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "cars" );
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.get( "cars" );
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final IdentityModule identityModule = mock( IdentityModule.class );
     private final TopologyService topologyService = mock( TopologyService.class );
@@ -37,7 +40,7 @@ class CoreRoleProcedureTest
     private final Context procedureContext = mock( Context.class );
     private final ResourceTracker resourceTracker = mock( ResourceTracker.class );
 
-    private final CoreRoleProcedure procedure = new CoreRoleProcedure( identityModule, topologyService );
+    private final CoreRoleProcedure procedure = new CoreRoleProcedure( identityModule, topologyService, databaseIdRepository );
 
     @Test
     void shouldThrowWhenDatabaseNameNotSpecified()

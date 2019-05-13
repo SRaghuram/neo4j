@@ -37,6 +37,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -70,7 +72,8 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
-    private static final DatabaseId UNKNOWN_DB_ID = new DatabaseId( "unknown.db" );
+    private static final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private static final DatabaseId UNKNOWN_DB_ID = databaseIdRepository.get( "unknown.db" );
     private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 1122, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
@@ -165,7 +168,7 @@ class CatchupServerIT
 
         // when the list of files are requested from the server with the wrong storeId
         PrepareStoreCopyResponse prepareStoreCopyResponse =
-                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, new DatabaseId( DEFAULT_DATABASE_NAME  ) );
+                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, databaseIdRepository.defaultDatabase() );
         simpleCatchupClient.close();
 
         // then the response is not a list of files but an error
@@ -210,7 +213,7 @@ class CatchupServerIT
 
         // when we copy that file using a different storeId
         StoreCopyFinishedResponse storeCopyFinishedResponse =
-                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, new DatabaseId( DEFAULT_DATABASE_NAME ) );
+                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, databaseIdRepository.defaultDatabase() );
         simpleCatchupClient.close();
 
         // then the response from the server should be an error message that describes a store ID mismatch
@@ -241,7 +244,7 @@ class CatchupServerIT
     @Test
     void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
     {
-        var databaseId = new DatabaseId( "testDatabase" );
+        var databaseId = databaseIdRepository.get( "testDatabase" );
         managementService.createDatabase( databaseId.name() );
 
         try ( var catchupClient = newSimpleCatchupClient( databaseId ) )
@@ -315,7 +318,7 @@ class CatchupServerIT
 
     private SimpleCatchupClient newSimpleCatchupClient()
     {
-        return newSimpleCatchupClient( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return newSimpleCatchupClient( databaseIdRepository.defaultDatabase() );
     }
 
     private SimpleCatchupClient newSimpleCatchupClient( DatabaseId databaseId )

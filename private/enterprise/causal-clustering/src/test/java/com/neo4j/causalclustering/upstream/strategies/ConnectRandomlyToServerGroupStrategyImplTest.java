@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
@@ -34,7 +35,7 @@ import static org.hamcrest.Matchers.is;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "employees" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "employees" );
 
     @Test
     void shouldStayWithinGivenSingleServerGroup()

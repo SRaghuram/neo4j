@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.when;
 
 class CoreTopologyChangeListenerTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "my_db" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_db" );
     private final DiscoveryMember myself = new TestDiscoveryMember( Set.of( databaseId ) );
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();

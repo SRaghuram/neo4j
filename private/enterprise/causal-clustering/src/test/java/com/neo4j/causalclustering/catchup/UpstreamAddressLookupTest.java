@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,11 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class UpstreamAddressLookupTest
 {
-    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
     private final MemberId firstMember = new MemberId( UUID.randomUUID() );
     private final MemberId secondMember = new MemberId( UUID.randomUUID() );

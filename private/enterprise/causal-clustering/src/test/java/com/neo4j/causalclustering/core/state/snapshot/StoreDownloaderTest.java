@@ -23,6 +23,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -44,7 +46,8 @@ class StoreDownloaderTest
     private final AdvertisedSocketAddress primaryAddress = new AdvertisedSocketAddress( "primary", 1 );
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
-    private final DatabaseId databaseId = new DatabaseId( "target" );
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.get( "target" );
     private final StoreId storeId = randomStoreId();
 
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
@@ -136,7 +139,7 @@ class StoreDownloaderTest
     {
         // given
         StoreDownloadContext wrongDb = mock( StoreDownloadContext.class );
-        when( wrongDb.databaseId() ).thenReturn( new DatabaseId( "wrong" ) );
+        when( wrongDb.databaseId() ).thenReturn( databaseIdRepository.get( "wrong" ) );
 
         // when & then
         assertThrows( IllegalStateException.class, () -> downloader.bringUpToDate( wrongDb, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) );

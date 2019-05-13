@@ -20,7 +20,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.Converters;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
@@ -130,7 +129,7 @@ class OnlineBackupContextFactory
 
             return OnlineBackupContext.builder()
                     .withAddress( address )
-                    .withDatabaseId( new DatabaseId( arguments.get( ARG_NAME_DATABASE_NAME ) ) )
+                    .withDatabaseName( arguments.get( ARG_NAME_DATABASE_NAME ) )
                     .withBackupDirectory( backupDirectory )
                     .withFallbackToFullBackup( arguments.getBoolean( ARG_NAME_FALLBACK_FULL ) )
                     .withReportsDirectory( getReportDirectory( arguments ) )

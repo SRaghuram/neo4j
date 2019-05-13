@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class CoreReplicatedContentMarshallingTestV2
@@ -48,7 +48,7 @@ public class CoreReplicatedContentMarshallingTestV2
     @Parameterized.Parameters( name = "{0}" )
     public static ReplicatedContent[] data()
     {
-        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
                 new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
                 new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),

@@ -26,6 +26,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -37,7 +38,6 @@ import org.neo4j.time.Clocks;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 /**
@@ -54,7 +54,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private TestDirectory testDirectory;
 
     private File logDirectory;
-    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {

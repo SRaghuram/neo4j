@@ -19,6 +19,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
 
@@ -50,10 +52,12 @@ public class RestoreDatabaseCli implements AdminCommand
         DatabaseId databaseId;
         String fromPath;
         boolean forceOverwrite;
+        Config config = loadNeo4jConfig( homeDir, configDir );
+        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
 
         try
         {
-            databaseId = new DatabaseId( arguments.parse( incomingArguments ).get( ARG_DATABASE ) );
+            databaseId = databaseIdRepository.get( arguments.parse( incomingArguments ).get( ARG_DATABASE ) );
             fromPath = arguments.get( "from" );
             forceOverwrite = arguments.getBoolean( "force" );
         }
@@ -61,8 +65,6 @@ public class RestoreDatabaseCli implements AdminCommand
         {
             throw new IncorrectUsage( e.getMessage() );
         }
-
-        Config config = loadNeo4jConfig( homeDir, configDir );
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {

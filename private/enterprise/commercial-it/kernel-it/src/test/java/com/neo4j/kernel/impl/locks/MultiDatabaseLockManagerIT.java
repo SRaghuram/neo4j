@@ -21,7 +21,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -99,7 +99,7 @@ class MultiDatabaseLockManagerIT
     {
         String secondDb = "second";
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( new DatabaseId( secondDb ) ).databaseFacade();
+        return databaseManager.createDatabase( new TestDatabaseIdRepository().get( secondDb ) ).databaseFacade();
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )

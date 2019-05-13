@@ -12,7 +12,6 @@ import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -21,7 +20,8 @@ import org.openjdk.jmh.annotations.Param;
 
 import java.util.concurrent.ExecutionException;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -31,6 +31,8 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 @OutputTimeUnit( MICROSECONDS )
 public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
 {
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+
     @ParamValues( allowed = {"V2"}, base = "V2" )
     @Param( {} )
     public ProtocolVersion ReplicatedTxRepresentation_protocolVersion;
@@ -66,7 +68,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         Log log = logProvider().getLog( getClass() );
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                   diffPercent( expectedSize, clusterTx.size() ) );
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), new DatabaseId( "db-name" ) );
+        var replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), databaseIdRepository.get( "db-name" ) );
         return RaftMessages.RaftIdAwareMessage.of( RAFT_ID, new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 

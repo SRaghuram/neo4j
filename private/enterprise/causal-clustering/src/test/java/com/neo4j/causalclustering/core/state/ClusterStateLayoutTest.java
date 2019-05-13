@@ -13,6 +13,7 @@ import java.io.File;
 import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -24,7 +25,7 @@ import static org.neo4j.io.fs.FileUtils.path;
 @ExtendWith( TestDirectoryExtension.class )
 class ClusterStateLayoutTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "my_database" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "my_database" );
 
     @Inject
     private TestDirectory testDirectory;

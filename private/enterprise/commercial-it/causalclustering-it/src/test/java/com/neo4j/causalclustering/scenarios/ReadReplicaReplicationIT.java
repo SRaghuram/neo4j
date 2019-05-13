@@ -57,7 +57,7 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.api.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -562,7 +562,7 @@ public class ReadReplicaReplicationIT
     {
         ClusteredDatabaseContext defaultDatabase = readReplica
                 .databaseManager()
-                .getDatabaseContext( new DatabaseId( databaseName ) )
+                .getDatabaseContext( new TestDatabaseIdRepository().get( databaseName ) )
                 .orElseThrow();
 
         assertTrue( defaultDatabase.isFailed() );

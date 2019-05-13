@@ -46,6 +46,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.FormattedLogProvider;
 
@@ -53,7 +54,6 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Warning! This test ensures that all raft protocol work as expected in their current implementation. However, it does not know about changes to the
@@ -74,7 +74,7 @@ class RaftMessageEncoderDecoderTest
 
     private static Stream<Arguments> data()
     {
-        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
         return setUpParams( new RaftMessage[]{new RaftMessages.Heartbeat( MEMBER_ID, 1, 2, 3 ),
                 new RaftMessages.HeartbeatResponse( MEMBER_ID ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, new DummyRequest( new byte[]{1, 2, 3, 4, 5, 6, 7, 8} ) ),

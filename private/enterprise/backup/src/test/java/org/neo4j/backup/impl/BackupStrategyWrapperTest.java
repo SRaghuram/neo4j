@@ -22,7 +22,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -535,7 +534,7 @@ class BackupStrategyWrapperTest
         return OnlineBackupContext.builder()
                 .withAddress( address )
                 .withConfig( config )
-                .withDatabaseId( new DatabaseId( DEFAULT_DATABASE_NAME ) )
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withBackupDirectory( desiredBackupLayout.databaseDirectory().toPath() )
                 .withFallbackToFullBackup( fallbackToFull )
                 .withConsistencyCheck( true )

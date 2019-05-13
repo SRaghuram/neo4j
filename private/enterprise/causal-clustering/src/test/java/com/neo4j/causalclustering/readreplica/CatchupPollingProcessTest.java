@@ -27,10 +27,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
@@ -63,7 +63,7 @@ class CatchupPollingProcessTest
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
-    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 

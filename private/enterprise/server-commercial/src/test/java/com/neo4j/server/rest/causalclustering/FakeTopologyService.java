@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -27,12 +27,13 @@ import java.util.stream.Collectors;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
+    private static final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
@@ -80,7 +81,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
         AdvertisedSocketAddress catchupServer = new AdvertisedSocketAddress( "hostname", 1234 );
         ClientConnectorAddresses clientConnectors = new ClientConnectorAddresses( Collections.emptyList() );
         Set<String> groups = Set.of();
-        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Set<DatabaseId> databaseIds = Set.of( databaseIdRepository.defaultDatabase() );
         boolean refuseToBeLeader = false;
         return new CoreServerInfo( raftServer, catchupServer, clientConnectors, groups, databaseIds, refuseToBeLeader );
     }
@@ -90,7 +91,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( List.of() );
         AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 1234 );
         Set<String> groups = Set.of();
-        Set<DatabaseId> databaseIds = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        Set<DatabaseId> databaseIds = Set.of( databaseIdRepository.defaultDatabase() );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 

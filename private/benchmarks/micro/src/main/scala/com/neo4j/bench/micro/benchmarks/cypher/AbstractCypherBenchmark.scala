@@ -9,7 +9,6 @@ import java.util
 import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.{PlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -35,7 +34,7 @@ import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead, Transac
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.database.{Database, DatabaseId}
+import org.neo4j.kernel.database.{Database, TestDatabaseIdRepository}
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
@@ -54,6 +53,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
+  private val databaseIdRepository = new TestDatabaseIdRepository()
 
   class CountVisitor(bh: Blackhole) extends QueryResultVisitor[Exception] {
     var count: Int = 0
@@ -192,7 +192,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       threadToStatementContextBridge,
       tx,
       initialStatement,
-      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ), "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
+      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, databaseIdRepository.defaultDatabase(), "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
       new DefaultValueMapper(proxySpi)) {
       override def close(success: Boolean): Unit = ()
     }

@@ -21,6 +21,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -48,7 +49,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
 
     private DatabaseId defaultDatabaseId()
     {
-        return new DatabaseId( env.defaultDatabaseName() );
+        return new TestDatabaseIdRepository().get( env.defaultDatabaseName() );
     }
 
     @Test

@@ -23,7 +23,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -57,9 +57,10 @@ class MultiDatabaseFileWatchIT
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        firstContext = databaseManager.createDatabase( new DatabaseId( "first" ) );
-        secondContext = databaseManager.createDatabase( new DatabaseId( "second" ) );
-        thirdContext = databaseManager.createDatabase( new DatabaseId( "third" ) );
+        var databaseIdRepository = new TestDatabaseIdRepository();
+        firstContext = databaseManager.createDatabase( databaseIdRepository.get( "first" ) );
+        secondContext = databaseManager.createDatabase( databaseIdRepository.get( "second" ) );
+        thirdContext = databaseManager.createDatabase( databaseIdRepository.get( "third" ) );
     }
 
     @AfterEach

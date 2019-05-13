@@ -20,7 +20,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -60,7 +60,7 @@ class CommercialGlobalTransactionStatsIT
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         String secondDb = "second";
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( new DatabaseId( secondDb ) ).databaseFacade();
+        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( new TestDatabaseIdRepository().get( secondDb ) ).databaseFacade();
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
         assertEquals( 0, globalTransactionStats.getNumberOfActiveTransactions() );

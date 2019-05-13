@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -32,13 +31,14 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
@@ -75,6 +75,7 @@ public class CoreClusterMember implements ClusterMember
     private final Monitors monitors = new Monitors();
     private final File databasesDirectory;
     private final CoreGraphDatabaseFactory dbFactory;
+    private final DatabaseIdRepository databaseIdRepository;
     private volatile boolean hasPanicked;
 
     public CoreClusterMember( int serverId,
@@ -148,6 +149,7 @@ public class CoreClusterMember implements ClusterMember
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         databasesDirectory = new File( dataDir, "databases" );
         memberConfig = Config.defaults( config );
+        this.databaseIdRepository = new PlaceholderDatabaseIdRepository( memberConfig );
 
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
@@ -326,12 +328,17 @@ public class CoreClusterMember implements ClusterMember
 
     public File raftLogDirectory()
     {
-        DatabaseId defaultDatabaseId = new DatabaseId( memberConfig.get( GraphDatabaseSettings.default_database ) );
+        DatabaseId defaultDatabaseId = databaseIdRepository.defaultDatabase();
         return clusterStateLayout.raftLogDirectory( defaultDatabaseId );
     }
 
     public int discoveryPort()
     {
         return discoveryPort;
+    }
+
+    public DatabaseIdRepository databaseIdRepository()
+    {
+        return databaseIdRepository;
     }
 }

@@ -21,6 +21,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
@@ -62,7 +63,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge(), new TestDatabaseIdRepository() );
         return testRealm( importOptions, securityLog, dbManager, dbManager.getManagementService(), executor, config );
     }
 
@@ -73,7 +74,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
         Collection<TransactionEventListener<?>> systemEventListener = unregisterListeners( graph);
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
-        CommercialSystemGraphInitializer systemGraphInitializer = new CommercialSystemGraphInitializer( dbManager, config );
+        CommercialSystemGraphInitializer systemGraphInitializer = new CommercialSystemGraphInitializer( dbManager, new TestDatabaseIdRepository(), config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( systemGraphInitializer, executor, securityLog, systemGraphOperations, importOptions, secureHasher );
 

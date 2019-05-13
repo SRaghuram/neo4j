@@ -90,6 +90,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.Log;
@@ -102,7 +103,6 @@ import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
@@ -127,6 +127,7 @@ public class CoreEditionModule extends ClusteringEditionModule
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
 
+    private final DatabaseIdRepository databaseIdRepository;
     private final Map<DatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     private final CompositeDatabaseHealth globalHealth;
     private final LogProvider logProvider;
@@ -148,6 +149,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         this.globalConfig = globalModule.getGlobalConfig();
         this.globalHealth = globalModule.getGlobalHealthService();
         this.logProvider = logService.getInternalLogProvider();
+        this.databaseIdRepository = globalModule.getDatabaseIdRepository();
 
         RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
 
@@ -225,7 +227,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
-        globalProcedures.register( new CoreRoleProcedure( identityModule, topologyService ) );
+        globalProcedures.register( new CoreRoleProcedure( identityModule, topologyService, databaseIdRepository ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
@@ -244,7 +246,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new CoreRoutingProcedureInstaller( topologyService, leaderService, config, logProvider );
+        return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseIdRepository, config, logProvider );
     }
 
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
@@ -330,8 +332,8 @@ public class CoreEditionModule extends ClusteringEditionModule
     {
         var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
 
-        initialDatabases.put( new DatabaseId( SYSTEM_DATABASE_NAME ), STOPPED );
-        initialDatabases.put( new DatabaseId( config.get( default_database ) ), STOPPED );
+        initialDatabases.put( databaseIdRepository.systemDatabase(), STOPPED );
+        initialDatabases.put( databaseIdRepository.get( config.get( default_database ) ), STOPPED );
 
         initialDatabases.keySet().forEach( databaseManager::createDatabase );
 
@@ -343,7 +345,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
         var connector = new OperatorConnector( reconciler );
 
-        var localOperator = new LocalOperator( connector );
+        var localOperator = new LocalOperator( connector, databaseIdRepository );
         var internalOperator = new InternalOperator( connector );
         var systemOperator = new SystemOperator( connector );
 
@@ -356,8 +358,8 @@ public class CoreEditionModule extends ClusteringEditionModule
     {
         SystemGraphInitializer initializer =
                 CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                        () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
-        databaseInitializerMap.put( new DatabaseId( SYSTEM_DATABASE_NAME ), db ->
+                        () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getDatabaseIdRepository(), globalModule.getGlobalConfig() ) );
+        databaseInitializerMap.put( databaseIdRepository.systemDatabase(), db ->
         {
             try
             {
@@ -379,7 +381,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( globalModule,
                     globalModule.getLogService().getUserLog( CoreEditionModule.class ), globalProcedures, "commercial-security-module" );
-            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( new DatabaseId( SYSTEM_DATABASE_NAME ), dbInit ) );
+            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( databaseIdRepository.systemDatabase(), dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }
@@ -388,6 +390,12 @@ public class CoreEditionModule extends ClusteringEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    @Override
+    public DatabaseIdRepository databaseIdRepository()
+    {
+        return databaseIdRepository;
     }
 
     private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,

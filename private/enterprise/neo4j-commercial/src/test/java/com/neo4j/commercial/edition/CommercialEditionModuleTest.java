@@ -14,7 +14,8 @@ import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
@@ -26,8 +27,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
 
@@ -43,6 +42,7 @@ class CommercialEditionModuleTest
     {
         DatabaseManager<?> manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
+        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
         GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, COMMERCIAL, newDependencies() )
         {
             @Override
@@ -56,7 +56,7 @@ class CommercialEditionModuleTest
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );
-        order.verify( manager ).createDatabase( eq( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
-        order.verify( manager ).createDatabase( eq( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        order.verify( manager ).createDatabase( eq( databaseIdRepository.systemDatabase() ) );
+        order.verify( manager ).createDatabase( eq( databaseIdRepository.defaultDatabase() ) );
     }
 }

@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -25,6 +25,8 @@ import java.util.function.Consumer;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
@@ -43,8 +45,9 @@ class GlobalTopologyStateTest
     private final Consumer<DatabaseCoreTopology> listener = mock( Consumer.class );
     private final GlobalTopologyState state = new GlobalTopologyState( NullLogProvider.getInstance(), listener );
 
-    private final DatabaseId databaseId1 = new DatabaseId( "db1" );
-    private final DatabaseId databaseId2 = new DatabaseId( "db2" );
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId1 = databaseIdRepository.get( "db1" );
+    private final DatabaseId databaseId2 = databaseIdRepository.get( "db2" );
 
     private final MemberId coreId1 = new MemberId( UUID.randomUUID() );
     private final MemberId coreId2 = new MemberId( UUID.randomUUID() );

@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
@@ -36,8 +38,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -48,8 +48,9 @@ class ClusterOverviewProcedureIT
     private static final int REPLICAS = 2;
     private static final int EXPECTED_COLUMNS = 4;
 
-    private static final DatabaseId SYSTEM_DB = new DatabaseId( SYSTEM_DATABASE_NAME );
-    private static final DatabaseId DEFAULT_DB = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final DatabaseId SYSTEM_DB = DATABASE_ID_REPOSITORY.systemDatabase();
+    private static final DatabaseId DEFAULT_DB = DATABASE_ID_REPOSITORY.defaultDatabase();
 
     @Inject
     private static ClusterFactory clusterFactory;
@@ -164,7 +165,7 @@ class ClusterOverviewProcedureIT
 
     private static boolean isLeader( ClusterMember member, DatabaseId databaseId )
     {
-        CoreClusterMember leader = cluster.getMemberWithAnyRole( databaseId, Role.LEADER );
+        CoreClusterMember leader = cluster.getMemberWithAnyRole( databaseId.name(), Role.LEADER );
         return Objects.equals( member, leader );
     }
 

@@ -30,7 +30,8 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.locker.StoreLocker;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -66,11 +67,12 @@ class RestoreDatabaseCommandIT
     @Inject
     private FileSystemAbstraction fileSystem;
     private static DatabaseManagementService managementService;
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
     void forceShouldRespectStoreLock()
     {
-        var databaseId = new DatabaseId( "to" );
+        var databaseId = databaseIdRepository.get( "to" );
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
@@ -98,7 +100,7 @@ class RestoreDatabaseCommandIT
     void shouldNotCopyOverAndExistingDatabase() throws Exception
     {
         // given
-        var databaseId = new DatabaseId( "to" );
+        var databaseId = databaseIdRepository.get( "to" );
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
@@ -117,7 +119,7 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotExist() throws Exception
     {
         // given
-        var databaseId = new DatabaseId( "to" );
+        var databaseId = databaseIdRepository.get( "to" );
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "from" );
@@ -134,7 +136,7 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles()
     {
         // given
-        var databaseId = new DatabaseId( "to" );
+        var databaseId = databaseIdRepository.get( "to" );
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "from" );
@@ -162,7 +164,7 @@ class RestoreDatabaseCommandIT
         createDbAt( toLayout, toNodeCount );
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), true ).execute();
 
         // then
         DatabaseManagementService managementService =
@@ -201,7 +203,7 @@ class RestoreDatabaseCommandIT
         managementService.shutdown();
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, new DatabaseId( DEFAULT_DATABASE_NAME ), true ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), true ).execute();
 
         LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem ).build();
         LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem ).build();
@@ -226,7 +228,7 @@ class RestoreDatabaseCommandIT
 
         createDbAt( fromPath, 10 );
 
-        new RestoreDatabaseCommand( fs, fromPath, config, new DatabaseId( "testDatabase" ), true ).execute();
+        new RestoreDatabaseCommand( fs, fromPath, config, databaseIdRepository.get( "testDatabase" ), true ).execute();
 
         verify( fs ).deleteRecursively( eq( testLayout.databaseDirectory() ) );
         verify( fs, never() ).deleteRecursively( eq( relativeLogDirectory ) );

@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -28,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyWithinServerGroupStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "orders" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "orders" );
 
     @Test
     void shouldUseServerGroupsFromConfig()

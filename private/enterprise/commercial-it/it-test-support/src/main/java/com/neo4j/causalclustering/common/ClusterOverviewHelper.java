@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -110,21 +109,21 @@ public class ClusterOverviewHelper
         ).collect( toList() ) );
     }
 
-    public static Matcher<List<MemberInfo>> containsRole( RoleInfo expectedRole, DatabaseId databaseId, long expectedCount )
+    public static Matcher<List<MemberInfo>> containsRole( RoleInfo expectedRole, String databaseName, long expectedCount )
     {
         return new FeatureMatcher<>( equalTo( expectedCount ), expectedRole.toString(), "count" )
         {
             @Override
             protected Long featureValueOf( List<MemberInfo> overview )
             {
-                return overview.stream().filter( info -> info.databases.get( databaseId ) == expectedRole ).count();
+                return overview.stream().filter( info -> info.databases.get( databaseName ) == expectedRole ).count();
             }
         };
     }
 
-    public static Matcher<List<MemberInfo>> doesNotContainRole( RoleInfo unexpectedRole, DatabaseId databaseId )
+    public static Matcher<List<MemberInfo>> doesNotContainRole( RoleInfo unexpectedRole, String databaseName )
     {
-        return containsRole( unexpectedRole, databaseId, 0 );
+        return containsRole( unexpectedRole, databaseName, 0 );
     }
 
     public static List<MemberInfo> clusterOverview( GraphDatabaseFacade db )
@@ -164,23 +163,23 @@ public class ClusterOverviewHelper
     }
 
     @SuppressWarnings( "unchecked" )
-    private static Map<DatabaseId,RoleInfo> extractDatabases( Map<String,Object> row )
+    private static Map<String,RoleInfo> extractDatabases( Map<String,Object> row )
     {
         var databasesObject = row.get( "databases" );
         assertThat( databasesObject, instanceOf( Map.class ) );
         return ((Map<String,Object>) databasesObject).entrySet()
                 .stream()
                 .collect( toMap(
-                        entry -> new DatabaseId( entry.getKey() ),
+                        entry -> entry.getKey(),
                         entry -> RoleInfo.valueOf( entry.getValue().toString() ) ) );
     }
 
     public static class MemberInfo
     {
         private final Set<URI> addresses;
-        private final Map<DatabaseId,RoleInfo> databases;
+        private final Map<String,RoleInfo> databases;
 
-        MemberInfo( Set<URI> addresses, Map<DatabaseId,RoleInfo> databases )
+        MemberInfo( Set<URI> addresses, Map<String,RoleInfo> databases )
         {
             this.addresses = addresses;
             this.databases = databases;

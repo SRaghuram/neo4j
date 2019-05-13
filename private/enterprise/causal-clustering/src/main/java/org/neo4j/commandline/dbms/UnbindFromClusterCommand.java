@@ -23,6 +23,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.Validators;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
@@ -60,8 +62,9 @@ public class UnbindFromClusterCommand implements AdminCommand
     {
         try
         {
-            DatabaseId databaseId = new DatabaseId( arguments.parse( args ).get( ARG_DATABASE ) );
             Config config = loadNeo4jConfig( homeDir, configDir );
+            DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
+            DatabaseId databaseId = databaseIdRepository.get( arguments.parse( args ).get( ARG_DATABASE ) );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
             File databasesRoot = config.get( databases_root_path );
             DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseId.name() );

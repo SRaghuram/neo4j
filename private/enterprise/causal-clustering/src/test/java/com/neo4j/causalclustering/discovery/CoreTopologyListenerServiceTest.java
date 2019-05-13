@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -22,8 +24,9 @@ import static org.mockito.Mockito.when;
 
 class CoreTopologyListenerServiceTest
 {
-    private final DatabaseId id1 = new DatabaseId( "database_one" );
-    private final DatabaseId id2 = new DatabaseId( "database_two" );
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId id1 = databaseIdRepository.get( "database_one" );
+    private final DatabaseId id2 = databaseIdRepository.get( "database_two" );
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
 

@@ -21,6 +21,8 @@ import java.util.Random;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -42,6 +44,7 @@ class CommercialSecurityModuleTest
     private Config config;
     private LogProvider mockLogProvider;
     private FileSystemAbstraction mockFileSystem;
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setup()
@@ -255,13 +258,14 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, databaseIdRepository );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem ) );
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem,
+                        databaseIdRepository ) );
         assertEquals( e.getMessage(), errorMsg );
     }
 }

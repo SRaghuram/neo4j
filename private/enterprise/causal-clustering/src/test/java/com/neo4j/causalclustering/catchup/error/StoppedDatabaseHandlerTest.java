@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,7 +28,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class StoppedDatabaseHandlerTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "customers" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "customers" );
     private final CatchupProtocolMessage message = new GetStoreIdRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();

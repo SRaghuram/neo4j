@@ -32,6 +32,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
@@ -53,7 +54,7 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 class ReadReplicaDatabaseLifeTest
 {
     private final RaftId raftId = new RaftId( UUID.randomUUID() );
-    private final DatabaseId databaseA = new DatabaseId( "dbA" );
+    private final DatabaseId databaseA = new TestDatabaseIdRepository().get( "dbA" );
     private final MemberId memberA = new MemberId( UUID.randomUUID() );
     private final AdvertisedSocketAddress addressA = new AdvertisedSocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );

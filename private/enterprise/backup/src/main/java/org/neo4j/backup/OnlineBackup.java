@@ -17,7 +17,6 @@ import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 
@@ -156,19 +155,19 @@ public class OnlineBackup
      * <p>
      * If the backup has become too far out of date for an incremental backup to succeed, a full backup is performed.
      *
-     * @param databaseId id of the database to backup.
+     * @param databaseName the name of the database to backup.
      * @param targetDirectory directory where the backup should be placed. Can contain a previous full backup.
      * @return the same {@code OnlineBackup} instance, possible to use for a new backup operation.
      */
-    public Result backup( DatabaseId databaseId, Path targetDirectory )
+    public Result backup( String databaseName, Path targetDirectory )
     {
-        requireNonNull( databaseId, "databaseId" );
+        requireNonNull( databaseName, "databaseName" );
         requireNonNull( targetDirectory, "targetDirectory" );
 
         LogProvider logProvider = FormattedLogProvider.toOutputStream( outputStream );
         try
         {
-            executeBackup( databaseId, targetDirectory, logProvider );
+            executeBackup( databaseName, targetDirectory, logProvider );
             return new Result( consistencyCheck );
         }
         catch ( BackupExecutionException e )
@@ -182,7 +181,7 @@ public class OnlineBackup
         }
     }
 
-    private void executeBackup( DatabaseId databaseId, Path targetDirectory, LogProvider logProvider )
+    private void executeBackup( String databaseName, Path targetDirectory, LogProvider logProvider )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
@@ -197,7 +196,7 @@ public class OnlineBackup
                 .withFallbackToFullBackup( fallbackToFullBackup )
                 .withBackupDirectory( targetDirectory )
                 .withReportsDirectory( targetDirectory )
-                .withDatabaseId( databaseId )
+                .withDatabaseName( databaseName )
                 .build();
 
         backupExecutor.executeBackup( context );

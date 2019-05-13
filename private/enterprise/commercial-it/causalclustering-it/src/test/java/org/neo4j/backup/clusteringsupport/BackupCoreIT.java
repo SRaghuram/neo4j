@@ -19,6 +19,7 @@ import java.io.File;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -31,7 +32,6 @@ import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExit
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
 @ClusterExtension
@@ -64,7 +64,7 @@ class BackupCoreIT
             // Run backup
             DbRepresentation beforeChange = DbRepresentation.of( createSomeData( cluster ) );
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
-            DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+            DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
             File coreDefaultDbBackupDir = new File( coreBackupDir, databaseId.name() );
             String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseId );
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );

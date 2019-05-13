@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +26,7 @@ class InternalOperatorTest
 {
     private OperatorConnector connector = mock( OperatorConnector.class );
     private InternalOperator operator = new InternalOperator( connector );
+    private DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
 
     @Test
     void shouldNotDesireAnythingInitially()
@@ -34,7 +38,7 @@ class InternalOperatorTest
     void shouldTriggerOnStartAndStop()
     {
         // given
-        DatabaseId someDb = new DatabaseId( "some.db" );
+        DatabaseId someDb = databaseIdRepository.get( "some.db" );
 
         // when
         Startable stoppedDatabase = operator.stopDatabase( someDb );
@@ -53,8 +57,8 @@ class InternalOperatorTest
     void shouldReturnIndependentContexts()
     {
         // given
-        DatabaseId databaseA = new DatabaseId( "A" );
-        DatabaseId databaseB = new DatabaseId( "B" );
+        DatabaseId databaseA = databaseIdRepository.get( "A" );
+        DatabaseId databaseB = databaseIdRepository.get( "B" );
 
         // when
         Startable stopA1 = operator.stopDatabase( databaseA );
@@ -116,7 +120,7 @@ class InternalOperatorTest
     void shouldComplainWhenStartingTwice()
     {
         // given
-        DatabaseId someDb = new DatabaseId( "some.db" );
+        DatabaseId someDb = databaseIdRepository.get( "some.db" );
         Startable stoppedDatabase = operator.stopDatabase( someDb );
         stoppedDatabase.start();
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +26,7 @@ class ReadReplicaRoleProcedureTest
     private final Context procedureContext = mock( Context.class );
     private final ResourceTracker resourceTracker = mock( ResourceTracker.class );
 
-    private final ReadReplicaRoleProcedure procedure = new ReadReplicaRoleProcedure();
+    private final ReadReplicaRoleProcedure procedure = new ReadReplicaRoleProcedure( new TestDatabaseIdRepository() );
 
     @Test
     void shouldThrowWhenDatabaseNameNotSpecified()

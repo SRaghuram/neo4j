@@ -60,6 +60,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -127,7 +128,7 @@ public class CommercialSecurityModule extends SecurityModule
         SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, dependencies.databaseIdRepository() );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
@@ -227,14 +228,15 @@ public class CommercialSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + CommercialSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
+    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
+            DatabaseIdRepository databaseIdRepository )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
+        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, databaseIdRepository );
         realms.add( (Realm) internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -284,10 +286,11 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
+    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
+            DatabaseIdRepository databaseIdRepository )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge, databaseIdRepository );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
@@ -643,10 +646,11 @@ public class CommercialSecurityModule extends SecurityModule
     // This is used by ImportAuthCommand for offline import of auth information
     public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, SecurityLog securityLog, DatabaseManager<?> databaseManager,
             SystemGraphInitializer systemGraphInitializer, UserRepository importUserRepository, RoleRepository importRoleRepository,
-            boolean shouldResetSystemGraphAuthBeforeImport, ThreadToStatementContextBridge threadToStatementContextBridge )
+            boolean shouldResetSystemGraphAuthBeforeImport, ThreadToStatementContextBridge threadToStatementContextBridge,
+            DatabaseIdRepository databaseIdRepository )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge, databaseIdRepository );
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphImportOptions importOptions =
                 configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );

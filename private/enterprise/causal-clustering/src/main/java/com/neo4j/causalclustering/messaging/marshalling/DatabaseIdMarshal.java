@@ -10,18 +10,23 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 public class DatabaseIdMarshal extends SafeChannelMarshal<DatabaseId>
 {
     public static final DatabaseIdMarshal INSTANCE = new DatabaseIdMarshal();
 
+    private final DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() ); // TODO not this
+
     @Override
     protected DatabaseId unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        return new DatabaseId( StringMarshal.unmarshal( channel ) );
+        return databaseIdRepository.get( StringMarshal.unmarshal( channel ) );
     }
 
     @Override

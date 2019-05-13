@@ -15,6 +15,7 @@ import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
@@ -89,6 +90,6 @@ class GetRoutingTableProcedureForMultiDCTest
 
     private static GetRoutingTableProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin )
     {
-        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, Config.defaults() );
+        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, new TestDatabaseIdRepository(), Config.defaults() );
     }
 }

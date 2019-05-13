@@ -21,7 +21,7 @@ import java.io.IOException;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +30,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class BackupDelegatorTest
 {
@@ -120,6 +119,6 @@ class BackupDelegatorTest
         verify( remoteStore ).copy( argumentCaptor.capture(), eq( storeId ), eq( databaseLayout ), eq( true ) );
 
         //and
-        assertEquals( anyAddress, argumentCaptor.getValue().primary( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        assertEquals( anyAddress, argumentCaptor.getValue().primary( new TestDatabaseIdRepository().defaultDatabase() ) );
     }
 }

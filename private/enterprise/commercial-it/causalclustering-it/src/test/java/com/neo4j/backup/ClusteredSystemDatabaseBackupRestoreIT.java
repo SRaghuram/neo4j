@@ -36,7 +36,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.DbRepresentation;
@@ -173,7 +173,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         Config restoreCommandConfig = Config.defaults();
         restoreCommandConfig.augment( memberConfig );
-        var databaseId = new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        var databaseId = new TestDatabaseIdRepository().systemDatabase();
         new RestoreDatabaseCommand( fs, new File( backupLocation, databaseId.name() ), restoreCommandConfig,
                 databaseId, true ).execute();
     }
@@ -195,7 +195,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 
-        return databaseManager.getDatabaseContext( new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
+        return databaseManager.getDatabaseContext( new TestDatabaseIdRepository().systemDatabase() )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 

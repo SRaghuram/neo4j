@@ -24,6 +24,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -162,8 +163,9 @@ class DefaultDatabaseSelectionIT
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
         Set<DatabaseId> databases = databaseManager.registeredDatabases().keySet();
-        assertThat( databases, hasItem( new DatabaseId( databaseName ) ) );
-        assertThat( databases, hasItem( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        var databaseIdRepository = new TestDatabaseIdRepository();
+        assertThat( databases, hasItem( databaseIdRepository.get( databaseName ) ) );
+        assertThat( databases, hasItem( databaseIdRepository.systemDatabase() ) );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException

@@ -26,6 +26,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.ProcessStreamHandler;
@@ -49,17 +51,18 @@ public class BackupTestUtil
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException, CommandFailed
     {
-        restoreFromBackup( backup, fsa, clusterMember, new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+        restoreFromBackup( backup, fsa, clusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
-            ClusterMember clusterMember, DatabaseId databaseId ) throws IOException, CommandFailed
+            ClusterMember clusterMember, String databaseName ) throws IOException, CommandFailed
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
-                .withSetting( GraphDatabaseSettings.default_database, databaseId.name() )
+                .withSetting( GraphDatabaseSettings.default_database, databaseName )
                 .withConnectorsDisabled()
                 .build();
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseId, true );
+        DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseIdRepository.get( databaseName ), true );
         restoreDatabaseCommand.execute();
     }
 

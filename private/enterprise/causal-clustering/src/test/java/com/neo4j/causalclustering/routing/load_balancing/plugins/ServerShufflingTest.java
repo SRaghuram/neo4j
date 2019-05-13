@@ -24,7 +24,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
@@ -107,7 +107,7 @@ class ServerShufflingTest
     @Test
     void serverPoliciesPluginShouldShuffleServers() throws Exception
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var databaseId = new TestDatabaseIdRepository().defaultDatabase();
         var coreTopologyService = mock( CoreTopologyService.class );
 
         var leaderId = member( 0 );
@@ -130,8 +130,8 @@ class ServerShufflingTest
         var serverPoliciesPlugin = new ServerPoliciesPlugin();
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
 
-        serverPoliciesPlugin.init( coreTopologyService, leaderService,
-                NullLogProvider.getInstance(), Config.defaults( CausalClusteringSettings.load_balancing_shuffle, "true" ) );
+        serverPoliciesPlugin.init( coreTopologyService, leaderService, new TestDatabaseIdRepository(), NullLogProvider.getInstance(),
+                Config.defaults( CausalClusteringSettings.load_balancing_shuffle, "true" ) );
 
         var routers = coreMembers.values().stream().map( ClientConnector::boltAddress ).collect( toList() );
         var leader = coreMembers.get( leaderId );

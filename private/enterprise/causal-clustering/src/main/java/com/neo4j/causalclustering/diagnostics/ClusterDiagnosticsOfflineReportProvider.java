@@ -19,6 +19,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSources;
@@ -39,11 +40,11 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, DatabaseIdRepository databaseIdRepository, Config config, File storeDirectory )
     {
         this.fs = fs;
         this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
-        this.defaultDatabaseId = new DatabaseId( config.get( GraphDatabaseSettings.default_database ) );
+        this.defaultDatabaseId = databaseIdRepository.defaultDatabase();
     }
 
     @Override

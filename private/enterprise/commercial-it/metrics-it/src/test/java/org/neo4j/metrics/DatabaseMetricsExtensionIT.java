@@ -22,6 +22,8 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -56,6 +58,7 @@ class DatabaseMetricsExtensionIT
     private GraphDatabaseAPI db;
 
     private File outputPath;
+    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
@@ -185,7 +188,7 @@ class DatabaseMetricsExtensionIT
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
-        DatabaseId testdb = new DatabaseId( "testdb" );
+        DatabaseId testdb = databaseIdRepository.get( "testdb" );
         databaseManager.createDatabase( testdb );
 
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
@@ -198,7 +201,7 @@ class DatabaseMetricsExtensionIT
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
-        DatabaseId testDbName = new DatabaseId( "testdb" );
+        DatabaseId testDbName = databaseIdRepository.get( "testdb" );
         databaseManager.createDatabase( testDbName );
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
 

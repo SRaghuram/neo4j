@@ -10,14 +10,16 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class CoreRoleProcedure extends RoleProcedure
 {
     private final IdentityModule identityModule;
     private final TopologyService topologyService;
 
-    public CoreRoleProcedure( IdentityModule identityModule, TopologyService topologyService )
+    public CoreRoleProcedure( IdentityModule identityModule, TopologyService topologyService, DatabaseIdRepository databaseIdRepository )
     {
+        super( databaseIdRepository );
         this.identityModule = identityModule;
         this.topologyService = topologyService;
     }

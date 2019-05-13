@@ -19,7 +19,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.lock.ResourceType;
@@ -36,7 +36,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TransactionDependenciesResolverTest
 {
@@ -152,7 +151,7 @@ class TransactionDependenciesResolverTest
 
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new DatabaseId( DEFAULT_DATABASE_NAME ), "test", "testQuey",
+        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new TestDatabaseIdRepository().defaultDatabase(), "test", "testQuey",
                 VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 Clocks.nanoClock(), CpuClock.NOT_AVAILABLE, HeapAllocation.NOT_AVAILABLE );

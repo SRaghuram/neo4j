@@ -16,7 +16,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotInTransactionException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -53,7 +53,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     {
         ThreadToStatementContextBridge bridge = getTransactionBridge();
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
+        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new TestDatabaseIdRepository().get( "second" ) ).databaseFacade();
         managementService.shutdown();
 
         assertThrows( NotInTransactionException.class, bridge::assertInUnterminatedTransaction );

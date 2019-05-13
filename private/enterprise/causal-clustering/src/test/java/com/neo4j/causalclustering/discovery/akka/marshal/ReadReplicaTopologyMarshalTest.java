@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseReadReplicaTopology>
 {
@@ -30,7 +30,7 @@ public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseRead
         Map<MemberId,ReadReplicaInfo> replicas = IntStream.range( 0, 5 )
                 .mapToObj( id -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForReadReplica( id ) ) )
                 .collect( CollectorsUtil.pairsToMap() );
-        return new DatabaseReadReplicaTopology( new DatabaseId( "hello" ), replicas );
+        return new DatabaseReadReplicaTopology( new TestDatabaseIdRepository().get( "hello" ), replicas );
     }
 
 }

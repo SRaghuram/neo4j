@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -85,7 +85,7 @@ class ClusteringLocalOperatorIT
 
     private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember member, String databaseName )
     {
-        return databaseManager( member ).getDatabaseContext( new DatabaseId( databaseName ) );
+        return databaseManager( member ).getDatabaseContext( new TestDatabaseIdRepository().get( databaseName ) );
     }
 
     private DatabaseAvailabilityGuard availabilityGuard( ClusterMember member, String databaseName )

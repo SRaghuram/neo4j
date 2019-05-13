@@ -42,6 +42,7 @@ import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
@@ -65,7 +66,6 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @SkipThreadLeakageGuard
@@ -121,7 +121,7 @@ class StoreCopyClientIT
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        subject = new StoreCopyClient( catchUpClient, new DatabaseId( DEFAULT_DATABASE_NAME ), Monitors::new, logProvider, storeCopyBackoffStrategy );
+        subject = new StoreCopyClient( catchUpClient, new TestDatabaseIdRepository().defaultDatabase(), Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @AfterEach

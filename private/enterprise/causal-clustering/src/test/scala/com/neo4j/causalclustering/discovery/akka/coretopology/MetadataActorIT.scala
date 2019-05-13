@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -86,7 +86,8 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
     val myself = new MemberId(UUID.randomUUID())
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
 
-    val databaseIds = Set(new DatabaseId("system"), new DatabaseId("not_system")).asJava
+    val databaseIdRepository = new TestDatabaseIdRepository()
+    val databaseIds = Set(databaseIdRepository.get("system"), databaseIdRepository.get("not_system")).asJava
     var discoveryMember = new TestDiscoveryMember(myself, databaseIds)
 
     val coreServerInfo = TestTopology.addressesForCore(0, false, databaseIds)

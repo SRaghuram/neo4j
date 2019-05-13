@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
@@ -29,7 +30,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class ReplicatedLockTokenStateMachineTest
 {
-    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( DEFAULT_DATABASE_NAME );
 
     @Rule
     public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();

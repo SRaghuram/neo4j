@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 class CoreDownloaderTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "the_database" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "the_database" );
 
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final AdvertisedSocketAddress remoteAddress = new AdvertisedSocketAddress( "remoteAddress", 1234 );

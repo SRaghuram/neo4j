@@ -11,8 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
@@ -24,13 +27,14 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 class ReconcilingDatabaseOperatorTest
 {
     private DatabaseManager databaseManager = mock( DatabaseManager.class );
+    private DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
 
     @Test
     void shouldNotStartInitiallyStarted()
     {
         // given
-        DatabaseId databaseA = new DatabaseId( "A" );
-        DatabaseId databaseB = new DatabaseId( "B" );
+        DatabaseId databaseA = databaseIdRepository.get( "A" );
+        DatabaseId databaseB = databaseIdRepository.get( "B" );
 
         Map<DatabaseId,OperatorState> initialStates = new HashMap<>();
         initialStates.put( databaseA, STARTED );
@@ -54,8 +58,8 @@ class ReconcilingDatabaseOperatorTest
     void shouldStopInitiallyStarted()
     {
         // given
-        DatabaseId databaseA = new DatabaseId( "A" );
-        DatabaseId databaseB = new DatabaseId( "B" );
+        DatabaseId databaseA = databaseIdRepository.get( "A" );
+        DatabaseId databaseB = databaseIdRepository.get( "B" );
 
         Map<DatabaseId,OperatorState> initialStates = new HashMap<>();
         initialStates.put( databaseA, STARTED );
@@ -80,8 +84,8 @@ class ReconcilingDatabaseOperatorTest
     void shouldNotTouchOperatorUnknownDatabases()
     {
         // given
-        DatabaseId databaseA = new DatabaseId( "A" );
-        DatabaseId databaseB = new DatabaseId( "B" );
+        DatabaseId databaseA = databaseIdRepository.get( "A" );
+        DatabaseId databaseB = databaseIdRepository.get( "B" );
 
         Map<DatabaseId,OperatorState> initialStates = new HashMap<>();
         initialStates.put( databaseA, STARTED );

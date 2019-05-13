@@ -10,14 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class RaftCoreTopologyConnectorTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     void shouldRegisterAsListenerWhenStarted()

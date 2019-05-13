@@ -12,13 +12,13 @@ import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
-import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -49,6 +49,7 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -157,36 +158,36 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
-        createCommercialEditionDatabases( databaseManager, config );
+        createCommercialEditionDatabases( databaseManager );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config )
+    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager )
             throws DatabaseExistsException
     {
-        databaseManager.createDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) );
-        createConfiguredDatabases( databaseManager, config );
+        databaseManager.createDatabase( databaseIdRepository().systemDatabase() );
+        createConfiguredDatabases( databaseManager );
     }
 
-    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
+    private void createConfiguredDatabases( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
     {
-        databaseManager.createDatabase( new DatabaseId( config.get( GraphDatabaseSettings.default_database ) ) );
+        databaseManager.createDatabase( databaseIdRepository().defaultDatabase() );
         DatabaseManagementService managementService = globalModule.getGlobalDependencies().resolveDependency( DatabaseManagementService.class );
         globalModule.getGlobalLife().addLifecycleListener( ( instance, from, to ) ->
         {
             if ( instance instanceof CompositeDatabaseAvailabilityGuard && LifecycleStatus.STARTED == to )
             {
                 globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME,
-                        new MultiDatabaseTransactionEventListener( databaseManager ) );
+                        new MultiDatabaseTransactionEventListener( databaseManager, databaseIdRepository() ) );
             }
         } );
-        managementService.registerDatabaseEventListener( new SystemDatabaseEventListener( databaseManager, config ) );
+        managementService.registerDatabaseEventListener( new SystemDatabaseEventListener( databaseManager, databaseIdRepository() ) );
     }
 
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
         SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getDatabaseIdRepository(), globalModule.getGlobalConfig() ) );
         return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
     }
 
@@ -237,12 +238,12 @@ public class CommercialEditionModule extends CommunityEditionModule
     private static class SystemDatabaseEventListener extends DatabaseEventListenerAdapter
     {
         private final DatabaseManager<?> databaseManager;
-        private final Config config;
+        private final DatabaseIdRepository databaseIdRepository;
 
-        SystemDatabaseEventListener( DatabaseManager<?> databaseManager, Config config )
+        SystemDatabaseEventListener( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository )
         {
             this.databaseManager = databaseManager;
-            this.config = config;
+            this.databaseIdRepository = databaseIdRepository;
         }
 
         @Override
@@ -250,7 +251,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         {
             if ( SYSTEM_DATABASE_NAME.equals( eventContext.getDatabaseName() ) )
             {
-                MultiDatabaseTransactionEventListener.createDatabasesFromSystem( databaseManager, config );
+                MultiDatabaseTransactionEventListener.createDatabasesFromSystem( databaseManager, databaseIdRepository );
             }
         }
     }

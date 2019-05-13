@@ -30,6 +30,7 @@ import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -55,6 +56,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private boolean allowReadsOnFollowers;
     private Policies policies;
     private boolean shouldShuffle;
+    private DatabaseIdRepository databaseIdRepository;
 
     @Override
     public void validate( Config config, Log log ) throws InvalidSettingException
@@ -70,7 +72,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public void init( TopologyService topologyService, LeaderService leaderService,
+    public void init( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
             LogProvider logProvider, Config config ) throws InvalidFilterSpecification
     {
         this.topologyService = topologyService;
@@ -79,6 +81,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
         this.policies = FilteringPolicyLoader.load( config, PLUGIN_NAME, logProvider.getLog( getClass() ) );
         this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
@@ -96,7 +99,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     @Override
     public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
     {
-        var dbId = new DatabaseId( databaseName );
+        var dbId = databaseIdRepository.get( databaseName );
         Policy policy = policies.selectFor( context );
 
         DatabaseCoreTopology coreTopology = coreTopologyFor( dbId );

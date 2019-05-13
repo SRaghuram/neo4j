@@ -16,7 +16,6 @@ import org.neo4j.commandline.arguments.Arguments;
 @ServiceProvider
 public class UnbindFromClusterCommandProvider implements AdminCommand.Provider
 {
-
     @Nonnull
     @Override
     public String getName()

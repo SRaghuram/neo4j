@@ -16,7 +16,7 @@ import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.Transaction
-import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
@@ -66,7 +66,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.auth_enabled -> "true")
 
   def selectDatabase(name: String): Unit = {
-    val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(new DatabaseId(name))
+    val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(new TestDatabaseIdRepository().get(name))
     val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)

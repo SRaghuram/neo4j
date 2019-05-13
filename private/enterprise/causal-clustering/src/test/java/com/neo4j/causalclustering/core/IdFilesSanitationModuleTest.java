@@ -14,7 +14,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -38,8 +38,9 @@ class IdFilesSanitationModuleTest
     @Test
     void shouldDeleteIdFilesForTheSpecifiedDatabase() throws Exception
     {
-        var databaseId1 = new DatabaseId( "database1" );
-        var databaseId2 = new DatabaseId( "database2" );
+        var databaseIdRepository = new TestDatabaseIdRepository();
+        var databaseId1 = databaseIdRepository.get( "database1" );
+        var databaseId2 = databaseIdRepository.get( "database2" );
         var databaseLayout1 = testDirectory.databaseLayout( databaseId1.name() );
         var databaseLayout2 = testDirectory.databaseLayout( databaseId2.name() );
         createIdFiles( databaseLayout1 );

@@ -26,7 +26,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helper.Workload;
 import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.utils.DumpUtils;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -65,7 +64,7 @@ class BackupServiceStressTesting
         int backupPort = parseInt( fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_PORT", DEFAULT_PORT ) );
         String txPrune = fromEnv( "BACKUP_SERVICE_STRESS_TX_PRUNE", DEFAULT_TX_PRUNE );
 
-        String databaseName = new DatabaseId( "testDatabase" ).name();
+        String databaseName = "testDatabase";
 
         File storeDir = testDirectory.storeDir( databaseName );
         File backupsDir = testDirectory.directory( "backups" );

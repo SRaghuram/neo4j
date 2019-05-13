@@ -19,6 +19,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TypicallyConnectToRandomReadReplicaStrategyTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "my_orders" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_orders" );
     private final MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
 
     @Test

@@ -19,15 +19,15 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static java.util.Collections.singletonList;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TestTopology
 {
-    private static final Set<DatabaseId> DEFAULT_DATABASE_IDS = Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+    private static final Set<DatabaseId> DEFAULT_DATABASE_IDS = Set.of( new TestDatabaseIdRepository().defaultDatabase() );
 
     private TestTopology()
     {

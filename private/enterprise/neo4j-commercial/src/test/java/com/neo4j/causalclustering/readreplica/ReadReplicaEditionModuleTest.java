@@ -22,7 +22,8 @@ import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -37,8 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.READ_REPLICA;
 
@@ -54,6 +53,7 @@ class ReadReplicaEditionModuleTest
     {
         DatabaseManager<?> manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
+        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
         GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {
             @Override
@@ -67,8 +67,8 @@ class ReadReplicaEditionModuleTest
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );
-        order.verify( manager ).createDatabase( eq( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
-        order.verify( manager ).createDatabase( eq( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        order.verify( manager ).createDatabase( eq( databaseIdRepository.systemDatabase() ) );
+        order.verify( manager ).createDatabase( eq( databaseIdRepository.defaultDatabase() ) );
     }
 
     @Test

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -35,7 +35,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class PersistentSnapshotDownloaderTest
 {
@@ -60,7 +59,7 @@ class PersistentSnapshotDownloaderTest
     @BeforeEach
     void setUp()
     {
-        when( downloadContext.databaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        when( downloadContext.databaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
     }
 
     @Test

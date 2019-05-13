@@ -14,7 +14,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -109,7 +109,7 @@ class StartupConstraintSemanticsTest
         {
             graphDb = getCommunityDatabase();
             DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
-            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new TestDatabaseIdRepository().defaultDatabase() ).get();
             assertTrue( databaseContext.isFailed() );
             Throwable error = Exceptions.rootCause( databaseContext.failureCause() );
             assertThat( error, instanceOf( IllegalStateException.class ) );

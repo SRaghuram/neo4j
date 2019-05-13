@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 
@@ -28,13 +28,14 @@ public class CoreServerInfoMarshalTest extends BaseMarshalTest<CoreServerInfo>
     @Parameterized.Parameters( name = "{0}" )
     public static Collection<CoreServerInfo> data()
     {
+        var dbIdRepo = new TestDatabaseIdRepository();
         return List.of(
                 addressesForCore( 42, false, Set.of() ),
                 addressesForCore( 4242, true, Set.of() ),
-                addressesForCore( 513, false, Set.of( new DatabaseId( "db_one" ) ) ),
-                addressesForCore( 98738, true, Set.of( new DatabaseId( "db_one" ) ) ),
-                addressesForCore( 145, false, Set.of( new DatabaseId( "db_one" ), new DatabaseId( "db_two" ), new DatabaseId( "db_three" ) ) ),
-                addressesForCore( 8361, true, Set.of( new DatabaseId( "db_one" ), new DatabaseId( "db_two" ), new DatabaseId( "db_three" ) ) )
+                addressesForCore( 513, false, Set.of( dbIdRepo.get( "db_one" ) ) ),
+                addressesForCore( 98738, true, Set.of( dbIdRepo.get( "db_one" ) ) ),
+                addressesForCore( 145, false, Set.of( dbIdRepo.get( "db_one" ), dbIdRepo.get( "db_two" ), dbIdRepo.get( "db_three" ) ) ),
+                addressesForCore( 8361, true, Set.of( dbIdRepo.get( "db_one" ), dbIdRepo.get( "db_two" ), dbIdRepo.get( "db_three" ) ) )
         );
     }
 }

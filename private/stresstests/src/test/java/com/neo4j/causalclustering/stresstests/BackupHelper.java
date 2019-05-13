@@ -26,7 +26,6 @@ import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
@@ -45,7 +44,7 @@ class BackupHelper
             StoreIdDownloadFailedException.class
     );
 
-    private static final DatabaseId DB_ID = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
     AtomicLong backupNumber = new AtomicLong();
     AtomicLong successfulBackups = new AtomicLong();
@@ -72,12 +71,12 @@ class BackupHelper
     Optional<File> backup( ClusterMember member ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         AdvertisedSocketAddress address = member.config().get( transaction_advertised_address );
-        Path backupDir = createBackupDir( DB_ID.name() );
+        Path backupDir = createBackupDir( DB_NAME );
 
         try
         {
             OnlineBackupContext context = OnlineBackupContext.builder()
-                    .withDatabaseId( DB_ID )
+                    .withDatabaseName( DB_NAME )
                     .withAddress( address.getHostname(), address.getPort() )
                     .withBackupDirectory( backupDir )
                     .withReportsDirectory( backupDir )
@@ -88,7 +87,7 @@ class BackupHelper
 
             successfulBackups.incrementAndGet();
 
-            return Optional.of( backupDir.resolve( DB_ID.name() ).toFile() );
+            return Optional.of( backupDir.resolve( DB_NAME ).toFile() );
         }
         catch ( BackupExecutionException e )
         {

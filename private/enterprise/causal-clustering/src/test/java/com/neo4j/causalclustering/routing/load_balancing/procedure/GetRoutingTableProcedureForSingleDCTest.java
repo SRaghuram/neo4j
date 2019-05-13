@@ -46,6 +46,8 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.values.AnyValue;
@@ -83,7 +85,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 // TODO: Better tests for LeaderLocator function.
 class GetRoutingTableProcedureForSingleDCTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "my_test_database" );
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = DATABASE_ID_REPOSITORY.get( "my_test_database" );
     private final RaftId raftId = new RaftId( UUID.randomUUID() );
 
     @Target( ElementType.METHOD )
@@ -452,7 +455,13 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private static CallableProcedure newProcedure( CoreTopologyService coreTopologyService, LeaderService leaderService, Config config )
     {
-        return new GetRoutingTableProcedureForSingleDC( DEFAULT_NAMESPACE, coreTopologyService, leaderService, config, NullLogProvider.getInstance() );
+        return new GetRoutingTableProcedureForSingleDC(
+                DEFAULT_NAMESPACE,
+                coreTopologyService,
+                leaderService,
+                DATABASE_ID_REPOSITORY,
+                config,
+                NullLogProvider.getInstance() );
     }
 
     private AnyValue[] inputParameters()

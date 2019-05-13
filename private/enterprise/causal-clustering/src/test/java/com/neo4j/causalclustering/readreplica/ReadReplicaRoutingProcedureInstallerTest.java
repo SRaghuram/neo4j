@@ -16,6 +16,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static java.util.stream.Collectors.toSet;
@@ -34,7 +35,8 @@ class ReadReplicaRoutingProcedureInstallerTest
     {
         DatabaseManager<?> databaseManager = mock( DatabaseManager.class );
         ConnectorPortRegister portRegister = mock( ConnectorPortRegister.class );
-        ReadReplicaRoutingProcedureInstaller installer = new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, Config.defaults() );
+        ReadReplicaRoutingProcedureInstaller installer =
+                new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, new TestDatabaseIdRepository(), Config.defaults() );
         GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
 
         installer.install( procedures );

@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.Services;
@@ -34,11 +35,11 @@ public class LoadBalancingPluginLoader
         plugin.validate( config, log );
     }
 
-    public static LoadBalancingProcessor load( TopologyService topologyService, LeaderService leaderService,
+    public static LoadBalancingProcessor load( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
             LogProvider logProvider, Config config ) throws Throwable
     {
         LoadBalancingPlugin plugin = findPlugin( config );
-        plugin.init( topologyService, leaderService, logProvider, config );
+        plugin.init( topologyService, leaderService, databaseIdRepository, logProvider, config );
 
         if ( config.get( CausalClusteringSettings.load_balancing_shuffle ) && !plugin.isShufflingPlugin() )
         {

@@ -16,6 +16,8 @@ import java.util.Optional;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -31,6 +33,7 @@ public class LoadBalancingPluginLoaderTest
 {
     private static final String DUMMY_PLUGIN_NAME = "dummy";
     private static final String DOES_NOT_EXIST = "does_not_exist";
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
     void shouldReturnSelectedPlugin() throws Throwable
@@ -43,8 +46,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ),
-                NullLogProvider.getInstance(),
+                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -64,8 +66,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ),
-                NullLogProvider.getInstance(),
+                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -84,8 +85,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ),
-                NullLogProvider.getInstance(),
+                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -104,8 +104,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ),
-                NullLogProvider.getInstance(),
+                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -157,7 +156,8 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
+        public void init( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
+                LogProvider logProvider, Config config )
         {
             wasInitialized = true;
         }

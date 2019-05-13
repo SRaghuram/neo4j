@@ -30,6 +30,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -77,7 +78,8 @@ class SystemGraphInternalsTest
         managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, getThreadToStatementContextBridge() );
+        systemGraphExecutor =
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, getThreadToStatementContextBridge(), new TestDatabaseIdRepository() );
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 

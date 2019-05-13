@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
@@ -50,7 +51,7 @@ class RaftBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final DatabaseId databaseId = new DatabaseId( "my_database" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_database" );
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService )
     {

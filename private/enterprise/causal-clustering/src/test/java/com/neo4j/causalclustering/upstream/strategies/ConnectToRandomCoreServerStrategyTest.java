@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.when;
 
 class ConnectToRandomCoreServerStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = new DatabaseId( "hello" );
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "hello" );
 
     @Test
     void shouldConnectToRandomCoreServer() throws Exception

@@ -11,8 +11,11 @@ import org.mockito.InOrder;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.inOrder;
@@ -31,9 +34,10 @@ class MultiDatabaseManagerTest
     private void initDatabaseManager() throws Exception
     {
         databaseManager = new StubMultiDatabaseManager();
-        sys = databaseManager.createDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) );
-        neo = databaseManager.createDatabase( new DatabaseId( DEFAULT_DATABASE_NAME ) );
-        custom = databaseManager.createDatabase( new DatabaseId( CUSTOM_DATABASE_NAME ) );
+        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
+        sys = databaseManager.createDatabase( databaseIdRepository.systemDatabase() );
+        neo = databaseManager.createDatabase( databaseIdRepository.defaultDatabase() );
+        custom = databaseManager.createDatabase( databaseIdRepository.get( CUSTOM_DATABASE_NAME ) );
         databaseManager.start();
     }
 

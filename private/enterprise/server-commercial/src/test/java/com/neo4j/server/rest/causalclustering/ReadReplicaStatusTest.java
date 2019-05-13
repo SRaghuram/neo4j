@@ -28,7 +28,7 @@ import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -53,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class ReadReplicaStatusTest
 {
@@ -89,7 +88,7 @@ class ReadReplicaStatusTest
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
         org.neo4j.kernel.database.Database internalDatabase = mock( org.neo4j.kernel.database.Database.class );
-        when( internalDatabase.getDatabaseId() ).thenReturn( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        when( internalDatabase.getDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
         dependencyResolver.satisfyDependency( internalDatabase );
 
         status = CausalClusteringStatusFactory.build( output, database );

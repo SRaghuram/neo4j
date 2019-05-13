@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
@@ -22,34 +23,36 @@ public class LocalOperator implements Operator
 {
     private final Map<DatabaseId,OperatorState> desired = new ConcurrentHashMap<>();
     private final OperatorConnector connector;
+    private final DatabaseIdRepository databaseIdRepository;
 
-    public LocalOperator( OperatorConnector connector )
+    public LocalOperator( OperatorConnector connector, DatabaseIdRepository databaseIdRepository )
     {
         this.connector = connector;
+        this.databaseIdRepository = databaseIdRepository;
         connector.register( this );
     }
 
     public void createDatabase( String databaseName )
     {
-        desired.put( new DatabaseId( databaseName ), STOPPED );
+        desired.put( databaseIdRepository.get( databaseName ), STOPPED );
         connector.trigger();
     }
 
     public void dropDatabase( String databaseName )
     {
-        desired.put( new DatabaseId( databaseName ), DROPPED );
+        desired.put( databaseIdRepository.get( databaseName ), DROPPED );
         connector.trigger();
     }
 
     public void startDatabase( String databaseName )
     {
-        desired.put( new DatabaseId( databaseName ), STARTED );
+        desired.put( databaseIdRepository.get( databaseName ), STARTED );
         connector.trigger();
     }
 
     public void stopDatabase( String databaseName )
     {
-        desired.put( new DatabaseId( databaseName ), STOPPED );
+        desired.put( databaseIdRepository.get( databaseName ), STOPPED );
         connector.trigger();
     }
 

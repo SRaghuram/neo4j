@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -35,7 +35,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class CoreDownloaderServiceTest
@@ -57,7 +56,7 @@ public class CoreDownloaderServiceTest
     {
         centralJobScheduler = createInitialisedScheduler();
         databaseService.givenDatabaseWithConfig()
-                .withDatabaseId( new DatabaseId( DEFAULT_DATABASE_NAME ) )
+                .withDatabaseId( new TestDatabaseIdRepository().defaultDatabase() )
                 .register();
     }
 

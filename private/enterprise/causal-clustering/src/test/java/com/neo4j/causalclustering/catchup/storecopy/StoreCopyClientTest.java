@@ -39,6 +39,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
@@ -97,6 +99,7 @@ class StoreCopyClientTest
     private MockCatchupClient catchupClient;
     private final MockCatchupClient.MockClientResponses clientResponses = responses();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -109,7 +112,7 @@ class StoreCopyClientTest
     void setup()
     {
         backOffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
-        subject = new StoreCopyClient( catchupClientFactory, new DatabaseId( DEFAULT_DATABASE_NAME ), () -> monitors, logProvider, backOffStrategy );
+        subject = new StoreCopyClient( catchupClientFactory, databaseIdRepository.defaultDatabase(), () -> monitors, logProvider, backOffStrategy );
     }
 
     private void mockClient( ApplicationProtocol protocol ) throws Exception
@@ -144,11 +147,11 @@ class StoreCopyClientTest
     {
         // given
         mockClient( protocol );
-        DatabaseId altDbName = new DatabaseId( "alternative" );
+        DatabaseId altDbName = databaseIdRepository.get( "alternative" );
         StoreId defaultDbStoreId = new StoreId( 6, 3, 1, 2, 6 );
         StoreId altDbStoreId = new StoreId( 4, 6, 3, 1, 9 );
         Map<GetStoreIdRequest,StoreId> storeIdMap = new HashMap<>();
-        storeIdMap.put( new GetStoreIdRequest( new DatabaseId( DEFAULT_DATABASE_NAME ) ), defaultDbStoreId );
+        storeIdMap.put( new GetStoreIdRequest( databaseIdRepository.get( DEFAULT_DATABASE_NAME ) ), defaultDbStoreId );
         storeIdMap.put( new GetStoreIdRequest( altDbName ), altDbStoreId );
         clientResponses.withStoreId( storeIdMap::get );
 
@@ -172,7 +175,7 @@ class StoreCopyClientTest
         TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
         when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
 
-        subject = new StoreCopyClient( catchupClientFactory, new DatabaseId( DEFAULT_DATABASE_NAME ), () -> monitors, logProvider, backoffStrategy );
+        subject = new StoreCopyClient( catchupClientFactory, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), () -> monitors, logProvider, backoffStrategy );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );

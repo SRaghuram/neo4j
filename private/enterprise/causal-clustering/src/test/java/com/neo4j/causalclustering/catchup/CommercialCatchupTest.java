@@ -33,6 +33,8 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -48,7 +50,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 @ExtendWith( DefaultFileSystemExtension.class )
 abstract class CommercialCatchupTest
 {
-    private static final DatabaseId DEFAULT_DB_ID = new DatabaseId( "db-one" );
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final DatabaseId DEFAULT_DB_ID = DATABASE_ID_REPOSITORY.get( "db-one" );
     private final ApplicationProtocols applicationProtocols;
     private StubClusteredDatabaseManager databaseManager;
 
@@ -136,7 +139,7 @@ abstract class CommercialCatchupTest
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( new DatabaseId( "WRONG_DB_NAME" ) ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( DATABASE_ID_REPOSITORY.get( "WRONG_DB_NAME" ) ), new ResponseAdaptor()
                 {
                     @Override
                     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )

@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 
@@ -23,13 +24,16 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
 {
     private final TopologyService topologyService;
     private final LeaderService leaderService;
+    private final DatabaseIdRepository databaseIdRepository;
     private final Config config;
     private final LogProvider logProvider;
 
-    public CoreRoutingProcedureInstaller( TopologyService topologyService, LeaderService leaderService, Config config, LogProvider logProvider )
+    public CoreRoutingProcedureInstaller( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
+            Config config, LogProvider logProvider )
     {
         this.topologyService = topologyService;
         this.leaderService = leaderService;
+        this.databaseIdRepository = databaseIdRepository;
         this.config = config;
         this.logProvider = logProvider;
     }
@@ -39,20 +43,20 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
     {
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
-            LoadBalancingProcessor loadBalancingProcessor = loadLoadBalancingProcessor();
-            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, config );
+            LoadBalancingProcessor loadBalancingProcessor = loadLoadBalancingProcessor( databaseIdRepository );
+            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, databaseIdRepository, config );
         }
         else
         {
-            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderService, config, logProvider );
+            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderService, databaseIdRepository, config, logProvider );
         }
     }
 
-    private LoadBalancingProcessor loadLoadBalancingProcessor()
+    private LoadBalancingProcessor loadLoadBalancingProcessor( DatabaseIdRepository databaseIdRepository )
     {
         try
         {
-            return LoadBalancingPluginLoader.load( topologyService, leaderService, logProvider, config );
+            return LoadBalancingPluginLoader.load( topologyService, leaderService, databaseIdRepository, logProvider, config );
         }
         catch ( Throwable e )
         {

@@ -57,6 +57,7 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -72,7 +73,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 /**
@@ -82,6 +82,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 public class ReadReplicaEditionModule extends ClusteringEditionModule
 {
     protected final LogProvider logProvider;
+    private final DatabaseIdRepository databaseIdRepository;
     private final Config globalConfig;
     private final CompositeDatabaseHealth globalHealth;
     private final GlobalModule globalModule;
@@ -104,6 +105,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         this.myIdentity = myIdentity;
         LogService logService = globalModule.getLogService();
         this.globalConfig = globalModule.getGlobalConfig();
+        this.databaseIdRepository = globalModule.getDatabaseIdRepository();
         logProvider = logService.getInternalLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myIdentity ) );
 
@@ -136,7 +138,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register( new ReadReplicaRoleProcedure() );
+        globalProcedures.register( new ReadReplicaRoleProcedure( databaseIdRepository ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
     }
 
@@ -145,7 +147,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     {
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
-        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config );
+        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, databaseIdRepository, config );
     }
 
     private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Health globalHealth, Server catchupServer, Optional<Server> backupServer )
@@ -215,8 +217,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     {
         var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
 
-        initialDatabases.put( new DatabaseId( SYSTEM_DATABASE_NAME ), STOPPED );
-        initialDatabases.put( new DatabaseId( config.get( default_database ) ), STOPPED );
+        initialDatabases.put( databaseIdRepository.systemDatabase(), STOPPED );
+        initialDatabases.put( databaseIdRepository.get( config.get( default_database ) ), STOPPED );
 
         initialDatabases.keySet().forEach( databaseManager::createDatabase );
 
@@ -228,7 +230,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
         var connector = new OperatorConnector( reconciler );
 
-        var localOperator = new LocalOperator( connector );
+        var localOperator = new LocalOperator( connector, databaseIdRepository );
         var internalOperator = new InternalOperator( connector );
         var systemOperator = new SystemOperator( connector );
 
@@ -278,6 +280,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         RetryStrategy retryStrategy = resolveStrategy( globalConfig );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, discoveryMember, hostnameResolver, retryStrategy,
                 sslPolicyLoader );
+    }
+
+    @Override
+    public DatabaseIdRepository databaseIdRepository()
+    {
+        return databaseIdRepository;
     }
 
     private static RetryStrategy resolveStrategy( Config config )

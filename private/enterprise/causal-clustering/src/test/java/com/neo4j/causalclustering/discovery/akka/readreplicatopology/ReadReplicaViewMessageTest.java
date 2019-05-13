@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,6 +38,7 @@ class ReadReplicaViewMessageTest extends TestKit
     private ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
     private MemberId memberId = new MemberId( UUID.randomUUID() );
     private Instant now = Instant.now();
+    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     private ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, topologyClient, memberId, now );
 
@@ -67,7 +70,7 @@ class ReadReplicaViewMessageTest extends TestKit
     @Test
     void shouldReturnEmptyTopologyIfEmptyView()
     {
-        DatabaseId databaseId = new DatabaseId( "no_such_database" );
+        DatabaseId databaseId = databaseIdRepository.get( "no_such_database" );
         assertThat( ReadReplicaViewMessage.EMPTY.toReadReplicaTopology( databaseId ), equalTo( new DatabaseReadReplicaTopology( databaseId, Map.of() ) ) );
     }
 
@@ -87,9 +90,9 @@ class ReadReplicaViewMessageTest extends TestKit
         var clusterClient2 = TestProbe.apply( getSystem() ).ref();
         var clusterClient3 = TestProbe.apply( getSystem() ).ref();
 
-        var info1 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ) ) );
-        var info2 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "employees" ), new DatabaseId( "orders" ) ) );
-        var info3 = TestTopology.addressesForReadReplica( 0, Set.of( new DatabaseId( "customers" ), new DatabaseId( "employees" ) ) );
+        var info1 = TestTopology.addressesForReadReplica( 0, Set.of( databaseIdRepository.get( "orders" ), databaseIdRepository.get( "customers" ) ) );
+        var info2 = TestTopology.addressesForReadReplica( 0, Set.of( databaseIdRepository.get( "employees" ), databaseIdRepository.get( "orders" ) ) );
+        var info3 = TestTopology.addressesForReadReplica( 0, Set.of( databaseIdRepository.get( "customers" ), databaseIdRepository.get( "employees" ) ) );
 
         var record1 = new ReadReplicaViewRecord( info1, topologyClient, memberId, now );
         var record2 = new ReadReplicaViewRecord( info2, topologyClient, memberId, now );
@@ -98,7 +101,8 @@ class ReadReplicaViewMessageTest extends TestKit
         var clusterClientReadReplicas = Map.of( clusterClient1, record1, clusterClient2, record2, clusterClient3, record3 );
         var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
 
-        var expectedDatabaseIds = Set.of( new DatabaseId( "orders" ), new DatabaseId( "customers" ), new DatabaseId( "employees" ) );
+        var expectedDatabaseIds =
+                Set.of( databaseIdRepository.get( "orders" ), databaseIdRepository.get( "customers" ), databaseIdRepository.get( "employees" ) );
         var actualDatabaseIds = readReplicaViewMessage.databaseIds();
         assertEquals( expectedDatabaseIds, actualDatabaseIds );
     }

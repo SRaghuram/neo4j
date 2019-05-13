@@ -11,8 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -22,7 +20,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -119,12 +117,12 @@ class MultiDatabaseIdGeneratorIT
 
     private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
     {
-        return databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
+        return databaseManager.createDatabase( new TestDatabaseIdRepository().get( "second" ) ).databaseFacade();
     }
 
     private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<?> databaseManager )
     {
-        return databaseManager.getDatabaseContext( new DatabaseId( Config.defaults().get( GraphDatabaseSettings.default_database ) ) )
+        return databaseManager.getDatabaseContext( new TestDatabaseIdRepository().defaultDatabase() )
                 .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
                 .databaseFacade();
     }

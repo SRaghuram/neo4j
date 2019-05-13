@@ -11,9 +11,9 @@ import org.junit.Test;
 
 import java.util.UUID;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.Assert.assertEquals;
 
@@ -23,7 +23,7 @@ public class ReplicatedIdAllocationStateMachineTest
 
     private IdType someType = IdType.NODE;
     private IdType someOtherType = IdType.RELATIONSHIP;
-    private DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     public void shouldNotHaveAnyIdsInitially()

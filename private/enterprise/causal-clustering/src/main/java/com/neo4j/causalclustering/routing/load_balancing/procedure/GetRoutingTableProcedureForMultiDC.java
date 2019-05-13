@@ -12,6 +12,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
@@ -29,9 +30,10 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor, Config config )
+    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor, DatabaseIdRepository databaseIdRepository,
+            Config config )
     {
-        super( namespace, config );
+        super( namespace, databaseIdRepository, config );
         this.loadBalancingProcessor = loadBalancingProcessor;
     }
 

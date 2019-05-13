@@ -16,13 +16,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class RaftIdAwareMessageComposerTest
 {
@@ -50,7 +49,7 @@ public class RaftIdAwareMessageComposerTest
         try
         {
             RaftMessageComposer raftMessageComposer = new RaftMessageComposer( Clock.systemUTC() );
-            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], new DatabaseId( DEFAULT_DATABASE_NAME ) );
+            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], new TestDatabaseIdRepository().defaultDatabase() );
             raftMessageComposer.decode( null, replicatedTransaction, null );
             List<Object> out = new ArrayList<>();
             raftMessageComposer.decode( null, messageCreator( ( a, b ) -> Optional.of( dummyRequest() ) ), out );

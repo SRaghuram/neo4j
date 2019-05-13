@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<LeaderInfoDirectoryMessage>
 {
@@ -26,8 +27,9 @@ public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<Leade
 
     static LeaderInfoDirectoryMessage generate()
     {
+        var databaseIdRepository = new TestDatabaseIdRepository();
         Map<DatabaseId,LeaderInfo> leaders = IntStream.range( 0, 5 )
-                .mapToObj( id -> Pair.of( new DatabaseId( "db" + id ), new LeaderInfo( new MemberId( UUID.randomUUID() ), id ) ) )
+                .mapToObj( id -> Pair.of( databaseIdRepository.get( "db" + id ), new LeaderInfo( new MemberId( UUID.randomUUID() ), id ) ) )
                 .collect( CollectorsUtil.pairsToMap() );
 
         return new LeaderInfoDirectoryMessage( leaders );

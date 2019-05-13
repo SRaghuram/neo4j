@@ -8,12 +8,11 @@ package com.neo4j.causalclustering.catchup.v3.tx;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class TxPullRequestTest
@@ -34,6 +33,6 @@ class TxPullRequestTest
 
     private static TxPullRequest newTxPullRequest( long correctTxId )
     {
-        return new TxPullRequest( correctTxId, StoreId.DEFAULT, new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        return new TxPullRequest( correctTxId, StoreId.DEFAULT, new TestDatabaseIdRepository().defaultDatabase() );
     }
 }

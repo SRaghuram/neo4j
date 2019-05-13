@@ -5,11 +5,11 @@
  */
 package org.neo4j.multidatabase.stresstest;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -17,6 +17,8 @@ import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.multidatabase.stresstest.commands.CreateManagerCommand;
 import org.neo4j.multidatabase.stresstest.commands.DatabaseManagerCommand;
 import org.neo4j.multidatabase.stresstest.commands.DropManagerCommand;
@@ -28,11 +30,11 @@ import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
+    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
     private final DatabaseManager<?> databaseManager;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
@@ -59,8 +61,11 @@ class CommandExecutor implements Runnable
         {
             try
             {
-                List<DatabaseId> databases = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
-                databases.remove( new DatabaseId( SYSTEM_DATABASE_NAME ) );
+                List<DatabaseId> databases = databaseManager.registeredDatabases()
+                        .keySet()
+                        .stream()
+                        .filter( dbId -> !DatabaseId.isSystemDatabase( dbId ) )
+                        .collect( Collectors.toList() );
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
@@ -116,7 +121,7 @@ class CommandExecutor implements Runnable
 
     private static DatabaseId createDatabaseId()
     {
-        return new DatabaseId( "database" + dbCounter.getAndIncrement() );
+        return DATABASE_ID_REPOSITORY.get( "database" + dbCounter.getAndIncrement() );
     }
 
     private DatabaseId getRandomDatabaseName( List<DatabaseId> databases )

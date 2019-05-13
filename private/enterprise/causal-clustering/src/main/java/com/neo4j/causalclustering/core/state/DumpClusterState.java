@@ -18,6 +18,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 
@@ -34,10 +36,10 @@ public class DumpClusterState
      */
     public static void main( String[] args )
     {
-
         File dataDirectory;
         Optional<String> databaseToDumpOpt;
         Optional<String> databaseNameOpt;
+        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
         if ( args.length == 1 )
         {
             dataDirectory = new File( args[0] );
@@ -67,7 +69,7 @@ public class DumpClusterState
         {
             String databaseName = databaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             String databaseToDump = databaseToDumpOpt.orElse( databaseName );
-            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, new DatabaseId( databaseToDump ) );
+            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseIdRepository.get( databaseToDump ) );
             dumpTool.dump();
         }
         catch ( Exception e )

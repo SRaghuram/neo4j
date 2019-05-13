@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Level;
 import org.neo4j.test.Race;
 
@@ -146,13 +145,13 @@ public class AkkaDiscoveryUncleanShutdownIT
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
         int followerCount = runningCores.size() - leaderCount;
 
-        DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        String db = DEFAULT_DATABASE_NAME;
 
         Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
                 ClusterOverviewHelper.containsMemberAddresses( runningCores ),
-                ClusterOverviewHelper.containsRole( LEADER, databaseId, leaderCount ),
-                ClusterOverviewHelper.containsRole( FOLLOWER, databaseId, followerCount ),
-                ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, databaseId ) );
+                ClusterOverviewHelper.containsRole( LEADER, db, leaderCount ),
+                ClusterOverviewHelper.containsRole( FOLLOWER, db, followerCount ),
+                ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, db ) );
 
         ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected, removedCoreIds, emptySet() );
     }

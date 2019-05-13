@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.logging.NullLogProvider;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.verify;
 
 class CoreCommitProcessFactoryTest
 {
-    private final DatabaseId databaseId = new DatabaseId( "orders" );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "orders" );
     private final Replicator replicator = mock( Replicator.class );
     private final CoreStateMachines coreStateMachines = mock( CoreStateMachines.class );
     private final Panicker panicker = new PanicService( NullLogProvider.getInstance() );

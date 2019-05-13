@@ -7,7 +7,9 @@ package com.neo4j.dbms;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
@@ -19,8 +21,9 @@ import static org.mockito.Mockito.verify;
 
 class LocalOperatorTest
 {
+    private DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
     private OperatorConnector connector = mock( OperatorConnector.class );
-    private LocalOperator operator = new LocalOperator( connector );
+    private LocalOperator operator = new LocalOperator( connector, databaseIdRepository );
 
     private String databaseName = "my.db";
 
@@ -30,7 +33,7 @@ class LocalOperatorTest
         operator.createDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger();
 
-        assertEquals( STOPPED, operator.getDesired().get( new DatabaseId( databaseName ) ) );
+        assertEquals( STOPPED, operator.getDesired().get( databaseIdRepository.get( databaseName ) ) );
     }
 
     @Test
@@ -39,7 +42,7 @@ class LocalOperatorTest
         operator.dropDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger();
 
-        assertEquals( DROPPED, operator.getDesired().get( new DatabaseId( databaseName ) ) );
+        assertEquals( DROPPED, operator.getDesired().get( databaseIdRepository.get( databaseName ) ) );
     }
 
     @Test
@@ -48,7 +51,7 @@ class LocalOperatorTest
         operator.startDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger();
 
-        assertEquals( STARTED, operator.getDesired().get( new DatabaseId( databaseName ) ) );
+        assertEquals( STARTED, operator.getDesired().get( databaseIdRepository.get( databaseName ) ) );
     }
 
     @Test
@@ -57,6 +60,6 @@ class LocalOperatorTest
         operator.stopDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger();
 
-        assertEquals( STOPPED, operator.getDesired().get( new DatabaseId( databaseName ) ) );
+        assertEquals( STOPPED, operator.getDesired().get( databaseIdRepository.get( databaseName ) ) );
     }
 }

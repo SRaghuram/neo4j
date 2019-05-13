@@ -52,7 +52,8 @@ class MultiDatabaseCreationStressTesting
         ensureExistsAndEmpty( storeDirectory );
 
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDirectory )
-                .setConfig( CommercialEditionSettings.maxNumberOfDatabases, valueOf( Long.MAX_VALUE ) ).build();
+                .setConfig( CommercialEditionSettings.maxNumberOfDatabases, valueOf( Long.MAX_VALUE ) )
+                .build();
         GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );

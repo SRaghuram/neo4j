@@ -27,7 +27,7 @@ import java.io.UncheckedIOException;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -43,7 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
@@ -138,7 +137,7 @@ class ClusterStateMigrationIT
     private static RaftId readRaftId( CoreClusterMember member )
     {
         var storageFactory = storageFactory( member );
-        var raftIdStorage = storageFactory.createRaftIdStorage( new DatabaseId( DEFAULT_DATABASE_NAME ), nullDatabaseLogProvider() );
+        var raftIdStorage = storageFactory.createRaftIdStorage( new TestDatabaseIdRepository().defaultDatabase(), nullDatabaseLogProvider() );
         try
         {
             return raftIdStorage.readState();

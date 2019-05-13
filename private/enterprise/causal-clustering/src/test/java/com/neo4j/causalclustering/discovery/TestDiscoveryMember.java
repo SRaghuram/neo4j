@@ -11,8 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 public class TestDiscoveryMember implements DiscoveryMember
 {
@@ -26,7 +25,7 @@ public class TestDiscoveryMember implements DiscoveryMember
 
     public TestDiscoveryMember( MemberId memberId )
     {
-        this( memberId, Set.of( new DatabaseId( DEFAULT_DATABASE_NAME ) ) );
+        this( memberId, Set.of( new TestDatabaseIdRepository().defaultDatabase() ) );
     }
 
     public TestDiscoveryMember( Set<DatabaseId> hostedDatabases )

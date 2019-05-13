@@ -33,6 +33,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
@@ -226,6 +227,6 @@ public class ImportAuthCommand implements AdminCommand
                 databaseManager,
                 systemGraphInitializer,
                 importUserRepository, importRoleRepository,
-                shouldResetSystemGraphAuthBeforeImport, threadToStatementContextBridge );
+                shouldResetSystemGraphAuthBeforeImport, threadToStatementContextBridge, new PlaceholderDatabaseIdRepository( config ) );
     }
 }

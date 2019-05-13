@@ -17,12 +17,12 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka._
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, _}
-import com.neo4j.causalclustering.identity.{RaftId, MemberId}
+import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -105,7 +105,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           Given("metadata updated with default database")
           makeTopologyActorKnowAboutCoreMember()
 
-          val otherDatabaseId = new DatabaseId("non-default")
+          val otherDatabaseId = databaseIdRepository.get("non-default")
           val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
           val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[MemberId, CoreServerInfo].asJava)
 
@@ -194,8 +194,9 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       conf
     }
 
+    val databaseIdRepository = new TestDatabaseIdRepository()
+    val databaseId = databaseIdRepository.get("default")
     val raftId = new RaftId(UUID.randomUUID())
-    val databaseId = new DatabaseId("default")
 
     val replicatorProbe = TestProbe("replicator")
 
