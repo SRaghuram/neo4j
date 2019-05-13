@@ -16,6 +16,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
@@ -27,8 +28,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 public class MultiDatabaseTransactionEventListener extends TransactionEventListenerAdapter<Object>
 {
     private static final Label DATABASE_LABEL = Label.label( "Database" );
+    private static final Label DELETED_DATABASE_LABEL = Label.label( "DeletedDatabase" );
     private static final String STATUS_PROPERTY_NAME = "status";
-    private static final String DELETED_STATUS = "deleted";
     private static final String ONLINE_STATUS = "online";
     private static final String OFFLINE_STATUS = "offline";
     private static final String NAME_PROPERTY_NAME = "name";
@@ -56,9 +57,6 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
                     String newStatus = (String) assignedNodeProperty.value();
                     switch ( newStatus )
                     {
-                    case DELETED_STATUS:
-                        databaseManager.dropDatabase( databaseId );
-                        break;
                     case ONLINE_STATUS:
                         databaseManager.startDatabase( databaseId );
                         break;
@@ -69,6 +67,14 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
                         throw new IllegalArgumentException( "Unsupported database status: " + newStatus );
                     }
                 }
+            }
+        }
+        for ( LabelEntry label : data.assignedLabels() )
+        {
+            if ( label.label().equals( DELETED_DATABASE_LABEL ) )
+            {
+                String name = getDatabaseName( label.node() );
+                databaseManager.dropDatabase( new DatabaseId( name ) );
             }
         }
         return null;

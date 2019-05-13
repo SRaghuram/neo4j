@@ -16,12 +16,11 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
-import org.scalatest.Ignore
 
-@Ignore
 class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
@@ -143,25 +142,6 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     } catch {
       // THEN
       case e :Exception if e.getMessage.equals("Cannot drop non-existent database 'foo'") =>
-    }
-  }
-
-  test("should fail on dropping online database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // GIVEN
-    execute("CREATE DATABASE foo")
-    val result = execute("SHOW DATABASES")
-    result.toList should contain (Map("name" -> "foo", "status" -> onlineStatus))
-
-    try {
-      // WHEN
-      execute("DROP DATABASE foo")
-
-      fail(s"""Expected error "Cannot drop database 'foo' that is not $offlineStatus. It is: $onlineStatus" but succeeded.""")
-    } catch {
-      // THEN
-      case e :Exception if e.getMessage.equals(s"""Cannot drop database 'foo' that is not $offlineStatus. It is: $onlineStatus""") =>
     }
   }
 
@@ -337,7 +317,11 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
     val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
+    val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
+    val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
     systemGraphInitializer.initializeSystemGraph()
+    systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
   }
 
   private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
