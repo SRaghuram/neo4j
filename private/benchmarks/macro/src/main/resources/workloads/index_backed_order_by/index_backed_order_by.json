@@ -151,6 +151,26 @@
       "name": "Q30",
       "description": "Wanted Improvement: Ordered Distinct should improve over normal Distinct. One sorted column, one unsorted column.",
       "queryFile": "queries/Q30.cypher"
+    },
+    {
+      "name": "Q31",
+      "description": "Wanted Improvement: OrderedAggregation should improve over EagerAggregation. One sorted column. Few distinct values in already sorted column.",
+      "queryFile": "queries/Q31.cypher"
+    },
+    {
+      "name": "Q32",
+      "description": "Wanted Improvement: OrderedAggregation should improve over EagerAggregation. One sorted column. Many distinct values in already sorted column.",
+      "queryFile": "queries/Q32.cypher"
+    },
+    {
+      "name": "Q33",
+      "description": "Wanted Improvement: OrderedAggregation should improve over EagerAggregation. One sorted column, one unsorted column. Few distinct values in already sorted column.",
+      "queryFile": "queries/Q33.cypher"
+    },
+    {
+      "name": "Q34",
+      "description": "Wanted Improvement: OrderedAggregation should improve over EagerAggregation. One sorted column, one unsorted column. Many distinct values in already sorted column.",
+      "queryFile": "queries/Q34.cypher"
     }
   ]
 }
