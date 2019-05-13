@@ -105,6 +105,12 @@ final class SharedDiscoveryService
     {
         listeningClients.remove( client );
         coreMembers.remove( client.memberId() );
+        if ( listeningClients.isEmpty() )
+        {
+            clusterIdDbNames.clear();
+            leaderMap.clear();
+            enoughMembersByDatabaseName.clear();
+        }
         for ( DatabaseId databaseId : client.getDatabaseIds() )
         {
             notifyCoreClients( databaseId );
