@@ -129,6 +129,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private var latch = new CountDownLatch(1)
   private val demand = new AtomicLong(0)
   private val cancelled = new AtomicBoolean(false)
+  @volatile private var completed = false
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
@@ -144,6 +145,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
           tracer.stopQuery()
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         } finally {
+          completed = true
           releaseLatch()
       }
     }
@@ -160,11 +162,12 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       }
     }
     finally {
+      completed = true
       releaseLatch()
     }
   }
 
-  override def isCompleted: Boolean = count.get() == 0 || cancelled.get() || !errors.isEmpty
+  override def isCompleted: Boolean = completed
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 
@@ -204,6 +207,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     try {
       cancelled.set(true)
     } finally {
+      completed = true
       releaseLatch()
     }
   }
