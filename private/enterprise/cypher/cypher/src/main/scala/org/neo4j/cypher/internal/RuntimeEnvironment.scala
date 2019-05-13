@@ -88,20 +88,13 @@ object RuntimeEnvironment {
 
       val runnable = new Runnable {
         override def run(): Unit =
-          while (!Thread.interrupted()) {
-            dataTracer.consume(dataWriter)
-            try {
+          try {
+            while (!Thread.interrupted()) {
+              dataTracer.consume(dataWriter)
               Thread.sleep(1)
-            } catch {
-              case _: InterruptedException =>
-                try {
-                  dataWriter.close()
-                } catch {
-                  case _: IOException =>
-                    // best effort, we can't do more
-                }
-                return
             }
+          } finally {
+            dataWriter.close()
           }
       }
       jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
