@@ -10,9 +10,10 @@ import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
+import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, QueryHandler, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast.{LabelQualifier, NamedGraphScope}
+import org.neo4j.dbms.database.DatabaseNotFoundException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.string.UTF8
@@ -139,10 +140,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       UpdatingSystemCommandExecutionPlan("CopyRole", normalExecutionEngine,
         """MATCH (old:Role {name: $old})
           |CREATE (new:Role {name: $new})
-          |RETURN count(*)""".stripMargin,
+          |RETURN old.name, new.name""".stripMargin,
         VirtualValues.map(Array("old", "new"), names),
-        record => if (record.get("count(*)").toString != "1") throw new InvalidArgumentsException(s"Cannot create role '$roleName' from non-existent role '$from'."),
-        e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.")
+        QueryHandler
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot create role '$roleName' from non-existent role '$from'."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists."))
       )
 
     // CREATE ROLE foo
@@ -151,8 +153,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         """CREATE (new:Role {name: $new})
           |RETURN count(*)""".stripMargin,
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
-        record => if (record.get("count(*)").toString != "1") throw new InvalidArgumentsException(s"Failed to create role '$roleName'."),
-        e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.")
+        QueryHandler
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create role '$roleName'."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists."))
       )
 
     // DROP ROLE foo
@@ -182,12 +185,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         case LabelQualifier(label) => (Values.stringArray(label), "UNWIND $labels AS label MERGE (q:LabelQualifier {label: label})")
         case _ => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
       }
-      val (dbName, databaseMerge, scopeMerge) = database match {
-        case NamedGraphScope(name) => (Values.stringValue(name), "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-        case _ => (Values.NO_VALUE, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      val (dbName, db, databaseMerge, scopeMerge) = database match {
+        case NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+        case _ => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       }
       //TODO: Return error when we don't get at least one row (eg. database does not exist)
-      SystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
         s"""
            |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
            |$qualifierMerge
@@ -212,7 +215,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
            |
            |// Return the table of results
            |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-        VirtualValues.map(Array("action", "resource", "database", "labels", "roles"), Array(action, resource, dbName, labels, roles))
+        VirtualValues.map(Array("action", "resource", "database", "labels", "roles"), Array(action, resource, dbName, labels, roles)),
+        QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
       )
 
     // SHOW [ALL | USER user | ROLE role1] PRIVILEGES
@@ -225,12 +229,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine,
         s"""MATCH $mainMatch
-           |MATCH (r)-[:GRANTED]->(a:Action)-[:SCOPE]->(s:Segment),
+           |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
            |    (a)-[:APPLIES_TO]->(res:Resource),
-           |    (s)-[:FOR]->(d)
-           |OPTIONAL MATCH (s)-[:QUALIFIED]->(q)
-           |WITH a, res, d, q, r ORDER BY d.name, r.name, q.label
-           |RETURN 'GRANT' AS grant, a.action AS action, res.type AS resource, d.name AS database, collect(q.label) AS labels, ${userReturn}r.name AS role""".stripMargin,
+           |    (s)-[:FOR]->(d),
+           |    (s)-[:QUALIFIED]->(q)
+           |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
+           |RETURN type(g) AS grant, a.action AS action, res.type AS resource, coalesce(d.name, '*') AS database, collect(q.label) AS labels, ${userReturn}r.name AS role""".stripMargin,
         VirtualValues.map(Array("role"), Array(role))
       )
 
@@ -249,15 +253,13 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // DROP DATABASE foo
     case DropDatabase(dbName) => (_, _) =>
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d:Database {name: $name})
+        """MATCH (d:Database {name: $name})
           |REMOVE d:Database
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
-        record => {
-          if (record.get("name") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
-        }
+        QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
       )
   }
 

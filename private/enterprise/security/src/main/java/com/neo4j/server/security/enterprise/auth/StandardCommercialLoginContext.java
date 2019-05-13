@@ -342,11 +342,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         else
                         {
-                            for ( String label : privilege.getSegment().getLabels() )
-                            {
-                                int labelId = resolveLabelId( label );
-                                whitelistTraverseLabels.add( labelId );
-                            }
+                            int labelId = resolveLabelId( privilege.getSegment().getLabel() );
+                            whitelistTraverseLabels.add( labelId );
                         }
                         break;
                     case READ:
@@ -367,11 +364,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             {
                                 MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
                                         .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
-                                for ( String label : privilege.getSegment().getLabels() )
-                                {
-                                    int labelId = resolveLabelId( label );
-                                    allowedNodesWithLabels.add( labelId );
-                                }
+                                int labelId = resolveLabelId( privilege.getSegment().getLabel() );
+                                allowedNodesWithLabels.add( labelId );
                             }
                             break;
                         case ALL_PROPERTIES:
@@ -382,11 +376,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                for ( String label : privilege.getSegment().getLabels() )
-                                {
-                                    int labelId = resolveLabelId( label );
-                                    allowedSegmentForAllProperties.add( labelId );
-                                }
+                                int labelId = resolveLabelId( privilege.getSegment().getLabel() );
+                                allowedSegmentForAllProperties.add( labelId );
                             }
                             break;
                         default:

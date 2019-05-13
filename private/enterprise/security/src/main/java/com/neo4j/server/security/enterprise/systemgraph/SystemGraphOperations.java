@@ -13,6 +13,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +22,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.neo4j.cypher.result.QueryResult;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
@@ -200,176 +200,75 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
-        Resource resource = resourcePrivilege.getResource();
-        Map<String,Object> params = map(
-                "roleName", roleName,
-                "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.type().toString(),
-                "arg1", resource.getArg1(),
-                "arg2", resource.getArg2()
-        );
-
-        String query =
-                "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
-                "MATCH (r:Role {name: $roleName}) " +
-                "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
-                "CREATE (p)-[:SCOPE]->(segment:Segment) RETURN id(segment)";
-
-        try ( Transaction tx = queryExecutor.beginTx() )
-        {
-            long segmentNodeId = queryExecutor.executeQueryLong( query, params );
-
-            if ( segmentNodeId == -1 )
-            {
-                assertRoleExists( roleName );
-            }
-            else
-            {
-                Segment segment = resourcePrivilege.getSegment();
-                addSegmentQualifierToPrivilege( tx, segmentNodeId, segment );
-
-                tx.success();
-            }
-        }
+        grantPrivilegeToRole( roleName, resourcePrivilege, new DatabasePrivilege() );
     }
 
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
+    private Map<String,Object> makePrivilegeParameters(String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege)
     {
-        assert !dbName.isEmpty();
+        assert dbPrivilege.isAllDatabases() || !dbPrivilege.getDbName().isEmpty();
         Resource resource = resourcePrivilege.getResource();
         Map<String,Object> params = map(
                 "roleName", roleName,
+                "dbName", dbPrivilege.getDbName(),
                 "action", resourcePrivilege.getAction().toString(),
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
-                "dbName", dbName
+                "label", resourcePrivilege.getSegment().getLabel()
         );
-
-        String query =
-                "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
-                "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
-                "CREATE (r)-[:GRANTED]->(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
-                "CREATE (p)-[:SCOPE]->(segment:Segment)-[:FOR]->(db) RETURN id(segment)";
-
-        try ( Transaction tx = queryExecutor.beginTx() )
-        {
-            long segmentNodeId = queryExecutor.executeQueryLong( query, params );
-
-            if ( segmentNodeId == -1 )
-            {
-                assertRoleExists( roleName );
-                assertDbExists( dbName );
-            }
-            else
-            {
-                Segment segment = resourcePrivilege.getSegment();
-                addSegmentQualifierToPrivilege( tx, segmentNodeId, segment );
-
-                tx.success();
-            }
-        }
+        return params;
     }
 
-    private void addSegmentQualifierToPrivilege( Transaction tx, long segmentNodeId, Segment segment )
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
-        if ( !segment.equals( Segment.ALL ) )
-        {
-            String qualifierQuery =
-                    "MATCH (segment) WHERE id(segment) = $segment " +
-                    "UNWIND $labels AS label " +
-                    "MERGE (segment)-[:QUALIFIED]->(:LabelQualifier {label: label}) RETURN 0";
-            boolean success =
-                    queryExecutor.executeQueryWithParamCheck( qualifierQuery, map( "labels", segment.getLabels(), "segment", segmentNodeId ) );
+        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege, dbPrivilege );
+        boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
+        String databaseMatch = dbPrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
+        String qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}" : "q:LabelQualifier {label: $label}";
 
-            if ( !success )
-            {
-                tx.failure();
-            }
-        }
+        String query = String.format(
+                "MATCH (r:Role {name: $roleName}) %s " +
+                "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) " +
+                "MERGE (%s) " +
+                "MERGE (db)<-[:FOR]-(segment:Segment)-[:QUALIFIED]->(q) " +
+                "MERGE (segment)<-[:SCOPE]-(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
+                "MERGE (r)-[:GRANTED]->(p) " +
+                "RETURN id(p)",
+                databaseMatch, qualifierPattern
+        );
+        assertPrivilegeSuccess( roleName, query, params, dbPrivilege );
     }
 
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
-        Resource resource = resourcePrivilege.getResource();
-        Map<String,Object> params = map(
-                "roleName", roleName,
-                "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.type().toString(),
-                "arg1", resource.getArg1(),
-                "arg2", resource.getArg2(),
-                "labels", resourcePrivilege.getSegment().getLabels()
+        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege, dbPrivilege );
+        boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
+        String databasePattern = dbPrivilege.isAllDatabases() ? "db:DatabaseAll" : "db:Database {name: $dbName}";
+        String qualifierPattern = fullSegment ? "q:LabelQualifierAll" : "q:LabelQualifier {label: label}";
+
+        String query = String.format(
+                "MATCH (role:Role)-[g:GRANTED]->(action:Action)-[:APPLIES_TO]->(res:Resource), "+
+                "(action)-[:SCOPE]->(segment:Segment), "+
+                "(segment)-[:FOR]->(%s), "+
+                "(segment)-[:QUALIFIED]-(%s) "+
+                "WHERE role.name = $roleName AND action.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 "+
+                "DELETE g RETURN 0",
+                databasePattern, qualifierPattern
         );
+        assertPrivilegeSuccess( roleName, query, params, dbPrivilege );
+    }
 
-        boolean success = revokePrivilegeFromRole( params, true, resourcePrivilege.getSegment().equals( Segment.ALL ) );
-
-        if ( !success )
+    private void assertPrivilegeSuccess( String roleName, String query, Map<String,Object> params, DatabasePrivilege dbPrivilege )
+            throws InvalidArgumentsException
+    {
+        if ( !queryExecutor.executeQueryWithParamCheck( query, params ) )
         {
             assertRoleExists( roleName );
+            if ( !dbPrivilege.isAllDatabases() )
+            {
+                assertDbExists( dbPrivilege.getDbName() );
+            }
         }
-    }
-
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
-    {
-        assert !dbName.isEmpty();
-        Resource resource = resourcePrivilege.getResource();
-        Map<String,Object> params = map(
-                "roleName", roleName,
-                "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.type().toString(),
-                "arg1", resource.getArg1(),
-                "arg2", resource.getArg2(),
-                "dbName", dbName,
-                "labels", resourcePrivilege.getSegment().getLabels()
-        );
-
-        boolean success = revokePrivilegeFromRole( params, false, resourcePrivilege.getSegment().equals( Segment.ALL ) );
-
-        if ( !success )
-        {
-            assertRoleExists( roleName );
-            assertDbExists( dbName );
-        }
-    }
-
-    private boolean revokePrivilegeFromRole( Map<String,Object> params, boolean allDatabases, boolean fullSegment )
-    {
-        StringBuilder query = new StringBuilder();
-        query.append( "MATCH (role:Role)-[:GRANTED]->(p:Action)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]->(segment:Segment)" );
-
-        if ( !allDatabases )
-        {
-            query.append( ", (segment)-[:FOR]->(db:Database)" );
-        }
-
-        if ( !fullSegment )
-        {
-            query.append( ", (segment)-[:QUALIFIED]-(q)" );
-        }
-
-        query.append( " WHERE role.name = $roleName AND p.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " );
-
-        if ( allDatabases )
-        {
-            query.append( "AND NOT (segment)-[:FOR]->(:Database) " );
-        }
-        else
-        {
-            query.append( "AND db.name = $dbName " );
-        }
-
-        if ( fullSegment )
-        {
-            query.append( "AND NOT (segment)-[:QUALIFIED]-() " );
-            query.append( "DETACH DELETE p, segment RETURN 0" );
-        }
-        else
-        {
-            query.append( "AND q.label IN $labels " );
-            query.append( "DETACH DELETE p, segment, q RETURN 0" );
-        }
-
-        return queryExecutor.executeQueryWithParamCheck( query.toString(), params );
     }
 
     Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
@@ -382,38 +281,44 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
     Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
         String query =
-                "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment)," +
+                "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment), " +
                 "(a)-[:APPLIES_TO]->(res) " +
                 "WHERE r.name IN $roles " +
-                "OPTIONAL MATCH (segment)-[:FOR]->(db:Database) " +
-                "RETURN db.name, a.action, res, segment";
+                "MATCH (segment)-[:FOR]->(db) " +
+                "MATCH (segment)-[:QUALIFIED]->(q) " +
+                "RETURN db.name, db, a.action, res, q";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
         {
             AnyValue dbNameValue = row.fields()[0];
+            NodeValue database = (NodeValue) row.fields()[1];
+            assert (database.labels().length() == 1);
             DatabasePrivilege dbpriv;
-            if ( dbNameValue != NO_VALUE )
+            if ( database.labels().stringValue( 0 ).equals( "Database" ) )
             {
                 String dbName = ((TextValue) dbNameValue).stringValue();
                 dbpriv = results.computeIfAbsent( dbName, DatabasePrivilege::new );
             }
-            else
+            else if ( database.labels().stringValue( 0 ).equals( "DatabaseAll" ) )
             {
                 dbpriv = results.computeIfAbsent( "", db -> new DatabasePrivilege() );
             }
+            else
+            {
+                throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+            }
 
-            String actionValue = ((TextValue) row.fields()[1]).stringValue();
-            NodeValue resource = (NodeValue) row.fields()[2];
-            NodeValue segment = (NodeValue) row.fields()[3];
+            String actionValue = ((TextValue) row.fields()[2]).stringValue();
+            NodeValue resource = (NodeValue) row.fields()[3];
+            NodeValue qualifier = (NodeValue) row.fields()[4];
             try
             {
-                dbpriv.addPrivilege( PrivilegeBuilder.grant( queryExecutor, actionValue )
-                        .withinScope( segment )
+                dbpriv.addPrivilege( PrivilegeBuilder.grant( actionValue )
+                        .withinScope( qualifier )
                         .onResource( resource )
-                        .build()
-                );
+                        .build() );
             }
             catch ( InvalidArgumentsException ie )
             {

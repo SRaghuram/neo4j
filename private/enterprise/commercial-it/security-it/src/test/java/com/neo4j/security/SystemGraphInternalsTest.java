@@ -22,7 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -37,6 +39,7 @@ import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExe
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.values.AnyValue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -44,6 +47,7 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
@@ -54,7 +58,8 @@ class SystemGraphInternalsTest
     private static final long DB_NODE_COUNT = 2;
     private static final long USER_NODE_COUNT = 1;
     private static final long ROLE_NODE_COUNT = 5;
-    private static final long PRIVILEGE_NODE_COUNT = 6 + 5 + 4 + 3 + 2;
+    private static final long PRIVILEGE_NODE_COUNT = 6;
+    private static final long PRIVILEGE_ASSIGNMENT_COUNT = 6 + 5 + 4 + 3 + 2;
     private static final long RESOURCE_NODE_COUNT = 4;
 
     private GraphDatabaseService database;
@@ -117,6 +122,9 @@ class SystemGraphInternalsTest
         // default privileges
         assertEquals( PRIVILEGE_NODE_COUNT, nbrOfPrivilegeNodes() );
 
+        // default privilege assignments
+        assertEquals( PRIVILEGE_ASSIGNMENT_COUNT, nbrOfPrivilegeAssignments() );
+
         // graph, token, schema, system
         assertEquals( RESOURCE_NODE_COUNT, nbrOfResourceNodes() );
     }
@@ -138,8 +146,9 @@ class SystemGraphInternalsTest
     }
 
     @Test
-    void shouldAddAlreadyGrantedPrivilegeAndRemoveAllDuplicatesWhenRevoking() throws Exception
+    void shouldAddAlreadyGrantedPrivilegeWithoutDuplication() throws Exception
     {
+        debugPrivileges();
         // Given
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
@@ -147,31 +156,38 @@ class SystemGraphInternalsTest
         dbPrivilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
         DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
         dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        debugPrivileges( "custom" );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege );
         realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+        debugPrivileges( "custom" );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege, dbPrivilege2 ) );
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT + 2 ) );
         assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege );
         realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
+        debugPrivileges( "custom" );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege, dbPrivilege2 ) );
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 4 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT + 2 ) );
         assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
 
         // When
         realm.revokePrivilegeFromRole( "custom", dbPrivilege );
+        debugPrivileges( "custom" );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( dbPrivilege2 ) );
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT + 1 ) );
         assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
 
         // When
@@ -179,7 +195,8 @@ class SystemGraphInternalsTest
 
         // Then
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), emptyIterable() );
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT ) );
         assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) );
     }
 
@@ -228,13 +245,15 @@ class SystemGraphInternalsTest
         realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
 
         // Then
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT + 1 ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege2 );
 
         // Then
-        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
+        assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 1 ) );
+        assertThat( nbrOfPrivilegeAssignments(), equalTo( PRIVILEGE_ASSIGNMENT_COUNT + 2 ) );
     }
 
     @Test
@@ -266,7 +285,7 @@ class SystemGraphInternalsTest
         DatabasePrivilege dbPriv1 = new DatabasePrivilege();
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL ) );
         DatabasePrivilege dbPriv2 = new DatabasePrivilege();
-        dbPriv2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Set.of( "A" ) ) ) );
+        dbPriv2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPriv1 );
@@ -274,7 +293,7 @@ class SystemGraphInternalsTest
 
         // Then
         DatabasePrivilege expected = new DatabasePrivilege();
-        expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Set.of( "A" ) ) ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ) );
         expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL ) );
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( expected ) );
     }
@@ -287,9 +306,53 @@ class SystemGraphInternalsTest
         realm.addRoleToUser( READER, "Trinity" );
     }
 
+    //TODO: Remove when finished refactoring
+    private void debugPrivileges()
+    {
+        debugPrivileges( "*" );
+    }
+
+    private void debugPrivileges(String roleName)
+    {
+        System.out.println( "Privileges for '" + roleName + "'" );
+        systemGraphExecutor.executeQuery(
+                "MATCH (r:Role" + (!roleName.equals( "*" ) ? " {name: $role}" : "") + ")-[g]->(a:Action)-[:APPLIES_TO]->(res:Resource), " +
+                        "(a)-[:SCOPE]->(s:Segment)-[f:FOR]->(d), (s)-[x:QUALIFIED]->(q) " +
+                        "RETURN type(g), r.name, res.type, a.action, id(a), type(f), d.name, type(x), q.label " +
+                        "ORDER BY r.name, res.type, a.action, type(f)",
+                map( "role", roleName ),
+                row ->
+                {
+                    String text = Arrays.stream( row.fields() ).map( this::valueToString ).collect(
+                            Collectors.joining( ", " ) );
+                    System.out.println( "\t" + text );
+                    return true;
+                } );
+    }
+
+    private String valueToString( AnyValue value)
+    {
+        if ( value instanceof org.neo4j.values.storable.Value )
+        {
+            Object obj = ((org.neo4j.values.storable.Value) value).asObject();
+            return (obj == null) ? value.toString() : obj.toString();
+        }
+        else
+        {
+            return value.toString();
+        }
+    }
+
     private long nbrOfPrivilegeNodes()
     {
         String query = "MATCH (p:Action) RETURN count(p)";
+        return systemGraphExecutor.executeQueryLong( query );
+
+    }
+
+    private long nbrOfPrivilegeAssignments()
+    {
+        String query = "MATCH (r:Role)-->(p:Action) RETURN count(*)";
         return systemGraphExecutor.executeQueryLong( query );
 
     }

@@ -5,29 +5,26 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.util.Collections;
-import java.util.Set;
-
 public class Segment
 {
-    private final Set<String> labels;
+    private final String label;
 
-    public Segment( Set<String> labels )
+    public Segment( String label )
     {
-        this.labels = labels;
+        this.label = label;
     }
 
-    public Set<String> getLabels()
+    public String getLabel()
     {
-        return labels;
+        return label;
     }
 
-    public static Segment ALL = new Segment( Collections.emptySet() );
+    public static Segment ALL = new Segment( null );
 
     @Override
     public int hashCode()
     {
-        return labels.hashCode();
+        return label.hashCode();
     }
 
     @Override
@@ -41,7 +38,14 @@ public class Segment
         if ( obj instanceof Segment )
         {
             Segment other = (Segment) obj;
-            return other.getLabels().equals( this.labels );
+            if ( this.label == null )
+            {
+                return other.label == null;
+            }
+            else
+            {
+                return this.label.equals( other.getLabel() );
+            }
         }
         return false;
     }
@@ -49,6 +53,6 @@ public class Segment
     @Override
     public String toString()
     {
-        return labels.isEmpty() ? "All labels" : "labels: " + String.join( ",", labels );
+        return label == null ? "All labels" : "label: '" + label + "'";
     }
 }

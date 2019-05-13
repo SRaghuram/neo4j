@@ -19,7 +19,7 @@ import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager, DatabaseNotFoundException}
 import org.neo4j.internal.kernel.api.security.{AuthSubject, AuthenticationResult}
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -164,10 +164,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ALL PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq())
-    val grantSchema = Map("grant" -> "GRANT", "resource" -> "schema", "database" -> "*", "labels" -> Seq())
-    val grantToken = Map("grant" -> "GRANT", "resource" -> "token", "database" -> "*", "labels" -> Seq())
-    val grantSystem = Map("grant" -> "GRANT", "resource" -> "system", "database" -> "*", "labels" -> Seq())
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
+    val grantSchema = Map("grant" -> "GRANTED", "resource" -> "schema", "database" -> "*", "labels" -> Seq("*"))
+    val grantToken = Map("grant" -> "GRANTED", "resource" -> "token", "database" -> "*", "labels" -> Seq("*"))
+    val grantSystem = Map("grant" -> "GRANTED", "resource" -> "system", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "reader"),
       grantGraph ++ Map("action" -> "read", "role" -> "reader"),
@@ -206,7 +206,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE editor PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq())
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "editor"),
       grantGraph ++ Map("action" -> "read", "role" -> "editor"),
@@ -226,7 +226,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE custom PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
     )
@@ -244,7 +244,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE custom PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "*", "labels" -> Seq("A"))
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("A"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
     )
@@ -263,7 +263,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE custom PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A"))
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
     )
@@ -282,7 +282,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE custom PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("*"))
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
     )
@@ -302,12 +302,21 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE custom PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANT", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A", "B"))
+    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A", "B"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
     )
 
     result.toSet should be(expected)
+  }
+
+  test("should fail grant traversal privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    the [DatabaseNotFoundException] thrownBy {
+      execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+    } should have message "Database 'foo' does not exist."
   }
 
   test("should create role") {
@@ -895,6 +904,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = login.subject().getAuthenticationResult
     if (expected == AuthenticationResult.FAILURE && result != AuthenticationResult.FAILURE) {
       // This is a hack to get around the fact that login() does not fail for suspended users
+      // TODO: Remove once initTest builds a full normal database stack
       val user = systemGraphRealm.getUser(username)
       user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
     }
@@ -916,6 +926,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   protected override def initTest(): Unit = {
     super.initTest()
+    // TODO: Rather build a full normal database stack (and stop using systemGraph* variables)
 
     systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher

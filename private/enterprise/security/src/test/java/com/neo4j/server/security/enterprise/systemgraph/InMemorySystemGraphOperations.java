@@ -8,6 +8,8 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
+
+import org.neo4j.internal.batchimport.input.csv.Data;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -160,28 +162,20 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
         Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
-        DatabasePrivilege dbPrivilege = databasePrivilegeMap.computeIfAbsent( dbName, DatabasePrivilege::new );
         dbPrivilege.addPrivilege( resourcePrivilege );
     }
 
     @Override
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
-    {
-        revokePrivilegeFromRole( roleName, resourcePrivilege, "" );
-    }
-
-    @Override
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
         Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.get( roleName );
         if ( databasePrivilegeMap != null )
         {
-            DatabasePrivilege dbPrivilege = databasePrivilegeMap.get( dbName );
             if ( dbPrivilege != null )
             {
                 dbPrivilege.removePrivilege( resourcePrivilege );

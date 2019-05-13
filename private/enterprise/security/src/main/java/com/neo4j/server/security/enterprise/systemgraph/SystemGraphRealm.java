@@ -145,14 +145,7 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     {
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
-            if ( dbPrivilege.isAllDatabases() )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName, privilege );
-            }
-            else
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege.getDbName() );
-            }
+            systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege );
         }
         clearCachedAuthorizationInfo();
     }
@@ -162,14 +155,7 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     {
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
-            if ( dbPrivilege.isAllDatabases() )
-            {
-                systemGraphOperations.revokePrivilegeFromRole( roleName, privilege );
-            }
-            else
-            {
-                systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege.getDbName() );
-            }
+            systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege );
         }
         clearCachedAuthorizationInfo();
     }

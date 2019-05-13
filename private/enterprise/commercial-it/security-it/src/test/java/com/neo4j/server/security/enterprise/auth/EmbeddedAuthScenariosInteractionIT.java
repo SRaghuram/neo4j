@@ -143,7 +143,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
@@ -177,9 +177,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "B" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "C" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (a:A)-[]->(n)-[]->(c:C) RETURN a.number AS a, n.number AS n, c.number AS c", r ->
@@ -222,11 +222,11 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext readOnly = setupUserAndLogin(
                 "readOnlyUser", "readOnlyRole",
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
         CommercialLoginContext findAndRead = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
 
         String query = "MATCH (n:A) WHERE n.number IS NOT NULL return n.number";
@@ -253,7 +253,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number",
@@ -270,7 +270,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
@@ -287,7 +287,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "Node" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "Node" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
@@ -336,8 +336,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A {number: 3})" );
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "B" ) ) );
 
         assertSuccess( adminSubject, "MATCH ()-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
         assertSuccess( adminSubject, "MATCH (:A)-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
@@ -353,8 +353,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "B" ) ) );
 
         String varlenBasic = "MATCH (:A)-[:R*3]-(n:B) return n.number";
         String varlenMinMax = "MATCH (:A)-[:R*..3]-(n:B) return n.number";
@@ -374,9 +374,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) ) );
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "B" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "C" ) ) );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
         String shortestWithProperty =
@@ -429,16 +429,16 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         CommercialLoginContext findSome = setupUserAndLogin(
                 "user1", "role1",
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( Collections.singleton( "B" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( "B" ) )
         );
 
         CommercialLoginContext findAll = setupUserAndLogin(
                 "user2", "role2",
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( Collections.singleton( "B" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "foo" ), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.PropertyResource( "bar" ), new Segment( "B" ) )
         );
 
         assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
@@ -469,7 +469,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldFindWhitelistedNodes() throws Throwable
     {
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) )
         );
 
         assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
@@ -485,7 +485,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A)" );
         assertEmpty( adminSubject, "CREATE (n:Node:A)" );
         CommercialLoginContext subject =
-                setupUserAndLogin( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+                setupUserAndLogin( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 5 ) );
@@ -503,9 +503,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "D" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "D" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "C" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (a:A)--(n1:D) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
@@ -521,9 +521,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "D" ) ) ),
-                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "D" ) ),
+                new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), new Segment( "C" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
@@ -537,9 +537,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "B" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "C" ) )
         );
 
         String varlenBasic = "MATCH p = (:A)-[:R*3]-(n:C) return length(p)";
@@ -559,9 +559,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         setupGraph();
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "B" ) ) ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "C" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "B" ) ),
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "C" ) )
         );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
@@ -582,7 +582,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) )
         );
 
         assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
@@ -597,7 +597,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         CommercialLoginContext subject = setupUserAndLogin(
                 "Alice", "custom",
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( Collections.singleton( "A" ) ) )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) )
         );
 
         DatabasePrivilege privilege = new DatabasePrivilege();

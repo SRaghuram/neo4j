@@ -9,52 +9,45 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.values.storable.StringValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.NodeValue;
-
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 class PrivilegeBuilder
 {
     private final boolean allowed;
-    private QueryExecutor queryExecutor;
-    private Set<String> labels = new HashSet<>();
+    private String label;
     private ResourcePrivilege.Action action;
     private Resource resource;
 
-    private PrivilegeBuilder( boolean allowed, QueryExecutor queryExecutor, String action )
+    private PrivilegeBuilder( boolean allowed, String action )
     {
         this.allowed = allowed;
-        this.queryExecutor = queryExecutor;
         this.action = ResourcePrivilege.Action.valueOf( action.toUpperCase() );
     }
 
-    static PrivilegeBuilder grant( QueryExecutor queryExecutor, String action )
+    static PrivilegeBuilder grant( String action )
     {
-        return new PrivilegeBuilder( true, queryExecutor, action );
+        return new PrivilegeBuilder( true, action );
     }
 
-    PrivilegeBuilder withinScope( NodeValue segment )
+    PrivilegeBuilder withinScope( NodeValue qualifier )
     {
-        queryExecutor.executeQuery( "MATCH (s:Segment)-[:QUALIFIED]->(q) WHERE id(s) = $nodeId RETURN q",
-                map( "nodeId", segment.id() ), row ->
-                {
-                    NodeValue qualifier = (NodeValue) row.fields()[0];
-                    switch ( qualifier.labels().stringValue( 0 ) )
-                    {
-                    case "LabelQualifier":
-                        this.labels.add( ((TextValue) qualifier.properties().get( "label" )).stringValue() );
-                        break;
-                    default:
-                        throw new InvalidArgumentsException( "Unknown privilege qualifier type: " + qualifier.labels().stringValue( 0 ) );
-                    }
-                    return true;
-                } );
+        qualifier.labels().forEach( label ->
+        {
+            switch ( ((StringValue)label).stringValue() )
+            {
+            case "LabelQualifier":
+                this.label = ((TextValue) qualifier.properties().get( "label" )).stringValue();
+                break;
+            case "LabelQualifierAll":
+                this.label = null;
+                break;
+            default:
+                throw new IllegalArgumentException( "Unknown privilege qualifier type: " + label.getTypeName() );
+            }
+        } );
         return this;
     }
 
@@ -107,7 +100,7 @@ class PrivilegeBuilder
 
     ResourcePrivilege build() throws InvalidArgumentsException
     {
-        Segment segment = labels.isEmpty() ? Segment.ALL : new Segment( labels );
+        Segment segment = label == null ? Segment.ALL : new Segment( label );
         return new ResourcePrivilege( action, resource, segment );
     }
 }
