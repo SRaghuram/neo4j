@@ -12,7 +12,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -31,6 +34,7 @@ public class ThroughputMonitor extends LifecycleAdapter
     private final Log log;
     private final Clock clock;
     private final JobScheduler scheduler;
+    private final Semaphore samplingTaskLock = new Semaphore( 0, true ); // Fairness means the lock is given in arrival order.
 
     private final Duration samplingWindow;
     private final Duration samplingInterval;
@@ -61,6 +65,7 @@ public class ThroughputMonitor extends LifecycleAdapter
     @Override
     public void start()
     {
+        samplingTaskLock.release();
         this.job = scheduler.scheduleRecurring( Group.THROUGHPUT_MONITOR, this::samplingTask, samplingInterval.toMillis(), TimeUnit.MILLISECONDS );
     }
 
@@ -68,6 +73,10 @@ public class ThroughputMonitor extends LifecycleAdapter
     public void stop()
     {
         job.cancel( false );
+
+        // After cancelling the job, no new jobs will be scheduled.
+        // We drain the semaphore, blocking if necessary, to ensure that any on-going job will finish, and no enqueued jobs will start.
+        samplingTaskLock.acquireUninterruptibly();
     }
 
     private boolean tooEarly()
@@ -81,15 +90,22 @@ public class ThroughputMonitor extends LifecycleAdapter
         return Duration.between( lastSample.instant(), clock.instant() ).compareTo( samplingInterval ) < 0;
     }
 
-    private synchronized void samplingTask()
+    private void samplingTask()
     {
-        try
+        if ( samplingTaskLock.tryAcquire() )
         {
-            samplingTask0();
-        }
-        catch ( Throwable e )
-        {
-            log.error( "Sampling task failed exceptionally", e );
+            try
+            {
+                samplingTask0();
+            }
+            catch ( Throwable e )
+            {
+                log.error( "Sampling task failed exceptionally", e );
+            }
+            finally
+            {
+                samplingTaskLock.release();
+            }
         }
     }
 
@@ -100,15 +116,18 @@ public class ThroughputMonitor extends LifecycleAdapter
             return;
         }
 
-        Optional<Sample<Long>> sample = qualitySampler.sample();
+        synchronized ( this )
+        {
+            Optional<Sample<Long>> sample = qualitySampler.sample();
 
-        if ( sample.isPresent() )
-        {
-            samples.append( sample.get() );
-        }
-        else
-        {
-            log.warn( "Sampling task failed" );
+            if ( sample.isPresent() )
+            {
+                samples.append( sample.get() );
+            }
+            else
+            {
+                log.warn( "Sampling task failed" );
+            }
         }
     }
 
