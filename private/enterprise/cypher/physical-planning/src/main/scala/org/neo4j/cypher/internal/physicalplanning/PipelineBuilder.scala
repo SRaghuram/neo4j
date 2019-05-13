@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.annotation.tailrec
@@ -175,7 +175,7 @@ object PipelineBuilder {
 class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
                       stateDefinition: StateDefinition,
                       slotConfigurations: SlotConfigurations)
-  extends TreeBuilder2[Pipeline, ApplyBufferDefinition] {
+  extends TreeBuilderWithArgument[Pipeline, ApplyBufferDefinition] {
 
   val pipelines = new ArrayBuffer[Pipeline]
 

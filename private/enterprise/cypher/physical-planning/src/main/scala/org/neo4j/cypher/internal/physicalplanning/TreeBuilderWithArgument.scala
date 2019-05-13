@@ -23,7 +23,7 @@ import scala.collection.mutable
   *
   * We model the whole plan tree as being encompassed by an implicit outer apply which is executed
   * with a single row. This lets us avoid specializing reducing operators that are not on the rhs of an apply.
-  * This single argument is constructed using the [[TreeBuilder2#initialArgument]] callback.
+  * This single argument is constructed using the [[TreeBuilderWithArgument#initialArgument]] callback.
   *
   * The argument handling can be used to flatten the output structure, e.g. an Apply plan `a` can be turned into:
   *
@@ -60,7 +60,7 @@ import scala.collection.mutable
   * @tparam T type of build output
   * @tparam ARGUMENT type of argument
   */
-trait TreeBuilder2[T, ARGUMENT] {
+trait TreeBuilderWithArgument[T, ARGUMENT] {
 
   protected def initialArgument(leftLeaf: LogicalPlan): ARGUMENT
   protected def onLeaf(plan: LogicalPlan, argument: ARGUMENT): T
