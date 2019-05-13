@@ -45,7 +45,7 @@ class ThroughputMonitorTest
     }
 
     @AfterEach
-    void after() throws Exception
+    void after()
     {
         monitor.stop();
     }

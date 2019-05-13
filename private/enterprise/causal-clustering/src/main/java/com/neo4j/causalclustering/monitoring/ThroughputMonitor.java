@@ -65,22 +65,9 @@ public class ThroughputMonitor extends LifecycleAdapter
     }
 
     @Override
-    public void stop() throws Exception
+    public void stop()
     {
-        terminateJob();
-    }
-
-    private void terminateJob()
-    {
-        try
-        {
-            job.cancel( false );
-            job.waitTermination();
-        }
-        catch ( Exception e )
-        {
-            log.warn( "Job termination finished exceptionally", e );
-        }
+        job.cancel( false );
     }
 
     private boolean tooEarly()
