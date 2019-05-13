@@ -39,10 +39,10 @@ fi
 vmstat -s -S M > "$resultsDir/vmstat.out"
 
 # dump process memory stats
-pidstat --human  -r -s -u -w -p $jvmPid > "$resultsDir/pidstat.out"
+pidstat --human  -r -s -u -w -p "$jvmPid" > "$resultsDir/pidstat.out"
 
 # dump native memory tracking summary
-jcmd $jvmPid VM.native_memory > "$resultsDir/native_memory.out"
+jcmd "$jvmPid" VM.native_memory > "$resultsDir/native_memory.out"
 
 # dump process tree
 ps fu > "$resultsDir/processes.out"
