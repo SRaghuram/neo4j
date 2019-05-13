@@ -3,8 +3,24 @@ package com.neo4j.bench.jmh.api;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
+import com.neo4j.bench.jmh.api.config.ParameterValue;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
+import org.openjdk.jmh.infra.BenchmarkParams;
+import org.openjdk.jmh.infra.IterationParams;
+import org.openjdk.jmh.runner.IterationType;
+import org.openjdk.jmh.runner.WorkloadParams;
+import org.openjdk.jmh.runner.options.TimeValue;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.THREADS_PARAM;
+import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.extractParameterValues;
+import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.parametersAsMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -48,5 +64,94 @@ public class BenchmarkDiscoveryUtilsTest
 
         assertFalse( benchmark1IsThreadSafe );
         assertTrue( benchmark2IsThreadSafe );
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenDuplicatesInParameterValues()
+    {
+        assertTrue( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
+                new ParameterValue( "k1", "v1" ),
+                new ParameterValue( "k1", "v1" ) ) ) );
+        assertTrue( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
+                new ParameterValue( "k1", "v1" ),
+                new ParameterValue( "k1", "v2" ) ) ) );
+        assertTrue( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
+                new ParameterValue( "k1", "v1" ),
+                new ParameterValue( "k2", "v2" ),
+                new ParameterValue( "k2", "v2" ) ) ) );
+
+        assertFalse( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
+                new ParameterValue( "k1", "v1" ),
+                new ParameterValue( "k2", "v2" ) ) ) );
+        assertFalse( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
+                new ParameterValue( "k1", "v1" ),
+                new ParameterValue( "k2", "v1" ) ) ) );
+    }
+
+    private boolean throwsExceptionWhenParameterValuesContainsDuplicates( List<ParameterValue> parameterValues )
+    {
+        try
+        {
+            parametersAsMap( parameterValues );
+            return false;
+        }
+        catch ( Throwable e )
+        {
+            return true;
+        }
+    }
+
+    @Test
+    public void shouldExtractJmhParamsAndThreadsCorrectly()
+    {
+        int threads = 42;
+        ParameterValue param1 = new ParameterValue( "param1", "value" );
+        ParameterValue param2 = new ParameterValue( "param2", "value" );
+        ParameterValue param3 = new ParameterValue( "param3", "value" );
+        ParameterValue paramThreads = new ParameterValue( THREADS_PARAM, Integer.toString( threads ) );
+
+        WorkloadParams workloadParams = new WorkloadParams();
+        workloadParams.put( "class_" + param1.param(), param1.value(), 1 );
+        workloadParams.put( "class_" + param2.param(), param2.value(), 1 );
+        workloadParams.put( "class_" + param3.param(), param3.value(), 1 );
+
+        BenchmarkParams benchmarkParams = new BenchmarkParams(
+                "doThing", /* benchmark */
+                "generatedDoThings", /* generatedTarget */
+                false, /* syncIterations */
+                Integer.parseInt( paramThreads.value() ),
+                new int[]{},/* threadGroups */
+                Collections.<String>emptyList(), /* threadGroupLabels */
+                1, /* forks */
+                1, /* warmupForks */
+                new IterationParams(
+                        IterationType.WARMUP,
+                        1, /* count */
+                        TimeValue.seconds( 5 ), /* time */
+                        1 /* batchSize */ ),
+                new IterationParams(
+                        IterationType.MEASUREMENT,
+                        1, /* count */
+                        TimeValue.seconds( 5 ), /* time */
+                        1 /* batchSize */ ),
+                org.openjdk.jmh.annotations.Mode.AverageTime, /* mode */
+                workloadParams, /* workload params */
+                TimeUnit.DAYS, /* time unit */
+                1, /* opsPerInvocation */
+                "jvm", /* jvm */
+                Collections.<String>emptyList(), /* jvmArgs */
+                "openjdk", /* vm name*/
+                "1.8.0", /* jdk version */
+                "1.8.0", /* vm version */
+                "1.19", /* jmh version */
+                TimeValue.NONE /* timeout */ );
+
+        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams );
+
+        assertTrue( parameterValues.contains( param1 ) );
+        assertTrue( parameterValues.contains( param2 ) );
+        assertTrue( parameterValues.contains( param3 ) );
+        assertTrue( parameterValues.contains( paramThreads ) );
+        MatcherAssert.assertThat( parameterValues.size(), CoreMatchers.equalTo( 4 ) );
     }
 }

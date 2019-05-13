@@ -31,7 +31,7 @@ public class SuiteDescription
         Map<String,BenchmarkDescription> benchmarkDescriptions = annotations.getBenchmarks().stream()
                                                                             .map( clazz -> BenchmarkDescription.of( clazz, validation, annotations ) )
                                                                             .collect( toMap( BenchmarkDescription::className, identity() ) );
-        return new SuiteDescription( benchmarkDescriptions );
+        return create( benchmarkDescriptions, validation );
     }
 
     public static SuiteDescription fromConfig(
@@ -42,7 +42,7 @@ public class SuiteDescription
         Map<String,BenchmarkDescription> finalBenchmarks = new HashMap<>();
         benchmarkConfigFile.entries()
                            .forEach( configEntry -> addBenchmarkEntryToSuite( configEntry, suiteDescription, finalBenchmarks, validation ) );
-        return new SuiteDescription( finalBenchmarks );
+        return create( finalBenchmarks, validation );
     }
 
     public static SuiteDescription fromBenchmarkDescription( BenchmarkDescription benchmarkDescription )
@@ -66,6 +66,15 @@ public class SuiteDescription
             benchmarks.put( configEntryName,
                             suite.getBenchmark( configEntryName ).copyWithConfig( entry, validation ) );
         }
+    }
+
+    private static SuiteDescription create( Map<String,BenchmarkDescription> benchmarks, Validation validation )
+    {
+        if ( benchmarks.isEmpty() )
+        {
+            validation.noBenchmarksFound();
+        }
+        return new SuiteDescription( benchmarks );
     }
 
     private final Map<String,BenchmarkDescription> benchmarkDescriptions;

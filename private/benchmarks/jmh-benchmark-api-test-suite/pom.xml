@@ -14,7 +14,6 @@
     <properties>
         <jmh.version>1.21</jmh.version>
         <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
-        <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
@@ -147,7 +146,6 @@
                         <configuration>
                             <includePluginDependencies>true</includePluginDependencies>
                             <mainClass>org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator</mainClass>
-                                <!--<compiled-bytecode-dir> <output-source-dir> <output-resource-dir> [generator-type]-->
                             <arguments>
                                 <argument>${project.basedir}/target/classes/</argument>
                                 <argument>${project.basedir}/target/generated-sources/jmh/</argument>

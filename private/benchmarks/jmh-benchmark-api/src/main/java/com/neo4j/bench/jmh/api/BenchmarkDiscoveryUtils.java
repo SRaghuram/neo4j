@@ -12,7 +12,6 @@ import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Benchmarks;
 import com.neo4j.bench.client.model.Metrics;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
-import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.util.Statistics;
@@ -120,7 +119,8 @@ public class BenchmarkDiscoveryUtils
     static List<ParameterValue> extractParameterValues( BenchmarkParams benchmarkParams )
     {
         List<ParameterValue> parameterValues = benchmarkParams.getParamsKeys().stream()
-                                                              .filter( param -> !JmhOptionsUtil.GLOBAL_PARAMS.contains( param ) )
+                                                              // TODO remove this once params no longer need an underscore/prefix
+                                                              .filter( param -> param.contains( "_" ) )
                                                               .map( param -> new ParameterValue( simplifyParamName( param ),
                                                                                                  benchmarkParams.getParam( param ) ) )
                                                               .collect( toList() );

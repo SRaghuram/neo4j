@@ -42,24 +42,37 @@ import java.util.function.BiConsumer;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromFile;
+import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled;
 import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.jmh.api.config.Validation.assertValid;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
-abstract class Runner
+/**
+ * This abstract runner defines the execution life-cycle of benchmarks written in JMH.
+ * To extend th life-cycle, implementors override call-back methods that are invoked at specific phases of execution.
+ * The pseudo-code below explains when each of these call-backs are invoked.
+ * <p>
+ * prepare()
+ * <p>
+ * for( benchmark <- benchmarks)
+ * beforeProfilerRun(benchmark)
+ * // profile
+ * afterProfilerRun(benchmark)
+ * <p>
+ * for( benchmark <- benchmarks)
+ * beforeMeasurementRun(benchmark)
+ * // measure
+ * afterMeasurementRun(benchmark)
+ */
+public abstract class Runner
 {
     public static SuiteDescription createSuiteDescriptionFor( String packageName, Path benchConfigFile )
     {
         Annotations annotations = new Annotations( packageName );
-
         AnnotationsValidationResult annotationsValidationResult = annotations.validate();
-
-        if ( !annotationsValidationResult.isValid() )
-        {
-            throw new RuntimeException( annotationsValidationResult.message() );
-        }
+        AnnotationsValidationResult.assertValid( annotationsValidationResult );
 
         Validation validation = new Validation();
         SuiteDescription defaultBenchmarks = SuiteDescription.fromAnnotations( annotations, validation );
@@ -74,12 +87,6 @@ abstract class Runner
                                                    fromFile( benchConfigFile, validation, annotations ),
                                                    validation );
         assertValid( validation );
-
-        // TODO maybe move that into Validation
-        if ( finalBenchmarks.count() == 0 )
-        {
-            throw new RuntimeException( "No benchmarks were enabled" );
-        }
         return finalBenchmarks;
     }
 
@@ -94,10 +101,7 @@ abstract class Runner
 
         Annotations annotations = new Annotations( packageName );
         AnnotationsValidationResult annotationsValidationResult = annotations.validate();
-        if ( !annotationsValidationResult.isValid() )
-        {
-            throw new RuntimeException( annotationsValidationResult.message() );
-        }
+        AnnotationsValidationResult.assertValid( annotationsValidationResult );
 
         Validation validation = new Validation();
         // force enable the benchmark, in case it is disabled by default
@@ -108,14 +112,7 @@ abstract class Runner
             benchmark = benchmark.copyRetainingMethods( methods );
         }
 
-        SuiteDescription finalBenchmarks = SuiteDescription.fromBenchmarkDescription( benchmark );
-
-        // TODO maybe move that into Validation
-        if ( finalBenchmarks.count() == 0 )
-        {
-            throw new RuntimeException( "No benchmarks were enabled" );
-        }
-        return finalBenchmarks;
+        return SuiteDescription.fromBenchmarkDescription( benchmark );
     }
 
     public BenchmarkGroupBenchmarkMetrics run(
@@ -127,7 +124,7 @@ abstract class Runner
             ErrorReporter errorReporter,
             String[] jmhArgs,
             Jvm jvm,
-            Path recordingsOutputDir )
+            Path profilerRecordingsOutputDir )
     {
         Instant start = Instant.now();
 
@@ -151,7 +148,7 @@ abstract class Runner
                 throw new RuntimeException( "Expected at least one benchmark description, but found none" );
             }
 
-            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks, workDir, jvm, errorReporter );
+            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks, workDir, jvm, errorReporter, jvmArgs );
 
             if ( benchmarksAfterPrepare.isEmpty() )
             {
@@ -189,7 +186,7 @@ abstract class Runner
 
                     if ( !profilerTypes.isEmpty() )
                     {
-                        moveProfilerRecordingsTo( recordingsOutputDir, workDir );
+                        moveProfilerRecordingsTo( profilerRecordingsOutputDir, workDir );
                     }
 
                     // Print Pretty Results Summary
@@ -213,33 +210,57 @@ abstract class Runner
 
     //------------------------------------- CALLBACKS -------------------------------------
 
-    // TODO java doc
+    /**
+     * This method is invoked exactly once, at the beginning of benchmark execution, before the profiling phase.
+     * The method is allowed to do more-or-less anything it wishes, including running benchmarks.
+     * The contract is that it must return the benchmarks that should be executed in later phases.
+     * These benchmarks must be a subset of those provided as input parameter.
+     *
+     * @return benchmarks to execute in later phases
+     */
     protected abstract List<BenchmarkDescription> prepare(
             List<BenchmarkDescription> benchmarks,
             Path workDir,
             Jvm jvm,
-            ErrorReporter errorReporter );
+            ErrorReporter errorReporter,
+            String[] jvmArgs );
 
-    // TODO java doc
+    /**
+     * This method is invoked once for each benchmark that is profiled, before profiling begins.
+     * Although there is no restriction on what can be done in this method, its main purpose is to perform any setup required for profiling.
+     * E.g., defining additional JMH parameters via the ChainedOptionsBuilder API.
+     *
+     * @return possibly modified version of the input options builder
+     */
     protected abstract ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                                 ProfilerType profilerType,
                                                                 Path workDir,
                                                                 ErrorReporter errorReporter,
                                                                 ChainedOptionsBuilder optionsBuilder );
 
-    // TODO java doc
+    /**
+     * This method is invoked once for each benchmark that is profiled, after profiling of the benchmark completes.
+     */
     protected abstract void afterProfilerRun( BenchmarkDescription benchmark,
                                               ProfilerType profilerType,
                                               Path workDir,
                                               ErrorReporter errorReporter );
 
-    // TODO java doc
+    /**
+     * This method is invoked once for each benchmark that is executed, before execution begins.
+     * Although there is no restriction on what can be done in this method, its main purpose is to perform any setup required for execution.
+     * E.g., defining additional JMH parameters via the ChainedOptionsBuilder API.
+     *
+     * @return possibly modified version of the input options builder
+     */
     protected abstract ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
                                                                    Path workDir,
                                                                    ErrorReporter errorReporter,
                                                                    ChainedOptionsBuilder optionsBuilder );
 
-    // TODO java doc
+    /**
+     * This method is invoked once for each benchmark that is executed, after execution of the benchmark completes.
+     */
     protected abstract void afterMeasurementRun( BenchmarkDescription benchmark,
                                                  Path workDir,
                                                  ErrorReporter errorReporter );
@@ -291,7 +312,7 @@ abstract class Runner
 
                             Options options = modifiedBuilder.build();
                             // sanity check, make sure provided benchmarks were correctly exploded
-                            assertExactlyOneBenchmarkIsEnabled( options );
+                            JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
                             executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics() );
                         }
@@ -365,14 +386,6 @@ abstract class Runner
                     }
                 }
             }
-        }
-    }
-
-    private static void assertExactlyOneBenchmarkIsEnabled( Options options )
-    {
-        if ( options.getIncludes().size() != 1 )
-        {
-            throw new RuntimeException( "Expected one enabled benchmark but found: " + options.getIncludes() );
         }
     }
 

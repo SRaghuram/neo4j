@@ -26,12 +26,15 @@ import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGUR
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_VALUE_IS_NOT_ALLOWED;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICATE_ALLOWED_VALUE;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICATE_BASE_VALUE;
+import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.NO_BENCHMARKS_FOUND;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -280,8 +283,10 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
                 validation );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( CONFIGURED_BENCHMARK_DOES_NOT_EXIST ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      newHashSet( CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
+                                  NO_BENCHMARKS_FOUND ) );
         assertFalse( validation.isValid() );
     }
 
@@ -312,8 +317,9 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( CONFIGURED_VALUE_IS_NOT_ALLOWED ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( CONFIGURED_VALUE_IS_NOT_ALLOWED ) );
         assertFalse( validation.isValid() );
     }
 
@@ -344,8 +350,9 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
         assertFalse( validation.isValid() );
     }
 
@@ -357,8 +364,9 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         BenchmarkDescription.of( DuplicateAllowedBenchmark.class, validation, getAnnotations() );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( DUPLICATE_ALLOWED_VALUE ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( DUPLICATE_ALLOWED_VALUE ) );
         assertFalse( validation.isValid() );
     }
 
@@ -370,8 +378,9 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         BenchmarkDescription.of( DuplicateBaseBenchmark.class, validation, getAnnotations() );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( DUPLICATE_BASE_VALUE ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( DUPLICATE_BASE_VALUE ) );
         assertFalse( validation.isValid() );
     }
 
