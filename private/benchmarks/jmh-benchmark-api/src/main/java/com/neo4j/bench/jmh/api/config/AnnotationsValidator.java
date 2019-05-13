@@ -253,5 +253,13 @@ public class AnnotationsValidator
         {
             return message;
         }
+
+        public static void assertValid( AnnotationsValidationResult annotationsValidationResult )
+        {
+            if ( !annotationsValidationResult.isValid() )
+            {
+                throw new RuntimeException( annotationsValidationResult.message() );
+            }
+        }
     }
 }

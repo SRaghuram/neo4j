@@ -15,7 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_BENCHMARK_DOES_NOT_EXIST;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_PARAMETER_DOES_NOT_EXIST;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_VALUE_IS_NOT_ALLOWED;
@@ -23,6 +22,7 @@ import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICAT
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.DUPLICATE_BASE_VALUE;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.MISSING_BENCHMARK_MODE;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.MISSING_PARAMETER_VALUE;
+import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.NO_BENCHMARKS_FOUND;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.UNRECOGNIZED_CONFIG_FILE_ENTRY;
@@ -46,7 +46,8 @@ public class Validation
         DUPLICATE_ALLOWED_VALUE,
         DUPLICATE_BASE_VALUE,
         MISSING_BENCHMARK_MODE,
-        MISSING_PARAMETER_VALUE
+        MISSING_PARAMETER_VALUE,
+        NO_BENCHMARKS_FOUND
     }
 
     private final List<String> paramConfiguredWithoutEnablingDisablingBenchmarkErrs = new ArrayList<>();
@@ -132,9 +133,14 @@ public class Validation
         validationErrors.add( MISSING_PARAMETER_VALUE );
     }
 
-    public boolean errorsEqual( ValidationError... errors )
+    void noBenchmarksFound()
     {
-        return newHashSet( errors ).equals( validationErrors );
+        validationErrors.add( NO_BENCHMARKS_FOUND );
+    }
+
+    public Set<ValidationError> errors()
+    {
+        return validationErrors;
     }
 
     public boolean isValid()
@@ -200,6 +206,10 @@ public class Validation
             {
                 sb.append( "\tMissing annotation '" + ParamValues.class.getSimpleName() + "':\n" );
                 appendErrors( sb, missingParameterValueErrs );
+            }
+            if ( !validationErrors.contains( NO_BENCHMARKS_FOUND ) )
+            {
+                sb.append( "\tNo benchmarks were configured!" );
             }
             return sb.toString();
         }

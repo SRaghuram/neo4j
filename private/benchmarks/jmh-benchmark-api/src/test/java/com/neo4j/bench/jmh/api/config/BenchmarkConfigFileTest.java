@@ -18,11 +18,13 @@ import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromMap;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
+import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -122,7 +124,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         assertThat( benchmarkConfigFile.getEntry( benchmarkName1 ), notNullValue() );
         assertThat( benchmarkConfigFile.getEntry( benchmarkName2 ), notNullValue() );
 
-        assertTrue( validation.report(), validation.errorsEqual(/*no errors*/ ) );
+        assertTrue( validation.report(), validation.errors().isEmpty() );
         assertTrue( validation.report(), validation.isValid() );
     }
 
@@ -136,8 +138,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, "" ), validation, getAnnotations() );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
+        assertEquals( validation.report(), validation.errors(), singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
         assertFalse( validation.isValid() );
     }
 
@@ -152,8 +153,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         fromMap( map( benchmarkName + "." + paramName, "1" ), validation, getAnnotations() );
 
         // then
-        assertTrue( validation.report(),
-                    validation.errorsEqual( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
+        assertEquals( validation.report(), validation.errors(), singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
         assertFalse( validation.isValid() );
     }
 
