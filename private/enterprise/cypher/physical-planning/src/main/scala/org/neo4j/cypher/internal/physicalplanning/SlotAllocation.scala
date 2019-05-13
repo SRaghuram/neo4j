@@ -335,7 +335,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
         addGroupingSlots(groupingExpressions, source, slots)
+        aggregationExpressions foreach {
+          case (key, _) =>
+            slots.newReference(key, nullable = true, CTAny)
+        }
 
+      case OrderedAggregation(_, groupingExpressions, aggregationExpressions, _) =>
+        addGroupingSlots(groupingExpressions, source, slots)
         aggregationExpressions foreach {
           case (key, _) =>
             slots.newReference(key, nullable = true, CTAny)

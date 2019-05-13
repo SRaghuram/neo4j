@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, OrderedDistinct, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand, VariablePredicate}
+import org.neo4j.cypher.internal.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, OrderedAggregation, OrderedDistinct, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand, VariablePredicate}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning._
-import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, RelationshipFromSlot}
+import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, NullCheckVariable, RelationshipFromSlot}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.{SlottedGroupingAggTable, SlottedNonGroupingAggTable, SlottedOrderedGroupingAggTable, SlottedOrderedNonGroupingAggTable, SlottedPrimitiveGroupingAggTable}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
@@ -217,20 +218,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val offset = slots.getReferenceOffsetFor(name)
         UnwindSlottedPipe(source, convertExpressions(expression), offset, slots)(id)
 
-      // Aggregation without grouping, such as RETURN count(*)
-      case Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
-        val aggregation = aggregationExpression.map {
-          case (key, expression) =>
-            slots.getReferenceOffsetFor(key) -> convertExpressions(expression)
-              .asInstanceOf[AggregationExpression]
-        }
-        EagerAggregationWithoutGroupingSlottedPipe(source, slots, aggregation)(id)
-
       case Aggregation(_, groupingExpressions, aggregationExpression) =>
         val aggregation = aggregationExpression.map {
           case (key, expression) =>
-            slots.getReferenceOffsetFor(key) -> convertExpressions(expression)
-              .asInstanceOf[AggregationExpression]
+            slots.getReferenceOffsetFor(key) -> convertExpressions(expression).asInstanceOf[AggregationExpression]
         }
 
         val keys = groupingExpressions.keys.toArray
@@ -238,7 +229,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val groupingColumnsIncoming = keys.collect {
           case key if slots(key).isLongSlot => groupingExpressions(key) match {
             case NodeFromSlot(offset, _) => offset
+            case NullCheckVariable(offset, _:NodeFromSlot) => offset
             case RelationshipFromSlot(offset, _) => offset
+            case NullCheckVariable(offset, _:RelationshipFromSlot) => offset
           }
         }
 
@@ -246,15 +239,37 @@ class SlottedPipeMapper(fallback: PipeMapper,
           case x if slots(x).isLongSlot => slots(x).offset
         }
 
-        if (groupingColumnsIncoming.length == groupingExpressions.size &&
+        // Choose the right kind of aggregation table factory based on what grouping columns we have
+        val tableFactory =
+          if (groupingExpressions.isEmpty) {
+            SlottedNonGroupingAggTable.Factory(slots, aggregation)
+          } else if (groupingColumnsIncoming.length == groupingExpressions.size &&
           groupingColumnsIncoming.length == groupingColumnsOutgoing.length) {
           // If we are able to use primitive for all incoming and outgoing grouping columns, we can use the more effective
-          // Primitive pipe that leverages that the fact that grouping can be done a single array of longs
-          EagerAggregationSlottedPrimitivePipe(source, slots, groupingColumnsIncoming, groupingColumnsOutgoing, aggregation)(id)
+          // Primitive table that leverages that the fact that grouping can be done a single array of longs
+            SlottedPrimitiveGroupingAggTable.Factory(slots, groupingColumnsIncoming, groupingColumnsOutgoing, aggregation)
         } else {
-          EagerAggregationSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions, Seq.empty),
-                                      aggregation)(id)
+          SlottedGroupingAggTable.Factory(slots, expressionConverters.toGroupingExpression(id, groupingExpressions, Seq.empty), aggregation)
         }
+        EagerAggregationPipe(source, tableFactory)(id)
+
+      case OrderedAggregation(_, groupingExpressions, aggregationExpression, orderToLeverage) =>
+        val aggregation = aggregationExpression.map {
+          case (key, expression) =>
+            slots.getReferenceOffsetFor(key) -> convertExpressions(expression).asInstanceOf[AggregationExpression]
+        }
+
+        val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_,v) => orderToLeverage.contains(v) }
+        val orderedGroupingColumns = expressionConverters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
+        val unorderedGroupingColumns = expressionConverters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
+
+        val tableFactory =
+          if (unorderedGroupingColumns.isEmpty) {
+            SlottedOrderedNonGroupingAggTable.Factory(slots, orderedGroupingColumns, aggregation)
+          } else {
+            SlottedOrderedGroupingAggTable.Factory(slots, orderedGroupingColumns, unorderedGroupingColumns, aggregation)
+          }
+        OrderedAggregationPipe(source, tableFactory)(id = id)
 
       case Distinct(_, groupingExpressions) =>
         chooseDistinctPipe(groupingExpressions, Seq.empty, slots, source, id)
@@ -403,18 +418,20 @@ class SlottedPipeMapper(fallback: PipeMapper,
           case _ => // do nothing, already added by lhs
         }, { cnp =>
           val offset = rhsSlots.getCachedNodePropertyOffsetFor(cnp)
-          if (offset >= argumentSize.nReferences)
+          if (offset >= argumentSize.nReferences) {
             copyCachedPropertiesFromRHS += offset -> slots.getCachedNodePropertyOffsetFor(cnp)
+          }
         })
 
         val longsToCopy = copyLongsFromRHS.result().toArray
         val refsToCopy = copyRefsFromRHS.result().toArray
         val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result().toArray
 
-        if (leftNodes.length == 1)
+        if (leftNodes.length == 1) {
           NodeHashJoinSlottedPrimitivePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
-        else
+        } else {
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+        }
 
       case ValueHashJoin(lhsPlan, _, Equals(lhsAstExp, rhsAstExp)) =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)

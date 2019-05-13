@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Litera
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -657,17 +658,18 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val plan = Aggregation(expand, groupingExpressions, aggregationExpression = Map.empty)
 
     // when
-    val pipe = build(plan).asInstanceOf[EagerAggregationSlottedPrimitivePipe]
+    val pipe = build(plan).asInstanceOf[EagerAggregationPipe]
 
+    val tableFactory = pipe.tableFactory.asInstanceOf[SlottedPrimitiveGroupingAggTable.Factory]
     // then
-    val offsetZ = pipe.writeGrouping(pipe.slots("z").offset)
+    val offsetZ = tableFactory.writeGrouping(tableFactory.slots("z").offset)
 
     // x has id 0 and z has id 1
-    for (i <- pipe.readGrouping.indices) {
+    for (i <- tableFactory.readGrouping.indices) {
       if (i != offsetZ) {
-        pipe.readGrouping(i) should equal(0)
+        tableFactory.readGrouping(i) should equal(0)
       } else {
-        pipe.readGrouping(i) should equal(1)
+        tableFactory.readGrouping(i) should equal(1)
       }
     }
   }
