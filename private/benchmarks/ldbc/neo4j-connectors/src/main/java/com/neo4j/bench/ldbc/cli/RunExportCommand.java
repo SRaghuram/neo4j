@@ -491,10 +491,6 @@ public class RunExportCommand implements Runnable
             ArrayList<ProfilerType> baseProfilers = Lists.newArrayList();
             if ( doTrace )
             {
-                baseProfilers.add( ProfilerType.STRACE );
-                baseProfilers.add( ProfilerType.IO_STAT );
-                baseProfilers.add( ProfilerType.MP_STAT );
-                baseProfilers.add( ProfilerType.VM_STAT );
                 baseProfilers.add( ProfilerType.JVM_LOGGING );
             }
             // additional profilers are run on one, profiling fork
