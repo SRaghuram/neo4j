@@ -12,12 +12,12 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.Segment;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.ImportOptionsBuilder;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import com.neo4j.server.security.enterprise.systemgraph.TestSystemGraphRealm;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -47,7 +47,6 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
 
-@Disabled
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphInternalsTest
 {
@@ -78,7 +77,7 @@ class SystemGraphInternalsTest
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        realm = TestSystemGraphRealm.testRealm( securityLog, systemGraphExecutor );
+        realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(), securityLog, managementService, systemGraphExecutor );
     }
 
     @AfterEach

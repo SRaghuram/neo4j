@@ -20,7 +20,7 @@ import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.server.security.auth.UserRepository;
 
-class ImportOptionsBuilder
+public class ImportOptionsBuilder
 {
     private boolean shouldPerformImport;
     private boolean mayPerformMigration;
@@ -33,7 +33,7 @@ class ImportOptionsBuilder
     private String[] initialUsers = new String[0];
     private String[] defaultAdmins = new String[0];
 
-    ImportOptionsBuilder()
+    public ImportOptionsBuilder()
     {
     }
 
@@ -122,7 +122,7 @@ class ImportOptionsBuilder
     }
 
     @SuppressWarnings( "unchecked" )
-    SystemGraphImportOptions build() throws IOException, InvalidArgumentsException
+    public SystemGraphImportOptions build() throws IOException, InvalidArgumentsException
     {
         return testImportOptions(
                 shouldPerformImport,
