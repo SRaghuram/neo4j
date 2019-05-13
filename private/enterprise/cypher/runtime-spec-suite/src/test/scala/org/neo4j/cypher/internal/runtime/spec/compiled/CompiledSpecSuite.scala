@@ -26,7 +26,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.SINGLE_THREADE
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("c")
-      .aggregation(Map.empty, Map("c" -> count(prop("x", "num"))))
+      .aggregation(Seq.empty, Seq("count(x.num) AS c"))
       .allNodeScan("x")
       .build()
 

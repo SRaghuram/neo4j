@@ -131,12 +131,12 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an aggregation and an expand") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN a.prop2, count(b) ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
-          includeSomewhere.aPlan("EagerAggregation")
+          includeSomewhere.aPlan("OrderedAggregation")
             .onTopOf(
               aPlan("Expand(All)")
                 .withOrder(providedOrder(prop("a", "prop2")))

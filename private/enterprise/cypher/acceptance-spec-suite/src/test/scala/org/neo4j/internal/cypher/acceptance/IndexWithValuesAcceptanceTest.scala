@@ -186,9 +186,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when the property is used in key column of an aggregation") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes)
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation")
+    result.executionPlanDescription() should includeSomewhere.aPlan("OrderedAggregation")
       // just for n.prop2, not for n.prop1
       .withDBHits(6)
       .onTopOf(aPlan("NodeIndexSeekByRange")

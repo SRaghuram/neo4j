@@ -55,18 +55,18 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("Node count from count store plan should work with labeled nodes") {
-    val node1 = createLabeledNode("Person")
-    val node2 = createLabeledNode("Person")
-    val node3 = createNode()
+    createLabeledNode("Person")
+    createLabeledNode("Person")
+    createNode()
     // CountStore not supported by sloted
     val result = executeWith(Configs.All, "MATCH (a:Person) WITH count(a) as c RETURN c")
     result.toList should equal(List(Map("c" -> 2L)))
   }
 
   test("Count should work with projected node variable") {
-    val node1 = createLabeledNode("Person")
-    val node2 = createLabeledNode("Person")
-    val node3 = createNode()
+    createLabeledNode("Person")
+    createLabeledNode("Person")
+    createNode()
     // This does not use countstore
     val result = executeWith(Configs.All, "MATCH (a:Person) WITH a as b WITH count(b) as c RETURN c")
     result.toList should equal(List(Map("c" -> 2L)))
@@ -76,8 +76,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node1 = createLabeledNode("Person")
     val node2 = createNode()
     val node3 = createNode()
-    val r1 = relate(node1, node2)
-    val r2 = relate(node1, node3)
+    relate(node1, node2)
+    relate(node1, node3)
 
     val result = executeWith(Configs.All, "MATCH (a:Person)-[r]->() WITH r as s WITH count(s) as c RETURN c")
     result.toList should equal(List(Map("c" -> 2L)))
@@ -86,29 +86,29 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("combine grouping and aggregation with sorting") {
     val node1 = createNode(Map("prop" -> 1))
     val node2 = createNode(Map("prop" -> 2))
-    val r1 = relate(node1, node2)
+    relate(node1, node2)
 
     val result = executeWith(Configs.All, "MATCH (a)--(b) RETURN a.prop, count(a) ORDER BY a.prop")
     result.toList should equal(List(Map("a.prop" -> 1, "count(a)" -> 1), Map("a.prop" -> 2, "count(a)" -> 1)))
   }
 
   test("combine simple aggregation on projection with sorting") {
-    val node1 = createNode()
-    val node2 = createNode()
+    createNode()
+    createNode()
     val result = executeWith(Configs.All, "MATCH (a) WITH a as b RETURN count(b) ORDER BY count(b)")
     result.toList should equal(List(Map("count(b)" -> 2)))
   }
 
   test("combine simple aggregation with sorting (cannot use count store)") {
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+    createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 2))
     val result = executeWith(Configs.All, "MATCH (a) RETURN count(a.prop) ORDER BY count(a.prop)")
     result.toList should equal(List(Map("count(a.prop)" -> 2)))
   }
 
   test("combine simple aggregation with sorting (can use node count store)") {
-    val node1 = createNode()
-    val node2 = createNode()
+    createNode()
+    createNode()
     val result = executeWith(Configs.All, "MATCH (a) RETURN count(a) ORDER BY count(a)")
     result.toList should equal(List(Map("count(a)" -> 2)))
   }
@@ -116,13 +116,13 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("combine simple aggregation with sorting (can use relationship count store)") {
     val node1 = createNode()
     val node2 = createNode()
-    val r1 = relate(node1, node2)
+    relate(node1, node2)
     val result = executeWith(Configs.All, "MATCH (a)-[r]-(b) RETURN count(r) ORDER BY count(r)")
     result.toList should equal(List(Map("count(r)" -> 2)))
   }
 
   test("should support DISTINCT followed by LIMIT and SKIP") {
-    val node1 = createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 1))
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a ORDER BY a.prop SKIP 1 LIMIT 1"
 
@@ -132,8 +132,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("should support DISTINCT projection followed by LIMIT and SKIP") {
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+    createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1 LIMIT 1"
 
     val result = executeWith(Configs.All - Configs.Morsel, query)
@@ -142,8 +142,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("should support DISTINCT projection followed by SKIP") {
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+    createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1"
 
     val result = executeWith(Configs.All - Configs.Morsel, query)
@@ -152,8 +152,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("should support DISTINCT projection followed by LIMIT") {
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+    createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop LIMIT 1"
 
     val result = executeWith(Configs.All - Configs.Morsel, query)
@@ -162,8 +162,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("should support DISTINCT followed by LIMIT and SKIP with no ORDER BY") {
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+    createNode(Map("prop" -> 1))
+    createNode(Map("prop" -> 2))
     val query = "MATCH (a) WITH DISTINCT a SKIP 1 LIMIT 1 RETURN count(a)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query)
@@ -200,7 +200,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("grouping and ordering with multiple different Value types") {
     val node1 = createNode(Map("prop" -> "alice"))
     val node2 = createNode(Map("prop" -> "bob"))
-    val r1 = relate(node1, node2)
+    relate(node1, node2)
 
     val query = "MATCH (a)-[r]-(b) RETURN a.prop, b.prop, count(a) ORDER BY a.prop, b.prop"
     val result = executeWith(Configs.All, query) // Neo4j version <= 3.1 cannot order by nodes
@@ -246,24 +246,5 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("Should not avg durations and numbers together") {
     val query = "UNWIND [duration('PT10S'), duration('P1D'), duration('PT30.5S'), 90] as x RETURN avg(x) AS length"
     failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("cannot mix number and durations"))
-  }
-
-  test("Aggregations should keep LHS order") {
-    // Please don't remove the ORDER BY, this will make CypherComparisonSupport check that results come in the sam order across runtimes
-    val query = "UNWIND [1, 2, 2, 3, 3, 4, 5, 5, 5, 6, 7, 8, 9, 99] AS n WITH n ORDER BY n RETURN n, count(n)"
-    val result = executeWith(Configs.All, query)
-
-    result.toList should be(List(
-      Map("n" -> 1, "count(n)" -> 1),
-      Map("n" -> 2, "count(n)" -> 2),
-      Map("n" -> 3, "count(n)" -> 2),
-      Map("n" -> 4, "count(n)" -> 1),
-      Map("n" -> 5, "count(n)" -> 3),
-      Map("n" -> 6, "count(n)" -> 1),
-      Map("n" -> 7, "count(n)" -> 1),
-      Map("n" -> 8, "count(n)" -> 1),
-      Map("n" -> 9, "count(n)" -> 1),
-      Map("n" -> 99, "count(n)" -> 1)
-    ))
   }
 }

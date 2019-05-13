@@ -14,8 +14,8 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
       _.aggregation(
-        Map("g" -> modulo(varFor(propVariable), literalInt(2))),
-        Map("amount" -> sum(varFor(propVariable)))),
+        Seq(s"$propVariable % 2 AS g"),
+        Seq(s"sum($propVariable) AS amount")),
       rowsComingIntoTheOperator =>
         for {
           (g, rowsForX) <- rowsComingIntoTheOperator.groupBy(_ (0).getId.toInt % 2) // group by x.prop % 2
@@ -31,8 +31,8 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
   override def rhsOfApplyOperator(variable: String) =
     RHSOfApplyOneChildTD(
       _.aggregation(
-        Map("g" -> modulo(prop("y", "prop"), literalInt(2))),
-        Map("amount" -> sum(add(varFor("prop"), prop("y", "prop"))))),
+        Seq("y.prop % 2 AS g"),
+        Seq("sum(prop + y.prop) AS amount")),
       rowsComingIntoTheOperator =>
         for {
           (_, rowsForX) <- rowsComingIntoTheOperator.groupBy(_ (0)) // group by x
@@ -55,10 +55,10 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("s")
-      .aggregation(Map.empty, Map("s" -> sum(varFor("amount"))))
+      .aggregation(Seq.empty, Seq("sum(amount) AS s"))
       .aggregation(
-        Map("g" -> modulo(prop("x", "prop"), literalInt(2))),
-        Map("amount" -> sum(prop("x", "prop"))))
+        Seq("x.prop % 2 AS g"),
+        Seq("sum(x.prop) AS amount"))
       .input(nodes = Seq("x"))
       .build()
 
@@ -84,7 +84,7 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("s")
-      .aggregation(Map.empty, Map("s" -> count(varFor("x"))))
+      .aggregation(Seq.empty, Seq("count(x) AS s"))
       .expand("(next)-[:NEXT]->(secondNext)")
       .expand("(x)-[:NEXT]->(next)")
       .input(nodes = Seq("x"))
