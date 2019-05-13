@@ -109,7 +109,7 @@ public class Annotations
                                                                                            .collect( toList() ) ) );
     }
 
-    public List<Method> getBenchmarkMethodsFor( Class benchmarkClass )
+    List<Method> getBenchmarkMethodsFor( Class benchmarkClass )
     {
         return benchmarkMethods.getOrDefault( benchmarkClass, emptyList() );
     }
@@ -119,7 +119,7 @@ public class Annotations
         return benchmarkMethods.keySet();
     }
 
-    public List<Field> getParamFieldsFor( Class clazz )
+    List<Field> getParamFieldsFor( Class clazz )
     {
         return Stream.of( clazz.getDeclaredFields() )
                      .filter( field -> field.isAnnotationPresent( Param.class ) )
@@ -172,11 +172,6 @@ public class Annotations
                                .collect( toList() );
     }
 
-    List<Field> getParamFields()
-    {
-        return benchmarkParamFields.values().stream().flatMap( List::stream ).collect( toList() );
-    }
-
     List<Field> assignedParamFields()
     {
         return getParamFields().stream()
@@ -187,6 +182,7 @@ public class Annotations
     List<Field> paramFieldsWithoutParamValue()
     {
         return getParamFields().stream()
+                               .filter( field -> !Modifier.isAbstract( field.getDeclaringClass().getModifiers() ) )
                                .filter( field -> !field.isAnnotationPresent( ParamValues.class ) )
                                .collect( toList() );
     }
@@ -217,6 +213,11 @@ public class Annotations
         return getBenchmarks().stream()
                               .filter( this::hasSetupMethod )
                               .collect( toList() );
+    }
+
+    private List<Field> getParamFields()
+    {
+        return benchmarkParamFields.values().stream().flatMap( List::stream ).collect( toList() );
     }
 
     /**

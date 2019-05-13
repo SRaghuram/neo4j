@@ -12,7 +12,6 @@ import java.util.List;
 
 public class SimpleRunner extends Runner
 {
-
     private final int forkCount;
     private final int iterations;
     private final TimeValue duration;
@@ -25,7 +24,11 @@ public class SimpleRunner extends Runner
     }
 
     @Override
-    protected List<BenchmarkDescription> prepare( List<BenchmarkDescription> benchmarks, Path workDir, Jvm jvm, ErrorReporter errorReporter )
+    protected List<BenchmarkDescription> prepare( List<BenchmarkDescription> benchmarks,
+                                                  Path workDir,
+                                                  Jvm jvm,
+                                                  ErrorReporter errorReporter,
+                                                  String[] jvmArgs )
     {
         return benchmarks;
     }

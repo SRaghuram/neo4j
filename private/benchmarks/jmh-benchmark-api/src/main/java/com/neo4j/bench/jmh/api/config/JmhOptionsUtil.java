@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.google.common.collect.Sets;
 import com.neo4j.bench.client.util.Jvm;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -18,20 +17,17 @@ import org.openjdk.jmh.runner.options.TimeValue;
 import org.openjdk.jmh.runner.options.WarmupMode;
 
 import java.nio.file.Path;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
 public class JmhOptionsUtil
 {
-    // global JMH params
     public static final String PARAM_WORK_DIR = "workDir";
-    public static final Set<String> GLOBAL_PARAMS = Sets.newHashSet( PARAM_WORK_DIR );
 
-    private static final TimeValue DEFAULT_ITERATION_DURATION = TimeValue.seconds( 5 );
-    private static final int DEFAULT_ITERATION_COUNT = 5;
-    private static final int DEFAULT_FORK_COUNT = 3;
+    public static final TimeValue DEFAULT_ITERATION_DURATION = TimeValue.seconds( 5 );
+    public static final int DEFAULT_ITERATION_COUNT = 5;
+    public static final int DEFAULT_FORK_COUNT = 3;
 
     public static ChainedOptionsBuilder baseBuilder(
             Path workDir,
@@ -252,6 +248,14 @@ public class JmhOptionsUtil
         if ( threads != null )
         {
             builder.threads( threads.value() );
+        }
+    }
+
+    public static void assertExactlyOneBenchmarkIsEnabled( Options options )
+    {
+        if ( options.getIncludes().size() != 1 )
+        {
+            throw new RuntimeException( "Expected one enabled benchmark but found: " + options.getIncludes() );
         }
     }
 
