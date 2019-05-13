@@ -17,9 +17,11 @@ import java.util.Set;
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_PARAMETER_DOES_NOT_EXIST;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -52,8 +54,9 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertTrue( validation.report(),
-                    validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
         assertFalse( validation.report(), validation.isValid() );
     }
 
@@ -83,8 +86,9 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertTrue( validation.report(),
-                    validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
+        assertEquals( validation.report(),
+                      validation.errors(),
+                      singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
         assertFalse( validation.report(), validation.isValid() );
     }
 
