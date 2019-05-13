@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuilder, StateDefinition}
+import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuilder, ExecutionStateDefinition}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
@@ -57,11 +57,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     val queryIndexes = new QueryIndexes(context.schemaRead)
 
-    val stateDefinition = new StateDefinition(physicalPlan)
-    val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, stateDefinition, physicalPlan.slotConfigurations)
+    val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, physicalPlan)
 
     DebugLog.logDiff("PhysicalPlanner.plan")
-    pipelineBuilder.build(physicalPlan.logicalPlan)
+    val stateDefinition = pipelineBuilder.build()
     val operatorFactory = new OperatorFactory(stateDefinition, converters, true, queryIndexes)
 
     DebugLog.logDiff("PipelineBuilder")
@@ -69,7 +68,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val fuseOperators = new FuseOperators(operatorFactory, context.config.fuseOperators, context.tokenContext)
 
     val executablePipelines =
-      for (p <- pipelineBuilder.pipelines) yield {
+      for (p <- stateDefinition.pipelines) yield {
         fuseOperators.compilePipeline(p)
       }
 
@@ -90,7 +89,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
-                                 stateDefinition: StateDefinition,
+                                 stateDefinition: ExecutionStateDefinition,
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
@@ -132,7 +131,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   class ZombieRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
-                            stateDefinition: StateDefinition,
+                            stateDefinition: ExecutionStateDefinition,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
                             prePopulateResults: Boolean,

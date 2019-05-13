@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
-import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -25,7 +24,7 @@ import org.neo4j.internal.kernel
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
   */
-class OperatorFactory(val stateDefinition: StateDefinition,
+class OperatorFactory(val stateDefinition: ExecutionStateDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
                       val queryIndexes: QueryIndexes) {
@@ -147,8 +146,8 @@ class OperatorFactory(val stateDefinition: StateDefinition,
         val buffer = inputBuffer.asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
         new NodeHashJoinOperator(
           WorkIdentity.fromPlan(plan),
-          buffer.lhsargumentStateMapId,
-          buffer.rhsargumentStateMapId,
+          buffer.lhsArgumentStateMapId,
+          buffer.rhsArgumentStateMapId,
           lhsOffsets,
           rhsOffsets,
           slots,
@@ -262,7 +261,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
       case MorselBufferOutput(bufferId) => MorselBufferOutputOperator(bufferId)
       case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset)
       case ProduceResultOutput(p) => createProduceResults(p)
-      case ReduceOutput(outputBuffer, plan) =>
+      case ReduceOutput(bufferId, plan) =>
         val id = plan.id
         val slots = physicalPlan.slotConfigurations(id)
         generateSlotAccessorFunctions(slots)
@@ -272,7 +271,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             val argumentDepth = physicalPlan.applyPlans(id)
             val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
             val ordering = sortItems.map(translateColumnOrder(slots, _))
-            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, outputBuffer.id, ordering)
+            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
           }
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
@@ -291,7 +290,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
                                           aggregators.result())
               .mapper(argumentSlotOffset,
-                      outputBuffer.id,
+                      bufferId,
                       expressions.result())
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
@@ -309,7 +308,7 @@ class OperatorFactory(val stateDefinition: StateDefinition,
             }
 
             AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
-              .mapper(argumentSlotOffset, outputBuffer.id, expressions.result())
+              .mapper(argumentSlotOffset, bufferId, expressions.result())
 
         }
     }

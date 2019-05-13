@@ -9,6 +9,7 @@ import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
 import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, LogicalPlan, ProduceResult, Selection}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -100,7 +101,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     private var longCount = 0
     private var refCount = 0
     private var current = head
-    val pipeline = new Pipeline(new PipelineId(3), head)
+    val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
@@ -152,11 +153,19 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     val expressionConverters = new ExpressionConverters(converter)
 
-    val operatorFactory = new DummyOperatorFactory(new StateDefinition(physicalPlan), expressionConverters)
+    val stateDefinition = ExecutionStateDefinition(physicalPlan, null, null, null)
+    val operatorFactory = new DummyOperatorFactory(stateDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
                                   fusingEnabled = true,
                                   tokenContext = TokenContext.EMPTY)
-    fuser.compilePipeline(pipelineBuilder.pipeline)
+    val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
+      pipelineBuilder.pipeline.headPlan,
+      null,
+      pipelineBuilder.pipeline.outputDefinition,
+      pipelineBuilder.pipeline.middlePlans,
+      serial = false,
+      checkHasDemand = false)
+    fuser.compilePipeline(pipeline)
   }
 
   case class dummy(source: LogicalPlan) extends LogicalPlan(idGen) {
@@ -181,7 +190,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     override def strictness: StrictnessMode = LazyMode
   }
 
-  class DummyOperatorFactory(stateDefinition: StateDefinition,
+  class DummyOperatorFactory(stateDefinition: ExecutionStateDefinition,
                              converters: ExpressionConverters)
     extends OperatorFactory(stateDefinition,
                             converters,

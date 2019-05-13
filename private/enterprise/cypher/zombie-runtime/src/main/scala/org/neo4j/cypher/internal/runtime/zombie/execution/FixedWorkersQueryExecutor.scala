@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.locks.LockSupport
 
-import org.neo4j.cypher.internal.physicalplanning.StateDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionStateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -79,7 +79,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   // ========== QUERY EXECUTOR ===========
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
-                                       stateDefinition: StateDefinition,
+                                       stateDefinition: ExecutionStateDefinition,
                                        inputDataStream: InputDataStream,
                                        queryContext: QueryContext,
                                        params: Array[AnyValue],

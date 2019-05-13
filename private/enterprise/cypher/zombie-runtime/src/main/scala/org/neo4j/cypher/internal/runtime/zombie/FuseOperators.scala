@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, Pipeline, ProduceResultOutput}
+import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, PipelineDefinition, ProduceResultOutput}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln
@@ -22,7 +22,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
   private val physicalPlan = operatorFactory.stateDefinition.physicalPlan
 
-  def compilePipeline(p: Pipeline): ExecutablePipeline = {
+  def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
       if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)

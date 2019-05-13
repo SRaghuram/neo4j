@@ -1,0 +1,129 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.physicalplanning
+
+import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+
+
+/**
+  * Per query unique buffer id
+  */
+case class BufferId(x: Int) extends AnyVal
+
+/**
+  * Per query unique pipeline id
+  */
+case class PipelineId(x: Int) extends AnyVal
+
+/**
+  * per query unique argument state map id
+  */
+case class ArgumentStateMapId(x: Int) extends AnyVal
+
+object PipelineId {
+  val NO_PIPELINE: PipelineId = PipelineId(-1)
+}
+
+/**
+  * Maps to one ExecutablePipeline
+  */
+case class PipelineDefinition(id: PipelineId,
+                              headPlan: LogicalPlan,
+                              inputBuffer: BufferDefinition,
+                              outputDefinition: OutputDefinition,
+                              middlePlans: IndexedSeq[LogicalPlan],
+                              serial: Boolean,
+                              checkHasDemand: Boolean)
+
+/**
+  * Maps to one ArgumentStateMap.
+  */
+case class ArgumentStateDefinition(id: ArgumentStateMapId,
+                                   planId: Id,
+                                   argumentSlotOffset: Int)
+
+
+// -- BUFFERS
+
+/**
+  * Common superclass of all buffer definitions.
+  */
+sealed trait BufferDefinition {
+  def id: BufferId
+
+  // We need multiple reducers because a buffer might need to
+  // reference count for multiple downstream reduce operators,
+  // at potentially different argument depths
+  def reducers: IndexedSeq[ArgumentStateMapId]
+
+  def workCancellers: IndexedSeq[ArgumentStateDefinition]
+}
+
+/**
+  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a MorselBuffer.
+  */
+case class MorselBufferDefinition(id: BufferId,
+                                  reducers: IndexedSeq[ArgumentStateMapId],
+                                  workCancellers: IndexedSeq[ArgumentStateDefinition])
+  extends BufferDefinition
+
+/**
+  * Sits between the LHS and RHS of an apply.
+  * This acts as a multiplexer. It receives input and copies it into
+  *
+  *
+  * @param reducersOnRHS these are ArgumentStates of reducers on the RHS
+  */
+case class ApplyBufferDefinition(id: BufferId,
+                                 argumentSlotOffset: Int,
+                                 reducers: IndexedSeq[ArgumentStateMapId],
+                                 workCancellers: IndexedSeq[ArgumentStateDefinition],
+                                 reducersOnRHS: IndexedSeq[ArgumentStateDefinition],
+                                 delegates: IndexedSeq[BufferId])
+  extends BufferDefinition
+
+/**
+  * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
+  * Maps to a MorselArgumentStateBuffer.
+  */
+case class ArgumentStateBufferDefinition(id: BufferId,
+                                         argumentStateMapId: ArgumentStateMapId,
+                                         reducers: IndexedSeq[ArgumentStateMapId],
+                                         workCancellers: IndexedSeq[ArgumentStateDefinition])
+  extends BufferDefinition
+
+/**
+  * This buffer maps to a LHSAccumulatingRHSStreamingBuffer. It sits before a hash join.
+  */
+case class LHSAccumulatingRHSStreamingBufferDefinition(id: BufferId,
+                                                       lhsPipelineId: PipelineId,
+                                                       rhsPipelineId: PipelineId,
+                                                       lhsArgumentStateMapId: ArgumentStateMapId,
+                                                       rhsArgumentStateMapId: ArgumentStateMapId,
+                                                       reducers: IndexedSeq[ArgumentStateMapId],
+                                                       workCancellers: IndexedSeq[ArgumentStateDefinition])
+  extends BufferDefinition
+
+// -- OUTPUT
+sealed trait OutputDefinition
+case class ProduceResultOutput(plan: ProduceResult) extends OutputDefinition
+case class MorselBufferOutput(id: BufferId) extends OutputDefinition
+case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int) extends OutputDefinition
+case class ReduceOutput(bufferId: BufferId, plan: LogicalPlan) extends OutputDefinition
+case object NoOutput extends OutputDefinition
+
+// -- EXECUTION STATE
+case class ExecutionStateDefinition(physicalPlan: PhysicalPlan,
+                                    buffers: IndexedSeq[BufferDefinition],
+                                    argumentStateMaps: IndexedSeq[ArgumentStateDefinition],
+                                    pipelines: IndexedSeq[PipelineDefinition]) {
+  def findArgumentStateMapForPlan(planId: Id): ArgumentStateMapId = {
+    argumentStateMaps.find(_.planId == planId).map(_.id).getOrElse {
+      throw new IllegalStateException("Requested an ArgumentStateMap for an operator which does not have any.")
+    }
+  }
+}

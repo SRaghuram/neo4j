@@ -19,7 +19,7 @@ import org.neo4j.util.Preconditions
 /**
   * Implementation of [[ExecutionState]].
   */
-class TheExecutionState(stateDefinition: StateDefinition,
+class TheExecutionState(stateDefinition: ExecutionStateDefinition,
                         pipelines: Seq[ExecutablePipeline],
                         stateFactory: StateFactory,
                         workerWaker: WorkerWaker,
