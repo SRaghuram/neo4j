@@ -51,11 +51,13 @@ if [[ -z "$JAVA_HOME" ]]; then
  echo "JAVA_HOME not set, bye, bye"
 fi
 
-# things to handle out of memory errors
+# path to on-out-of-memory script
 out_of_memory_script=$(realpath "$0")/on-out-of-memory.sh
 out_of_memory_base_dir=$(realpath "${ldbc_results_dir}/out-of-memory")
-out_of_memory_dir="$out_of_memory_base_dir"/$(uuidgen)
-out_of_memory_fork_dir="$out_of_memory_base_dir"/$(uuidgen)
+# path to benchmark process out of memory output directory
+out_of_memory_dir="$out_of_memory_base_dir/benchmark"
+# path to forked process out of memory output directory
+out_of_memory_fork_dir="$out_of_memory_base_dir/fork"
 
 echo "------------------------------------------------"
 echo "------------------------------------------------"
@@ -107,9 +109,8 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    ${jvm_path} \
-    	-XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
-    	-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
+    ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
+        -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
         -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
         --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${ldbc_jvm_args}" \
@@ -146,6 +147,7 @@ function runReport {
          --profile-gc \
         $@
 }
+
 
 uuid=$(uuidgen)
 profiler_recording_dir="${ldbc_results_dir}/${uuid}"

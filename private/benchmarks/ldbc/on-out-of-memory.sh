@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-# this script should be invoked by JVM when out of memory occures,
-# to capture state of process and operating system, and ease
-# debugging of things, it should be configured like this
-# java -XX:OnOutOfMemory="./on-out-of-memory.sh;--jvm-pid;%p;--output-dir;[somedirectory]"
-
+# debug-support script, to be invoked by JVM on OOM - captures state of process and OS
+# required parameters with values:
+# --jvm-pid       this is JVM process id
+# --output-dir 		a directory where output of commands will be stored
 set -ex
 
 declare -a params

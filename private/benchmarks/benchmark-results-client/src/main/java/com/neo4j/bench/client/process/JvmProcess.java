@@ -125,8 +125,6 @@ public class JvmProcess implements BaseProcess, HasPid
                                         "Code   : " + resultCode + "\n" +
                                         "Output : " + jpsOutput );
         }
-        // this is for debugging purposes
-        System.out.println( "jps process output \n" + jpsOutput );
         return JpsPid.fromProcessOutput( jpsOutput, processName );
     }
 
