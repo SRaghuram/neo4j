@@ -20,8 +20,8 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 
 class BasicImportOptionsBuilder
 {
-    private List<User> migrateUsers = new ArrayList<>();
-    private List<User> initialUsers = new ArrayList<>();
+    List<User> migrateUsers = new ArrayList<>();
+    List<User> initialUsers = new ArrayList<>();
 
     BasicImportOptionsBuilder()
     {
@@ -35,12 +35,7 @@ class BasicImportOptionsBuilder
 
     BasicImportOptionsBuilder migrateUsers( String... migrateUsers )
     {
-        for ( String userName : migrateUsers )
-        {
-            // Use username as password to simplify test assertions
-            this.migrateUsers.add( createUser( userName, userName, false ) );
-        }
-        return this;
+        return fillListWithUsers( this.migrateUsers, migrateUsers );
     }
 
     BasicImportOptionsBuilder initialUser( String password, boolean pwdChangeRequired )
@@ -63,12 +58,22 @@ class BasicImportOptionsBuilder
         return () -> initialUserRepository;
     }
 
-    private static void populateUserRepository( UserRepository repository, List<User> users ) throws IOException, InvalidArgumentsException
+    static void populateUserRepository( UserRepository repository, List<User> users ) throws IOException, InvalidArgumentsException
     {
         for ( User user : users )
         {
             repository.create( user );
         }
+    }
+
+    BasicImportOptionsBuilder fillListWithUsers( List<User> list, String... userNames )
+    {
+        for ( String userName :userNames )
+        {
+            // Use username as password to simplify test assertions
+            list.add( createUser( userName, userName, false ) );
+        }
+        return this;
     }
 
     private static User createUser( String userName, String password, boolean pwdChangeRequired )

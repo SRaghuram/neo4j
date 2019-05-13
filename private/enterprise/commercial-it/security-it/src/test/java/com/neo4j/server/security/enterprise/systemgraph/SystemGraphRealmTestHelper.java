@@ -50,7 +50,7 @@ class SystemGraphRealmTestHelper
             testSystemDb = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         }
 
-        public DatabaseManagementService getManagementService()
+        DatabaseManagementService getManagementService()
         {
             return managementService;
         }
@@ -103,15 +103,21 @@ class SystemGraphRealmTestHelper
         return new ShiroAuthToken( authToken );
     }
 
+    // For simplified testing where username equals password
     static void assertAuthenticationSucceeds( BasicSystemGraphRealm realm, String username )
     {
         // NOTE: Password is the same as username
+        assertAuthenticationSucceeds( realm, username, username );
+    }
+
+    static void assertAuthenticationSucceeds( BasicSystemGraphRealm realm, String username, String password )
+    {
         // Try twice to rule out differences if authentication info has been cached or not
-        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
-        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, password ) ) );
+        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, password ) ) );
 
         // Also test the non-cached result explicitly
-        assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+        assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, password ) ) );
     }
 
     static void assertAuthenticationFailsWithTooManyAttempts( BasicSystemGraphRealm realm, String username, int attempts )
