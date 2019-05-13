@@ -5,6 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -12,6 +15,7 @@ import org.junit.rules.RuleChain;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.TransactionFailureException;
@@ -26,6 +30,7 @@ import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -72,13 +77,25 @@ public class ReplicatedTokenStateMachineTest
     private final int UNEXPECTED_TOKEN_ID = 1024;
     private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
-    private TestDirectory testDirectory = TestDirectory.testDirectory();
-    private EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
-    private AssertableLogProvider logProvider = new AssertableLogProvider( true );
-    private PageCacheRule pageCacheRule = new PageCacheRule();
-    private CleanupRule cleanupRule = new CleanupRule();
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
+    private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private final PageCacheRule pageCacheRule = new PageCacheRule();
+    private final CleanupRule cleanupRule = new CleanupRule();
+    private final ClusteredDatabaseManager databaseManager = mock( ClusteredDatabaseManager.class );
+    private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
+    private final Database database = mock( Database.class );
+
     @Rule
     public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule ).around( cleanupRule );
+
+    @Before
+    public void setUp() throws Exception
+    {
+        when( databaseContext.database() ).thenReturn( database );
+        when( database.getVersionContextSupplier() ).thenReturn( EmptyVersionContextSupplier.EMPTY );
+        when( databaseManager.getDatabaseContext( databaseId ) ).thenReturn( Optional.of( databaseContext ) );
+    }
 
     @Test
     public void shouldCreateTokenId() throws Exception
@@ -86,7 +103,7 @@ public class ReplicatedTokenStateMachineTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+                NullLogProvider.getInstance(), databaseManager );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
@@ -103,7 +120,7 @@ public class ReplicatedTokenStateMachineTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+                NullLogProvider.getInstance(), databaseManager );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
@@ -121,7 +138,7 @@ public class ReplicatedTokenStateMachineTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+                NullLogProvider.getInstance(), databaseManager );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
@@ -144,7 +161,7 @@ public class ReplicatedTokenStateMachineTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+                NullLogProvider.getInstance(), databaseManager );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
@@ -171,7 +188,7 @@ public class ReplicatedTokenStateMachineTest
         StubTransactionCommitProcess commitProcess = new StubTransactionCommitProcess( null, null );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine(
                 new TokenRegistry( "Token" ),
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+                NullLogProvider.getInstance(), databaseManager );
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when

@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
@@ -32,6 +33,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
@@ -214,35 +216,38 @@ public class DatabaseBootstrapper
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( ClusteredDatabaseContext dbContext ) throws IOException
     {
         DatabaseLayout layout = dbContext.databaseLayout();
-        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( layout, pageCache );
-        LogFiles logFiles = LogFilesBuilder
-                .activeFilesBuilder( layout, fs, pageCache )
-                .withConfig( config )
-                .withLastCommittedTransactionIdSupplier( () -> readOnlyTransactionIdStore.getLastClosedTransactionId() - 1 )
-                .build();
-
-        long dummyTransactionId;
-        LogPositionMarker logPositionMarker = new LogPositionMarker();
-        try ( Lifespan ignored = new Lifespan( logFiles ) )
+        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
-            FlushablePositionAwareChannel channel = logFiles.getLogFile().getWriter();
-            TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
+            TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( layout, databasePageCache );
+            LogFiles logFiles = LogFilesBuilder
+                    .activeFilesBuilder( layout, fs, databasePageCache )
+                    .withConfig( config )
+                    .withLastCommittedTransactionIdSupplier( () -> readOnlyTransactionIdStore.getLastClosedTransactionId() - 1 )
+                    .build();
 
-            long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
-            PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.emptyList() );
-            byte[] txHeaderBytes = LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( -1 );
-            tx.setHeader( txHeaderBytes, -1, -1, -1, lastCommittedTransactionId, -1, -1 );
+            long dummyTransactionId;
+            LogPositionMarker logPositionMarker = new LogPositionMarker();
+            try ( Lifespan ignored = new Lifespan( logFiles ) )
+            {
+                FlushablePositionAwareChannel channel = logFiles.getLogFile().getWriter();
+                TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
 
-            dummyTransactionId = lastCommittedTransactionId + 1;
-            channel.getCurrentPosition( logPositionMarker );
-            writer.append( tx, dummyTransactionId );
-            channel.prepareForFlush().flush();
-        }
+                long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
+                PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.emptyList() );
+                byte[] txHeaderBytes = LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( -1 );
+                tx.setHeader( txHeaderBytes, -1, -1, -1, lastCommittedTransactionId, -1, -1 );
 
-        try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, layout, config, pageCache ) )
-        {
-            transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
-                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
+                dummyTransactionId = lastCommittedTransactionId + 1;
+                channel.getCurrentPosition( logPositionMarker );
+                writer.append( tx, dummyTransactionId );
+                channel.prepareForFlush().flush();
+            }
+
+            try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache ) )
+            {
+                transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
+                        logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
+            }
         }
     }
 

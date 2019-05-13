@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -69,7 +68,6 @@ public class CatchupProcessManager extends SafeLifecycle
     private final TimerService timerService;
     private final long txPullIntervalMillis;
     private final LifeSupport txPulling;
-    private final VersionContextSupplier versionContextSupplier;
     private final CommandIndexTracker commandIndexTracker;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Executor executor;
@@ -89,23 +87,22 @@ public class CatchupProcessManager extends SafeLifecycle
             ClusteredDatabaseManager clusteredDatabaseManager,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, VersionContextSupplier versionContextSupplier, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
+            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
     {
         this( executor, catchupComponents, clusteredDatabaseManager, databaseHealth, topologyService,
                 catchUpClient, selectionStrategyPipeline, timerService, commandIndexTracker, null, logProvider,
-                versionContextSupplier, pageCursorTracerSupplier, config );
+                pageCursorTracerSupplier, config );
     }
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
             ClusteredDatabaseManager clusteredDatabaseManager,
             Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            CatchupProcessFactory catchupProcessFactory, LogProvider logProvider, VersionContextSupplier versionContextSupplier,
+            CatchupProcessFactory catchupProcessFactory, LogProvider logProvider,
             PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
-        this.versionContextSupplier = versionContextSupplier;
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.config = config;
 
@@ -185,7 +182,8 @@ public class CatchupProcessManager extends SafeLifecycle
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier(
                 maxBatchSize, () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
-                writableCommitProcess, databaseContext.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
+                writableCommitProcess, databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(),
+                commandIndexTracker, logProvider );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext.databaseId(), clusteredDatabaseManager,
                 catchupClient, batchingTxApplier, databaseContext.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider,

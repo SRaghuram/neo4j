@@ -5,36 +5,36 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
-public class CommitProcessStateMachineCollaborationTest
+class CommitProcessStateMachineCollaborationTest
 {
     private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
 
     @Test
-    public void shouldFailTransactionIfLockSessionChanges()
+    void shouldFailTransactionIfLockSessionChanges()
     {
         // given
         int initialLockSessionId = 23;
@@ -45,25 +45,17 @@ public class CommitProcessStateMachineCollaborationTest
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( mock( CommandIndexTracker.class ),
                         lockState( finalLockSessionId ), 16, NullLogProvider.getInstance(),
-                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY );
+                        PageCursorTracerSupplier.NULL, mock( ClusteredDatabaseManager.class ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId, mock( Panicker.class ) );
 
         // when
-        try
-        {
-            commitProcess.commit( transactionToApply, NULL, EXTERNAL );
-            fail( "Should have thrown exception." );
-        }
-        catch ( TransactionFailureException e )
-        {
-            // expected
-        }
+        assertThrows( TransactionFailureException.class, () -> commitProcess.commit( transactionToApply, NULL, EXTERNAL ) );
     }
 
-    private PhysicalTransactionRepresentation physicalTx( int lockSessionId )
+    private static PhysicalTransactionRepresentation physicalTx( int lockSessionId )
     {
         PhysicalTransactionRepresentation physicalTx = mock( PhysicalTransactionRepresentation.class );
         when( physicalTx.getLockSessionId() ).thenReturn( lockSessionId );

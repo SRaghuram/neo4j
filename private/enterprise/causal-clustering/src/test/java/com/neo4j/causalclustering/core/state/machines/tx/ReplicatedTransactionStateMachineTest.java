@@ -5,12 +5,16 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -18,6 +22,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -29,24 +34,36 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class ReplicatedTransactionStateMachineTest
+class ReplicatedTransactionStateMachineTest
 {
     private static final DatabaseId DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
+    private final ClusteredDatabaseManager databaseManager = mock( ClusteredDatabaseManager.class );
+    private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
+    private final Database database = mock( Database.class );
     private final int batchSize = 16;
 
+    @BeforeEach
+    void setUp()
+    {
+        when( databaseContext.database() ).thenReturn( database );
+        when( database.getVersionContextSupplier() ).thenReturn( EmptyVersionContextSupplier.EMPTY );
+        when( databaseManager.getDatabaseContext( DATABASE_ID ) ).thenReturn( Optional.of( databaseContext ) );
+    }
+
     @Test
-    public void shouldCommitTransaction() throws Exception
+    void shouldCommitTransaction() throws Exception
     {
         // given
         int lockSessionId = 23;
@@ -58,7 +75,7 @@ public class ReplicatedTransactionStateMachineTest
 
         ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine(
                 commandIndexTracker, lockState( lockSessionId ), batchSize, logProvider, () -> cursorTracer,
-                EmptyVersionContextSupplier.EMPTY );
+                databaseManager );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -72,7 +89,7 @@ public class ReplicatedTransactionStateMachineTest
     }
 
     @Test
-    public void shouldFailFutureForTransactionCommittedUnderWrongLockSession()
+    void shouldFailFutureForTransactionCommittedUnderWrongLockSession()
     {
         // given
         int txLockSessionId = 23;
@@ -85,7 +102,7 @@ public class ReplicatedTransactionStateMachineTest
         final ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ),
                         batchSize, logProvider,
-                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY );
+                        PageCursorTracerSupplier.NULL, databaseManager );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -94,19 +111,8 @@ public class ReplicatedTransactionStateMachineTest
         {
             // then
             called.set( true );
-            try
-            {
-                result.consume();
-                fail( "should have thrown" );
-            }
-            catch ( TransactionFailureException tfe )
-            {
-                assertEquals( Status.Transaction.LockSessionExpired, tfe.status() );
-            }
-            catch ( Exception e )
-            {
-                throw new RuntimeException( e );
-            }
+            TransactionFailureException exception = assertThrows( TransactionFailureException.class, result::consume );
+            assertEquals( Status.Transaction.LockSessionExpired, exception.status() );
         } );
         stateMachine.ensuredApplied();
 
@@ -114,7 +120,7 @@ public class ReplicatedTransactionStateMachineTest
     }
 
     @Test
-    public void shouldAcceptTransactionCommittedWithNoLockManager() throws Exception
+    void shouldAcceptTransactionCommittedWithNoLockManager() throws Exception
     {
         // given
         int txLockSessionId = Locks.Client.NO_LOCK_SESSION_ID;
@@ -127,7 +133,7 @@ public class ReplicatedTransactionStateMachineTest
 
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ), batchSize, logProvider,
-                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY );
+                        PageCursorTracerSupplier.NULL, databaseManager );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -137,14 +143,7 @@ public class ReplicatedTransactionStateMachineTest
         {
             // then
             called.set( true );
-            try
-            {
-                assertEquals( txId, (long) result.consume() );
-            }
-            catch ( Exception e )
-            {
-                throw new RuntimeException( e );
-            }
+            assertDoesNotThrow( () -> assertEquals( txId, (long) result.consume() ) );
         } );
         stateMachine.ensuredApplied();
 
@@ -152,7 +151,7 @@ public class ReplicatedTransactionStateMachineTest
     }
 
     @Test
-    public void raftIndexIsRecorded() throws TransactionFailureException
+    void raftIndexIsRecorded() throws TransactionFailureException
     {
         // given
         int txLockSessionId = Locks.Client.NO_LOCK_SESSION_ID;
@@ -163,7 +162,7 @@ public class ReplicatedTransactionStateMachineTest
         // and
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( txLockSessionId ), batchSize, logProvider, PageCursorTracerSupplier.NULL,
-                        EmptyVersionContextSupplier.EMPTY );
+                        databaseManager );
 
         ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
@@ -184,7 +183,7 @@ public class ReplicatedTransactionStateMachineTest
         assertEquals( updatedCommandIndex, commandIndexTracker.getAppliedCommandIndex() );
     }
 
-    private TransactionCommitProcess createFakeTransactionCommitProcess( long txId ) throws TransactionFailureException
+    private static TransactionCommitProcess createFakeTransactionCommitProcess( long txId ) throws TransactionFailureException
     {
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         when( localCommitProcess.commit(
@@ -201,14 +200,14 @@ public class ReplicatedTransactionStateMachineTest
         return localCommitProcess;
     }
 
-    private PhysicalTransactionRepresentation physicalTx( int lockSessionId )
+    private static PhysicalTransactionRepresentation physicalTx( int lockSessionId )
     {
         PhysicalTransactionRepresentation physicalTx = mock( PhysicalTransactionRepresentation.class );
         when( physicalTx.getLockSessionId() ).thenReturn( lockSessionId );
         return physicalTx;
     }
 
-    private  ReplicatedLockTokenStateMachine lockState( int lockSessionId )
+    private static ReplicatedLockTokenStateMachine lockState( int lockSessionId )
     {
         ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, DATABASE_ID );
         ReplicatedLockTokenStateMachine lockState = mock( ReplicatedLockTokenStateMachine.class );

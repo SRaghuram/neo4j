@@ -7,9 +7,9 @@ package org.neo4j.bolt;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -34,24 +34,27 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class BoltSnapshotQueryExecutionIT
+@ExtendWith( TestDirectoryExtension.class )
+class BoltSnapshotQueryExecutionIT
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     private Driver driver;
     private GraphDatabaseService db;
     private DatabaseManagementService managementService;
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( db != null )
         {
@@ -61,13 +64,13 @@ public class BoltSnapshotQueryExecutionIT
     }
 
     @Test
-    public void executeQueryWithSnapshotEngine()
+    void executeQueryWithSnapshotEngine()
     {
         executeQuery( "withSnapshotEngine", Settings.TRUE );
     }
 
     @Test
-    public void executeQueryWithoutSnapshotEngine()
+    void executeQueryWithoutSnapshotEngine()
     {
         executeQuery( "withoutSnapshotEngine", Settings.FALSE );
     }
@@ -75,7 +78,8 @@ public class BoltSnapshotQueryExecutionIT
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
         managementService =
-                new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) ).setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
+                new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) )
+                .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).build();
@@ -144,7 +148,7 @@ public class BoltSnapshotQueryExecutionIT
         }
     }
 
-    private void assertPairs( List<Pair<String,Value>> pairs, String key1, String value1, String key2, String value2, String key3, String value3,
+    private static void assertPairs( List<Pair<String,Value>> pairs, String key1, String value1, String key2, String value2, String key3, String value3,
             String key4, String value4 )
     {
         assertThat( pairs, Matchers.hasSize( 4 ) );
@@ -154,7 +158,7 @@ public class BoltSnapshotQueryExecutionIT
         validatePair( pairs.get( 3 ), key4, value4 );
     }
 
-    private void validatePair( Pair<String,Value> pair, String key, String value )
+    private static void validatePair( Pair<String,Value> pair, String key, String value )
     {
         assertEquals( key, pair.key() );
         assertEquals( value, pair.value().asString() );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
@@ -12,9 +13,11 @@ import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncodin
 import java.util.Collection;
 import java.util.function.Consumer;
 
+import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -25,7 +28,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.token.TokenRegistry;
-import org.neo4j.token.api.NamedToken;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.bytesToCommands;
 import static java.lang.String.format;
@@ -36,17 +38,16 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
     private TransactionCommitProcess commitProcess;
 
     private final TokenRegistry tokenRegistry;
-    private final VersionContext versionContext;
 
     private final Log log;
+    private final ClusteredDatabaseManager databaseManager;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTokenStateMachine( TokenRegistry tokenRegistry,
-            LogProvider logProvider, VersionContextSupplier versionContextSupplier )
+    public ReplicatedTokenStateMachine( TokenRegistry tokenRegistry, LogProvider logProvider, ClusteredDatabaseManager databaseManager )
     {
         this.tokenRegistry = tokenRegistry;
-        this.versionContext = versionContextSupplier.getVersionContext();
         this.log = logProvider.getLog( getClass() );
+        this.databaseManager = databaseManager;
     }
 
     public synchronized void installCommitProcess( TransactionCommitProcess commitProcess, long lastCommittedIndex )
@@ -78,7 +79,10 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
             log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
             // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
             // Thus there is no need for us to update the token registry directly.
-            applyToStore( commands, commandIndex );
+            DatabaseId databaseId = tokenRequest.databaseId();
+            VersionContextSupplier versionContextSupplier = databaseManager.getDatabaseContext( databaseId ).orElseThrow(
+                    () -> new DatabaseNotFoundException( databaseId.name() ) ).database().getVersionContextSupplier();
+            applyToStore( commands, commandIndex, versionContextSupplier.getVersionContext() );
             callback.accept( Result.of( newTokenId ) );
         }
         else
@@ -89,7 +93,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
         }
     }
 
-    private void applyToStore( Collection<StorageCommand> commands, long logIndex )
+    private void applyToStore( Collection<StorageCommand> commands, long logIndex, VersionContext versionContext )
     {
         PhysicalTransactionRepresentation representation = new PhysicalTransactionRepresentation( commands );
         representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0, 0, 0L, 0L, 0 );

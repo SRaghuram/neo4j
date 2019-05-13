@@ -56,7 +56,7 @@ public class ClusterRuleIT
                         actualNumberOfReadReplicas * NumberOfPortsUsedByReadReplica ) );
     }
 
-    private Set<Integer> gatherPortsUsed( Cluster cluster )
+    private static Set<Integer> gatherPortsUsed( Cluster cluster )
     {
         Set<Integer> portsUsed = new HashSet<>();
 
@@ -80,7 +80,7 @@ public class ClusterRuleIT
         return portsUsed;
     }
 
-    private int getPortFromSetting( ClusterMember coreClusterMember, String settingName )
+    private static int getPortFromSetting( ClusterMember coreClusterMember, String settingName )
     {
         String setting = coreClusterMember.settingValue( settingName );
         return Integer.valueOf( setting.split( ":" )[1] );

@@ -58,7 +58,6 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -103,10 +102,10 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     private final MemberId myself;
     private final Map<IdType,Integer> allocationSizes;
     private final LogService logging;
+    private final ClusteredDatabaseManager databaseManager;
     private final Panicker panicker;
     private final LogProvider logProvider;
     private final CommandIndexTracker commandIndexTracker;
-    private final VersionContextSupplier versionContextSupplier;
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final FileSystemAbstraction fs;
     private final GlobalModule globalModule;
@@ -119,6 +118,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
             StateStorage<Long> lastFlushedStorage, Panicker panicker )
     {
         this.logging = globalModule.getLogService();
+        this.databaseManager = databaseManager;
         this.panicker = panicker;
         this.logProvider = logging.getInternalLogProvider();
         this.lastFlushedStorage = lastFlushedStorage;
@@ -135,7 +135,6 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
         commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( globalModule, commandIndexTracker );
 
-        versionContextSupplier = globalModule.getVersionContextSupplier();
         cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
 
         dbStateMap = new ConcurrentHashMap<>();
@@ -175,18 +174,17 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
 
         ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine = createLockTokenStateMachine( databaseId );
 
-        ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry,
-                logProvider, versionContextSupplier );
+        ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry, logProvider, databaseManager );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine =
-                new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, logProvider, versionContextSupplier );
+                new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, logProvider, databaseManager );
 
         ReplicatedTokenStateMachine relationshipTypeTokenStateMachine =
-                new ReplicatedTokenStateMachine( relationshipTypeTokenRegistry, logProvider, versionContextSupplier );
+                new ReplicatedTokenStateMachine( relationshipTypeTokenRegistry, logProvider, databaseManager );
 
         ReplicatedTransactionStateMachine replicatedTxStateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, replicatedLockTokenStateMachine,
                         config.get( state_machine_apply_max_batch_size ), logProvider, cursorTracerSupplier,
-                        versionContextSupplier );
+                        databaseManager );
 
         Locks lockManager = createLockManager( config, globalModule.getGlobalClock(), logging, replicator, myself, raftMachine,
                 replicatedLockTokenStateMachine, databaseId );

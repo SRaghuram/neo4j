@@ -221,7 +221,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         CatchupProcessManager catchupProcessManager =
                 new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseManager,
                         globalHealth, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
-                        commandIndexTracker, internalLogProvider, globalModule.getVersionContextSupplier(),
+                        commandIndexTracker, internalLogProvider,
                         globalModule.getTracers().getPageCursorTracerSupplier(), globaConfig );
 
         addPanicEventHandlers( panicService, globalModule.getGlobalLife(), globalHealth,

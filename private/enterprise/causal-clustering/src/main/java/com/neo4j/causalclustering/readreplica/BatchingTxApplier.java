@@ -34,10 +34,10 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final int maxBatchSize;
     private final Supplier<TransactionIdStore> txIdStoreSupplier;
     private final Supplier<TransactionCommitProcess> commitProcessSupplier;
+    private final Supplier<VersionContextSupplier> versionContextSupplier;
 
     private final PullRequestMonitor monitor;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
-    private final VersionContextSupplier versionContextSupplier;
     private final CommandIndexTracker commandIndexTracker;
     private final Log log;
 
@@ -50,7 +50,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     public BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier,
                               Supplier<TransactionCommitProcess> commitProcessSupplier, Monitors monitors,
                               PageCursorTracerSupplier pageCursorTracerSupplier,
-                              VersionContextSupplier versionContextSupplier, CommandIndexTracker commandIndexTracker,
+                              Supplier<VersionContextSupplier> versionContextSupplier, CommandIndexTracker commandIndexTracker,
                               LogProvider logProvider )
     {
         this.maxBatchSize = maxBatchSize;
@@ -106,7 +106,7 @@ public class BatchingTxApplier extends LifecycleAdapter
             return;
         }
 
-        txQueue.queue( new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext() ) );
+        txQueue.queue( new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() ) );
 
         if ( !stopped )
         {

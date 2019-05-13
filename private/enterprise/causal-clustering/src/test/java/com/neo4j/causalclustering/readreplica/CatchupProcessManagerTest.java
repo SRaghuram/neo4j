@@ -18,8 +18,8 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -41,7 +40,7 @@ import org.neo4j.test.FakeClockJobScheduler;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -50,14 +49,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.Iterables.single;
 
-public class CatchupProcessManagerTest
+class CatchupProcessManagerTest
 {
     private final CatchupClientFactory catchUpClient = mock( CatchupClientFactory.class );
     private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
     private final TopologyService topologyService = mock( TopologyService.class );
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
     private final Health databaseHealth = mock( DatabaseHealth.class );
-    private final VersionContextSupplier versionContextSupplier = mock( VersionContextSupplier.class );
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
@@ -67,8 +65,8 @@ public class CatchupProcessManagerTest
 
     private CatchupProcessManager catchupProcessManager;
 
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
         //Mock the components of CatchupComponentsRepository
         databaseIds.forEach( name -> databaseService.registerDatabase( name, getMockDatabase( name ) ) );
@@ -80,7 +78,7 @@ public class CatchupProcessManagerTest
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() ) );
+                NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults() ) );
     }
 
     private ClusteredDatabaseContext getMockDatabase( DatabaseId databaseId )
@@ -92,7 +90,7 @@ public class CatchupProcessManagerTest
     }
 
     @Test
-    public void shouldTickAllCatchupProcessesOnTimeout()
+    void shouldTickAllCatchupProcessesOnTimeout()
     {
         // given
         Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()
@@ -108,7 +106,7 @@ public class CatchupProcessManagerTest
     }
 
     @Test
-    public void shouldCreateCatchupProcessComponentsForEachDatabaseOnStart() throws Throwable
+    void shouldCreateCatchupProcessComponentsForEachDatabaseOnStart() throws Throwable
     {
         // given
         List<DatabaseId> startedCatchupProcs = new ArrayList<>();
@@ -121,7 +119,7 @@ public class CatchupProcessManagerTest
         };
         catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                factory, NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() );
+                factory, NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults() );
         // when
         catchupProcessManager.init();
         catchupProcessManager.start();
@@ -131,7 +129,7 @@ public class CatchupProcessManagerTest
     }
 
     @Test
-    public void shouldNotRenewTheTimeoutOnPanic()
+    void shouldNotRenewTheTimeoutOnPanic()
     {
         // given
         Map<DatabaseId,CatchupPollingProcess> catchupProcesses = databaseIds.stream()

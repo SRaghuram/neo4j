@@ -11,10 +11,12 @@ import java.util.Map;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -44,6 +46,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final TransactionLogWriter writer;
     private final LogFiles logFiles;
     private final TransactionMetaDataStore metaDataStore;
+    private final DatabasePageCache databasePageCache;
     private final boolean rotateTransactionsManually;
     private final LongRange validInitialTxId;
     private final FlushablePositionAwareChannel logChannel;
@@ -60,9 +63,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.asPartOfStoreCopy = asPartOfStoreCopy;
         this.rotateTransactionsManually = forceTransactionRotations;
         final Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
+        databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat );
-        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, pageCache );
+        dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
+        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
@@ -75,14 +79,14 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.validInitialTxId = validInitialTxId;
     }
 
-    private Config configWithoutSpecificStoreFormat( Config config )
+    private static Config configWithoutSpecificStoreFormat( Config config )
     {
         Map<String,String> raw = config.getRaw();
         raw.remove( GraphDatabaseSettings.record_format.name() );
         return Config.defaults( raw );
     }
 
-    private Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
+    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
     {
         Config.Builder builder = Config.builder();
         if ( !keepTxLogsInStoreDir && original.isConfigured( transaction_logs_root_path ) )
@@ -203,5 +207,6 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                     logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
         }
         metaDataStore.close();
+        databasePageCache.close();
     }
 }
