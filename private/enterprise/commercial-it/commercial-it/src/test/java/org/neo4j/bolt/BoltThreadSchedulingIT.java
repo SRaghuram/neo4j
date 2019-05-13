@@ -5,6 +5,8 @@
  */
 package org.neo4j.bolt;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,6 +22,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -28,20 +33,18 @@ import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.IOUtils;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.Connector.ConnectorType.BOLT;
-import static org.neo4j.kernel.configuration.Settings.FALSE;
-import static org.neo4j.kernel.configuration.Settings.TRUE;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
 public class BoltThreadSchedulingIT
@@ -55,6 +58,7 @@ public class BoltThreadSchedulingIT
 
     private GraphDatabaseService db;
     private Driver driver;
+    private DatabaseManagementService managementService;
 
     @After
     public void shutdownDb() throws InterruptedException
@@ -63,7 +67,7 @@ public class BoltThreadSchedulingIT
         Thread.sleep( 100 );
         if ( db != null )
         {
-            db.shutdown();
+            managementService.shutdown();
         }
     }
 
@@ -71,7 +75,7 @@ public class BoltThreadSchedulingIT
     public void shouldFinishAllQueries() throws Throwable
     {
         // create server with limited thread pool threads.
-        db = startDbWithBolt( new GraphDatabaseFactory(), 1, 2 );
+        db = startDbWithBolt( 1, 2 );
         driver = createDriver( getBoltPort( db ) );
 
         // submits some jobs to executor, shooting at server at the same time.
@@ -139,16 +143,18 @@ public class BoltThreadSchedulingIT
         }
     }
 
-    private GraphDatabaseService startDbWithBolt( GraphDatabaseFactory dbFactory, int threadPoolMinSize, int threadPoolMaxSize )
+    private GraphDatabaseService startDbWithBolt( int threadPoolMinSize, int threadPoolMaxSize )
     {
-        return dbFactory.newEmbeddedDatabaseBuilder( dir.storeDir() )
+        DatabaseManagementServiceBuilder dbFactory = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() );
+        managementService = dbFactory
                 .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
                 .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( new BoltConnector( "bolt" ).thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
                 .setConfig( new BoltConnector( "bolt" ).thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
+        return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static Driver createDriver( int port )
