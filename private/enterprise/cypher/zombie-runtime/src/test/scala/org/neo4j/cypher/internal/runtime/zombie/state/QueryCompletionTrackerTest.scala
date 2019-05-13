@@ -18,7 +18,7 @@ class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
-  override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
+  override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
                                                                                          mock[QueryContext](RETURNS_DEEP_STUBS),
                                                                                          mock[QueryExecutionTracer])
 }
@@ -35,7 +35,30 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     x.decrement()
 
     // then
-    x.await()
+    x.await() shouldBe false
+  }
+
+  test("await should return normally if query has been cancelled") {
+    val x = newTracker()
+
+    // when
+    x.increment()
+    x.cancel()
+
+    // then
+    x.await() shouldBe false
+  }
+
+  test("await should return normally if query has no demand") {
+    val x = newTracker()
+
+    // when
+    x.increment()
+    x.request(1)
+    x.addServed(1)
+
+    // then
+    x.await() shouldBe true
   }
 
   test("await should throw if query has failed") {
@@ -75,7 +98,19 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     val x = newTracker()
 
     // when
+    x.increment()
     x.error(new IllegalArgumentException)
+
+    // then
+    x.isCompleted should be(true)
+  }
+
+  test("isCompleted when cancelled") {
+    val x = newTracker()
+
+    // when
+    x.increment()
+    x.cancel()
 
     // then
     x.isCompleted should be(true)

@@ -164,7 +164,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     }
   }
 
-  override def isCompleted: Boolean = count.get == 0 || cancelled.get()
+  override def isCompleted: Boolean = count.get() == 0 || cancelled.get() || !errors.isEmpty
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 
