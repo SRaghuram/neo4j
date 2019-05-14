@@ -204,7 +204,7 @@ public class JmhOptionsUtil
         return optionsBuilder;
     }
 
-    public static void applyAnnotations( Class<?> benchmark, ChainedOptionsBuilder builder )
+    public static ChainedOptionsBuilder applyAnnotations( Class<?> benchmark, ChainedOptionsBuilder builder )
     {
         // TODO would be nice if we could do this on method basis
         Warmup warmup = benchmark.getAnnotation( Warmup.class );
@@ -249,6 +249,7 @@ public class JmhOptionsUtil
         {
             builder.threads( threads.value() );
         }
+        return builder;
     }
 
     public static void assertExactlyOneBenchmarkIsEnabled( Options options )
