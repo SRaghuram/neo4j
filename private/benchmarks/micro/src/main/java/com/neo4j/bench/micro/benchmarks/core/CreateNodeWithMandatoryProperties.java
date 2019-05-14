@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
@@ -73,12 +73,12 @@ public class CreateNodeWithMandatoryProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of creating nodes with mandatory constraints, " +
-                "using different transaction batch sizes.\n" +
-                "Method:\n" +
-                "- Threads create nodes, batching multiple writes per transaction\n" +
-                "- Every time a node is created it has one label, always the same label\n" +
-                "- Every time a node is created it has one property, always with same key, but different value\n" +
-                "- There is a mandatory constraint on the label:property pair being written";
+               "using different transaction batch sizes.\n" +
+               "Method:\n" +
+               "- Threads create nodes, batching multiple writes per transaction\n" +
+               "- Every time a node is created it has one label, always the same label\n" +
+               "- Every time a node is created it has one property, always with same key, but different value\n" +
+               "- There is a mandatory constraint on the label:property pair being written";
     }
 
     @Override

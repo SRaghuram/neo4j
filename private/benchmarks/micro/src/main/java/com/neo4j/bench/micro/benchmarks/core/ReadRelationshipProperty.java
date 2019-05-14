@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -45,7 +45,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( false )
@@ -75,14 +74,14 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of retrieving properties from relationships that have a single property.\n" +
-                "Method:\n" +
-                "- Every relationship has the same property (with different values)\n" +
-                "- During store creation, property values are generated with uniform random policy\n" +
-                "- When reading, relationship IDs are selected using two different policies: same, random\n" +
-                "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
-                "--- random: Accesses random relationship. Worst cache hit rate. Test non-cached performance.\n" +
-                "Outcome:\n" +
-                "- Tests performance of property reading in cached & non-cached scenarios";
+               "Method:\n" +
+               "- Every relationship has the same property (with different values)\n" +
+               "- During store creation, property values are generated with uniform random policy\n" +
+               "- When reading, relationship IDs are selected using two different policies: same, random\n" +
+               "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
+               "--- random: Accesses random relationship. Worst cache hit rate. Test non-cached performance.\n" +
+               "Outcome:\n" +
+               "- Tests performance of property reading in cached & non-cached scenarios";
     }
 
     @Override
@@ -147,7 +146,7 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     public Object randomRelationshipGetProperty( TxState txState, RNGState rngState )
     {
         return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
-                .getProperty( txState.propertyKey );
+                   .getProperty( txState.propertyKey );
     }
 
     @Benchmark
@@ -155,6 +154,6 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     public boolean randomRelationshipHasProperty( TxState txState, RNGState rngState )
     {
         return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
-                .hasProperty( txState.propertyKey );
+                   .hasProperty( txState.propertyKey );
     }
 }

@@ -5,6 +5,16 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
+import com.neo4j.bench.micro.data.IndexType;
+import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.PropertyDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -14,17 +24,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
-
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.IndexType;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFactory;
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -83,16 +82,16 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of retrieving nodes by label and property.\n" +
-                "Runs in two indexing scenarios: no index, schema index.\n" +
-                "Method:\n" +
-                "- Every node has exactly one label, same label\n" +
-                "- Every node has exactly one property, same property (key)\n" +
-                "- During store creation, property values are assigned with skewed policy\n" +
-                "- There are three property values, with frequency of 1:10:100\n" +
-                "- When reading, there is one benchmark for each frequency:\n" +
-                "    * High Selectivity: 1\n" +
-                "    * Medium Selectivity: 10\n" +
-                "    * Low Selectivity: 100";
+               "Runs in two indexing scenarios: no index, schema index.\n" +
+               "Method:\n" +
+               "- Every node has exactly one label, same label\n" +
+               "- Every node has exactly one property, same property (key)\n" +
+               "- During store creation, property values are assigned with skewed policy\n" +
+               "- There are three property values, with frequency of 1:10:100\n" +
+               "- When reading, there is one benchmark for each frequency:\n" +
+               "    * High Selectivity: 1\n" +
+               "    * Medium Selectivity: 10\n" +
+               "    * Low Selectivity: 100";
     }
 
     @Override
@@ -150,19 +149,19 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public static int expectedHighSelectivityCount()
     {
         return (int) ((NODE_COUNT * HIGH_SELECTIVITY_RATIO) /
-                (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
+                      (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
     }
 
     public static int expectedMediumSelectivityCount()
     {
         return (int) ((NODE_COUNT * MEDIUM_SELECTIVITY_RATIO) /
-                (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
+                      (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
     }
 
     public static int expectedLowSelectivityCount()
     {
         return (int) ((NODE_COUNT * LOW_SELECTIVITY_RATIO) /
-                (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
+                      (HIGH_SELECTIVITY_RATIO + MEDIUM_SELECTIVITY_RATIO + LOW_SELECTIVITY_RATIO));
     }
 
     public static int minEstimateFor( int expectedCount )

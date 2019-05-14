@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
@@ -27,7 +27,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class VarExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var VarExpand_runtime: String = _
@@ -107,8 +107,8 @@ class VarExpand extends AbstractCypherBenchmark {
     val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)
 
     val nodesTable = SemanticTable()
-      .addNode(startNode)
-      .addNode(endNode)
+                     .addNode(startNode)
+                     .addNode(endNode)
     val table = nodesTable.copy(types = nodesTable.types.updated(rel, ExpressionTypeInfo(symbols.CTList(symbols.CTRelationship), None)))
 
     (produceResults, table, resultColumns)

@@ -5,6 +5,17 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.benchmarks.TxBatch;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.IndexType;
+import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFactory;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -18,18 +29,6 @@ import org.openjdk.jmh.infra.ThreadParams;
 import java.util.SplittableRandom;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.IndexType;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFactory;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
 
 import org.neo4j.graphdb.Label;
 
@@ -63,8 +62,8 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     // Controls how many indexes are created
     private static final int MAX_PROPERTIES_PER_NODE = 10;
     private static final String[] KEYS = IntStream.range( 0, MAX_PROPERTIES_PER_NODE ).boxed()
-            .map( i -> "key" + i )
-            .toArray( String[]::new );
+                                                  .map( i -> "key" + i )
+                                                  .toArray( String[]::new );
 
     @ParamValues(
             allowed = {
@@ -103,21 +102,21 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of non-unique node property creation, with different transaction batch sizes.\n" +
-                "Benchmark creates key:value node property pairs.\n" +
-                "Runs in two indexing scenarios: no index, schema index.\n" +
-                "Setup is as follows:\n" +
-                "- Every node has exactly one, same label\n" +
-                "- Threads work on node ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-                "- When a sequence wraps the thread moves onto the next property key\n" +
-                "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
-                "- For property value generation a skewed distribution is used\n" +
-                "- There are three property values, with frequency of 1:10:100\n" +
-                "Outcome:\n" +
-                "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
-                "- Every node will have the same properties\n" +
-                "- Multiple nodes will have the same value for the same property";
+               "Benchmark creates key:value node property pairs.\n" +
+               "Runs in two indexing scenarios: no index, schema index.\n" +
+               "Setup is as follows:\n" +
+               "- Every node has exactly one, same label\n" +
+               "- Threads work on node ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+               "- When a sequence wraps the thread moves onto the next property key\n" +
+               "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
+               "- For property value generation a skewed distribution is used\n" +
+               "- There are three property values, with frequency of 1:10:100\n" +
+               "Outcome:\n" +
+               "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
+               "- Every node will have the same properties\n" +
+               "- Multiple nodes will have the same value for the same property";
     }
 
     @Override

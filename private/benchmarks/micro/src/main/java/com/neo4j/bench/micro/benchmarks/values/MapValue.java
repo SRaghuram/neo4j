@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.values;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import org.apache.commons.lang3.StringUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -25,7 +25,6 @@ import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.bench.micro.Main.run;
-
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 @BenchmarkEnabled( true )
@@ -112,7 +111,7 @@ public class MapValue extends AbstractValuesBenchmark
     @Benchmark
     @CompilerControl( CompilerControl.Mode.DONT_INLINE )
     @BenchmarkMode( {Mode.AverageTime} )
-    public AnyValue get( ThreadState threadState,  RNGState rngState )
+    public AnyValue get( ThreadState threadState, RNGState rngState )
     {
         return threadState.get( rngState );
     }
@@ -120,13 +119,13 @@ public class MapValue extends AbstractValuesBenchmark
     @Benchmark
     @CompilerControl( CompilerControl.Mode.DONT_INLINE )
     @BenchmarkMode( {Mode.AverageTime} )
-    public void foreach( ThreadState threadState,  Blackhole bh )
+    public void foreach( ThreadState threadState, Blackhole bh )
     {
-        threadState.mapValue.foreach( ( k,v ) ->
-        {
-            bh.consume( k );
-            bh.consume( v );
-        });
+        threadState.mapValue.foreach( ( k, v ) ->
+                                      {
+                                          bh.consume( k );
+                                          bh.consume( v );
+                                      } );
     }
 
     public static void main( String... methods ) throws Exception

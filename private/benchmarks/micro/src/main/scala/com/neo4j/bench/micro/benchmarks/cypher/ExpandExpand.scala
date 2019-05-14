@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
@@ -50,11 +50,11 @@ class ExpandExpand extends AbstractCypherBenchmark {
     val produceResults = plans.ProduceResult(filter, resultColumns)(IdGen)
 
     val table = SemanticTable().
-      addNode(astVariable("a")).
-      addNode(astVariable("b")).
-      addNode(astVariable("c")).
-      addRelationship(astVariable("r1")).
-      addRelationship(astVariable("r2"))
+                addNode(astVariable("a")).
+                addNode(astVariable("b")).
+                addNode(astVariable("c")).
+                addRelationship(astVariable("r1")).
+                addRelationship(astVariable("r2"))
 
     (produceResults, table, resultColumns)
   }

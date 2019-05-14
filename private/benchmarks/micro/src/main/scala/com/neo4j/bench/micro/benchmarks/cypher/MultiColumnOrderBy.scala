@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML, mapValuesOfList}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
@@ -28,7 +28,7 @@ import scala.util.Random
 @BenchmarkEnabled(true)
 class MultiColumnOrderBy extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var MultiColumnOrderBy_runtime: String = _
@@ -73,8 +73,8 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
     val unwindVariable = astVariable("value")
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariable.name, parameter)(IdGen)
     val expressionsAndSortItems: Map[String, (Expression, ColumnOrder)] = columnNames()
-      .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
-      .toMap[String, (Expression, ColumnOrder)]
+                                                                          .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
+                                                                          .toMap[String, (Expression, ColumnOrder)]
     val expressions = expressionsAndSortItems.map {
       case (key: String, value: (Expression, ColumnOrder)) => key -> value._1
     }
