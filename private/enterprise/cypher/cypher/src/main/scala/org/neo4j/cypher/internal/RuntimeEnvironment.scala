@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import java.io.IOException
 import java.util.concurrent.ExecutorService
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
@@ -86,17 +85,7 @@ object RuntimeEnvironment {
 
       val dataTracer = new SingleConsumerDataBuffers()
 
-      val runnable = new Runnable {
-        override def run(): Unit =
-          try {
-            while (!Thread.interrupted()) {
-              dataTracer.consume(dataWriter)
-              Thread.sleep(1)
-            }
-          } finally {
-            dataWriter.close()
-          }
-      }
+      val runnable = new SchedulerTracerOutputWorker(dataWriter, dataTracer)
       jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
 
       new DataPointSchedulerTracer(dataTracer)
