@@ -559,7 +559,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
     testUserLogin("bar", "p4s5w*rd", AuthenticationResult.FAILURE)
-    testUserLogin("bar", "PASSword", AuthenticationResult.FAILURE)
     testUserLogin("bar", "password", AuthenticationResult.FAILURE)
     testUserLogin("bar", "p4s5W*rd", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -758,8 +757,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     testUserLogin("foo", "bAz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
-    testUserLogin("foo", "BaZ", AuthenticationResult.FAILURE)
-    testUserLogin("foo", "BAZ", AuthenticationResult.FAILURE)
   }
 
   test("should alter user password as parameter") {
