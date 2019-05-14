@@ -34,7 +34,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(prevNode, n)
       prevNode = n
     }
-    val result = executeSingle( // Bug in 3.1 makes it difficult to use the backwards compability mode here
+    val result = executeSingle( // Bug in 3.1 makes it difficult to use the backwards compatibility mode here
       queryText = "MATCH ()-[r]->() WHERE id(r) IN {ids} RETURN id(r)",
       params = Map("ids" -> List(-2, -3, 0, -4)))
     result.executionPlanDescription() should includeSomewhere.aPlan("DirectedRelationshipByIdSeek")

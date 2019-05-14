@@ -93,4 +93,28 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
     result.toList should be(empty)
   }
+
+
+  test("should not union identical NodeIndexScans") {
+    val as = (1 to 209).map(_ => createLabeledNode("A"))
+    val cs = (1 to 12).map(_ => createLabeledNode("C"))
+    (1 to 2262).map(i => createLabeledNode("Other"))
+    as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode) }
+
+    graph.createIndex("A", "id")
+
+    val q =
+      """
+        |MATCH (c:C)-[:REL]->(a:A)
+        |MATCH (c)-[:REL]->(b:A)
+        |  WHERE a.id = b.id OR a.id < b.id
+        |RETURN *
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, q)
+    result.executionPlanDescription() should not(includeSomewhere.aPlan("Union")
+      .withLHS(aPlan("NodeIndexScan"))
+      .withRHS(aPlan("NodeIndexScan"))
+    )
+  }
 }
