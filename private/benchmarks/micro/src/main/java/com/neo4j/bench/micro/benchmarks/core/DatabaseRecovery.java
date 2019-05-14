@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.StringGenerator;
@@ -44,7 +44,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 public class DatabaseRecovery extends AbstractCoreBenchmark

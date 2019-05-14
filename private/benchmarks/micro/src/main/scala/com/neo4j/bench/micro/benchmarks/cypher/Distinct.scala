@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
@@ -60,7 +60,7 @@ class Distinct extends AbstractCypherBenchmark {
       .withNodeCount(NODE_COUNT)
       .isReusableStore(true)
     withProperty(Distinct_columns, builder)
-      .build()
+    .build()
   }
 
   def withProperty(columnDefinition: String, builder: DataGeneratorConfigBuilder): DataGeneratorConfigBuilder = Distinct_columns match {
@@ -72,8 +72,8 @@ class Distinct extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val table = SemanticTable()
-      .addNode(astVariable(NODE_A))
-      .addNode(astVariable(NODE_B))
+                .addNode(astVariable(NODE_A))
+                .addNode(astVariable(NODE_B))
     Distinct_columns match {
       case ONE_COLUMN_PRIMITIVE =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)

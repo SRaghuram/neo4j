@@ -5,15 +5,15 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML, mapValuesOfList}
-import org.neo4j.cypher.internal.util.v3_4.symbols
-import org.neo4j.cypher.internal.util.v3_4.symbols.ListType
 import org.neo4j.cypher.internal.frontend.v3_4.ast._
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.util.v3_4.symbols.ListType
 import org.neo4j.cypher.internal.v3_4.expressions.Expression
 import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.cypher.internal.v3_4.logical.plans.{Ascending, ColumnOrder, Descending}
@@ -73,8 +73,8 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
     val unwindVariable = astVariable("value")
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariable.name, parameter)(IdGen)
     val expressionsAndSortItems: Map[String, (Expression, ColumnOrder)] = columnNames()
-      .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
-      .toMap[String, (Expression, ColumnOrder)]
+                                                                          .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
+                                                                          .toMap[String, (Expression, ColumnOrder)]
     val expressions = expressionsAndSortItems.map {
       case (key: String, value: (Expression, ColumnOrder)) => key -> value._1
     }

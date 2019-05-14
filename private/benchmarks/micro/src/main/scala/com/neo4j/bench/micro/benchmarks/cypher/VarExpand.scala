@@ -5,18 +5,17 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.util.v3_4.symbols
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.ir.v3_4._
 import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.v3_4.symbols
 import org.neo4j.cypher.internal.v3_4.expressions.{RelTypeName, SemanticDirection, True}
 import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.cypher.internal.v3_4.logical.plans.{ExpandAll, SingleQueryExpression}
@@ -107,8 +106,8 @@ class VarExpand extends AbstractCypherBenchmark {
     val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)
 
     val nodesTable = SemanticTable()
-      .addNode(startNode)
-      .addNode(endNode)
+                     .addNode(startNode)
+                     .addNode(endNode)
     val table = nodesTable.copy(types = nodesTable.types.updated(rel, ExpressionTypeInfo(symbols.CTList(symbols.CTRelationship), None)))
 
     (produceResults, table, resultColumns)

@@ -5,6 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -19,14 +26,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
-
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveLongList;
 import org.neo4j.graphdb.RelationshipType;
@@ -35,7 +34,6 @@ import org.neo4j.internal.kernel.api.exceptions.KernelException;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 

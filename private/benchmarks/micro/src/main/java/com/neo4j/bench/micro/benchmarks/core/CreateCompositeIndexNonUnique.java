@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -70,9 +70,9 @@ public class CreateCompositeIndexNonUnique extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of composite index creation: Schema.\n" +
-                "Benchmark generates a store with nodes and properties.\n" +
-                "Each node has the same number of properties as there are elements in the composite key.\n" +
-                "Property values assigned with skewed policy, there are three, with frequency 1:10:100.";
+               "Benchmark generates a store with nodes and properties.\n" +
+               "Each node has the same number of properties as there are elements in the composite key.\n" +
+               "Property values assigned with skewed policy, there are three, with frequency 1:10:100.";
     }
 
     @Override
@@ -89,10 +89,10 @@ public class CreateCompositeIndexNonUnique extends AbstractCoreBenchmark
     private PropertyDefinition[] propertyDefinitions()
     {
         return IntStream.range( 0, CreateCompositeIndexNonUnique_keys )
-                .mapToObj( i -> new PropertyDefinition(
-                        CreateCompositeIndexNonUnique_type + "_" + i,
-                        valuesFor( CreateCompositeIndexNonUnique_type ) ) )
-                .toArray( PropertyDefinition[]::new );
+                        .mapToObj( i -> new PropertyDefinition(
+                                CreateCompositeIndexNonUnique_type + "_" + i,
+                                valuesFor( CreateCompositeIndexNonUnique_type ) ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     private ValueGeneratorFactory valuesFor( String type )

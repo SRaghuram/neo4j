@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.pageCache;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;

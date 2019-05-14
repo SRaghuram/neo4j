@@ -5,6 +5,15 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
+import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.PropertyDefinition;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -18,16 +27,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 
 import org.neo4j.graphdb.Transaction;
 
@@ -84,29 +83,29 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
     {
         PropertyDefinition propertyDefinition = randPropertyFor( ReadMultipleNodeProperties_type );
         return IntStream.range( 0, PROPERTY_COUNT ).boxed()
-                .map( i -> propertyDefinition.key() + i )
-                .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
-                .toArray( PropertyDefinition[]::new );
+                        .map( i -> propertyDefinition.key() + i )
+                        .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     @Override
     public String description()
     {
         return "Tests performance of retrieving properties from nodes that have many properties.\n" +
-                "Method:\n" +
-                "- Every node has the same properties (with different values)\n" +
-                "- On every node properties (keys) appear in the same order in the chain\n" +
-                "- During store creation, property values are generated with uniform random policy\n" +
-                "- When reading, node IDs are selected using two different policies: same, random\n" +
-                "--- same: Same node accessed every time. Best cache hit rate. Test cached performance.\n" +
-                "--- random: Random node accessed every time. Worst cache hit rate. Test non-cached performance.\n" +
-                "- When reading, properties are selected using three different policies: first, half, all.\n" +
-                "--- first: retrieve value for first property in chain\n" +
-                "--- half: retrieve values for every property in the first half of the property chain\n" +
-                "--- all: retrieve values for every property of the property chain\n" +
-                "Outcome:\n" +
-                "- Tests performance of property reading in cached & non-cached scenarios\n" +
-                "- Tests performance of accessing different percentages of node property chain";
+               "Method:\n" +
+               "- Every node has the same properties (with different values)\n" +
+               "- On every node properties (keys) appear in the same order in the chain\n" +
+               "- During store creation, property values are generated with uniform random policy\n" +
+               "- When reading, node IDs are selected using two different policies: same, random\n" +
+               "--- same: Same node accessed every time. Best cache hit rate. Test cached performance.\n" +
+               "--- random: Random node accessed every time. Worst cache hit rate. Test non-cached performance.\n" +
+               "- When reading, properties are selected using three different policies: first, half, all.\n" +
+               "--- first: retrieve value for first property in chain\n" +
+               "--- half: retrieve values for every property in the first half of the property chain\n" +
+               "--- all: retrieve values for every property of the property chain\n" +
+               "Outcome:\n" +
+               "- Tests performance of property reading in cached & non-cached scenarios\n" +
+               "- Tests performance of accessing different percentages of node property chain";
     }
 
     @Override
@@ -141,8 +140,8 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
         {
             tx = benchmarkState.db().beginTx();
             String[] propertyKeys = Stream.of( benchmarkState.propertyDefinitions() )
-                    .map( PropertyDefinition::key )
-                    .toArray( String[]::new );
+                                          .map( PropertyDefinition::key )
+                                          .toArray( String[]::new );
             keysFirst = Arrays.copyOfRange( propertyKeys, 0, 1 );
             keysHalf = Arrays.copyOfRange( propertyKeys, 0, PROPERTY_COUNT / 2 );
             keysAll = Arrays.copyOfRange( propertyKeys, 0, PROPERTY_COUNT );

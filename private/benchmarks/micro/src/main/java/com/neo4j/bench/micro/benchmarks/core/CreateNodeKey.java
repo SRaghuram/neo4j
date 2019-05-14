@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -77,9 +77,9 @@ public class CreateNodeKey extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of composite index creation: Schema.\n" +
-                "Benchmark generates a store with nodes and properties.\n" +
-                "Each node has the same number of properties as there are elements in the composite key.\n" +
-                "Values of one of the property have frequency 5:1:...:1, all other have random values.";
+               "Benchmark generates a store with nodes and properties.\n" +
+               "Each node has the same number of properties as there are elements in the composite key.\n" +
+               "Values of one of the property have frequency 5:1:...:1, all other have random values.";
     }
 
     @Override
@@ -91,18 +91,19 @@ public class CreateNodeKey extends AbstractCoreBenchmark
     private String[] keys()
     {
         return IntStream.range( 0, CreateNodeKey_keys )
-                .mapToObj( i -> CreateNodeKey_type + "_" + i )
-                .toArray( String[]::new );
+                        .mapToObj( i -> CreateNodeKey_type + "_" + i )
+                        .toArray( String[]::new );
     }
 
     private PropertyDefinition[] propertyDefinitions()
     {
         List<PropertyDefinition> propertyDefinitions = IntStream.range( 0, CreateNodeKey_keys - 1 )
-                .mapToObj( i -> new PropertyDefinition( CreateNodeKey_type + "_" + i, valuesFor( CreateNodeKey_type ) ) )
-                .collect( Collectors.toList() );
+                                                                .mapToObj( i -> new PropertyDefinition( CreateNodeKey_type + "_" + i,
+                                                                                                        valuesFor( CreateNodeKey_type ) ) )
+                                                                .collect( Collectors.toList() );
         ValueGeneratorFactory valueGeneratorFactory = discretePropertyValueGenerator();
         propertyDefinitions.add( new PropertyDefinition( CreateNodeKey_type + "_" + (CreateNodeKey_keys - 1),
-                valueGeneratorFactory ) );
+                                                         valueGeneratorFactory ) );
         return propertyDefinitions.toArray( new PropertyDefinition[propertyDefinitions.size()] );
     }
 

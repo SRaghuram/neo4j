@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -81,29 +81,29 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
     {
         PropertyDefinition propertyDefinition = randPropertyFor( ReadMultipleRelationshipProperties_type );
         return IntStream.range( 0, PROPERTY_COUNT ).boxed()
-                .map( i -> propertyDefinition.key() + i )
-                .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
-                .toArray( PropertyDefinition[]::new );
+                        .map( i -> propertyDefinition.key() + i )
+                        .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     @Override
     public String description()
     {
         return "Tests performance of retrieving properties from relationships that have many properties.\n" +
-                "Method:\n" +
-                "- Every relationship has the same properties (with different values)\n" +
-                "- On every relationship properties (keys) appear in the same order in the chain\n" +
-                "- During store creation, property values are generated with uniform random policy\n" +
-                "- When reading, relationship IDs are selected using two different policies: same, random\n" +
-                "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
-                "--- random: Accesses random relationships. Worst cache hit rate. Test non-cached performance.\n" +
-                "- When reading, properties are selected using three different policies: first, half, all.\n" +
-                "--- first: retrieve value for first property in chain\n" +
-                "--- half: retrieve values for every property in the first half of the property chain\n" +
-                "--- all: retrieve values for every property of the property chain\n" +
-                "Outcome:\n" +
-                "- Tests performance of property reading in cached & non-cached scenarios\n" +
-                "- Tests performance of accessing different percentages of relationship property chain";
+               "Method:\n" +
+               "- Every relationship has the same properties (with different values)\n" +
+               "- On every relationship properties (keys) appear in the same order in the chain\n" +
+               "- During store creation, property values are generated with uniform random policy\n" +
+               "- When reading, relationship IDs are selected using two different policies: same, random\n" +
+               "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
+               "--- random: Accesses random relationships. Worst cache hit rate. Test non-cached performance.\n" +
+               "- When reading, properties are selected using three different policies: first, half, all.\n" +
+               "--- first: retrieve value for first property in chain\n" +
+               "--- half: retrieve values for every property in the first half of the property chain\n" +
+               "--- all: retrieve values for every property of the property chain\n" +
+               "Outcome:\n" +
+               "- Tests performance of property reading in cached & non-cached scenarios\n" +
+               "- Tests performance of accessing different percentages of relationship property chain";
     }
 
     @Override
@@ -138,8 +138,8 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
         {
             tx = benchmarkState.db().beginTx();
             String[] propertyKeys = Stream.of( benchmarkState.propertyDefinitions() )
-                    .map( PropertyDefinition::key )
-                    .toArray( String[]::new );
+                                          .map( PropertyDefinition::key )
+                                          .toArray( String[]::new );
             keysFirst = Arrays.copyOfRange( propertyKeys, 0, 1 );
             keysHalf = Arrays.copyOfRange( propertyKeys, 0, PROPERTY_COUNT / 2 );
             keysAll = Arrays.copyOfRange( propertyKeys, 0, PROPERTY_COUNT );
@@ -210,7 +210,7 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
     public Map<String,Object> randomRelationshipGetPropertiesFirst( TxState txState, RNGState rngState )
     {
         return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
-                .getProperties( txState.keysFirst );
+                   .getProperties( txState.keysFirst );
     }
 
     @Benchmark

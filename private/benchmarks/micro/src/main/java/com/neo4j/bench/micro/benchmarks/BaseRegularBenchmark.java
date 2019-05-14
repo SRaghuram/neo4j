@@ -5,23 +5,21 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
-import com.neo4j.bench.micro.JMHResultUtil;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.BenchmarkParams;
 
 import java.nio.file.Paths;
 
 @State( Scope.Benchmark )
-public abstract class BaseRegularBenchmark implements Neo4jBenchmark
+public abstract class BaseRegularBenchmark extends BaseBenchmark
 {
     @Param( {} )
     public String baseNeo4jConfig;
@@ -29,20 +27,18 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
     @Param( {} )
     public String storesDir;
 
-    @Setup
-    public final void setUp( BenchmarkParams params ) throws Exception
+    @Override
+    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Exception
     {
         Stores stores = new Stores( Paths.get( storesDir ) );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
-        BenchmarkGroup group = JMHResultUtil.toBenchmarkGroup( params );
-        Benchmark benchmark = JMHResultUtil.toBenchmarks( params ).parentBenchmark();
 
         stores.writeNeo4jConfigForNoStore( neo4jConfig, FullBenchmarkName.from( group, benchmark ) );
         benchmarkSetup( group, benchmark, stores, neo4jConfig );
     }
 
-    @TearDown
-    public final void tearDown() throws Exception
+    @Override
+    protected final void onTearDown() throws Exception
     {
         benchmarkTearDown();
     }

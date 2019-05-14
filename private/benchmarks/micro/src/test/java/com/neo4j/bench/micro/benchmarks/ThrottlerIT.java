@@ -13,9 +13,8 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
-
 import static java.lang.String.format;
+import static org.junit.Assert.assertTrue;
 
 public class ThrottlerIT
 {
@@ -38,8 +37,8 @@ public class ThrottlerIT
             long durationMs = System.currentTimeMillis() - startTime;
             double actualOpPerSec = ((double) thread.count / (double) durationMs) * 1000D;
             String description = format( "Target: %s (op/s), Actual: %s (op/s)",
-                    DECIMAL_FORMAT.format( targetOpPerSec ),
-                    DECIMAL_FORMAT.format( actualOpPerSec ) );
+                                         DECIMAL_FORMAT.format( targetOpPerSec ),
+                                         DECIMAL_FORMAT.format( actualOpPerSec ) );
             assertTrue( description, areSimilar( targetOpPerSec, actualOpPerSec, PERCENTAGE_TOLERANCE ) );
         }
     }

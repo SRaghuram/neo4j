@@ -5,6 +5,14 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.RelationshipDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -17,15 +25,6 @@ import org.openjdk.jmh.infra.ThreadParams;
 
 import java.util.SplittableRandom;
 import java.util.stream.IntStream;
-
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
 
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.internal.kernel.api.Write;
@@ -55,7 +54,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( false )
