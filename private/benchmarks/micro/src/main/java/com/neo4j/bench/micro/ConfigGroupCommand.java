@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.micro.config.BenchmarkConfigFile;
-import com.neo4j.bench.micro.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 

@@ -5,8 +5,9 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.micro.config.SuiteDescription;
-import com.neo4j.bench.micro.config.Validation;
+import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.Validation;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
@@ -28,7 +29,8 @@ public class ListCommand implements Runnable
     public void run()
     {
         Validation validation = new Validation();
-        SuiteDescription suite = SuiteDescription.byReflection( validation );
+        Annotations annotations = new Annotations( "com.neo4j.bench.micro" );
+        SuiteDescription suite = SuiteDescription.fromAnnotations( annotations, validation );
         Validation.assertValid( validation );
         Map<String,List<String>> groupBenchmarks = suite.getGroupBenchmarkNames();
         System.out.println( makeGroupBenchmarksString( groupBenchmarks, verbose ) );
@@ -39,14 +41,14 @@ public class ListCommand implements Runnable
         String title = verbose ? "Available Groups & Benchmarks\n" : "Available Groups\n";
         StringBuilder sb = new StringBuilder( title );
         groupBenchmarks.keySet().forEach( group ->
-        {
-            sb.append( "\t" ).append( group ).append( "\n" );
-            if ( verbose )
-            {
-                groupBenchmarks.get( group ).forEach( benchmark ->
-                        sb.append( "\t\t" ).append( benchmark ).append( "\n" ) );
-            }
-        } );
+                                          {
+                                              sb.append( "\t" ).append( group ).append( "\n" );
+                                              if ( verbose )
+                                              {
+                                                  groupBenchmarks.get( group ).forEach( benchmark ->
+                                                                                                sb.append( "\t\t" ).append( benchmark ).append( "\n" ) );
+                                              }
+                                          } );
         return sb.toString();
     }
 }
