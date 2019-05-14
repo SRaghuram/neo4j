@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.gbptree;
 
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;

@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
@@ -49,7 +49,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( false )
@@ -62,8 +61,8 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     // Controls how many indexes are created
     private static final int MAX_PROPERTIES_PER_RELATIONSHIP = 10;
     private static final String[] KEYS = IntStream.range( 0, MAX_PROPERTIES_PER_RELATIONSHIP ).boxed()
-            .map( i -> "key" + i )
-            .toArray( String[]::new );
+                                                  .map( i -> "key" + i )
+                                                  .toArray( String[]::new );
 
     @ParamValues(
             allowed = {
@@ -90,21 +89,21 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of relationship property creation, using different transaction batch sizes.\n" +
-                "Creates unique key:value property pairs.\n" +
-                "Runs in two indexing scenarios: no index, schema index.\n" +
-                "Guarantees unique values in the presence of parallelism:\n" +
-                "- Every relationship has the same type\n" +
-                "- Threads work on relationship ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-                "- When a sequence wraps the thread moves onto the next property key\n" +
-                "- Guarantees that for any property, relationship ID appears in the sequence of exactly one thread\n" +
-                "- Guarantees property(key):relationship(id) uniqueness, so same policy used for property values\n" +
-                "- I.e., value assigned to relationship property is ID of that relationship (in appropriate type)\n" +
-                "Outcome:\n" +
-                "- No two threads will ever create a property on the same relationship (avoids deadlocks)\n" +
-                "- Every relationship will have the same properties\n" +
-                "- No two relationships will have the same value for the same property";
+               "Creates unique key:value property pairs.\n" +
+               "Runs in two indexing scenarios: no index, schema index.\n" +
+               "Guarantees unique values in the presence of parallelism:\n" +
+               "- Every relationship has the same type\n" +
+               "- Threads work on relationship ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+               "- When a sequence wraps the thread moves onto the next property key\n" +
+               "- Guarantees that for any property, relationship ID appears in the sequence of exactly one thread\n" +
+               "- Guarantees property(key):relationship(id) uniqueness, so same policy used for property values\n" +
+               "- I.e., value assigned to relationship property is ID of that relationship (in appropriate type)\n" +
+               "Outcome:\n" +
+               "- No two threads will ever create a property on the same relationship (avoids deadlocks)\n" +
+               "- Every relationship will have the same properties\n" +
+               "- No two relationships will have the same value for the same property";
     }
 
     @Override
@@ -196,6 +195,6 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     {
         txState.advance( rngState.rng );
         db().getRelationshipById( txState.relationshipId() )
-                .setProperty( txState.key(), txState.value( rngState.rng ) );
+            .setProperty( txState.key(), txState.value( rngState.rng ) );
     }
 }

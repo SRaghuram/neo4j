@@ -5,6 +5,17 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.IndexType;
+import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.PropertyDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.Range;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -17,18 +28,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.SplittableRandom;
-
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.IndexType;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.Range;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -49,7 +48,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
@@ -87,15 +85,15 @@ public class FindNodeUnique extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of retrieving nodes by label and property.\n" +
-                "Runs in three indexing scenarios: no index, schema index, unique constraint.\n" +
-                "Method:\n" +
-                "- Every node has exactly one, same label\n" +
-                "- Every node has exactly one property, same and the property (key)\n" +
-                "- During store creation, property values are assigned with ascending policy, to guaranty uniqueness\n" +
-                "- When reading, property value generation is uniform random, to spread load across store\n" +
-                "Outcome:\n" +
-                "- Accesses are spread evenly across the store\n" +
-                "- No two nodes will have the same property value (allows for testing with unique constraint)";
+               "Runs in three indexing scenarios: no index, schema index, unique constraint.\n" +
+               "Method:\n" +
+               "- Every node has exactly one, same label\n" +
+               "- Every node has exactly one property, same and the property (key)\n" +
+               "- During store creation, property values are assigned with ascending policy, to guaranty uniqueness\n" +
+               "- When reading, property value generation is uniform random, to spread load across store\n" +
+               "Outcome:\n" +
+               "- Accesses are spread evenly across the store\n" +
+               "- No two nodes will have the same property value (allows for testing with unique constraint)";
     }
 
     @Override

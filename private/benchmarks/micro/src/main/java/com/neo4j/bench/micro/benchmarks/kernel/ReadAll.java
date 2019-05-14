@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -30,9 +30,7 @@ import static com.neo4j.bench.micro.benchmarks.core.ReadAll.LABEL;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.RELATIONSHIP_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.RELATIONSHIP_DEFINITION;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 
 @BenchmarkEnabled( true )

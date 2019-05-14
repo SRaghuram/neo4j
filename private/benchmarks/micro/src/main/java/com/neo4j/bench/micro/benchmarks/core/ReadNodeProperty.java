@@ -5,6 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.PropertyDefinition;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -13,13 +20,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.PropertyDefinition;
 
 import org.neo4j.graphdb.Transaction;
 
@@ -76,14 +76,14 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of retrieving properties from nodes that have a single property.\n" +
-                "Method:\n" +
-                "- Every node has the same property (with different values)\n" +
-                "- During store creation, property values are generated with uniform random policy\n" +
-                "- When reading, node IDs are selected using two different policies: same, random\n" +
-                "--- same: Same node accessed every time. Best cache hit rate. Test cached performance.\n" +
-                "--- random: Random node accessed every time. Worst cache hit rate. Test non-cached performance.\n" +
-                "Outcome:\n" +
-                "- Tests performance of property reading in cached & non-cached scenarios";
+               "Method:\n" +
+               "- Every node has the same property (with different values)\n" +
+               "- During store creation, property values are generated with uniform random policy\n" +
+               "- When reading, node IDs are selected using two different policies: same, random\n" +
+               "--- same: Same node accessed every time. Best cache hit rate. Test cached performance.\n" +
+               "--- random: Random node accessed every time. Worst cache hit rate. Test non-cached performance.\n" +
+               "Outcome:\n" +
+               "- Tests performance of property reading in cached & non-cached scenarios";
     }
 
     @Override

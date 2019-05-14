@@ -5,17 +5,16 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -127,12 +126,12 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractCoreBen
     public String description()
     {
         return "Tests impact on performance of having many unused indexes.\n" +
-                "Specifically, when creating and deleting properties via GraphDatabaseService::remove/setProperty.\n" +
-                "Benchmark invariants:\n" +
-                "- All nodes have the same number of properties\n" +
-                "- Number of properties on each node is stable throughout the experiment\n" +
-                "- The set of properties between any two nodes may differ by at most two\n" +
-                "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
+               "Specifically, when creating and deleting properties via GraphDatabaseService::remove/setProperty.\n" +
+               "Benchmark invariants:\n" +
+               "- All nodes have the same number of properties\n" +
+               "- Number of properties on each node is stable throughout the experiment\n" +
+               "- The set of properties between any two nodes may differ by at most two\n" +
+               "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
     }
 
     @Override
@@ -173,21 +172,21 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractCoreBen
     private LabelKeyDefinition[] indexes()
     {
         return IntStream.range( 0, CreateDeleteNodePropertiesWithUnusedIndexes_indexCount )
-                .mapToObj( i -> new LabelKeyDefinition(
-                        Label.label(
-                                "Indexed" + (i / CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ),
-                        UNUSED_KEY_PREFIX + (i % CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ) )
-                .toArray( LabelKeyDefinition[]::new );
+                        .mapToObj( i -> new LabelKeyDefinition(
+                                Label.label(
+                                        "Indexed" + (i / CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ),
+                                UNUSED_KEY_PREFIX + (i % CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ) )
+                        .toArray( LabelKeyDefinition[]::new );
     }
 
     private PropertyDefinition[] properties()
     {
         return IntStream.range( 0, CreateDeleteNodePropertiesWithUnusedIndexes_propertyCount )
-                .mapToObj( i ->
-                        new PropertyDefinition(
-                                CreateDeleteNodePropertiesWithUnusedIndexes_type + "_" + i,
-                                randPropertyFor( CreateDeleteNodePropertiesWithUnusedIndexes_type ).value() ) )
-                .toArray( PropertyDefinition[]::new );
+                        .mapToObj( i ->
+                                           new PropertyDefinition(
+                                                   CreateDeleteNodePropertiesWithUnusedIndexes_type + "_" + i,
+                                                   randPropertyFor( CreateDeleteNodePropertiesWithUnusedIndexes_type ).value() ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     private String[] keys()
@@ -213,8 +212,8 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractCoreBen
                 CreateDeleteNodePropertiesWithUnusedIndexes benchmarkState,
                 RNGState rngState )
         {
-            int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
-            int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
+            int threads = threadCountForSubgroupInstancesOf( threadParams );
+            int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
                     LNG,
                     threads,

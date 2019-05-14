@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.DataGenerator.Order
 import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
 import com.neo4j.bench.micro.data.Plans._
@@ -15,8 +15,7 @@ import com.neo4j.bench.micro.data._
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
 import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans._
-import org.neo4j.cypher.internal.v3_5.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.v3_5.logical.plans.{IndexOrderNone, _}
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -25,7 +24,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class CompositeIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var CompositeIndexSeek_runtime: String = _
@@ -65,7 +64,7 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
 
   lazy val properties: Array[PropertyDefinition] =
     Array.range(0, CompositeIndexSeek_propertyCount)
-      .map(i => new PropertyDefinition(s"${CompositeIndexSeek_type}_$i", discrete(buckets: _*)))
+    .map(i => new PropertyDefinition(s"${CompositeIndexSeek_type}_$i", discrete(buckets: _*)))
 
   lazy val index: LabelKeyDefinition = new LabelKeyDefinition(LABEL, keys: _*)
 
@@ -88,9 +87,9 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
     // TODO assuming this property key id mapping only works when properties are written in ORDERED order, not SHUFFLED
     // TODO if store was available at this point it would be possible to retrieve this info from the store
     val keyTokens = Seq.range(0, CompositeIndexSeek_propertyCount)
-      .map(i => IndexedProperty(astPropertyKeyToken(properties(i).key(), planContext), DoNotGetValue))
+                    .map(i => IndexedProperty(astPropertyKeyToken(properties(i).key(), planContext), DoNotGetValue))
     val seekExpressions = Seq.range(0, CompositeIndexSeek_propertyCount)
-      .map(_ => SingleQueryExpression(astLiteralFor(buckets(0), CompositeIndexSeek_type)))
+                          .map(_ => SingleQueryExpression(astLiteralFor(buckets(0), CompositeIndexSeek_type)))
     val indexSeek = plans.NodeIndexSeek(
       nodeIdName,
       labelToken,

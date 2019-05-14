@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.values;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.Range;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -31,7 +31,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )

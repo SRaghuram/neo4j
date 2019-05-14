@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util.Collections
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{DBL, LNG, STR_SML, _}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, Semanti
 import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.cypher.internal.v3_5.logical.plans.Ascending
 import org.neo4j.cypher.internal.v3_5.util.symbols
-import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -29,7 +29,7 @@ import scala.collection.mutable
 @BenchmarkEnabled(true)
 class Top extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Top_runtime: String = _

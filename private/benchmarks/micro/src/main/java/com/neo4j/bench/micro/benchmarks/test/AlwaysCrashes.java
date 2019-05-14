@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.test;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;

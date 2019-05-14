@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.CRS;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -109,9 +109,9 @@ public class CreateIndexNonUnique extends AbstractCreateIndex
     public String description()
     {
         return "Tests performance of schema index creation.\n" +
-                "Benchmark generates a store with nodes and properties.\n" +
-                "Each node has exactly one property.\n" +
-                "Property values assigned with skewed policy, there are three, with frequency 1:10:100.";
+               "Benchmark generates a store with nodes and properties.\n" +
+               "Each node has exactly one property.\n" +
+               "Property values assigned with skewed policy, there are three, with frequency 1:10:100.";
     }
 
     @TearDown( Level.Iteration )
