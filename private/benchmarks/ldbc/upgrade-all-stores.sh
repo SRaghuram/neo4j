@@ -44,10 +44,10 @@ for i in "${dbs[@]}"; do
     
     echo "---------------"
     echo "Preparing temporary locations"
-	temp_old_db_path="$working_dir/"$(basename $(mktemp -d -u))
+	temp_old_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 	mkdir -p "$temp_old_db_path/graph.db"
 	
-	temp_new_db_path="$working_dir/"$(basename $(mktemp -d -u))
+	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 	
     echo "Temporary old db path : ${temp_old_db_path}"
     echo "Temporary new db path : ${temp_new_db_path}"
