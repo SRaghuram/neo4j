@@ -8,7 +8,6 @@ package org.neo4j.procedure.commercial.builtin;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -56,14 +55,14 @@ public class TransactionStatusResult
 
     public TransactionStatusResult( KernelTransactionHandle transaction,
             TransactionDependenciesResolver transactionDependenciesResolver,
-            Map<KernelTransactionHandle,List<QuerySnapshot>> handleSnapshotsMap, ZoneId zoneId ) throws InvalidArgumentsException
+            Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleSnapshotsMap, ZoneId zoneId ) throws InvalidArgumentsException
     {
         this.transactionId = transaction.getUserTransactionName();
         this.username = transaction.subject().username();
         this.startTime = ProceduresTimeFormatHelper.formatTime( transaction.startTime(), zoneId );
         Optional<Status> terminationReason = transaction.terminationReason();
         this.activeLockCount = transaction.activeLocks().count();
-        List<QuerySnapshot> querySnapshots = handleSnapshotsMap.get( transaction );
+        Optional<QuerySnapshot> querySnapshot = handleSnapshotsMap.get( transaction );
         TransactionExecutionStatistic statistic = transaction.transactionStatistic();
         elapsedTimeMillis = statistic.getElapsedTimeMillis();
         cpuTimeMillis = statistic.getCpuTimeMillis();
@@ -74,9 +73,9 @@ public class TransactionStatusResult
         pageHits = statistic.getPageHits();
         pageFaults = statistic.getPageFaults();
 
-        if ( !querySnapshots.isEmpty() )
+        if ( querySnapshot.isPresent() )
         {
-            QuerySnapshot snapshot = querySnapshots.get( 0 );
+            QuerySnapshot snapshot = querySnapshot.get();
             this.currentQueryId = QueryId.ofInternalId( snapshot.internalQueryId() ).toString();
             this.currentQuery = snapshot.queryText();
         }

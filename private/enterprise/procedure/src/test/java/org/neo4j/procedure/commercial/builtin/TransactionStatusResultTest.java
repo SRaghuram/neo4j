@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.time.ZoneId;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -58,10 +58,7 @@ import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -78,13 +75,13 @@ class TransactionStatusResultTest
 {
 
     private TestKernelTransactionHandle transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction() );
-    private final HashMap<KernelTransactionHandle,List<QuerySnapshot>> snapshotsMap = new HashMap<>();
+    private final HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> snapshotsMap = new HashMap<>();
     private final TransactionDependenciesResolver blockerResolver = new TransactionDependenciesResolver( snapshotsMap );
 
     @Test
     void statusOfTransactionWithSingleQuery() throws InvalidArgumentsException
     {
-        snapshotsMap.put( transactionHandle, singletonList( createQuerySnapshot( 7L ) ) );
+        snapshotsMap.put( transactionHandle, Optional.of( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
                 new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
 
@@ -94,7 +91,7 @@ class TransactionStatusResultTest
     @Test
     void statusOfTransactionWithoutRunningQuery() throws InvalidArgumentsException
     {
-        snapshotsMap.put( transactionHandle, emptyList() );
+        snapshotsMap.put( transactionHandle, Optional.empty() );
         TransactionStatusResult statusResult =
                 new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
 
@@ -102,19 +99,9 @@ class TransactionStatusResultTest
     }
 
     @Test
-    void statusOfTransactionWithMultipleQueries() throws InvalidArgumentsException
-    {
-        snapshotsMap.put( transactionHandle, asList( createQuerySnapshot( 7L ), createQuerySnapshot( 8L ) ) );
-        TransactionStatusResult statusResult =
-                new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
-
-        checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T00:00:01.984Z" );
-    }
-
-    @Test
     void statusOfTransactionWithDifferentTimeZone() throws InvalidArgumentsException
     {
-        snapshotsMap.put( transactionHandle, singletonList( createQuerySnapshot( 7L ) ) );
+        snapshotsMap.put( transactionHandle, Optional.of( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
                 new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC+1" ) );
 
@@ -124,7 +111,7 @@ class TransactionStatusResultTest
     @Test
     void emptyInitialisationStacktraceWhenTraceNotAvailable() throws InvalidArgumentsException
     {
-        snapshotsMap.put( transactionHandle, emptyList() );
+        snapshotsMap.put( transactionHandle, Optional.empty() );
         TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
         assertEquals( EMPTY, statusResult.initializationStackTrace );
     }
@@ -133,7 +120,7 @@ class TransactionStatusResultTest
     void includeInitialisationStacktraceWhenTraceAvailable() throws InvalidArgumentsException
     {
         transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction(), true );
-        snapshotsMap.put( transactionHandle, emptyList() );
+        snapshotsMap.put( transactionHandle, Optional.empty() );
         TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
         assertThat( statusResult.initializationStackTrace, containsString( "Transaction initialization stacktrace." ) );
     }

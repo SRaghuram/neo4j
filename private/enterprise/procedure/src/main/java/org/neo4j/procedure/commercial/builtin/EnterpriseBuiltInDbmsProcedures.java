@@ -12,9 +12,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -315,7 +317,7 @@ public class EnterpriseBuiltInDbmsProcedures
         try
         {
             return getKernelTransactions().activeTransactions().stream()
-                .flatMap( KernelTransactionHandle::executingQueries )
+                .flatMap( k -> k.executingQuery().stream() )
                     .filter( query -> isAdminOrSelf( query.username() ) )
                     .map( catchThrown( InvalidArgumentsException.class,
                             query -> new QueryStatusResult( query, nodeManager, zoneId ) ) );
@@ -338,7 +340,7 @@ public class EnterpriseBuiltInDbmsProcedures
                     .filter( transaction -> isAdminOrSelf( transaction.subject().username() ) )
                     .collect( toSet() );
 
-            Map<KernelTransactionHandle,List<QuerySnapshot>> handleQuerySnapshotsMap = handles.stream()
+            Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleQuerySnapshotsMap = handles.stream()
                     .collect( toMap( identity(), getTransactionQueries() ) );
 
             TransactionDependenciesResolver transactionBlockerResolvers =
@@ -393,11 +395,9 @@ public class EnterpriseBuiltInDbmsProcedures
         return new TransactionMarkForTerminationResult( transactionId, handle.subject().username() );
     }
 
-    private static Function<KernelTransactionHandle,List<QuerySnapshot>> getTransactionQueries()
+    private static Function<KernelTransactionHandle,Optional<QuerySnapshot>> getTransactionQueries()
     {
-        return transactionHandle -> transactionHandle.executingQueries()
-                                              .map( ExecutingQuery::snapshot )
-                                              .collect( toList() );
+        return transactionHandle -> transactionHandle.executingQuery().map( ExecutingQuery::snapshot );
     }
 
     @Description( "List the active lock requests granted for the transaction executing the query with the given query id." )
@@ -428,7 +428,8 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             long queryId = QueryId.fromExternalString( idText ).kernelQueryId();
 
-            Set<Pair<KernelTransactionHandle,ExecutingQuery>> querys = getActiveTransactions( tx -> executingQueriesWithId( queryId, tx ) ).collect( toSet() );
+            Set<Pair<KernelTransactionHandle,Optional<ExecutingQuery>>> querys =
+                    getActiveTransactions( tx -> executingQueriesWithId( queryId, tx ) ).collect( toSet() );
             boolean killQueryVerbose = resolver.resolveDependency( Config.class ).get( GraphDatabaseSettings.kill_query_verbose );
             if ( killQueryVerbose && querys.isEmpty() )
             {
@@ -505,33 +506,34 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    private <T> Stream<Pair<KernelTransactionHandle, T>> getActiveTransactions(
-            Function<KernelTransactionHandle,Stream<T>> selector
+    private <T> Stream<Pair<KernelTransactionHandle, Optional<ExecutingQuery>>> getActiveTransactions( Predicate<KernelTransactionHandle> predicate
     )
     {
         return getActiveTransactions( graph.getDependencyResolver() )
             .stream()
-            .flatMap( tx -> selector.apply( tx ).map( data -> Pair.of( tx, data ) ) );
+            .filter( predicate )
+            .map( tx -> Pair.of( tx, tx.executingQuery() ) );
     }
 
-    private static Stream<ExecutingQuery> executingQueriesWithIds( Set<Long> ids, KernelTransactionHandle txHandle )
+    private static boolean executingQueriesWithIds( Set<Long> ids, KernelTransactionHandle txHandle )
     {
-        return txHandle.executingQueries().filter( q -> ids.contains( q.internalQueryId() ) );
+        return txHandle.executingQuery().map( q -> ids.contains( q.internalQueryId() ) ).orElse( false );
     }
 
-    private static Stream<ExecutingQuery> executingQueriesWithId( long id, KernelTransactionHandle txHandle )
+    private static boolean executingQueriesWithId( long id, KernelTransactionHandle txHandle )
     {
-        return txHandle.executingQueries().filter( q -> q.internalQueryId() == id );
+        return txHandle.executingQuery().map( q -> q.internalQueryId() == id ).orElse( false );
     }
 
-    private QueryTerminationResult killQueryTransaction( Pair<KernelTransactionHandle, ExecutingQuery> pair )
+    private QueryTerminationResult killQueryTransaction( Pair<KernelTransactionHandle, Optional<ExecutingQuery>> pair )
             throws InvalidArgumentsException
     {
-        ExecutingQuery query = pair.other();
-        if ( isAdminOrSelf( query.username() ) )
+        Optional<ExecutingQuery> query = pair.other();
+        ExecutingQuery executingQuery = query.orElseThrow( () -> new IllegalStateException( "Query should exist since we filtered based on query ids" ) );
+        if ( isAdminOrSelf( executingQuery.username() ) )
         {
             pair.first().markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( QueryId.ofInternalId( query.internalQueryId() ), query.username() );
+            return new QueryTerminationResult( QueryId.ofInternalId( executingQuery.internalQueryId() ), executingQuery.username() );
         }
         else
         {
@@ -539,17 +541,20 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    private Stream<ActiveLocksResult> getActiveLocksForQuery( Pair<KernelTransactionHandle, ExecutingQuery> pair )
+    private Stream<ActiveLocksResult> getActiveLocksForQuery( Pair<KernelTransactionHandle, Optional<ExecutingQuery>> pair )
     {
-        ExecutingQuery query = pair.other();
-        if ( isAdminOrSelf( query.username() ) )
+        Optional<ExecutingQuery> query = pair.other();
+        return query.map( q ->
         {
-            return pair.first().activeLocks().map( ActiveLocksResult::new );
-        }
-        else
-        {
-            throw new AuthorizationViolationException( PERMISSION_DENIED );
-        }
+            if ( isAdminOrSelf( q.username() ) )
+            {
+                return pair.first().activeLocks().map( ActiveLocksResult::new );
+            }
+            else
+            {
+                throw new AuthorizationViolationException( PERMISSION_DENIED );
+            }
+        } ).orElse( Stream.empty() );
     }
 
     private KernelTransactions getKernelTransactions()
