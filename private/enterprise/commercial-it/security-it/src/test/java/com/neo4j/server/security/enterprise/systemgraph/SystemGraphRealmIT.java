@@ -11,6 +11,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,6 +122,21 @@ class SystemGraphRealmIT
         log.assertExactly(
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
         );
+    }
+
+    @Test
+    void shouldSetInitialUserAsAdminWithChangedPassword() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .initialUser( "neo4j1", false )
+                .build(), securityLog, dbManager
+        );
+
+        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertIncorrectCredentials( realm, UserManager.INITIAL_USER_NAME, UserManager.INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME, "neo4j1" );
     }
 
     // In alignment with InternalFlatFileRealm we prevent this case (the admin tool currently does not allow it anyways)
@@ -475,5 +491,14 @@ class SystemGraphRealmIT
 
         // Also test the non-cached result explicitly
         assertThrows( AuthenticationException.class, () -> realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+    }
+
+    private static void assertIncorrectCredentials( SystemGraphRealm realm, String username, String password )
+    {
+        // Try twice to rule out differences if authentication info has been cached or not
+        for ( int i = 0; i < 2; i++ )
+        {
+            assertThrows( IncorrectCredentialsException.class, () -> realm.getAuthenticationInfo( testAuthenticationToken( username, password ) ) );
+        }
     }
 }

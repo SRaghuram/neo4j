@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -28,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPasswordWithSameLengthAs;
@@ -72,6 +76,27 @@ class BasicSystemGraphRealmIT
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertTrue( user.credentials().matchesPassword( password("123") ) );
+        assertFalse( user.passwordChangeRequired() );
+    }
+
+    @Test
+    void shouldLoadInitialUserWithInitialPassword() throws Throwable
+    {
+        // Given simulation of the set-initial-password
+        OutsideWorld mock = mock( OutsideWorld.class );
+        when( mock.fileSystem() ).thenReturn( testDirectory.getFileSystem() );
+        SetInitialPasswordCommand setPasswordCommand = new SetInitialPasswordCommand( testDirectory.directory().toPath(),
+                testDirectory.directory( "conf" ).toPath(), mock );
+        setPasswordCommand.execute( new String[]{"neo4j1"} );
+
+        // When
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+
+        // Then
+        final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
         assertFalse( user.passwordChangeRequired() );
     }
 

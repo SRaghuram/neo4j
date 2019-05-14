@@ -6,21 +6,28 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import java.time.Clock;
+import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
+import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
 
@@ -29,11 +36,26 @@ class TestBasicSystemGraphRealm
     static BasicSystemGraphRealm testRealm( BasicImportOptionsBuilder importOptions, DatabaseManager<?> dbManager ) throws Throwable
     {
         ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
-        return testRealm( importOptions, newRateLimitedAuthStrategy(), executor );
+        return testRealm( importOptions.migrationSupplier(), importOptions.initalUserSupplier(), newRateLimitedAuthStrategy(), executor );
+    }
+
+    static BasicSystemGraphRealm testRealm( DatabaseManager<?> dbManager, TestDirectory testDirectory ) throws Throwable
+    {
+        Config config = Config.defaults();
+        config.augment(  DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString()  );
+        LogProvider logProvider = mock(LogProvider.class);
+        FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
+
+        Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
+        Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
+
+        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        return testRealm( migrationUserRepositorySupplier, initialUserRepositorySupplier, newRateLimitedAuthStrategy(), executor );
     }
 
     private static BasicSystemGraphRealm testRealm(
-            BasicImportOptionsBuilder importOptions,
+            Supplier<UserRepository> migrationSupplier,
+            Supplier<UserRepository> initialUserSupplier,
             AuthenticationStrategy authStrategy,
             QueryExecutor executor ) throws Throwable
     {
@@ -43,8 +65,8 @@ class TestBasicSystemGraphRealm
                 new BasicSystemGraphInitializer(
                         executor,
                         systemGraphOperations,
-                        importOptions.migrationSupplier(),
-                        importOptions.initalUserSupplier(),
+                        migrationSupplier,
+                        initialUserSupplier,
                         secureHasher,
                         mock(Log.class)
                 );
