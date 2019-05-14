@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.micro.config.BenchmarkConfigFile;
-import com.neo4j.bench.micro.config.BenchmarkDescription;
-import com.neo4j.bench.micro.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
+import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import io.airlift.airline.Command;
 
 import java.util.Set;
@@ -25,9 +25,9 @@ public class ConfigDefaultCommand extends ConfigCommandBase
 
         SuiteDescription suiteDescription = allBenchmarks();
         Set<String> enabledBenchmarks = suiteDescription.benchmarks().stream()
-                .filter( BenchmarkDescription::isEnabled )
-                .map( BenchmarkDescription::className )
-                .collect( toSet() );
+                                                        .filter( BenchmarkDescription::isEnabled )
+                                                        .map( BenchmarkDescription::className )
+                                                        .collect( toSet() );
 
         BenchmarkConfigFile.write(
                 suiteDescription,
