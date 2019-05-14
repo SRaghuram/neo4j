@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.helper.VolatileFuture;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
@@ -18,7 +17,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.concurrent.TimeoutException;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -36,7 +34,7 @@ class RaftOutcomeApplier implements LeaderLocator
     private final RaftLogShippingManager logShipping;
     private final RaftMembershipManager membershipManager;
 
-    private final VolatileFuture<MemberId> volatileLeader = new VolatileFuture<>( null );
+    private volatile MemberId leaderId;
     private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
     RaftOutcomeApplier( RaftState state, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
@@ -61,7 +59,7 @@ class RaftOutcomeApplier implements LeaderLocator
         handleTimers( outcome );
         handleLogShipping( outcome );
 
-        volatileLeader.set( outcome.getLeader() );
+        leaderId = outcome.getLeader();
 
         if ( newLeaderWasElected )
         {
@@ -148,20 +146,12 @@ class RaftOutcomeApplier implements LeaderLocator
     @Override
     public MemberId getLeader() throws NoLeaderFoundException
     {
-        try
+        var leaderId = this.leaderId;
+        if ( leaderId == null )
         {
-            return volatileLeader.get( 0L, Objects::nonNull );
+            throw new NoLeaderFoundException();
         }
-        catch ( InterruptedException e )
-        {
-            Thread.currentThread().interrupt();
-
-            throw new NoLeaderFoundException( e );
-        }
-        catch ( TimeoutException e )
-        {
-            throw new NoLeaderFoundException( e );
-        }
+        return leaderId;
     }
 
     @Override
