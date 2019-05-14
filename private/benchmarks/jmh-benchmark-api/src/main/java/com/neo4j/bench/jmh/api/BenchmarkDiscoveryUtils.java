@@ -224,7 +224,7 @@ public class BenchmarkDiscoveryUtils
         }
     }
 
-    private static Class benchmarkClassForName( String benchmarkClassName )
+    public static Class benchmarkClassForName( String benchmarkClassName )
     {
         try
         {

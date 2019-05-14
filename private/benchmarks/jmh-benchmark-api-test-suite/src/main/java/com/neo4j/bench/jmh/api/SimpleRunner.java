@@ -37,7 +37,6 @@ public class SimpleRunner extends Runner
     protected ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                        ProfilerType profilerType,
                                                        Path workDir,
-                                                       ErrorReporter errorReporter,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
         return augmentOptions( optionsBuilder );
@@ -52,7 +51,6 @@ public class SimpleRunner extends Runner
     @Override
     protected ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
                                                           Path workDir,
-                                                          ErrorReporter errorReporter,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
         return augmentOptions( optionsBuilder );

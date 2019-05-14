@@ -38,11 +38,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromFile;
-import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled;
 import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.jmh.api.config.Validation.assertValid;
@@ -126,15 +124,13 @@ public abstract class Runner
             Jvm jvm,
             Path profilerRecordingsOutputDir )
     {
+        BenchmarkUtil.assertDirectoryExists( workDir );
+
         Instant start = Instant.now();
 
         try
         {
             BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-
-            // build modifier only used in interactive mode, to apply benchmark annotations to JMH configuration
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier = ( builder, className ) ->
-            {/* do nothing*/};
 
             // each benchmark description will represent 1 method and 1 combination of param values, i.e., one benchmark
             // necessary to ensure only specific failing benchmarks are excluded from results, not all for a given class
@@ -164,8 +160,7 @@ public abstract class Runner
                         threadCounts,
                         profilerTypes,
                         workDir,
-                        errorReporter,
-                        builderModifier );
+                        errorReporter );
 
                 if ( benchmarksWithProfiles.isEmpty() )
                 {
@@ -181,8 +176,7 @@ public abstract class Runner
                             jmhArgs,
                             threadCounts,
                             workDir,
-                            errorReporter,
-                            builderModifier );
+                            errorReporter );
 
                     if ( !profilerTypes.isEmpty() )
                     {
@@ -235,7 +229,6 @@ public abstract class Runner
     protected abstract ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                                 ProfilerType profilerType,
                                                                 Path workDir,
-                                                                ErrorReporter errorReporter,
                                                                 ChainedOptionsBuilder optionsBuilder );
 
     /**
@@ -255,7 +248,6 @@ public abstract class Runner
      */
     protected abstract ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
                                                                    Path workDir,
-                                                                   ErrorReporter errorReporter,
                                                                    ChainedOptionsBuilder optionsBuilder );
 
     /**
@@ -273,8 +265,7 @@ public abstract class Runner
             int[] threadCounts,
             List<ProfilerType> profilerTypes,
             Path workDir,
-            ErrorReporter errorReporter,
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier )
+            ErrorReporter errorReporter )
     {
         System.out.println( "\n\n" );
         System.out.println( "------------------------------------------------------------------------" );
@@ -302,15 +293,14 @@ public abstract class Runner
                                     threadCount,
                                     jvm,
                                     jvmArgs );
-                            JmhOptionsUtil
-                                    .applyOptions( builder, new CommandLineOptions( jmhArgs ) )
-                                    .addProfiler( profiler )
-                                    .forks( 1 );
-                            builderModifier.accept( builder, benchmark.className() );
-
-                            ChainedOptionsBuilder modifiedBuilder = beforeProfilerRun( benchmark, profilerType, workDir, errorReporter, builder );
-
-                            Options options = modifiedBuilder.build();
+                            // profile using exactly one profiler
+                            builder = builder.addProfiler( profiler )
+                                             .forks( 1 );
+                            // allow Runner implementation to override/enrich JMH configuration
+                            builder = beforeProfilerRun( benchmark, profilerType, workDir, builder );
+                            // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
+                            builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
+                            Options options = builder.build();
                             // sanity check, make sure provided benchmarks were correctly exploded
                             JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
@@ -342,8 +332,7 @@ public abstract class Runner
             String[] jmhArgs,
             int[] threadCounts,
             Path workDir,
-            ErrorReporter errorReporter,
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier )
+            ErrorReporter errorReporter )
     {
         System.out.println( "\n\n" );
         System.out.println( "-------------------------------------------------------------------------" );
@@ -365,14 +354,13 @@ public abstract class Runner
                                 threadCount,
                                 jvm,
                                 jvmArgs );
-                        JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
-                        builderModifier.accept( builder, benchmark.className() );
-
-                        ChainedOptionsBuilder modifiedBuilder = beforeMeasurementRun( benchmark, workDir, errorReporter, builder );
-
-                        Options options = modifiedBuilder.build();
+                        // allow Runner implementation to override/enrich JMH configuration
+                        builder = beforeMeasurementRun( benchmark, workDir, builder );
+                        // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
+                        builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
+                        Options options = builder.build();
                         // sanity check, make sure provided benchmarks were correctly exploded
-                        assertExactlyOneBenchmarkIsEnabled( options );
+                        JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
                         executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics );
                     }
