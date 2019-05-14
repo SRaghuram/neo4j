@@ -5,7 +5,9 @@
  */
 package org.neo4j.ssl;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,11 +74,19 @@ public class KeyStoreSslPolicyLoaderIT
         this.keyPass = format.equals( PKCS12 ) ? KEYSTORE_PASS : "barquux";
     }
 
+    @Before
+    public void setUp()
+    {
+        assumeFormatSupported();
+
+        UUID random = UUID.randomUUID();
+        this.serverDir = testDirectory.directory( "base_directory_server_" + random );
+        this.clientDir = testDirectory.directory( "base_directory_client_" + random );
+    }
+
     @Test
     public void shouldConnectWithServerTrustedByClient() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).build();
 
@@ -100,8 +110,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldConnectWithServerTrustedByClientWithSeparateTrustStoreFile() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).build();
 
@@ -129,8 +137,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldConnectWithCATrustedCert() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).build();
 
@@ -154,8 +160,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldNotConnectWithoutTrustedCerts() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).build();
 
@@ -175,8 +179,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldConnectWithTrustAllAndNoTrustedCerts() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.trust_all, "true" ).build();
 
@@ -197,8 +199,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldNotConnectIfHostnameValidationRequestedAndHostsDoNotMatch() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "something" ).build();
 
@@ -222,8 +222,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldConnectIfHostnameValidationOffAndHostsDoNotMatch() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "something" ).withSetting( SSL_POLICY_CONFIG.verify_hostname, "false" ).build();
 
@@ -247,8 +245,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldNotConnectWithClientAuthIfClientDoesNotTrustServer() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
 
@@ -272,8 +268,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldConnectWithClientAuthAndMutuallyTrustedCerts() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
 
@@ -297,8 +291,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldNotCommunicateIfCiphersDoNotMatch() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.ciphers, "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" ).build();
 
@@ -322,8 +314,6 @@ public class KeyStoreSslPolicyLoaderIT
     @Test
     public void shouldNotCommunicateIfTlsVersionsDoNotMatch() throws Throwable
     {
-        setUp();
-
         // given server
         Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.tls_versions, TLSV1_2 ).build();
 
@@ -346,7 +336,7 @@ public class KeyStoreSslPolicyLoaderIT
 
     private Config.Builder aConfig( File baseDirectory, String hostName ) throws IOException, InterruptedException
     {
-        exec( baseDirectory,"keytool", "-genkey", "-alias", "test", "-keystore", KEYSTORE, "-storetype", format, "-storepass", KEYSTORE_PASS,
+        exec( baseDirectory, getKeyToolPath(), "-genkey", "-alias", "test", "-keystore", KEYSTORE, "-storetype", format, "-storepass", KEYSTORE_PASS,
                 "-keypass", keyPass, "-keyalg", "RSA", "-dname", String.format( "cn=%s, ou=test, o=neo4j, l=london, st=european union, c=eu", hostName ) );
 
         File revoked = new File( baseDirectory, "revoked" );
@@ -371,6 +361,11 @@ public class KeyStoreSslPolicyLoaderIT
                 .withSetting( SSL_POLICY_CONFIG.verify_hostname, "true" );
     }
 
+    private static String getKeyToolPath()
+    {
+        return Path.of( SystemUtils.getJavaHome().getAbsolutePath(), "bin", "keytool" ).toString();
+    }
+
     private void signServerCertWithCAAndCopyCACertToClientTrustedCertEntry( File serverBaseDir, File clientBaseDir ) throws IOException, InterruptedException
     {
         String certReq = "certreq";
@@ -379,28 +374,29 @@ public class KeyStoreSslPolicyLoaderIT
         String ca = "ca";
 
         // Create CA
-        exec( serverBaseDir,"keytool", "-genkey", "-alias", CA_ALIAS, "-keystore", KEYSTORE, "-storetype", format, "-storepass", KEYSTORE_PASS,
+        String keyToolPath = getKeyToolPath();
+        exec( serverBaseDir, keyToolPath, "-genkey", "-alias", CA_ALIAS, "-keystore", KEYSTORE, "-storetype", format, "-storepass", KEYSTORE_PASS,
                 "-keypass", keyPass, "-keyalg", "RSA", "-dname", "cn=ca, ou=test, o=neo4j, l=london, st=european union, c=eu", "-ext", "bc=ca:true" );
 
         // Generate cert req for server
-        exec( serverBaseDir, "keytool", "-certreq", "-alias", KEYPAIR_ALIAS, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
+        exec( serverBaseDir, keyToolPath, "-certreq", "-alias", KEYPAIR_ALIAS, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
                 "-file", certReq, "-keypass", keyPass,  "-keyalg", "rsa" );
 
         // Sign cert req
-        exec( serverBaseDir,"keytool", "-gencert", "-alias", CA_ALIAS, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
+        exec( serverBaseDir, keyToolPath, "-gencert", "-alias", CA_ALIAS, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
                 "-infile", certReq, "-outfile", signed, "-keypass", keyPass, "-ext", "san=dns:localhost" );
 
         // Import cert req
-        exec( serverBaseDir, "keytool", "-importcert", "-alias", KEYPAIR_ALIAS, "-keystore", KEYSTORE, "-file", signed, "-deststoretype", format,
+        exec( serverBaseDir, keyToolPath, "-importcert", "-alias", KEYPAIR_ALIAS, "-keystore", KEYSTORE, "-file", signed, "-deststoretype", format,
                 "-storepass", KEYSTORE_PASS, "-keypass", keyPass, "-noprompt" );
 
         // Export CA cert
-        exec( serverBaseDir, "keytool", "-exportcert", "-alias", CA_ALIAS, "-file", ca, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
+        exec( serverBaseDir, keyToolPath, "-exportcert", "-alias", CA_ALIAS, "-file", ca, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
                 "-keypass", keyPass );
 
         // Trust CA cert on client
         Path exportedFile = serverBaseDir.toPath().resolve( ca );
-        exec( clientBaseDir, "keytool", "-importcert", "-alias", TRUSTED_ALIAS, "-keystore", KEYSTORE, "-file", exportedFile.toString(),
+        exec( clientBaseDir, keyToolPath, "-importcert", "-alias", TRUSTED_ALIAS, "-keystore", KEYSTORE, "-file", exportedFile.toString(),
                 "-deststoretype", format, "-storepass", KEYSTORE_PASS, "-noprompt" );
 
         Files.delete( exportedFile );
@@ -410,18 +406,19 @@ public class KeyStoreSslPolicyLoaderIT
             throws IOException, InterruptedException
     {
         String filename = "cer.cer";
-        exec( serverBaseDir, "keytool", "-exportcert", "-alias", KEYPAIR_ALIAS, "-file", filename, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
+        String keyToolPath = getKeyToolPath();
+        exec( serverBaseDir, keyToolPath, "-exportcert", "-alias", KEYPAIR_ALIAS, "-file", filename, "-keystore", KEYSTORE, "-storepass", KEYSTORE_PASS,
                         "-keypass", keyPass );
 
         Path exportedFile = serverBaseDir.toPath().resolve( filename );
 
-        exec( clientBaseDir, "keytool", "-importcert", "-alias", TRUSTED_ALIAS, "-keystore", trustStore, "-file", exportedFile.toString(),
+        exec( clientBaseDir, keyToolPath, "-importcert", "-alias", TRUSTED_ALIAS, "-keystore", trustStore, "-file", exportedFile.toString(),
                 "-deststoretype", format, "-storepass", storePass, "-noprompt" );
 
         Files.delete( exportedFile );
     }
 
-    private void exec( File directory, String... commands ) throws IOException, InterruptedException
+    private static void exec( File directory, String... commands ) throws IOException, InterruptedException
     {
         new ProcessBuilder()
                 .command( commands )
@@ -430,15 +427,6 @@ public class KeyStoreSslPolicyLoaderIT
                 .redirectError( ProcessBuilder.Redirect.appendTo( directory.toPath().resolve( "error" ).toFile() ) )
                 .start()
                 .waitFor( 30, TimeUnit.SECONDS );
-    }
-
-    public void setUp()
-    {
-        assumeFormatSupported();
-
-        UUID random = UUID.randomUUID();
-        this.serverDir = testDirectory.directory( "base_directory_server_" + random );
-        this.clientDir = testDirectory.directory( "base_directory_client_" + random );
     }
 
     private void assumeFormatSupported()
