@@ -6,28 +6,50 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.neo4j.bench.client.ClientUtil;
+import com.neo4j.bench.client.model.BenchmarkConfig;
+import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.BranchAndVersion;
 import com.neo4j.bench.client.model.Edition;
+import com.neo4j.bench.client.model.Environment;
+import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Neo4j;
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.Repository;
+import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.micro.profile.ProfileDescriptor;
+import com.neo4j.bench.jmh.api.Runner;
+import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.io.fs.FileUtils;
+
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
+import static com.neo4j.bench.client.util.Args.concatArgs;
 import static com.neo4j.bench.client.util.Args.splitArgs;
+import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
 
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunExportCommand implements Runnable
@@ -136,7 +158,7 @@ public class RunExportCommand implements Runnable
             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
             title = "JVM Args",
             required = false )
-    private String jvmArgs = "";
+    private String jvmArgsString = "";
 
     private static final String CMD_BENCHMARK_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
@@ -145,14 +167,6 @@ public class RunExportCommand implements Runnable
             title = "Benchmark Configuration",
             required = false )
     private File benchConfigFile;
-
-    private static final String CMD_NEO4J_PACKAGE = "--neo4j_package_for_jvm_args";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_PACKAGE},
-            description = "Extract default product JVM args from Neo4j tar.gz package",
-            title = "Neo4j package containing JVM args",
-            required = false )
-    private File neo4jPackageForJvmArgs;
 
     private static final String CMD_JMH_ARGS = "--jmh";
     @Option( type = OptionType.COMMAND,
@@ -177,6 +191,7 @@ public class RunExportCommand implements Runnable
             description = "Run with JFR profiler",
             title = "Run with JFR profiler",
             required = false )
+    // TODO replace with Macro-like arg
     private boolean doJfrProfile;
 
     private static final String CMD_PROFILE_ASYNC = "--profile-async";
@@ -185,7 +200,9 @@ public class RunExportCommand implements Runnable
             description = "Run with Async profiler",
             title = "Run with Async profiler",
             required = false )
+    // TODO replace with Macro-like arg
     private boolean doAsyncProfile;
+    // TODO add GC profiler
 
     private static final String CMD_STORES_DIR = "--stores-dir";
     @Option( type = OptionType.COMMAND,
@@ -240,27 +257,84 @@ public class RunExportCommand implements Runnable
 
         // trim anything like '-M01' from end of Neo4j version string
         neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
-        TestRunReport testRun = new BenchmarksRunner().run(
-                neo4jConfigFile,
-                new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner ),
-                toolCommit,
-                toolOwner,
-                toolBranch,
+
+        Neo4jConfig baseNeo4jConfig = (neo4jConfigFile == null)
+                                      ? Neo4jConfig.withDefaults()
+                                      : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
+        baseNeo4jConfig = baseNeo4jConfig
+                .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                .withSetting( new HttpConnector( "http" ).enabled, "false" );
+
+        String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
+        String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );
+
+        // only used in interactive mode, to apply more (normally unsupported) benchmark annotations to JMH configuration
+        boolean extendedAnnotationSupport = false;
+        BenchmarksRunner runner = new BenchmarksRunner( baseNeo4jConfig,
+                                                        JmhOptionsUtil.DEFAULT_FORK_COUNT,
+                                                        JmhOptionsUtil.DEFAULT_ITERATION_COUNT,
+                                                        JmhOptionsUtil.DEFAULT_ITERATION_DURATION,
+                                                        extendedAnnotationSupport );
+        SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( BenchmarksRunner.class.getPackage().getName(),
+                                                                              null == benchConfigFile ? null : benchConfigFile.toPath() );
+        ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
+
+        if ( !storesDir.exists() )
+        {
+            System.out.println( "Creating stores directory: " + storesDir.getAbsolutePath() );
+            tryMkDir( storesDir.toPath() );
+        }
+
+        Instant start = Instant.now();
+        BenchmarkGroupBenchmarkMetrics resultMetrics = runner.run( suiteDescription,
+                                                                   profilers,
+                                                                   jvmArgs,
+                                                                   DEFAULT_THREAD_COUNTS,
+                                                                   storesDir.toPath(),
+                                                                   errorReporter,
+                                                                   splitArgs( this.jmhArgs, " " ),
+                                                                   Jvm.bestEffortOrFail( jvmFile ),
+                                                                   profilerOutput.toPath() );
+        Instant finish = Instant.now();
+
+        try
+        {
+            System.out.println( "Deleting: " + storesDir.getAbsolutePath() );
+            FileUtils.deleteRecursively( storesDir );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "Failed to to delete stores directory", e );
+        }
+
+        String testRunId = ClientUtil.generateUniqueId();
+        TestRun testRun = new TestRun(
+                testRunId,
+                Duration.between( start, finish ).toMillis(),
+                start.toEpochMilli(),
                 build,
                 parentBuild,
-                splitArgs( jvmArgs, " " ),
-                neo4jPackageForJvmArgs,
-                benchConfigFile,
-                DEFAULT_THREAD_COUNTS,
-                ProfileDescriptor.profileTo( profilerOutput.toPath(), profilers ),
-                splitArgs( jmhArgs, " " ),
-                storesDir.toPath(),
-                errorPolicy,
-                Jvm.bestEffortOrFail( jvmFile ),
                 triggeredBy );
+        BenchmarkConfig benchmarkConfig = suiteDescription.toBenchmarkConfig();
+        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty()
+                                                            : Neo4jConfig.fromFile( neo4jConfigFile );
+        BenchmarkTool tool = new BenchmarkTool( Repository.MICRO_BENCH, toolCommit, toolOwner, toolBranch );
+        Java java = Java.current( String.join( " ", jvmArgs ) );
+
+        TestRunReport testRunReport = new TestRunReport(
+                testRun,
+                benchmarkConfig,
+                Sets.newHashSet( new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner ) ),
+                neo4jConfig,
+                Environment.current(),
+                resultMetrics,
+                tool,
+                java,
+                Lists.newArrayList(),
+                errorReporter.errors() );
 
         System.out.println( "Exporting results as JSON to: " + jsonPath.getAbsolutePath() );
-        JsonUtil.serializeJson( jsonPath.toPath(), testRun );
+        JsonUtil.serializeJson( jsonPath.toPath(), testRunReport );
     }
 
     static List<String> argsFor(
@@ -278,7 +352,6 @@ public class RunExportCommand implements Runnable
             long parentTeamcityBuild,
             String jvmArgs,
             Path config,
-            Path neo4jPackageForJvmArgs,
             String jmhArgs,
             Path profilesDir,
             Path storesDir,
@@ -317,8 +390,6 @@ public class RunExportCommand implements Runnable
                 jvmArgs,
                 CMD_BENCHMARK_CONFIG,
                 config.toAbsolutePath().toString(),
-                CMD_NEO4J_PACKAGE,
-                neo4jPackageForJvmArgs.toAbsolutePath().toString(),
                 CMD_JMH_ARGS,
                 jmhArgs,
                 CMD_PROFILES_DIR,
@@ -335,20 +406,20 @@ public class RunExportCommand implements Runnable
             commandArgs.add( jvm.launchJava() );
         }
         profilers.forEach( profiler ->
-        {
-            if ( profilers.contains( ProfilerType.JFR ) )
-            {
-                commandArgs.add( CMD_PROFILE_JFR );
-            }
-            else if ( profilers.contains( ProfilerType.ASYNC ) )
-            {
-                commandArgs.add( CMD_PROFILE_ASYNC );
-            }
-            else
-            {
-                throw new RuntimeException( "Unsupported profiler type: " + profiler );
-            }
-        } );
+                           {
+                               if ( profilers.contains( ProfilerType.JFR ) )
+                               {
+                                   commandArgs.add( CMD_PROFILE_JFR );
+                               }
+                               else if ( profilers.contains( ProfilerType.ASYNC ) )
+                               {
+                                   commandArgs.add( CMD_PROFILE_ASYNC );
+                               }
+                               else
+                               {
+                                   throw new RuntimeException( "Unsupported profiler type: " + profiler );
+                               }
+                           } );
         return commandArgs;
     }
 }

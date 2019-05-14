@@ -11,6 +11,8 @@ import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
+import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.micro.benchmarks.cypher.AllNodesScan;
@@ -18,11 +20,10 @@ import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
 import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
-import com.neo4j.bench.micro.config.BenchmarkDescription;
-import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -39,14 +40,13 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
-import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
+import static com.neo4j.bench.jmh.api.config.BenchmarkDescription.of;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
-class InteractiveRunIT
+class InteractiveRunIT extends AnnotationsFixture
 {
     @Inject
     private TestDirectory temporaryFolder;
@@ -55,7 +55,7 @@ class InteractiveRunIT
     void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
     {
         Class benchmark = ReadById.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int benchmarkMethodCount = benchmarkDescription.methods().size();
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
         // parameters affect store content, in this benchmark
@@ -67,7 +67,7 @@ class InteractiveRunIT
     void shouldRunAllMethodsOfBenchmarkClass() throws Exception
     {
         Class benchmark = AllNodesScan.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
         int expectedStoreCount = 1;
@@ -78,7 +78,7 @@ class InteractiveRunIT
     void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
     {
         Class benchmark = ConcurrentReadWriteLabelsV2.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format", "count" ) );
@@ -89,7 +89,7 @@ class InteractiveRunIT
     void shouldRunConstantDataConstantAugment() throws Exception
     {
         Class benchmark = ConstantDataConstantAugment.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
         int expectedStoreCount = 1;
@@ -100,7 +100,7 @@ class InteractiveRunIT
     void shouldRunConstantDataVariableAugment() throws Exception
     {
         Class benchmark = ConstantDataVariableAugment.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
         int expectedStoreCount = expectedBenchmarkCount;
@@ -111,7 +111,7 @@ class InteractiveRunIT
     void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
     {
         Class benchmark = DefaultDisabled.class;
-        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
         int expectedStoreCount = 1;
@@ -152,14 +152,17 @@ class InteractiveRunIT
     {
         File storesDir = createTempDirectory( temporaryFolder.absolutePath() );
         Path profilerRecordingDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
-        boolean generateStoresInFork = true;
         int measurementForks = 1;
+        int iterationCount = 1;
+        TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(
                 benchmark,
-                generateStoresInFork,
                 measurementForks,
-                profileTo( profilerRecordingDirectory, Lists.newArrayList( ProfilerType.JFR ) ),
-                new Stores( storesDir.toPath() ),
+                iterationCount,
+                iterationDuration,
+                Lists.newArrayList( ProfilerType.JFR ),
+                storesDir.toPath()\,
+                profilerRecordingDirectory,
                 errorPolicy,
                 Paths.get( Jvm.defaultJvmOrFail().launchJava() ),
                 methods );
@@ -176,7 +179,7 @@ class InteractiveRunIT
         assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 
         // expected number of stores are present
-        try ( Stream<Path> paths = Files.list( storesDir.toPath() ) )
+        try ( Stream<Path> paths = Files.walk( storesDir.toPath() ) )
         {
             List<String> pathNames = paths
                     .filter( Files::isDirectory )

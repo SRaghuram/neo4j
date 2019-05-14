@@ -10,10 +10,6 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
@@ -70,56 +66,6 @@ public class Stores
     public Neo4jConfig neo4jConfigFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
     {
         return Neo4jConfig.fromFile( findNeo4jConfigFor( FullBenchmarkName.from( benchmarkGroup, benchmark ) ) );
-    }
-
-    private static final String FORK_NAME_PREFIX = "fork-";
-
-    public ForkDirectory findOrCreateForkDirectoryFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark, List<ProfilerType> profilers )
-    {
-        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( storesDir, benchmarkGroup );
-        BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        List<ForkDirectory> existingForkDirectories = benchmarkDir.forks().stream()
-                                                                  .filter( f -> f.profilers().containsAll( profilers ) )
-                                                                  .collect( toList() );
-        if ( existingForkDirectories.isEmpty() )
-        {
-            int forkNumber = lastForkNumberFor( benchmarkDir ) + 1;
-            String forkName = numberedForkName( forkNumber );
-            return benchmarkDir.create( forkName, profilers );
-        }
-        else if ( existingForkDirectories.size() != 1 )
-        {
-            throw new RuntimeException( "Found more than one fork directory for:\n" +
-                                        "Benchmark Group : " + benchmarkGroup.name() + "\n" +
-                                        "Benchmark       : " + benchmark.name() + "\n" +
-                                        "Profilers       : " + profilers );
-        }
-        else
-        {
-            return existingForkDirectories.get( 0 );
-        }
-    }
-
-    private int lastForkNumberFor( BenchmarkDirectory benchmarkDir )
-    {
-        return benchmarkDir.forks()
-                           .stream()
-                           .map( ForkDirectory::name )
-                           .map( this::extractForkNumber )
-                           .mapToInt( i -> i )
-                           .max()
-                           .orElse( -1 );
-    }
-
-    private int extractForkNumber( String forkName )
-    {
-        String stringNumber = forkName.substring( FORK_NAME_PREFIX.length() );
-        return Integer.parseInt( stringNumber );
-    }
-
-    private String numberedForkName( int i )
-    {
-        return FORK_NAME_PREFIX + i;
     }
 
     StoreAndConfig prepareDb(
@@ -186,12 +132,6 @@ public class Stores
                                                      "Stores: %s\n" +
                                                      "%s", topLevelDirs, config ) );
         }
-    }
-
-    public void copyProfilerRecordingsTo( Path directory )
-    {
-        BenchmarkGroupDirectory.searchAllIn( storesDir )
-                               .forEach( groupDir -> groupDir.copyProfilerRecordings( directory ) );
     }
 
     public void writeNeo4jConfigForNoStore( Neo4jConfig neo4jConfig, FullBenchmarkName benchmarkName )
@@ -308,22 +248,6 @@ public class Stores
         return storesDir.resolve( UUID.randomUUID().toString() );
     }
 
-    public void createStoresDir()
-    {
-        try
-        {
-            if ( !storesDir.toFile().exists() )
-            {
-                System.out.println( "Creating: " + storesDir.toAbsolutePath() );
-                tryMkDir( storesDir );
-            }
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Could not delete store: " + storesDir, e );
-        }
-    }
-
     public void deleteTemporaryStoreCopies()
     {
         for ( Path temporaryStore : findAllTemporaryStoreCopies( storesDir ) )
@@ -337,22 +261,6 @@ public class Stores
             {
                 throw new UncheckedIOException( "Could not delete store: " + temporaryStore, e );
             }
-        }
-    }
-
-    public void deleteStoresDir()
-    {
-        try
-        {
-            if ( storesDir.toFile().exists() )
-            {
-                System.out.println( "Deleting: " + storesDir.toAbsolutePath() );
-                FileUtils.deleteRecursively( storesDir.toFile() );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( "Could not delete store: " + storesDir, e );
         }
     }
 
@@ -378,6 +286,7 @@ public class Stores
                 .toString();
     }
 
+    // TODO why is this never called anymore?
     private Path findNeo4jConfigFor( FullBenchmarkName benchmarkName )
     {
         List<Path> neo4jConfigs = findAllTopLevelDirs( storesDir ).stream()

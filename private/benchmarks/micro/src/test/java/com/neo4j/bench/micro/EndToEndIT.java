@@ -17,10 +17,10 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
-import com.neo4j.bench.micro.config.BenchmarkConfigFile;
-import com.neo4j.bench.micro.config.SuiteDescription;
-import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import io.findify.s3mock.S3Mock;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
-class EndToEndIT
+class EndToEndIT extends AnnotationsFixture
 {
     private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
 
@@ -157,10 +157,10 @@ class EndToEndIT
             String endpointUrl = String.format( "http://localhost:%d", s3Port );
             EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
             client = AmazonS3ClientBuilder.standard()
-                    .withPathStyleAccessEnabled( true )
-                    .withEndpointConfiguration( endpoint )
-                    .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
-                    .build();
+                                          .withPathStyleAccessEnabled( true )
+                                          .withEndpointConfiguration( endpoint )
+                                          .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
+                                          .build();
             client.createBucket( "benchmarking.neo4j.com" );
 
             // prepare neo4j config file
@@ -172,49 +172,49 @@ class EndToEndIT
             File tarball = createNeo4jArchive();
 
             ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
-                    // neo4j_version
-                    "3.3.0",
-                    // neo4j_commit
-                    "neo4j_commit",
-                    // neo4j_branch
-                    "neo4j_branch",
-                    // neo4j_branch_owner
-                    "neo4j_branch_owner",
-                    // tool_branch
-                    "tool_branch",
-                    // tool_branch_owner
-                    "tool_branch_owner",
-                    // tool_commit
-                    "tool_commit",
-                    // results_store_uri
-                    boltUri.toString(),
-                    // results_store_user
-                    "neo4j",
-                    // results_store_password
-                    "neo4j",
-                    // benchmark_config
-                    benchmarkConfig.toString(),
-                    // teamcity_build_id
-                    "0",
-                    // parent_teamcity_build_id
-                    "1",
-                    // tarball
-                    tarball.getAbsolutePath(),
-                    // jvm_args
-                    "",
-                    // jmh_args
-                    "",
-                    // neo4j_config_path
-                    neo4jConfig.toString(),
-                    // jvm_path
-                    Jvm.defaultJvmOrFail().launchJava(),
-                    // with_jfr
-                    Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
-                    // with_async
-                    Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
-                    // triggered_by
-                    "triggered_by",
-                    endpointUrl ) )
+                                                                        // neo4j_version
+                                                                        "3.3.0",
+                                                                        // neo4j_commit
+                                                                        "neo4j_commit",
+                                                                        // neo4j_branch
+                                                                        "neo4j_branch",
+                                                                        // neo4j_branch_owner
+                                                                        "neo4j_branch_owner",
+                                                                        // tool_branch
+                                                                        "tool_branch",
+                                                                        // tool_branch_owner
+                                                                        "tool_branch_owner",
+                                                                        // tool_commit
+                                                                        "tool_commit",
+                                                                        // results_store_uri
+                                                                        boltUri.toString(),
+                                                                        // results_store_user
+                                                                        "neo4j",
+                                                                        // results_store_password
+                                                                        "neo4j",
+                                                                        // benchmark_config
+                                                                        benchmarkConfig.toString(),
+                                                                        // teamcity_build_id
+                                                                        "0",
+                                                                        // parent_teamcity_build_id
+                                                                        "1",
+                                                                        // tarball
+                                                                        tarball.getAbsolutePath(),
+                                                                        // jvm_args
+                                                                        "",
+                                                                        // jmh_args
+                                                                        "",
+                                                                        // neo4j_config_path
+                                                                        neo4jConfig.toString(),
+                                                                        // jvm_path
+                                                                        Jvm.defaultJvmOrFail().launchJava(),
+                                                                        // with_jfr
+                                                                        Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
+                                                                        // with_async
+                                                                        Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
+                                                                        // triggered_by
+                                                                        "triggered_by",
+                                                                        endpointUrl ) )
                     .directory( workPath.toFile() )
                     .redirectOutput( Redirect.PIPE )
                     .redirectErrorStream( true );
@@ -244,8 +244,11 @@ class EndToEndIT
     {
         File benchmarkConfig = temporaryFolder.file( "benchmarkConfig" );
 
+        Validation validation = new Validation();
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), validation );
+        Validation.assertValid( validation );
         BenchmarkConfigFile.write(
-                SuiteDescription.byReflection( new Validation() ),
+                suiteDescription,
                 ImmutableSet.of( NoOpBenchmark.class.getName() ),
                 false,
                 false,

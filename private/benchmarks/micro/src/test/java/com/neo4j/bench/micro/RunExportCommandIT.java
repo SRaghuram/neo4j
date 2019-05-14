@@ -57,22 +57,19 @@ class RunExportCommandIT
         {
             // Create empty Neo4j configuration file
             File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );
-            Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
-
-            // Create empty benchmark configuration file
-            File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
-            Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
-
-            Path neo4jArchive = createTempFilePath( temporaryFolder.absolutePath() );
-            try ( InputStream inputStream = getClass().getResource( "/neo4j-enterprise-3.1.0-M09-unix.tar.gz" )
+            try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
                                                       .openStream();
-                  OutputStream outputStream = Files.newOutputStream( neo4jArchive ) )
+                  OutputStream outputStream = Files.newOutputStream( neo4jConfigFile.toPath() ) )
             {
                 IOUtils.copy( inputStream, outputStream );
             }
 
+            // Create empty benchmark configuration file
+            File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+            Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
+
             Path jsonFile = createTempFilePath( temporaryFolder.absolutePath() );
-            Path profileOutputDirectory = createTempFilePath( temporaryFolder.absolutePath() );
+            Path profileOutputDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
             Path storesDir = Paths.get( "benchmark_stores" );
 
             List<String> commandArgs = RunExportCommand.argsFor(
@@ -82,7 +79,7 @@ class RunExportCommandIT
                     ENTERPRISE,
                     "master",
                     "Trinity",
-                    neo4jConfigFile.toPath(),
+                    neo4jConfigFile,
                     "2",
                     "Trinity",
                     "master",
@@ -90,7 +87,6 @@ class RunExportCommandIT
                     1,
                     "-Xms2g -Xmx2g",
                     benchmarkConfig.toPath(),
-                    neo4jArchive,
                     "-i 1 -wi 1 -r 1 -w 1 -f 1",
                     profileOutputDirectory,
                     storesDir,
@@ -99,7 +95,7 @@ class RunExportCommandIT
                     "Trinity",
                     Lists.newArrayList( ProfilerType.JFR ) );
             Main.main( commandArgs.toArray( new String[0] ) );
-        });
+        } );
     }
 
     @Test
@@ -107,7 +103,12 @@ class RunExportCommandIT
     {
         // Create empty Neo4j configuration file
         File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
+        try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
+                                                  .openStream();
+              OutputStream outputStream = Files.newOutputStream( neo4jConfigFile.toPath() ) )
+        {
+            IOUtils.copy( inputStream, outputStream );
+        }
 
         // Create benchmark configuration file with only one benchmark enabled
         File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
@@ -119,14 +120,6 @@ class RunExportCommandIT
                 "--path", benchmarkConfig.getAbsolutePath(),
                 benchmark.getName()
         } );
-
-        Path neo4jArchive = createTempFilePath( temporaryFolder.absolutePath() );
-        try ( InputStream inputStream = getClass().getResource( "/neo4j-enterprise-3.1.0-M09-unix.tar.gz" )
-                                                  .openStream();
-              OutputStream outputStream = Files.newOutputStream( neo4jArchive ) )
-        {
-            IOUtils.copy( inputStream, outputStream );
-        }
 
         Path jsonFile = createTempFilePath( temporaryFolder.absolutePath() );
         Path profilerRecordingDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
@@ -147,7 +140,6 @@ class RunExportCommandIT
                 1,
                 "-Xms2g -Xmx2g",
                 benchmarkConfig.toPath(),
-                neo4jArchive,
                 "-i 1 -wi 1 -r 1 -w 1 -f 1",
                 profilerRecordingDirectory,
                 storesDir,
@@ -163,12 +155,12 @@ class RunExportCommandIT
         BenchmarkTool expectedBenchmarkTool =
                 new BenchmarkTool( Repository.MICRO_BENCH, "2", "Trinity", "master" );
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
-        assertThat( report.baseNeo4jConfig().toMap().size(), equalTo( 0 ) );
+        assertThat( report.baseNeo4jConfig().toMap().size(), equalTo( 6 ) );
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +
                 "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 " +
-                "-Dunsupported.dbms.udc.source=tarball" ) );
+                "-Djdk.tls.rejectClientInitiatedRenegotiation=true -Dunsupported.dbms.udc.source=tarball" ) );
         assertThat( report.testRun().build(), equalTo( 1L ) );
         HashMap<String,String> expectedBenchmarkConfig = new HashMap<>();
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.format", "standard" );
@@ -180,6 +172,6 @@ class RunExportCommandIT
                     equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount,
-                    equalTo( 0 ) );
+                    equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
     }
 }
