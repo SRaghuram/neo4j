@@ -7,6 +7,8 @@ package org.neo4j.com.storecopy;
 
 public interface StoreCopyClientMonitor
 {
+    void start();
+
     void startReceivingStoreFiles();
 
     void finishReceivingStoreFiles();
@@ -31,8 +33,15 @@ public interface StoreCopyClientMonitor
 
     void finishReceivingIndexSnapshots();
 
+    void finish();
+
     class Adapter implements StoreCopyClientMonitor
     {
+        @Override
+        public void start()
+        {   // empty
+        }
+
         @Override
         public void startReceivingStoreFiles()
         {   // empty
@@ -90,6 +99,11 @@ public interface StoreCopyClientMonitor
 
         @Override
         public void finishReceivingIndexSnapshots()
+        {   // empty
+        }
+
+        @Override
+        public void finish()
         {   // empty
         }
     }
