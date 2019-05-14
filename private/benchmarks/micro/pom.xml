@@ -38,17 +38,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>jmh-benchmark-api</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -243,7 +239,6 @@
                         <configuration>
                             <includePluginDependencies>true</includePluginDependencies>
                             <mainClass>org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator</mainClass>
-                                <!--<compiled-bytecode-dir> <output-source-dir> <output-resource-dir> [generator-type]-->
                             <arguments>
                                 <argument>${project.basedir}/target/classes/</argument>
                                 <argument>${project.basedir}/target/generated-sources/jmh/</argument>
