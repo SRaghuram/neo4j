@@ -32,6 +32,8 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
 
     public ImportOptionsBuilder()
     {
+        shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
+        shouldResetSystemGraphAuthBeforeImport = false;
     }
 
     ImportOptionsBuilder shouldPerformImport()
@@ -55,30 +57,6 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
     ImportOptionsBuilder mayNotPerformMigration()
     {
         mayPerformMigration = false;
-        return this;
-    }
-
-    ImportOptionsBuilder shouldPurgeImportRepositoriesAfterSuccesfulImport()
-    {
-        shouldPurgeImportRepositoriesAfterSuccesfulImport = true;
-        return this;
-    }
-
-    ImportOptionsBuilder shouldNotPurgeImportRepositoriesAfterSuccesfulImport()
-    {
-        shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
-        return this;
-    }
-
-    ImportOptionsBuilder shouldResetSystemGraphAuthBeforeImport()
-    {
-        shouldResetSystemGraphAuthBeforeImport = true;
-        return this;
-    }
-
-    ImportOptionsBuilder shouldNotResetSystemGraphAuthBeforeImport()
-    {
-        shouldResetSystemGraphAuthBeforeImport = false;
         return this;
     }
 

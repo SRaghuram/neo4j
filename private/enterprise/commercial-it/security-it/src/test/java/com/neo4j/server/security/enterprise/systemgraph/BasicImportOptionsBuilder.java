@@ -51,7 +51,7 @@ class BasicImportOptionsBuilder
         return () -> migrationUserRepository;
     }
 
-    Supplier<UserRepository> initalUserSupplier() throws IOException, InvalidArgumentsException
+    Supplier<UserRepository> initialUserSupplier() throws IOException, InvalidArgumentsException
     {
         UserRepository initialUserRepository = new InMemoryUserRepository();
         populateUserRepository( initialUserRepository, initialUsers );

@@ -36,7 +36,7 @@ class TestBasicSystemGraphRealm
     static BasicSystemGraphRealm testRealm( BasicImportOptionsBuilder importOptions, DatabaseManager<?> dbManager ) throws Throwable
     {
         ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
-        return testRealm( importOptions.migrationSupplier(), importOptions.initalUserSupplier(), newRateLimitedAuthStrategy(), executor );
+        return testRealm( importOptions.migrationSupplier(), importOptions.initialUserSupplier(), newRateLimitedAuthStrategy(), executor );
     }
 
     static BasicSystemGraphRealm testRealm( DatabaseManager<?> dbManager, TestDirectory testDirectory ) throws Throwable
