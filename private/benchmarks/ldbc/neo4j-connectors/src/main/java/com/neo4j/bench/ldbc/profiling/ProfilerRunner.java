@@ -60,7 +60,7 @@ public class ProfilerRunner
         try
         {
             // If process is still alive, reset start time and wait another timeout
-            JpsPid jpsPid = JpsPid.tryFindFor( jvm, now(), Duration.of( 10, SECONDS ), processName );
+            JpsPid jpsPid = JpsPid.tryFindFor( jvm, now(), Duration.of( 1, MINUTES ), processName );
             if ( !jpsPid.pid().isPresent() )
             {
                 throw new RuntimeException( "Process '" + processName + "' not found!!" );
