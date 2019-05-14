@@ -33,7 +33,7 @@ public class JpsPid
                 {
                     return jpsPid;
                 }
-                Thread.sleep( Duration.ofSeconds( 2 ).toMillis() );
+                Thread.sleep( Duration.ofSeconds( 1 ).toMillis() );
             }
         }
         catch ( Exception e )
