@@ -51,8 +51,11 @@ public class SimpleBenchmark extends BaseBenchmark
 
     @Benchmark
     @BenchmarkMode( Mode.AverageTime )
-    public void sleep() throws InterruptedException
+    public void spin( Blackhole bh )
     {
-        Thread.sleep( 1 );
+        for ( int i = 0; i < SimpleBenchmark_range; i++ )
+        {
+            bh.consume( i );
+        }
     }
 }
