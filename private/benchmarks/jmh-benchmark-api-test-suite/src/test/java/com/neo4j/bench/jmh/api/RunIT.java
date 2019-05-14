@@ -49,7 +49,7 @@ public class RunIT
         Path workDir = temporaryFolder.newFolder().toPath();
         Path profilerRecordingsOutputDir = temporaryFolder.newFolder().toPath();
 
-        Annotations annotations = new Annotations( "com.neo4j.bench.jmh.api" );
+        Annotations annotations = new Annotations( SimpleBenchmark.class.getPackage().getName() );
         SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( annotations, new Validation() );
         BenchmarkConfigFile.write(
                 defaultSuiteDescription,
@@ -60,9 +60,9 @@ public class RunIT
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
-        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 1 ) );
+        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 5 ) );
 
-        SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( "com.neo4j.bench.jmh.api", benchmarkConfig );
+        SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( SimpleBenchmark.class.getPackage().getName(), benchmarkConfig );
 
         String[] jvmArgs = {};
         String[] jmhArgs = {};
@@ -130,7 +130,7 @@ public class RunIT
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
-        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 1 ) );
+        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 5 ) );
 
         SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( SimpleBenchmark.class, "count" );
 
