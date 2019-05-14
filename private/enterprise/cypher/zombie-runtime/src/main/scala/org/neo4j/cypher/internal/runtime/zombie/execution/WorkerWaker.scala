@@ -10,12 +10,13 @@ import org.neo4j.cypher.internal.runtime.zombie.state.buffers.Sink
 trait WorkerWaker {
 
   /**
-    * Wake up any idle workers.
+    * Wake up an idle worker.
     */
   def wakeOne(): Unit
 }
 
 class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker) extends Sink[T] {
+
   /**
     * Put an element in this sink
     */
