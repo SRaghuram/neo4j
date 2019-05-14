@@ -5,22 +5,22 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-// N.B: order should generally not change for reasons of backwards compatibility
 public enum CoreStateType
 {
     DUMMY( -1 ),
-    LOCK_TOKEN( 0 ),
-    SESSION_TRACKER( 1 ),
-    ID_ALLOCATION( 2 ),
-    RAFT_CORE_STATE( 3 ),
-    DB_NAME( 4 ),
-    CLUSTER_ID( 5 ),
-    CORE_MEMBER_ID( 6 ),
-    RAFT_LOG( 7 ),
-    RAFT_TERM( 8 ),
-    RAFT_VOTE( 9 ),
-    RAFT_MEMBERSHIP( 10 ),
-    LAST_FLUSHED( 11 );
+    VERSION( 0 ),
+    LOCK_TOKEN( 1 ),
+    SESSION_TRACKER( 2 ),
+    ID_ALLOCATION( 3 ),
+    RAFT_CORE_STATE( 4 ),
+    DB_NAME( 5 ),
+    CLUSTER_ID( 6 ),
+    CORE_MEMBER_ID( 7 ),
+    RAFT_LOG( 8 ),
+    RAFT_TERM( 9 ),
+    RAFT_VOTE( 10 ),
+    RAFT_MEMBERSHIP( 11 ),
+    LAST_FLUSHED( 12 );
 
     private final int typeId;
 

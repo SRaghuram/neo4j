@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
 import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
@@ -190,6 +191,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
         storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+
+        migrateClusterStateIfNeeded( globalModule, clusterStateLayout, storageFactory );
 
         startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, clusterStateLayout ); // must be constructed before storage is touched by other modules
 
@@ -510,5 +513,14 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    private static void migrateClusterStateIfNeeded( GlobalModule globalModule, ClusterStateLayout clusterStateLayout, CoreStateStorageFactory storageFactory )
+    {
+        var clusterStateVersionStorage = storageFactory.createClusterStateVersionStorage();
+        var fs = globalModule.getFileSystem();
+        var logProvider = globalModule.getLogService().getInternalLogProvider();
+        var clusterStateMigrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
+        clusterStateMigrator.migrateIfNeeded();
     }
 }

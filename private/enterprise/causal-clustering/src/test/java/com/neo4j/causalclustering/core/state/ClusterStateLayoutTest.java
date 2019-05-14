@@ -40,6 +40,12 @@ class ClusterStateLayoutTest
     }
 
     @Test
+    void shouldExposeVersionStateFile()
+    {
+        assertEquals( path( dataDir, "cluster-state", "version-state", "version" ), layout.clusterStateVersionFile() );
+    }
+
+    @Test
     void shouldExposeClusterIdStateFile()
     {
         assertEquals( path( dataDir, "cluster-state", "cluster-id-state", "cluster-id" ), layout.clusterIdStateFile() );

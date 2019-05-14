@@ -41,6 +41,11 @@ public class CoreStateStorageFactory
         this.config = config;
     }
 
+    public SimpleStorage<Long> createClusterStateVersionStorage()
+    {
+        return createSimpleStorage( layout.clusterStateVersionFile(), CoreStateFiles.VERSION );
+    }
+
     public SimpleStorage<ClusterId> createClusterIdStorage()
     {
         return createSimpleStorage( layout.clusterIdStateFile(), CoreStateFiles.CLUSTER_ID );

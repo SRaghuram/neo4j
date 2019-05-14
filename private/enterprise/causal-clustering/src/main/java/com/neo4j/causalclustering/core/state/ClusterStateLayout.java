@@ -50,6 +50,11 @@ public class ClusterStateLayout
         return clusterStateDirectory;
     }
 
+    public File clusterStateVersionFile()
+    {
+        return globalClusterStateFile( CoreStateFiles.VERSION );
+    }
+
     public File clusterIdStateFile()
     {
         return globalClusterStateFile( CoreStateFiles.CLUSTER_ID );

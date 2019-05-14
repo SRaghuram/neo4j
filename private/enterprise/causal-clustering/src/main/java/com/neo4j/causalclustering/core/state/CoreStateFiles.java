@@ -49,6 +49,17 @@ public class CoreStateFiles<STATE>
         DATABASE
     }
 
+    // global state
+
+    public static final CoreStateFiles<Long> VERSION =
+            new CoreStateFiles<>( "version", GLOBAL, new LongIndexMarshal(), CoreStateType.VERSION );
+    public static final CoreStateFiles<ClusterId> CLUSTER_ID =
+            new CoreStateFiles<>( "cluster-id", GLOBAL, new ClusterId.Marshal(), CoreStateType.CLUSTER_ID );
+    public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =
+            new CoreStateFiles<>( "core-member-id", GLOBAL, new MemberId.Marshal(), CoreStateType.CORE_MEMBER_ID );
+
+    // per-database state
+
     public static final CoreStateFiles<ReplicatedLockTokenState> LOCK_TOKEN =
             new CoreStateFiles<>( "lock-token", DATABASE, new ReplicatedLockTokenState.Marshal(), replicated_lock_token_state_size, CoreStateType.LOCK_TOKEN );
     public static final CoreStateFiles<GlobalSessionTrackerState> SESSION_TRACKER =
@@ -58,9 +69,6 @@ public class CoreStateFiles<STATE>
             new CoreStateFiles<>( "id-allocation", DATABASE, new IdAllocationState.Marshal(), id_alloc_state_size, CoreStateType.ID_ALLOCATION );
     public static final CoreStateFiles<RaftCoreState> RAFT_CORE_STATE =
             new CoreStateFiles<>( "core", DATABASE, new RaftCoreState.Marshal(), CoreStateType.RAFT_CORE_STATE );
-    public static final CoreStateFiles<ClusterId> CLUSTER_ID = new CoreStateFiles<>( "cluster-id", GLOBAL, new ClusterId.Marshal(), CoreStateType.CLUSTER_ID );
-    public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =
-            new CoreStateFiles<>( "core-member-id", GLOBAL, new MemberId.Marshal(), CoreStateType.CORE_MEMBER_ID );
     public static final CoreStateFiles<RaftLog> RAFT_LOG = new CoreStateFiles<>( "raft-log", DATABASE, null, CoreStateType.RAFT_LOG );
     public static final CoreStateFiles<TermState> RAFT_TERM =
             new CoreStateFiles<>( "term", DATABASE, new TermState.Marshal(), term_state_size, CoreStateType.RAFT_TERM );
@@ -81,7 +89,7 @@ public class CoreStateFiles<STATE>
 
     static
     {
-        values = asList( ID_ALLOCATION, LOCK_TOKEN, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
+        values = asList( VERSION, ID_ALLOCATION, LOCK_TOKEN, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
                 LAST_FLUSHED, SESSION_TRACKER );
         values.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         values = Collections.unmodifiableList( values );
