@@ -257,6 +257,15 @@ public abstract class Runner
                                                  Path workDir,
                                                  ErrorReporter errorReporter );
 
+    /**
+     * This method is invoked once for each benchmark that was executed, but only after all benchmarks have been executed.
+     * Returns the system (not necessarily Neo4j) configuration used to execute the given benchmark.
+     * The return value is reported attached to the benchmark results, so it can be reported along with the results.
+     *
+     * @return the configuration that was used to execute this benchmark
+     */
+    protected abstract Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, Path workDir );
+
     private List<BenchmarkDescription> profileBenchmarks(
             Collection<BenchmarkDescription> benchmarks,
             Jvm jvm,
@@ -304,7 +313,7 @@ public abstract class Runner
                             // sanity check, make sure provided benchmarks were correctly exploded
                             JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                            executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics() );
+                            executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics(), workDir );
                         }
                         catch ( Exception e )
                         {
@@ -362,7 +371,7 @@ public abstract class Runner
                         // sanity check, make sure provided benchmarks were correctly exploded
                         JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                        executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics );
+                        executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics, workDir );
                     }
                     catch ( Exception e )
                     {
@@ -377,9 +386,10 @@ public abstract class Runner
         }
     }
 
-    private static void executeBenchmarksForConfig(
+    private void executeBenchmarksForConfig(
             Options options,
-            BenchmarkGroupBenchmarkMetrics metrics ) throws RunnerException
+            BenchmarkGroupBenchmarkMetrics metrics,
+            Path workDir ) throws RunnerException
     {
         for ( RunResult runResult : new org.openjdk.jmh.runner.Runner( options ).run() )
         {
@@ -387,10 +397,9 @@ public abstract class Runner
             BenchmarkParams params = runResult.getParams();
             BenchmarkGroup benchmarkGroup = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
             Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( params );
+            Benchmark benchmark = benchmarks.parentBenchmark();
 
-            // TODO Max complains again, maybe we fix it so he less sad
-            // TODO invent a means to retrieve benchmark/suite-specific artifacts for each benchmark
-            Neo4jConfig neo4jConfig = Neo4jConfig.empty();
+            Neo4jConfig neo4jConfig = systemConfigFor( benchmarkGroup, benchmark, workDir );
 
             if ( !benchmarks.isGroup() )
             {
@@ -400,7 +409,7 @@ public abstract class Runner
                         params.getTimeUnit() );
                 metrics.add(
                         benchmarkGroup,
-                        benchmarks.parentBenchmark(),
+                        benchmark,
                         parentBenchmarkMetrics,
                         neo4jConfig );
             }

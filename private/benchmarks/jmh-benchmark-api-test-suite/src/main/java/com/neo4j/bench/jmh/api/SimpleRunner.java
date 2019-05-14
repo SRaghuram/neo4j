@@ -1,5 +1,8 @@
 package com.neo4j.bench.jmh.api;
 
+import com.neo4j.bench.client.model.Benchmark;
+import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
@@ -60,6 +63,12 @@ public class SimpleRunner extends Runner
     protected void afterMeasurementRun( BenchmarkDescription benchmark, Path workDir, ErrorReporter errorReporter )
     {
 
+    }
+
+    @Override
+    protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, Path workDir )
+    {
+        return Neo4jConfig.empty();
     }
 
     private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder )
