@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is part of Neo4j internal tooling.
+ */
 package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.jmh.api.config.ParamValues;
@@ -7,7 +12,6 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.OptionalInt;
 import java.util.stream.IntStream;
 
 public class SimpleBenchmark extends BaseBenchmark
@@ -42,13 +46,12 @@ public class SimpleBenchmark extends BaseBenchmark
     @BenchmarkMode( Mode.AverageTime )
     public void count( Blackhole bh )
     {
-        OptionalInt reduce = IntStream.range( 1, SimpleBenchmark_range ).reduce( ( i, x ) -> (x + (i * (i - 1))) );
-        bh.consume( reduce.orElse( 0 ) ) ;
+        bh.consume( IntStream.range( 0, SimpleBenchmark_range ).map( i -> i * i ).count() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.AverageTime )
-    public void sleep( ) throws InterruptedException
+    public void sleep() throws InterruptedException
     {
         Thread.sleep( 1 );
     }
