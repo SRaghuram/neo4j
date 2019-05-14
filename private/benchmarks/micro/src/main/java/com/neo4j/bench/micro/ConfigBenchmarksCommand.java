@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.micro.config.BenchmarkConfigFile;
-import com.neo4j.bench.micro.config.BenchmarkDescription;
-import com.neo4j.bench.micro.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
+import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 
@@ -40,9 +40,9 @@ public class ConfigBenchmarksCommand extends ConfigCommandBase
 
         // this forces existence of selected benchmarks to be checked
         Set<String> enabledBenchmarks = benchmarks.stream()
-                .map( suiteDescription::getBenchmark )
-                .map( BenchmarkDescription::className ).collect(
-                        toSet() );
+                                                  .map( suiteDescription::getBenchmark )
+                                                  .map( BenchmarkDescription::className )
+                                                  .collect( toSet() );
 
         BenchmarkConfigFile.write(
                 suiteDescription,
