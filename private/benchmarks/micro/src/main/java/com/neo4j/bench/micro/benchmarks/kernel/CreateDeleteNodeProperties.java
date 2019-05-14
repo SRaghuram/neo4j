@@ -6,10 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.kernel;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
@@ -217,8 +216,8 @@ public class CreateDeleteNodeProperties extends AbstractKernelBenchmark
                 throws KernelException
         {
             initializeTx( benchmarkState, benchmarkState.CreateDeleteNodeProperties_txSize );
-            int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
-            int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
+            int threads = threadCountForSubgroupInstancesOf( threadParams );
+            int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
                     LNG,
                     threads,

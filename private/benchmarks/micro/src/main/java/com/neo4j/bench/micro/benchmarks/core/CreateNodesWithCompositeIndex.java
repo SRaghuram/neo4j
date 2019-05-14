@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
@@ -115,10 +115,10 @@ public class CreateNodesWithCompositeIndex extends AbstractCoreBenchmark
     private PropertyDefinition[] propertyDefinitions()
     {
         return IntStream.range( 0, CreateNodesWithCompositeIndex_keys )
-                .mapToObj( i -> new PropertyDefinition(
-                        CreateNodesWithCompositeIndex_type + "_" + i,
-                        randPropertyFor( CreateNodesWithCompositeIndex_type ).value() ) )
-                .toArray( PropertyDefinition[]::new );
+                        .mapToObj( i -> new PropertyDefinition(
+                                CreateNodesWithCompositeIndex_type + "_" + i,
+                                randPropertyFor( CreateNodesWithCompositeIndex_type ).value() ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     @State( Scope.Thread )

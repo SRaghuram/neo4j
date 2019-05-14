@@ -6,11 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -157,9 +156,9 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                 .withPropertyOrder( Order.ORDERED )
                 .withNodeProperties( properties() )
                 .withNeo4jConfig( Neo4jConfig
-                        .empty()
-                        .withSetting( record_format, CreateDeleteNodeProperties_format )
-                        .setTransactionMemory( CreateDeleteNodeProperties_txMemory ) )
+                                          .empty()
+                                          .withSetting( record_format, CreateDeleteNodeProperties_format )
+                                          .setTransactionMemory( CreateDeleteNodeProperties_txMemory ) )
                 .isReusableStore( false )
                 .build();
     }
@@ -291,8 +290,8 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
         @Setup
         public void setUp( ThreadParams threadParams, CreateDeleteNodeProperties benchmarkState )
         {
-            int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
-            int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
+            int threads = threadCountForSubgroupInstancesOf( threadParams );
+            int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
                     LNG,
                     threads,

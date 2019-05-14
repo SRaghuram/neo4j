@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
@@ -87,8 +87,8 @@ public class CreateRelationships extends AbstractCoreBenchmark
     protected DataGeneratorConfig getConfig()
     {
         Neo4jConfig neo4jConfig = Neo4jConfig.empty()
-                .withSetting( dense_node_threshold, denseNodeThreshold() )
-                .withSetting( record_format, CreateRelationships_format );
+                                             .withSetting( dense_node_threshold, denseNodeThreshold() )
+                                             .withSetting( record_format, CreateRelationships_format );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withNeo4jConfig( neo4jConfig )

@@ -6,9 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -90,8 +90,8 @@ public class ReadLabel extends AbstractCoreBenchmark
     public static Label[] labels( int count )
     {
         return IntStream.range( 0, count ).boxed()
-                .map( i -> Label.label( "Label" + i ) )
-                .toArray( Label[]::new );
+                        .map( i -> Label.label( "Label" + i ) )
+                        .toArray( Label[]::new );
     }
 
     @State( Scope.Thread )

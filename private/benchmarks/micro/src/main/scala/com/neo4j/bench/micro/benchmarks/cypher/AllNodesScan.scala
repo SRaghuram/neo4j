@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans.{IdGen, astVariable}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
 import org.neo4j.cypher.internal.logical.plans

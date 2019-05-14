@@ -6,9 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -120,8 +120,8 @@ public class ReadRelationship extends AbstractCoreBenchmark
         {
             tx = benchmarkState.db().beginTx();
             relationshipTypes = Stream.of( RELATIONSHIP_DEFINITIONS )
-                    .map( RelationshipDefinition::type )
-                    .toArray( RelationshipType[]::new );
+                                      .map( RelationshipDefinition::type )
+                                      .toArray( RelationshipType[]::new );
         }
 
         @TearDown

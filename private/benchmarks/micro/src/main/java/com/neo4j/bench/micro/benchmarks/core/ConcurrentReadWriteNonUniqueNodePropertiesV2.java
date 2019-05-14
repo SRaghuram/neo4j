@@ -6,12 +6,11 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.Throttler;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
@@ -219,8 +218,8 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
         public void setUp( ThreadParams threadParams, ConcurrentReadWriteNonUniqueNodePropertiesV2 benchmarkState )
         {
             throttler = new Throttler( TARGET_WRITE_THROUGHPUT );
-            int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
-            int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
+            int threads = threadCountForSubgroupInstancesOf( threadParams );
+            int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
                     LNG,
                     threads,

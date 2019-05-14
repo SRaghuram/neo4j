@@ -5,18 +5,17 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -116,12 +115,12 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
     public String description()
     {
         return "Tests performance of creating and deleting properties via " +
-                "GraphDatabaseService::removeProperty/setProperty.\n" +
-                "Benchmark invariants:\n" +
-                "- All nodes have the same number of properties\n" +
-                "- Number of properties on each node is stable throughout the experiment\n" +
-                "- The set of properties between any two nodes may differ by at most two\n" +
-                "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
+               "GraphDatabaseService::removeProperty/setProperty.\n" +
+               "Benchmark invariants:\n" +
+               "- All nodes have the same number of properties\n" +
+               "- Number of properties on each node is stable throughout the experiment\n" +
+               "- The set of properties between any two nodes may differ by at most two\n" +
+               "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
     }
 
     @Override
@@ -146,18 +145,18 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
     private LabelKeyDefinition[] constraints()
     {
         return Arrays.stream( keys() )
-                .map( key -> new LabelKeyDefinition( LABEL, key ) )
-                .toArray( LabelKeyDefinition[]::new );
+                     .map( key -> new LabelKeyDefinition( LABEL, key ) )
+                     .toArray( LabelKeyDefinition[]::new );
     }
 
     private PropertyDefinition[] properties()
     {
         return IntStream.range( 0, CreateDeleteNodePropertiesUnderConstraint_count )
-                .mapToObj( i ->
-                        new PropertyDefinition(
-                                CreateDeleteNodePropertiesUnderConstraint_type + "_" + i,
-                                ascPropertyFor( CreateDeleteNodePropertiesUnderConstraint_type ).value() ) )
-                .toArray( PropertyDefinition[]::new );
+                        .mapToObj( i ->
+                                           new PropertyDefinition(
+                                                   CreateDeleteNodePropertiesUnderConstraint_type + "_" + i,
+                                                   ascPropertyFor( CreateDeleteNodePropertiesUnderConstraint_type ).value() ) )
+                        .toArray( PropertyDefinition[]::new );
     }
 
     private String[] keys()
@@ -184,8 +183,8 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
                 CreateDeleteNodePropertiesUnderConstraint benchmarkState,
                 RNGState rngState )
         {
-            int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
-            int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
+            int threads = threadCountForSubgroupInstancesOf( threadParams );
+            int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
                     LNG,
                     threads,

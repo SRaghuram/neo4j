@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.RelationshipKeyDefinition;
@@ -85,21 +85,21 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
     public String description()
     {
         return "Tests performance of creating relationships with mandatory constraints, " +
-                "using different transaction batch sizes.\n" +
-                "Method:\n" +
-                "- Every node starts with zero relationships\n" +
-                "- Threads work on node ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Threads choose random node pairs from their sequence then create a relationship between them\n" +
-                "- All relationships are of the same type\n" +
-                "- Threads create relationships, batching multiple writes per transaction\n" +
-                "- Every created relationship has the same type\n" +
-                "- Every created relationship has one property, always with same key, but different value\n" +
-                "- There is a mandatory constraint on the type:property pair\n" +
-                "Outcome:\n" +
-                "- No two threads will never create a relationship on the same node (avoids deadlocks)\n" +
-                "- Every node will have approximately the same number of relationships\n" +
-                "- Relationships will be spread uniformly across all nodes";
+               "using different transaction batch sizes.\n" +
+               "Method:\n" +
+               "- Every node starts with zero relationships\n" +
+               "- Threads work on node ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Threads choose random node pairs from their sequence then create a relationship between them\n" +
+               "- All relationships are of the same type\n" +
+               "- Threads create relationships, batching multiple writes per transaction\n" +
+               "- Every created relationship has the same type\n" +
+               "- Every created relationship has one property, always with same key, but different value\n" +
+               "- There is a mandatory constraint on the type:property pair\n" +
+               "Outcome:\n" +
+               "- No two threads will never create a relationship on the same node (avoids deadlocks)\n" +
+               "- Every node will have approximately the same number of relationships\n" +
+               "- Relationships will be spread uniformly across all nodes";
     }
 
     @Override
@@ -201,6 +201,6 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
     {
         txState.advance();
         txState.nextNode().createRelationshipTo( txState.nextNode(), TYPE )
-                .setProperty( KEY, txState.value( rngState.rng ) );
+               .setProperty( KEY, txState.value( rngState.rng ) );
     }
 }

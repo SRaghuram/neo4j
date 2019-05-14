@@ -6,9 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.kernel;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
@@ -134,7 +134,7 @@ public class CreateRelationships extends AbstractKernelBenchmark
                     NODE_COUNT,
                     threadParams.getThreadIndex(),
                     sliding ).create();
-            MutableLongList nodes =  LongLists.mutable.empty();
+            MutableLongList nodes = LongLists.mutable.empty();
             try ( Transaction ignore = benchmarkState.db().beginTx() )
             {
                 while ( !ids.wrapped() )

@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.bolt;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.PropertyDefinition;
@@ -57,7 +57,7 @@ import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 @OutputTimeUnit( TimeUnit.MICROSECONDS )
 public class BoltValueSerialization extends AbstractBoltBenchmark
 {
-    private static final  RelationshipDefinition RELATIONSHIP_DEFINITION = new RelationshipDefinition(
+    private static final RelationshipDefinition RELATIONSHIP_DEFINITION = new RelationshipDefinition(
             RelationshipType.withName( "REL" ), 1 );
 
     @ParamValues(

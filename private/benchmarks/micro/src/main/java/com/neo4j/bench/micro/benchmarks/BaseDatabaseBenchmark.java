@@ -9,7 +9,7 @@ import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.JMHResultUtil;
+import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -18,9 +18,7 @@ import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -53,7 +51,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
  * </ol>
  */
 @State( Scope.Benchmark )
-public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
+public abstract class BaseDatabaseBenchmark extends BaseBenchmark
 {
     @Param( {} )
     public String baseNeo4jConfig;
@@ -79,13 +77,11 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
         return managedStore.store();
     }
 
-    @Setup
-    public final void setUp( BenchmarkParams params ) throws Exception
+    @Override
+    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params )
     {
         Stores stores = new Stores( Paths.get( storesDir ) );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
-        BenchmarkGroup group = JMHResultUtil.toBenchmarkGroup( params );
-        Benchmark benchmark = JMHResultUtil.toBenchmarks( params ).parentBenchmark();
 
         Augmenterizer augmenterizer = augmentDataGeneration();
         managedStore = new ManagedStore( stores );
@@ -101,8 +97,8 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
         }
     }
 
-    @TearDown
-    public final void tearDown() throws Exception
+    @Override
+    protected final void onTearDown() throws Exception
     {
         managedStore.tearDownDb();
         benchmarkTearDown();
@@ -148,7 +144,6 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
 
     protected void benchmarkTearDown() throws Exception
     {
-
     }
 
     // -----------------------------------------------------------------------------------------------------------------

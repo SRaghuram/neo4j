@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.Main;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
@@ -61,8 +61,8 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of creating multiple new property keys using a cypher map parameter.\n " +
-                "As tokens cannot be deleted, this benchmark cannot achieve fixed state. Therefore it\n" +
-                "executes for a fixed number of executions instead of for a fixed time.\n";
+               "As tokens cannot be deleted, this benchmark cannot achieve fixed state. Therefore it\n" +
+               "executes for a fixed number of executions instead of for a fixed time.\n";
     }
 
     @Override
@@ -90,8 +90,8 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
         String keyBase;
         int propTokenCount;
         int propsPerMap;
-        Map<String, Object> params;
-        Map<String, Object> prop;
+        Map<String,Object> params;
+        Map<String,Object> prop;
 
         GraphDatabaseService db;
 
@@ -138,7 +138,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
             return keyBase + (propTokenCount++);
         }
 
-        Map<String, Object> params()
+        Map<String,Object> params()
         {
             params.put( "id", node.getId() );
             prop.clear();
@@ -152,7 +152,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
 
     /**
      * This is a special setup, which is required because every invocation increases the cost of later invocations.
-     *
+     * <p>
      * The initial warm-up invocations are fast, so we require more of them to make sure JIT has happened. We then
      * perform relatively few measurement invocations, partly because they are now starting to get quite slow, and
      * partly because we don't want the work performed by the first and last measurement invocation to differ too

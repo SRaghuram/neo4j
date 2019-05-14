@@ -6,9 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -64,9 +64,9 @@ public class CreateNodes extends AbstractCoreBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNeo4jConfig( Neo4jConfig
-                        .empty()
-                        .withSetting( record_format, CreateNodes_format )
-                        .setTransactionMemory( CreateNodes_txMemory ))
+                                          .empty()
+                                          .withSetting( record_format, CreateNodes_format )
+                                          .setTransactionMemory( CreateNodes_txMemory ) )
                 .isReusableStore( false )
                 .build();
     }

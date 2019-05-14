@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
@@ -61,8 +61,8 @@ public class CreateUniqueNodeProperties extends AbstractCoreBenchmark
     // Controls how many indexes are created
     private static final int MAX_PROPERTIES_PER_NODE = 10;
     private static final String[] KEYS = IntStream.range( 0, MAX_PROPERTIES_PER_NODE ).boxed()
-            .map( i -> "key" + i )
-            .toArray( String[]::new );
+                                                  .map( i -> "key" + i )
+                                                  .toArray( String[]::new );
 
     @ParamValues(
             allowed = {
@@ -95,21 +95,21 @@ public class CreateUniqueNodeProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of unique node property creation, using different transaction batch sizes.\n" +
-                "Creates unique key:value property pairs (allows comparison between index and unique constraints).\n" +
-                "Runs three indexing scenarios: no index, schema index, unique constraint.\n" +
-                "Guarantees unique values in the presence of parallelism:\n" +
-                "- Every node has exactly one, same label\n" +
-                "- Threads work on node ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-                "- When a sequence wraps the thread moves onto the next property key\n" +
-                "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
-                "- As this guarantees property(key):node(id) uniqueness, same policy is used for property values\n" +
-                "- I.e., value assigned to node property is ID of that node (in appropriate type)\n" +
-                "Outcome:\n" +
-                "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
-                "- Every node will have the same properties\n" +
-                "- No two nodes will have the same value for the same property";
+               "Creates unique key:value property pairs (allows comparison between index and unique constraints).\n" +
+               "Runs three indexing scenarios: no index, schema index, unique constraint.\n" +
+               "Guarantees unique values in the presence of parallelism:\n" +
+               "- Every node has exactly one, same label\n" +
+               "- Threads work on node ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+               "- When a sequence wraps the thread moves onto the next property key\n" +
+               "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
+               "- As this guarantees property(key):node(id) uniqueness, same policy is used for property values\n" +
+               "- I.e., value assigned to node property is ID of that node (in appropriate type)\n" +
+               "Outcome:\n" +
+               "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
+               "- Every node will have the same properties\n" +
+               "- No two nodes will have the same value for the same property";
     }
 
     @Override
