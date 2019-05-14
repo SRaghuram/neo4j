@@ -25,7 +25,7 @@ public class LdbcHeaderFactory implements Header.Factory
     }
 
     @Override
-    public Header create( CharSeeker dataSeeker, Configuration configuration, IdType idType, Groups groups )
+    public Header create( CharSeeker dataSeeker, Configuration configuration, IdType idType, Groups groups, Header.Monitor monitor )
     {
         Mark mark = new Mark();
         int columnDelimiter = '|';
