@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.commandline.admin.CommandFailed;
+import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
 import org.neo4j.configuration.Config;
@@ -17,6 +19,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
+import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -82,12 +85,8 @@ class BasicSystemGraphRealmIT
     @Test
     void shouldLoadInitialUserWithInitialPassword() throws Throwable
     {
-        // Given simulation of the set-initial-password
-        OutsideWorld mock = mock( OutsideWorld.class );
-        when( mock.fileSystem() ).thenReturn( testDirectory.getFileSystem() );
-        SetInitialPasswordCommand setPasswordCommand = new SetInitialPasswordCommand( testDirectory.directory().toPath(),
-                testDirectory.directory( "conf" ).toPath(), mock );
-        setPasswordCommand.execute( new String[]{"neo4j1"} );
+        // Given
+        simulateSetInitialPasswordCommand(testDirectory);
 
         // When
         BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
@@ -98,6 +97,52 @@ class BasicSystemGraphRealmIT
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
         assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
         assertFalse( user.passwordChangeRequired() );
+    }
+
+    @Test
+    void shouldLoadInitialUserWithInitialPasswordOnRestart() throws Throwable
+    {
+        // Given
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+
+        User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertTrue( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.passwordChangeRequired() );
+
+        realm.stop();
+
+        simulateSetInitialPasswordCommand(testDirectory);
+
+        // When
+        realm.start();
+
+        // Then
+        user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertFalse( user.passwordChangeRequired() );
+    }
+
+    @Test
+    void shouldNotLoadInitialUserWithInitialPasswordOnRestartWhenAlreadyChanged() throws Throwable
+    {
+        // Given started and stopped database
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+        realm.setUserPassword( INITIAL_USER_NAME, UTF8.encode( "neo4j2" ), false );
+        realm.stop();
+        simulateSetInitialPasswordCommand(testDirectory);
+
+        // When
+        realm.start();
+
+        // Then
+        User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertFalse( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j2") ) );
     }
 
     @Test
@@ -206,5 +251,14 @@ class BasicSystemGraphRealmIT
         // Then
         assertThat( newPassword, equalTo( clearedPasswordWithSameLengthAs( "jake" ) ) );
         assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    static void simulateSetInitialPasswordCommand( TestDirectory testDirectory ) throws IncorrectUsage, CommandFailed
+    {
+        OutsideWorld mock = mock( OutsideWorld.class );
+        when( mock.fileSystem() ).thenReturn( testDirectory.getFileSystem() );
+        SetInitialPasswordCommand setPasswordCommand =
+                new SetInitialPasswordCommand( testDirectory.directory().toPath(), testDirectory.directory( "conf" ).toPath(), mock );
+        setPasswordCommand.execute( new String[]{"neo4j1"} );
     }
 }

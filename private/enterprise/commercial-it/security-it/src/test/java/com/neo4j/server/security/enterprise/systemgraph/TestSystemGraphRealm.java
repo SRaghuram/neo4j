@@ -5,25 +5,60 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.TestDatabaseManager;
 
 import java.util.Collection;
+import java.util.function.Supplier;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.event.TransactionEventListener;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
+import org.neo4j.server.security.auth.CommunitySecurityModule;
+import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.test.rule.TestDirectory;
 
+import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
+    static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
+    {
+        Config config = Config.defaults();
+        config.augment(  DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString()  );
+        LogProvider logProvider = mock(LogProvider.class);
+        FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
+
+        Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
+        Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
+        SystemGraphImportOptions importOptions = new SystemGraphImportOptions(
+                false,
+                false,
+                false,
+                false,
+                InMemoryUserRepository::new,
+                InMemoryRoleRepository::new,
+                migrationUserRepositorySupplier,
+                InMemoryRoleRepository::new,
+                initialUserRepositorySupplier,
+                InMemoryUserRepository::new
+                );
+
+        return testRealm( importOptions, securityLog, dbManager );
+    }
 
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager )
             throws Throwable

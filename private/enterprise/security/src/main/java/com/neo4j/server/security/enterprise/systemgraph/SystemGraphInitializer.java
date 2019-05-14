@@ -106,7 +106,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
 
     private void ensureDefaultUserAndRoles() throws Exception
     {
-        if ( noUsers() )
+        if ( nbrOfUsers() == 0 )
         {
             ensureDefaultUser();
             ensureDefaultRoles( INITIAL_USER_NAME );
@@ -116,6 +116,10 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             // This will be the case when upgrading from community to enterprise system-graph
             String newAdmin = ensureAdmin();
             ensureDefaultRoles( newAdmin );
+        }
+        else
+        {
+            ensureCorrectInitialPassword();
         }
     }
 

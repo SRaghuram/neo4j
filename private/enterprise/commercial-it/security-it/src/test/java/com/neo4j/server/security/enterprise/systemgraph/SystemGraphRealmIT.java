@@ -22,12 +22,15 @@ import java.util.Set;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.UserManager;
+import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.systemgraph.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.testAuthenticationToken;
 import static java.util.Collections.singleton;
@@ -37,12 +40,17 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
+import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphRealmIT
@@ -137,6 +145,69 @@ class SystemGraphRealmIT
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
         assertIncorrectCredentials( realm, UserManager.INITIAL_USER_NAME, UserManager.INITIAL_PASSWORD );
         assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME, "neo4j1" );
+    }
+
+    @Test
+    void shouldLoadInitialUserWithInitialPassword() throws Throwable
+    {
+        // Given
+        simulateSetInitialPasswordCommand(testDirectory);
+
+        // When
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( dbManager, testDirectory, securityLog );
+
+        // Then
+        final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertFalse( user.passwordChangeRequired() );
+    }
+
+    @Test
+    void shouldLoadInitialUserWithInitialPasswordOnRestart() throws Throwable
+    {
+        // Given
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( dbManager, testDirectory, securityLog );
+
+        User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertTrue( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.passwordChangeRequired() );
+
+        realm.stop();
+
+        simulateSetInitialPasswordCommand(testDirectory);
+
+        // When
+        realm.start();
+
+        // Then
+        user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertFalse( user.passwordChangeRequired() );
+    }
+
+    @Test
+    void shouldNotLoadInitialUserWithInitialPasswordOnRestartWhenAlreadyChanged() throws Throwable
+    {
+        // Given started and stopped database
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( dbManager, testDirectory, securityLog );
+        realm.setUserPassword( INITIAL_USER_NAME, UTF8.encode( "neo4j2" ), false );
+        realm.stop();
+        simulateSetInitialPasswordCommand(testDirectory);
+
+        // When
+        realm.start();
+
+        // Then
+        User user = realm.silentlyGetUser( INITIAL_USER_NAME );
+        assertNotNull( user );
+        assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
+        assertFalse( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password("neo4j2") ) );
     }
 
     // In alignment with InternalFlatFileRealm we prevent this case (the admin tool currently does not allow it anyways)
