@@ -51,11 +51,11 @@ class BenchmarksRunner extends Runner
      * @param extendedAnnotationSupport specifies if the JMH configuration should include the values of all JMH annotations present on the benchmark classes.
      * Only true in interactive mode, to apply more benchmark annotations that are normally ignored by this framework.
      */
-    public BenchmarksRunner( Neo4jConfig baseNeo4jConfig,
-                             int forkCount,
-                             int iterations,
-                             TimeValue duration,
-                             boolean extendedAnnotationSupport )
+    BenchmarksRunner( Neo4jConfig baseNeo4jConfig,
+                      int forkCount,
+                      int iterations,
+                      TimeValue duration,
+                      boolean extendedAnnotationSupport )
     {
         this.baseNeo4jConfig = baseNeo4jConfig;
         this.forkCount = forkCount;

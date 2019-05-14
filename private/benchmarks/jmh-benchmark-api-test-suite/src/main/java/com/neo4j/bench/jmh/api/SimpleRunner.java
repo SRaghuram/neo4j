@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is part of Neo4j internal tooling.
+ */
 package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.client.model.Benchmark;
@@ -19,7 +24,7 @@ public class SimpleRunner extends Runner
     private final int iterations;
     private final TimeValue duration;
 
-    public SimpleRunner( int forkCount, int iterations, TimeValue duration )
+    SimpleRunner( int forkCount, int iterations, TimeValue duration )
     {
         this.forkCount = forkCount;
         this.iterations = iterations;
