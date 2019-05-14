@@ -5,8 +5,9 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.micro.config.SuiteDescription;
-import com.neo4j.bench.micro.config.Validation;
+import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.Validation;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
@@ -42,15 +43,16 @@ abstract class ConfigCommandBase implements Runnable
         return format( "\tPath:           %s\n" +
                        "\tVerbose:        %s\n" +
                        "\tWith disabled:  %s",
-                benchConfigFile.toPath().toAbsolutePath(),
-                verbose,
-                withDisabled );
+                       benchConfigFile.toPath().toAbsolutePath(),
+                       verbose,
+                       withDisabled );
     }
 
     protected SuiteDescription allBenchmarks()
     {
         Validation validation = new Validation();
-        SuiteDescription allByReflection = SuiteDescription.byReflection( validation );
+        Annotations annotations = new Annotations( BenchmarksRunner.class.getPackage().getName() );
+        SuiteDescription allByReflection = SuiteDescription.fromAnnotations( annotations, validation );
         Validation.assertValid( validation );
         return allByReflection;
     }
