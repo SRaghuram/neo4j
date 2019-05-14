@@ -7,7 +7,6 @@ package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.Project;
 import com.neo4j.bench.client.model.Repository;
@@ -17,6 +16,7 @@ import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,20 +45,17 @@ public class RunExportCommandIT
     public void shouldThrowExceptionWhenNoBenchmarkIsEnabled() throws Exception
     {
         // Create empty Neo4j configuration file
-        File neo4jConfigFile = temporaryFolder.newFile();
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
-
-        // Create empty benchmark configuration file
-        File benchmarkConfig = temporaryFolder.newFile();
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
-
-        Path neo4jArchive = temporaryFolder.newFile().toPath();
-        try ( InputStream inputStream = getClass().getResource( "/neo4j-enterprise-3.1.0-M09-unix.tar.gz" )
+        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
                                                   .openStream();
-              OutputStream outputStream = Files.newOutputStream( neo4jArchive ) )
+              OutputStream outputStream = Files.newOutputStream( neo4jConfigFile ) )
         {
             IOUtils.copy( inputStream, outputStream );
         }
+
+        // Create empty benchmark configuration file
+        File benchmarkConfig = temporaryFolder.newFile();
+        Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
 
         Path jsonFile = temporaryFolder.newFile().toPath();
         Path profileOutputDirectory = temporaryFolder.newFolder().toPath();
@@ -71,7 +68,7 @@ public class RunExportCommandIT
                 ENTERPRISE,
                 "master",
                 "Trinity",
-                neo4jConfigFile.toPath(),
+                neo4jConfigFile,
                 "2",
                 "Trinity",
                 "master",
@@ -79,7 +76,6 @@ public class RunExportCommandIT
                 1,
                 "-Xms2g -Xmx2g",
                 benchmarkConfig.toPath(),
-                neo4jArchive,
                 "-i 1 -wi 1 -r 1 -w 1 -f 1",
                 profileOutputDirectory,
                 storesDir,
@@ -94,12 +90,17 @@ public class RunExportCommandIT
     public void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
     {
         // Create empty Neo4j configuration file
-        File neo4jConfigFile = temporaryFolder.newFile();
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
+        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
+                                                  .openStream();
+              OutputStream outputStream = Files.newOutputStream( neo4jConfigFile ) )
+        {
+            IOUtils.copy( inputStream, outputStream );
+        }
 
         // Create benchmark configuration file with only one benchmark enabled
         File benchmarkConfig = temporaryFolder.newFile();
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
+        Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
 
         Class benchmark = ReadById.class;
         Main.main( new String[]{
@@ -107,14 +108,6 @@ public class RunExportCommandIT
                 "--path", benchmarkConfig.getAbsolutePath(),
                 benchmark.getName()
         } );
-
-        Path neo4jArchive = temporaryFolder.newFile().toPath();
-        try ( InputStream inputStream = getClass().getResource( "/neo4j-enterprise-3.1.0-M09-unix.tar.gz" )
-                                                  .openStream();
-              OutputStream outputStream = Files.newOutputStream( neo4jArchive ) )
-        {
-            IOUtils.copy( inputStream, outputStream );
-        }
 
         Path jsonFile = temporaryFolder.newFile().toPath();
         Path profilerRecordingDirectory = temporaryFolder.newFolder().toPath();
@@ -127,7 +120,7 @@ public class RunExportCommandIT
                 ENTERPRISE,
                 "master",
                 "Trinity",
-                neo4jConfigFile.toPath(),
+                neo4jConfigFile,
                 "2",
                 "Trinity",
                 "master",
@@ -135,7 +128,6 @@ public class RunExportCommandIT
                 1,
                 "-Xms2g -Xmx2g",
                 benchmarkConfig.toPath(),
-                neo4jArchive,
                 "-i 1 -wi 1 -r 1 -w 1 -f 1",
                 profilerRecordingDirectory,
                 storesDir,
@@ -151,12 +143,12 @@ public class RunExportCommandIT
         BenchmarkTool expectedBenchmarkTool =
                 new BenchmarkTool( Repository.MICRO_BENCH, "2", "Trinity", "master" );
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
-        assertThat( report.baseNeo4jConfig().toMap().size(), equalTo( 0 ) );
+        assertThat( report.baseNeo4jConfig().toMap().size(), equalTo( 6 ) );
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +
                 "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 " +
-                "-Dunsupported.dbms.udc.source=tarball" ) );
+                "-Djdk.tls.rejectClientInitiatedRenegotiation=true -Dunsupported.dbms.udc.source=tarball" ) );
         assertThat( report.testRun().build(), equalTo( 1L ) );
         HashMap<String,String> expectedBenchmarkConfig = new HashMap<>();
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.format", "standard" );

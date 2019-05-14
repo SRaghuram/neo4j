@@ -17,10 +17,10 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
-import com.neo4j.bench.micro.config.BenchmarkConfigFile;
-import com.neo4j.bench.micro.config.SuiteDescription;
-import com.neo4j.bench.micro.config.Validation;
 import io.findify.s3mock.S3Mock;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -60,7 +60,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class EndToEndIT
+public class EndToEndIT extends AnnotationsFixture
 {
     private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
     @Rule
@@ -200,8 +200,11 @@ public class EndToEndIT
     {
         File benchmarkConfig = temporaryFolder.newFile( "benchmarkConfig" );
 
+        Validation validation = new Validation();
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), validation );
+        Validation.assertValid( validation );
         BenchmarkConfigFile.write(
-                SuiteDescription.byReflection( new Validation() ),
+                suiteDescription,
                 ImmutableSet.of( NoOpBenchmark.class.getName() ),
                 false,
                 false,

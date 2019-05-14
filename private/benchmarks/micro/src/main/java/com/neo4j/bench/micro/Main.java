@@ -6,21 +6,25 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.micro.data.Stores;
-import com.neo4j.bench.micro.profile.ProfileDescriptor;
+import com.neo4j.bench.jmh.api.BaseBenchmark;
+import com.neo4j.bench.jmh.api.Runner;
+import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import io.airlift.airline.Cli;
 import io.airlift.airline.Cli.CliBuilder;
 import io.airlift.airline.Help;
+import org.openjdk.jmh.runner.options.TimeValue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
-import static com.neo4j.bench.micro.BenchmarksRunner.runBenchmark;
+import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
 
 public class Main
 {
@@ -54,68 +58,76 @@ public class Main
      * @throws Exception
      */
     public static void run(
-            Class<? extends Neo4jBenchmark> benchmark,
-            String... methods )
-    {
-        Path profilesDir = Paths.get( "profiler_recordings" );
-        ProfileDescriptor profileDescriptor = ProfileDescriptor.profileTo( profilesDir, Lists.newArrayList( ProfilerType.JFR ) );
-        run( benchmark, profileDescriptor, methods );
-    }
-
-    /**
-     * Convenience method for running benchmarks from a specific benchmark class, with the given {@link ProfileDescriptor}.
-     * @param benchmark the benchmark class from which benchmarks will be run.
-     * @param profileDescriptor describes which profilers to use when running the benchmarks.
-     * @param methods methods of benchmark class to run, if none are provided all will be run.
-     * @throws Exception
-     */
-    public static void run(
-            Class<? extends Neo4jBenchmark> benchmark,
-            ProfileDescriptor profileDescriptor,
+            Class<? extends BaseBenchmark> benchmark,
             String... methods )
     {
         Path storesDir = Paths.get( "benchmark_stores" );
-        run(
-                benchmark,
-                true,
-                1, profileDescriptor,
-                new Stores( storesDir ),
-                ErrorReporter.ErrorPolicy.FAIL,
-                null,
-                methods );
+        Path profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
+        int forkCount = 1;
+        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
+        Path jvmFile = null;
+        run( benchmark,
+             forkCount,
+             JmhOptionsUtil.DEFAULT_ITERATION_COUNT,
+             JmhOptionsUtil.DEFAULT_ITERATION_DURATION,
+             profilers,
+             storesDir,
+             profilerRecordingsOutputDir,
+             errorPolicy,
+             jvmFile,
+             methods );
     }
 
     /**
      * Convenience method for running benchmarks from a specific benchmark class.
      *
      * @param benchmark the benchmark class from which benchmarks will be run
-     * @param generateStoresInFork set to false for debugging -- breakpoints only work when executing in same process
-     * @param executeForks set to 0 for debugging (e.g., breakpoints), and at least 1 for measurement
-     * @param profileDescriptor profilers to run with -- profilers run in a fork (different process)
-     * @param stores directory location of stores (and configurations)
+     * @param forkCount set to 0 for debugging (e.g., breakpoints), and at least 1 for measurement
+     * @param iterationCount number of measurement iterations JMH will run, default is 5
+     * @param iterationDuration duration of JMH measurement iterations, default is 5 seconds
+     * @param profilers profilers to run with -- profilers run in a fork (different process)
+     * @param storesDir directory location of stores (and configurations)
      * @param errorPolicy specifies how to deal with errors (skip vs fail fast)
      * @param methods methods of benchmark class to run, if none are provided all will be run
-     * @throws Exception
      */
     public static void run(
-            Class<? extends Neo4jBenchmark> benchmark,
-            boolean generateStoresInFork,
-            int executeForks,
-            ProfileDescriptor profileDescriptor,
-            Stores stores,
+            Class<? extends BaseBenchmark> benchmark,
+            int forkCount,
+            int iterationCount,
+            TimeValue iterationDuration,
+            ArrayList<ProfilerType> profilers,
+            Path storesDir,
+            Path profilerRecordingsOutputDir,
             ErrorReporter.ErrorPolicy errorPolicy,
             Path jvmFile,
             String... methods )
     {
-        runBenchmark(
-                benchmark,
-                profileDescriptor,
-                Neo4jConfig.withDefaults(),
-                stores,
-                generateStoresInFork,
-                executeForks,
-                errorPolicy,
-                Jvm.bestEffortOrFail( jvmFile ),
-                methods );
+        if ( !Files.exists( storesDir ) )
+        {
+            System.out.println( "Creating stores directory: " + storesDir.toAbsolutePath() );
+            tryMkDir( storesDir );
+        }
+
+        // only used in interactive mode, to apply more (normally unsupported) benchmark annotations to JMH configuration
+        boolean extendedAnnotationSupport = true;
+        BenchmarksRunner runner = new BenchmarksRunner( Neo4jConfig.withDefaults(),
+                                                        forkCount,
+                                                        iterationCount,
+                                                        iterationDuration,
+                                                        extendedAnnotationSupport );
+        SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( benchmark, methods );
+        String[] jvmArgs = new String[0];
+        int[] threadCounts = new int[]{1};
+        String[] jmhArgs = new String[0];
+        runner.run( suiteDescription,
+                    profilers,
+                    jvmArgs,
+                    threadCounts,
+                    storesDir,
+                    new ErrorReporter( errorPolicy ),
+                    jmhArgs,
+                    Jvm.bestEffortOrFail( jvmFile ),
+                    profilerRecordingsOutputDir );
     }
 }
