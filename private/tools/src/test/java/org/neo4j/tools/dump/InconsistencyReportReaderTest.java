@@ -16,7 +16,7 @@ import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
 import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.internal.index.label.NodeLabelRange;
-import org.neo4j.kernel.api.index.IndexProviderDescriptor;
+import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
