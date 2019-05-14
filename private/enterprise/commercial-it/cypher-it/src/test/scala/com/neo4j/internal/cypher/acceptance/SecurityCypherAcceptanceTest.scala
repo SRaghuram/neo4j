@@ -369,6 +369,31 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "bar").asJava)
     val user = systemGraphRealm.getUser("bar")
     user.credentials().matchesPassword(UTF8.encode("password")) should be(true)
+    user.credentials().matchesPassword(UTF8.encode("PASSword")) should be(false)
+    user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+  }
+
+  test("should create user with mixed password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    getAllUserNamesFromManager should equal(Set("neo4j").asJava)
+
+    // WHEN
+    execute("CREATE USER bar SET PASSWORD 'p4s5W*rd'")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "bar", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "bar").asJava)
+    val user = systemGraphRealm.getUser("bar")
+    user.credentials().matchesPassword(UTF8.encode("p4s5W*rd")) should be(true)
+    user.credentials().matchesPassword(UTF8.encode("p4s5w*rd")) should be(false)
+    user.credentials().matchesPassword(UTF8.encode("PASSword")) should be(false)
+    user.credentials().matchesPassword(UTF8.encode("password")) should be(false)
     user.passwordChangeRequired() should equal(true)
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
@@ -390,6 +415,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.credentials().matchesPassword(UTF8.encode("bar")) should be(true)
+    user.credentials().matchesPassword(UTF8.encode("Bar")) should be(false)
     user.passwordChangeRequired() should equal(true)
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
@@ -614,6 +640,30 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
 
+  test("should alter user password with mixed upper- and lowercase letters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+    execute("SHOW USERS").toSet should be(Set(
+      Map("user" -> "neo4j", "roles" -> Seq("admin")),
+      Map("user" -> "foo", "roles" -> Seq.empty)
+    ))
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD 'bAz'")
+
+    // THEN
+    getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
+    val user = systemGraphRealm.getUser("foo")
+    user.credentials().matchesPassword(UTF8.encode("bAz")) should be(true)
+    user.credentials().matchesPassword(UTF8.encode("BaZ")) should be(false)
+    user.credentials().matchesPassword(UTF8.encode("BAZ")) should be(false)
+    user.credentials().matchesPassword(UTF8.encode("baz")) should be(false)
+    user.passwordChangeRequired() should equal(true)
+    user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
+  }
+
   test("should alter user password as parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -631,6 +681,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     getAllUserNamesFromManager should equal(Set("neo4j", "foo").asJava)
     val user = systemGraphRealm.getUser("foo")
     user.credentials().matchesPassword(UTF8.encode("baz")) should be(true)
+    user.credentials().matchesPassword(UTF8.encode("BAZ")) should be(false)
     user.passwordChangeRequired() should equal(true)
     user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(false)
   }
