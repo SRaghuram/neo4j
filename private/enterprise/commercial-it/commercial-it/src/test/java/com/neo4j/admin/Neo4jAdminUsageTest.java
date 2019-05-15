@@ -47,7 +47,7 @@ public class Neo4jAdminUsageTest
                         "    check-consistency\n" +
                         "        Check the consistency of a database.\n" +
                         "    import\n" +
-                        "        Import from a collection of CSV files or a pre-3.0 database.\n" +
+                        "        Import from a collection of CSV files.\n" +
                         "    memrec\n" +
                         "        Print Neo4j heap and pagecache memory settings recommendations.\n" +
                         "    report\n" +

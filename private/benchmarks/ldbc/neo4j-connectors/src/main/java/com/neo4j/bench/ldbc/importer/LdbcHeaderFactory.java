@@ -8,10 +8,10 @@ package com.neo4j.bench.ldbc.importer;
 import java.io.IOException;
 
 import org.neo4j.csv.reader.CharSeeker;
+import org.neo4j.csv.reader.Configuration;
 import org.neo4j.csv.reader.Mark;
 import org.neo4j.internal.batchimport.input.Groups;
 import org.neo4j.internal.batchimport.input.IdType;
-import org.neo4j.internal.batchimport.input.csv.Configuration;
 import org.neo4j.internal.batchimport.input.csv.Header;
 
 public class LdbcHeaderFactory implements Header.Factory

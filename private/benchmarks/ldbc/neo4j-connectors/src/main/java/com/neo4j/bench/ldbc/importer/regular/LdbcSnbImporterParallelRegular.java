@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.csv.reader.Configuration;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -62,7 +63,6 @@ import org.neo4j.internal.batchimport.input.Groups;
 import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.input.InputEntityDecorators;
-import org.neo4j.internal.batchimport.input.csv.Configuration;
 import org.neo4j.internal.batchimport.input.csv.CsvInput;
 import org.neo4j.internal.batchimport.input.csv.DataFactories;
 import org.neo4j.internal.batchimport.input.csv.DataFactory;
@@ -119,21 +119,10 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
 
         Extractors extractors = new Extractors( ';' );
 
-        Configuration configuration =
-                new Configuration.Default()
-                {
-                    @Override
-                    public char delimiter()
-                    {
-                        return '|';
-                    }
-
-                    @Override
-                    public char arrayDelimiter()
-                    {
-                        return ';';
-                    }
-                };
+        Configuration configuration = Configuration.newBuilder()
+            .withDelimiter( '|' )
+            .withArrayDelimiter( ';' )
+            .build();
 
         /*
         *** NODE FILES ***
