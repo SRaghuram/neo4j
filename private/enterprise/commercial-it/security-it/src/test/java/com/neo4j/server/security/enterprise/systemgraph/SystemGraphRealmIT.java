@@ -536,6 +536,81 @@ class SystemGraphRealmIT
         assertTrue( privileges.isEmpty() );
     }
 
+    @Test
+    void shouldHandleCustomDefaultDatabase() throws Throwable
+    {
+        dbManager.getManagementService().createDatabase( "foo" );
+        defaultConfig.augment( default_database, "foo" );
+
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .initialUsers( UserManager.INITIAL_USER_NAME )
+                .build(), securityLog, dbManager, defaultConfig
+        );
+
+        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
+        log.assertExactly(
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
+        );
+    }
+
+    @Test
+    void shouldHandleSwitchOfDefaultDatabase() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice" )
+                .migrateRole( "custom", "alice" )
+                .build(), securityLog, dbManager, defaultConfig
+        );
+
+        // Give Alice read privileges in 'neo4j'
+        DatabasePrivilege dbPriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        realm.grantPrivilegeToRole( "custom", dbPriv );
+
+        assertAuthenticationSucceeds( realm, "alice" );
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "alice" );
+        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+
+        realm.stop();
+
+        // Create a new database 'foo' and set it to default db in config
+        dbManager.getManagementService().createDatabase( "foo" );
+        defaultConfig.augment( default_database, "foo" );
+
+        realm.start();
+
+        // Alice should still be able to authenticate
+        assertAuthenticationSucceeds( realm, "alice" );
+
+        // Alice should still have read privileges in 'neo4j'
+        privileges = realm.showPrivilegesForUser( "alice" );
+        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+
+        // Alice should NOT have read privileges in 'foo'
+        DatabasePrivilege dbPrivFoo = new DatabasePrivilege( "foo" );
+        dbPrivFoo.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        assertFalse( privileges.contains( dbPrivFoo ) );
+
+        realm.stop();
+
+        // Switch back default db to 'neo4j'
+        defaultConfig.augment( default_database, DEFAULT_DATABASE_NAME );
+
+        realm.start();
+
+        // Alice should still be able to authenticate
+        assertAuthenticationSucceeds( realm, "alice" );
+
+        // Alice should still have read privileges in 'neo4j'
+        privileges = realm.showPrivilegesForUser( "alice" );
+        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+    }
+
     private void prePopulateUsers( String... usernames ) throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
