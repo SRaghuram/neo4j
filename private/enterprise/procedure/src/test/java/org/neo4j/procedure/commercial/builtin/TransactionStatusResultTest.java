@@ -33,7 +33,6 @@ import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
-import org.neo4j.kernel.impl.api.StatementOperationParts;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
@@ -237,7 +236,7 @@ class TransactionStatusResultTest
             Dependencies dependencies = new Dependencies();
             dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
-                        mock( StatementOperationParts.class ), mock( DatabaseTransactionEventListeners.class ),
+                        mock( DatabaseTransactionEventListeners.class ),
                         mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ), TransactionHeaderInformationFactory.DEFAULT,
                         mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
@@ -247,7 +246,7 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ) )
+                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ), new DatabaseId( DEFAULT_DATABASE_NAME ) )
             {
                 @Override
                 public Statistics getStatistics()
