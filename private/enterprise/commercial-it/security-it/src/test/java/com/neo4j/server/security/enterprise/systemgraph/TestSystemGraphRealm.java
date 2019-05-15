@@ -31,11 +31,10 @@ import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
-    static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
+static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
     {
         Config config = Config.defaults();
         config.augment(  DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString()  );
@@ -57,51 +56,41 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
                 InMemoryUserRepository::new
                 );
 
-        return testRealm( importOptions, securityLog, dbManager );
+        return testRealm( importOptions, securityLog, dbManager, config );
     }
 
-    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager )
+    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
         ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
-        return testRealm( importOptions, securityLog, dbManager.getManagementService(), executor );
+        return testRealm( importOptions, securityLog, dbManager.getManagementService(), executor, config );
     }
 
-    public static SystemGraphRealm testRealm(
-            SystemGraphImportOptions importOptions,
-            SecurityLog securityLog,
-            DatabaseManagementService managementService,
-            QueryExecutor executor ) throws Throwable
+    public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManagementService managementService,
+            QueryExecutor executor, Config config ) throws Throwable
     {
-        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database(DEFAULT_DATABASE_NAME) );
-        GlobalTransactionEventListeners transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class);
+        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
+        GlobalTransactionEventListeners transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
         Collection<TransactionEventListener<?>> systemListeners =
                 transactionEventListeners.getDatabaseTransactionEventListeners( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
         for ( TransactionEventListener<?> listener : systemListeners )
         {
-            transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener);
+            transactionEventListeners.unregisterTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
         }
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
-        SystemGraphRealm realm = new SystemGraphRealm(
-                systemGraphOperations,
-                new SystemGraphInitializer( executor, systemGraphOperations, importOptions, secureHasher, securityLog ),
-                true,
-                new SecureHasher(),
-                new BasicPasswordPolicy(),
-                newRateLimitedAuthStrategy(),
-                true,
-                true
-        );
+        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations,
+                new SystemGraphInitializer( executor, systemGraphOperations, importOptions, secureHasher, securityLog, config ), true,
+                new SecureHasher(), new BasicPasswordPolicy(), newRateLimitedAuthStrategy(), true, true );
 
         realm.initialize();
         realm.start();
 
         for ( TransactionEventListener<?> listener : systemListeners )
         {
-            transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener);
+            transactionEventListeners.registerTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
         }
 
         return realm;

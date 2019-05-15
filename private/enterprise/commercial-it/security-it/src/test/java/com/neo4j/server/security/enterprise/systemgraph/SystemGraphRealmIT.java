@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Collections;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.impl.security.User;
@@ -50,6 +51,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
@@ -59,6 +61,7 @@ class SystemGraphRealmIT
     private SystemGraphRealmTestHelper.TestDatabaseManager dbManager;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
+    private Config defaultConfig;
 
     @Inject
     private TestDirectory testDirectory;
@@ -69,6 +72,7 @@ class SystemGraphRealmIT
         dbManager = new SystemGraphRealmTestHelper.TestDatabaseManager( testDirectory );
         log = new AssertableLogProvider();
         securityLog = new SecurityLog( log.getLog( getClass() ) );
+        defaultConfig = Config.defaults();
     }
 
     @AfterEach
@@ -85,7 +89,7 @@ class SystemGraphRealmIT
                 .mayNotPerformMigration()
                 .importUsers( "alice" )
                 .importRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
@@ -104,7 +108,7 @@ class SystemGraphRealmIT
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
                 .migrateRole( "goon", "bob" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
@@ -123,7 +127,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .initialUsers( UserManager.INITIAL_USER_NAME )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
@@ -140,7 +144,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .initialUser( "neo4j1", false )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
@@ -219,7 +223,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .initialUsers( "jane", "joe" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         // Only the default user should have been created instead
@@ -239,7 +243,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .migrateUsers( "jane" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane" ) );
@@ -260,7 +264,7 @@ class SystemGraphRealmIT
                 .build();
 
         InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class,
-                () -> TestSystemGraphRealm.testRealm( importOptions, securityLog, dbManager ) );
+                () -> TestSystemGraphRealm.testRealm( importOptions, securityLog, dbManager, defaultConfig ) );
         assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
     }
 
@@ -271,7 +275,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .migrateUsers( "jane", "alice", "neo4j" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
@@ -294,7 +298,7 @@ class SystemGraphRealmIT
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .defaultAdmins( "trinity" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         // Then
@@ -313,7 +317,7 @@ class SystemGraphRealmIT
                 .mayNotPerformMigration()
                 .importUsers( "alice" )
                 .importRole( "not_admin", "alice" )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
 
         assertThat( realm.getUsernamesForRole( "not_admin" ), contains( "alice" ) );
@@ -329,7 +333,7 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         // When
         Set<DatabasePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
@@ -378,7 +382,7 @@ class SystemGraphRealmIT
                 .migrateRole( PredefinedRoles.ADMIN )
                 .migrateRole( "custom" )
                 .migrateRole( "role" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         // When
         DatabasePrivilege customPriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
@@ -409,7 +413,7 @@ class SystemGraphRealmIT
                 .migrateUsers( "alice" )
                 .migrateRole( PredefinedRoles.ADMIN )
                 .migrateRole( "CustomAdmin" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
@@ -434,7 +438,7 @@ class SystemGraphRealmIT
                 .mayPerformMigration()
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         try
         {
@@ -460,7 +464,7 @@ class SystemGraphRealmIT
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
                 .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         DatabasePrivilege dbPriv1 = new DatabasePrivilege( SYSTEM_DATABASE_NAME );
         dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
@@ -488,7 +492,7 @@ class SystemGraphRealmIT
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
                 .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
@@ -511,7 +515,7 @@ class SystemGraphRealmIT
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
                 .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager );
+                .build(), securityLog, dbManager, defaultConfig );
 
         Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
@@ -537,7 +541,7 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldPerformImport()
                 .importUsers( usernames )
-                .build(), securityLog, dbManager
+                .build(), securityLog, dbManager, defaultConfig
         );
         realm.stop();
         realm.shutdown();

@@ -39,6 +39,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class MultiRealmAuthManagerRule implements TestRule
 {
@@ -69,7 +70,8 @@ public class MultiRealmAuthManagerRule implements TestRule
 
         SecureHasher secureHasher = new SecureHasher();
         InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( secureHasher );
-        SystemGraphInitializer initializer = new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ) );
+        SystemGraphInitializer initializer =
+                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ), Config.defaults() );
 
         SecurityLog securityLog = new SecurityLog( log );
         SystemGraphRealm realm = new SystemGraphRealm( ops, initializer, true, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );

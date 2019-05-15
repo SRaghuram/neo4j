@@ -9,7 +9,7 @@ import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -317,7 +317,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
+    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], Config.defaults())
     val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
     val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))

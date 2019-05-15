@@ -865,7 +865,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new SystemGraphInitializer(systemGraphInnerQueryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log])
+    val systemGraphInitializer =
+      new SystemGraphInitializer(systemGraphInnerQueryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], Config.defaults())
     val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
     val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))

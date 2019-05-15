@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -202,7 +203,8 @@ public class CommercialSecurityModule extends SecurityModule
             SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
             SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem, accessCapability );
             Log log = logProvider.getLog( getClass() );
-            SystemGraphInitializer initializer = new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, log );
+            SystemGraphInitializer initializer =
+                    new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, log, config );
 
             try
             {
@@ -293,7 +295,7 @@ public class CommercialSecurityModule extends SecurityModule
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
         SystemGraphInitializer systemGraphInitializer = initSystemGraphOnStart ? new SystemGraphInitializer( queryExecutor, systemGraphOperations,
-                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog ) : null;
+                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog, config ) : null;
 
         return new SystemGraphRealm(
                 systemGraphOperations,
@@ -652,7 +654,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
         SystemGraphInitializer systemGraphInitializer =
-                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, securityLog );
+                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, securityLog, config );
 
         return new SystemGraphRealm(
                 systemGraphOperations,

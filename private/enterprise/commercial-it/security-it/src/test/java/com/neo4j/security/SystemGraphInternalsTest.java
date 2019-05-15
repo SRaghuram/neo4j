@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -77,7 +78,8 @@ class SystemGraphInternalsTest
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(), securityLog, managementService, systemGraphExecutor );
+        realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
+                securityLog, managementService, systemGraphExecutor, Config.defaults() );
     }
 
     @AfterEach

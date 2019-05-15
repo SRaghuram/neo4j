@@ -23,6 +23,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
@@ -36,7 +38,6 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
@@ -46,9 +47,10 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
     private final SystemGraphOperations systemGraphOperations;
     private final SystemGraphImportOptions importOptions;
     private final Log log;
+    private final String defaultDbName;
 
     public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations,
-            SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log )
+            SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log, Config config )
     {
         super( queryExecutor, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
                 importOptions.initialUserRepositorySupplier, secureHasher, log );
@@ -56,6 +58,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
         this.log = log;
+        this.defaultDbName = config.get( GraphDatabaseSettings.default_database );
     }
 
     @Override
@@ -125,7 +128,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
 
     private void ensureDefaultDatabases() throws InvalidArgumentsException
     {
-        newDb( DEFAULT_DATABASE_NAME );
+        newDb( defaultDbName );
         newDb( SYSTEM_DATABASE_NAME );
     }
 

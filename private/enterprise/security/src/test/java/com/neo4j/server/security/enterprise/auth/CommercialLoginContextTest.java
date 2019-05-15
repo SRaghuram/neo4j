@@ -56,7 +56,7 @@ class CommercialLoginContextTest
                 new SystemGraphImportOptions( false, true, true, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
                         InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
         SystemGraphInitializer graphInitializer =
-                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ) );
+                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ), Config.defaults() );
         SystemGraphRealm realm = new SystemGraphRealm( ops, graphInitializer, true, secureHasher, new BasicPasswordPolicy(),
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
         authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
