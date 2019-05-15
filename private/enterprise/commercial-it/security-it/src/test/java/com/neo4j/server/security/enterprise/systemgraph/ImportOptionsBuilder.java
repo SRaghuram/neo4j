@@ -62,7 +62,8 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
 
     ImportOptionsBuilder importUsers( String... importUsers )
     {
-        return (ImportOptionsBuilder) fillListWithUsers( this.importUsers, importUsers );
+        fillListWithUsers( this.importUsers, importUsers );
+        return this;
     }
 
     ImportOptionsBuilder importRole( String role, String... users )
@@ -94,12 +95,14 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
 
     ImportOptionsBuilder initialUsers( String... initialUsers )
     {
-        return (ImportOptionsBuilder) fillListWithUsers( this.initialUsers, initialUsers );
+        fillListWithUsers( this.initialUsers, initialUsers );
+        return this;
     }
 
     ImportOptionsBuilder defaultAdmins( String... defaultAdmins )
     {
-        return (ImportOptionsBuilder) fillListWithUsers( this.defaultAdmins, defaultAdmins );
+        fillListWithUsers( this.defaultAdmins, defaultAdmins );
+        return this;
     }
 
     @SuppressWarnings( "unchecked" )

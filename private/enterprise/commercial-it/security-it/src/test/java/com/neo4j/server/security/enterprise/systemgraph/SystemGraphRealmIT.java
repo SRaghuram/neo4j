@@ -30,6 +30,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.systemgraph.BasicSystemGraphRealmIT.SIMULATED_INITIAL_PASSWORD;
 import static com.neo4j.server.security.enterprise.systemgraph.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.testAuthenticationToken;
@@ -144,7 +145,7 @@ class SystemGraphRealmIT
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
         assertIncorrectCredentials( realm, UserManager.INITIAL_USER_NAME, UserManager.INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME, "neo4j1" );
+        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME,  SIMULATED_INITIAL_PASSWORD  );
     }
 
     @Test
@@ -160,7 +161,7 @@ class SystemGraphRealmIT
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertFalse( user.passwordChangeRequired() );
     }
 
@@ -186,7 +187,7 @@ class SystemGraphRealmIT
         user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertFalse( user.passwordChangeRequired() );
     }
 
@@ -206,7 +207,7 @@ class SystemGraphRealmIT
         User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertFalse( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertFalse( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertTrue( user.credentials().matchesPassword( password("neo4j2") ) );
     }
 

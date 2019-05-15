@@ -35,7 +35,8 @@ class BasicImportOptionsBuilder
 
     BasicImportOptionsBuilder migrateUsers( String... migrateUsers )
     {
-        return fillListWithUsers( this.migrateUsers, migrateUsers );
+        fillListWithUsers( this.migrateUsers, migrateUsers );
+        return this;
     }
 
     BasicImportOptionsBuilder initialUser( String password, boolean pwdChangeRequired )
@@ -66,14 +67,13 @@ class BasicImportOptionsBuilder
         }
     }
 
-    BasicImportOptionsBuilder fillListWithUsers( List<User> list, String... userNames )
+    void fillListWithUsers( List<User> list, String... userNames )
     {
         for ( String userName :userNames )
         {
             // Use username as password to simplify test assertions
             list.add( createUser( userName, userName, false ) );
         }
-        return this;
     }
 
     private static User createUser( String userName, String password, boolean pwdChangeRequired )

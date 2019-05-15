@@ -95,7 +95,7 @@ class BasicSystemGraphRealmIT
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertFalse( user.passwordChangeRequired() );
     }
 
@@ -121,7 +121,7 @@ class BasicSystemGraphRealmIT
         user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertTrue( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertTrue( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertFalse( user.passwordChangeRequired() );
     }
 
@@ -141,7 +141,7 @@ class BasicSystemGraphRealmIT
         User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
         assertFalse( user.credentials().matchesPassword( password( INITIAL_PASSWORD ) ) );
-        assertFalse( user.credentials().matchesPassword( password("neo4j1") ) );
+        assertFalse( user.credentials().matchesPassword( password( SIMULATED_INITIAL_PASSWORD ) ) );
         assertTrue( user.credentials().matchesPassword( password("neo4j2") ) );
     }
 
@@ -259,6 +259,8 @@ class BasicSystemGraphRealmIT
         when( mock.fileSystem() ).thenReturn( testDirectory.getFileSystem() );
         SetInitialPasswordCommand setPasswordCommand =
                 new SetInitialPasswordCommand( testDirectory.directory().toPath(), testDirectory.directory( "conf" ).toPath(), mock );
-        setPasswordCommand.execute( new String[]{"neo4j1"} );
+        setPasswordCommand.execute( new String[]{SIMULATED_INITIAL_PASSWORD} );
     }
+
+    static final String SIMULATED_INITIAL_PASSWORD = "neo4j1";
 }
