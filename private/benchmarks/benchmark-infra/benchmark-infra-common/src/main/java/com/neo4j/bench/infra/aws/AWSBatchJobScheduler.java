@@ -88,7 +88,7 @@ public class AWSBatchJobScheduler implements JobScheduler
     private List<String> schedule( List<SubmitJobRequest> submitJobRequests )
     {
         return submitJobRequests.stream()
-                .map( request -> awsBatch.submitJob( request ) )
+                .map( awsBatch::submitJob )
                 .map( SubmitJobResult::getJobId )
                 .collect( toList() );
     }
@@ -100,12 +100,12 @@ public class AWSBatchJobScheduler implements JobScheduler
         return workloadsAndDbs.stream()
         .map(workloadAndDb ->
         {
-        String jobName = getJobName(workloadAndDb.workload);
-        return new SubmitJobRequest()
-                   .withJobDefinition( jobDefinition )
-                   .withJobQueue( jobQueue )
-                   .withJobName( jobName )
-                   .withParameters( args.toJobParameters( workloadAndDb.workload, workloadAndDb.db ) );
+            String jobName = getJobName(workloadAndDb.workload);
+            return new SubmitJobRequest()
+                       .withJobDefinition( jobDefinition )
+                       .withJobQueue( jobQueue )
+                       .withJobName( jobName )
+                       .withParameters( args.toJobParameters( workloadAndDb.workload, workloadAndDb.db ) );
         }).collect( toList() );
     }
 

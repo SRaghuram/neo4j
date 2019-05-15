@@ -12,6 +12,8 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOError;
@@ -32,6 +34,8 @@ import static java.lang.String.format;
  */
 public class Workspace
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( Workspace.class );
 
     public static Workspace create( Path baseDir, Path... requiredArtifacts )
     {
@@ -100,7 +104,7 @@ public class Workspace
             {
                 if ( !archiveInput.canReadEntryData( entry ) )
                 {
-                    // log something?
+                    LOG.warn( "cannot read archive entry {} from archive {}", entry,productArchive );
                     continue;
                 }
                 if ( !entry.isDirectory() && entry.getName().endsWith( "neo4j.conf" ) )

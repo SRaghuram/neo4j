@@ -5,20 +5,15 @@
  */
 package com.neo4j.bench.infra;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 
 public interface ArtifactStorage
 {
 
-    URI uploadBuildArtifacts( String string, Workspace workspace ) throws URISyntaxException, AmazonServiceException, SdkClientException, IOException;
+    URI uploadBuildArtifacts( String string, Workspace workspace ) throws ArtifactStoreException;
 
-    void downloadBuildArtifacts( Path baseDir, String buildID ) throws IOException;
+    void downloadBuildArtifacts( Path baseDir, String buildID ) throws ArtifactStoreException;
 
     Dataset downloadDataset( String neo4jVersion, String dataset );
 }

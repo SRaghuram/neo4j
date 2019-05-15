@@ -6,6 +6,7 @@ package com.neo4j.bench.infra.worker;
  */
 
 import com.amazonaws.SdkClientException;
+import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.InfraCommand;
 import com.neo4j.bench.infra.Workspace;
@@ -99,7 +100,7 @@ public class RunWorker extends InfraCommand
             }
 
         }
-        catch ( SdkClientException | IOException | InterruptedException e )
+        catch ( SdkClientException | IOException | InterruptedException | ArtifactStoreException e )
         {
             throw new RuntimeException( "fatal error in worker", e );
         }

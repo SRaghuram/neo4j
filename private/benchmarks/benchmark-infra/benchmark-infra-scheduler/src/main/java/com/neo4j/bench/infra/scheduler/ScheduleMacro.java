@@ -6,6 +6,7 @@
 package com.neo4j.bench.infra.scheduler;
 
 import com.amazonaws.SdkClientException;
+import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkArgs;
 import com.neo4j.bench.infra.InfraCommand;
 import com.neo4j.bench.infra.JobScheduler;
@@ -94,7 +95,7 @@ public class ScheduleMacro extends InfraCommand
             LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map(Object::toString).collect( joining( "\n" ) ) );
 
         }
-        catch ( SdkClientException | URISyntaxException | IOException e )
+        catch ( SdkClientException | ArtifactStoreException e )
         {
             LOG.error( "failed to schedule benchmarking job", e );
         }

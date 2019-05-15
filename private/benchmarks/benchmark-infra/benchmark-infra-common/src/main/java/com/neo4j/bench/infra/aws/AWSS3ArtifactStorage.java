@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.infra.aws;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -26,6 +24,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.lifecycle.LifecycleFilter;
 import com.amazonaws.services.s3.model.lifecycle.LifecyclePrefixPredicate;
 import com.neo4j.bench.infra.ArtifactStorage;
+import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
 import org.slf4j.Logger;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -89,48 +87,59 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public URI uploadBuildArtifacts( String buildID, Workspace workspace )
-            throws URISyntaxException, AmazonServiceException, SdkClientException, IOException
+    public URI uploadBuildArtifacts( String buildID, Workspace workspace ) throws ArtifactStoreException
     {
         LOG.debug( "uploading build {} artifacts from workspace {}", buildID, workspace.baseDir() );
-        for ( Path artifact : workspace.allArtifacts() )
+
+        try
         {
-            String key = createBuildArtifactKey( buildID, workspace.baseDir().relativize( artifact ) );
-
-            ObjectMetadata objectMetadata = new ObjectMetadata();
-            // don't you ever dare to touch it,
-            // otherwise you will run out of memory
-            // as AWS S3 client tries to cache whole stream in memory
-            // if size is unknown
-            objectMetadata.setContentLength( Files.size( artifact ) );
-
-            LOG.info( "upload artifact {} with build id {}", artifact.toString(), buildID );
-
-            PutObjectResult result = amazonS3.putObject( BENCHMARKING_BUCKET_NAME, key, Files.newInputStream( artifact ), objectMetadata );
-            // TODO this fails under tests, and works with real implementation
-            // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
+            for ( Path artifact : workspace.allArtifacts() )
+            {
+                String key = createBuildArtifactKey( buildID, workspace.baseDir().relativize( artifact ) );
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                // don't you ever dare to touch it,
+                // otherwise you will run out of memory
+                // as AWS S3 client tries to cache whole stream in memory
+                // if size is unknown
+                objectMetadata.setContentLength( Files.size( artifact ) );
+                LOG.info( "upload artifact {} with build id {}", artifact.toString(), buildID );
+                PutObjectResult result = amazonS3.putObject( BENCHMARKING_BUCKET_NAME, key,
+                        Files.newInputStream( artifact ), objectMetadata );
+                // TODO this fails under tests, and works with real implementation
+                // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
+            }
+            String uriPath = Paths.get( "/", ARTIFACTS_PREFIX, buildID ).toString();
+            return new URI( "s3", BENCHMARKING_BUCKET_NAME, uriPath, null );
         }
-
-        String uriPath = Paths.get( "/", ARTIFACTS_PREFIX, buildID ).toString();
-        return new URI( "s3", BENCHMARKING_BUCKET_NAME, uriPath, null );
+        catch ( IOException | URISyntaxException e )
+        {
+            throw new ArtifactStoreException( e );
+        }
     }
 
     @Override
-    public void downloadBuildArtifacts( Path baseDir, String buildID ) throws IOException
+    public void downloadBuildArtifacts( Path baseDir, String buildID ) throws ArtifactStoreException
     {
         String keyPrefix = createBuildArtifactPrefix( buildID );
         LOG.info( "downloading build artifacts for build {} from bucket {} at key prefix {}", buildID,  BENCHMARKING_BUCKET_NAME, keyPrefix );
 
         ObjectListing objectListing = amazonS3.listObjects( BENCHMARKING_BUCKET_NAME, keyPrefix );
-        for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )
+        try
         {
-            String key = objectSummary.getKey();
-            String relativeArtifact = key.replace( keyPrefix + "/", "" );
-            S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
-            Path absoluteArtifact = baseDir.resolve( relativeArtifact );
-            Files.createDirectories( absoluteArtifact.getParent() );
-            LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
-            Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
+            for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )
+            {
+                String key = objectSummary.getKey();
+                String relativeArtifact = key.replace( keyPrefix + "/", "" );
+                S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
+                Path absoluteArtifact = baseDir.resolve( relativeArtifact );
+                Files.createDirectories( absoluteArtifact.getParent() );
+                LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
+                Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new ArtifactStoreException( e );
         }
 
     }
