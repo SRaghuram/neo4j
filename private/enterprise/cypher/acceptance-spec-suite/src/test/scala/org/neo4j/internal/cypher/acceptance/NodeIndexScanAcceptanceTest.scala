@@ -94,7 +94,6 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should be(empty)
   }
 
-
   test("should not union identical NodeIndexScans") {
     val as = (1 to 209).map(_ => createLabeledNode("A"))
     val cs = (1 to 12).map(_ => createLabeledNode("C"))
@@ -112,6 +111,30 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, q)
+    result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
+      .withLHS(aPlan("NodeIndexScan"))
+      .withRHS(aPlan("NodeIndexScan"))
+    ) and includeSomewhere.aPlan("NodeIndexScan"))
+  }
+
+  test("should not union identical NodeIndexScans in a non CNF normalized predicate") {
+    val as = (1 to 209).map(_ => createLabeledNode("A"))
+    val cs = (1 to 12).map(_ => createLabeledNode("C"))
+    (1 to 2262).map(i => createLabeledNode("Other"))
+    as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode, ("id", i)) }
+
+    graph.createIndex("A", "id")
+
+    val q =
+      """
+        |MATCH (c:C)-[r1:REL]->(a:A)
+        |MATCH (c)-[r2:REL]->(b:A)
+        |  WHERE (a.id = b.id AND r1.id < r2.id) OR a.id < b.id
+        |RETURN *
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, q)
+    println(result.executionPlanDescription())
     result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))
