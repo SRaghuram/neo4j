@@ -128,8 +128,8 @@ public class TransactionBatchCommitterTest
         // then
         verify( txToTerminate ).markForTermination( Status.Transaction.Outdated );
         verify( tx, never() ).markForTermination( any() );
-        logProvider.assertContainsLogCallContaining( "Marking transaction for termination" );
-        logProvider.assertContainsLogCallContaining( "lastCommittedTxId:" + (BASE_TX_ID + txCount - 1) );
+        logProvider.rawMessageMatcher().assertContainsLogCallContaining( "Marking transaction for termination" );
+        logProvider.rawMessageMatcher().assertContainsLogCallContaining( "lastCommittedTxId:" + (BASE_TX_ID + txCount - 1) );
     }
 
     private KernelTransactionHandle newHandle( KernelTransaction tx )

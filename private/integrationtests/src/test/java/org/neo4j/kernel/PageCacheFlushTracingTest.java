@@ -34,7 +34,7 @@ public class PageCacheFlushTracingTest
             transaction.success();
         }
         database.shutdown();
-        logProvider.assertContainsMessageContaining( "Flushing file" );
-        logProvider.assertContainsMessageContaining( "Page cache flush completed. Flushed " );
+        logProvider.rawMessageMatcher().assertContainsMessageContaining( "Flushing file" );
+        logProvider.rawMessageMatcher().assertContainsMessageContaining( "Page cache flush completed. Flushed " );
     }
 }

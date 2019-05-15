@@ -309,7 +309,7 @@ public class StoreCopyClientIT
         }
         catch ( StoreCopyFailedException e )
         {
-            assertableLogProvider.assertContainsExactlyOneMessageMatching(
+            assertableLogProvider.rawMessageMatcher().assertContainsExactlyOneMessageMatching(
                     both( startsWith( "Connection refused:" ) ).and( containsString( "localhost/127.0.0.1:" + port ) ) );
         }
     }
@@ -339,8 +339,8 @@ public class StoreCopyClientIT
         }
         catch ( StoreCopyFailedException e )
         {
-            assertableLogProvider.assertContainsExactlyOneMessageMatching( startsWith( "Unable to resolve address for" ) );
-            assertableLogProvider.assertLogStringContains(catchupAddressResolutionException.getMessage() );
+            assertableLogProvider.rawMessageMatcher().assertContainsExactlyOneMessageMatching( startsWith( "Unable to resolve address for" ) );
+            assertableLogProvider.rawMessageMatcher().assertLogStringContains(catchupAddressResolutionException.getMessage() );
         }
     }
 

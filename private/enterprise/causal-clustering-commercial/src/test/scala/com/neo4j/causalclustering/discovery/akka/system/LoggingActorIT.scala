@@ -7,15 +7,16 @@ package com.neo4j.causalclustering.discovery.akka.system
 
 
 
+import java.util.logging.Level
+
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.testkit.TestKit
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, NeoSuite}
+import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.neo4j.causalclustering.core.CausalClusteringSettings
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.logging.AssertableLogProvider
-import java.util.logging.Level
 
 
 class LoggingActorIT extends NeoSuite {
@@ -27,9 +28,9 @@ class LoggingActorIT extends NeoSuite {
       "pass warning messages on to Neo logProvider" in new Fixture(Level.WARNING) {
 
         withLogging {
-          logProvider.assertNoLogCallContaining("debug test")
-          logProvider.assertNoLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertNoLogCallContaining("debug test")
+          logProvider.rawMessageMatcher().assertNoLogCallContaining("info test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
         }
       }
     }
@@ -39,9 +40,9 @@ class LoggingActorIT extends NeoSuite {
       "pass info and warning messages on to Neo logProvider" in new Fixture(Level.INFO) {
 
         withLogging {
-          logProvider.assertNoLogCallContaining("debug test")
-          logProvider.assertContainsLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertNoLogCallContaining("debug test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("info test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
         }
       }
     }
@@ -51,9 +52,9 @@ class LoggingActorIT extends NeoSuite {
       "pass all messages on to Neo logProvider" in new Fixture(Level.ALL) {
 
         withLogging {
-          logProvider.assertContainsLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
-          logProvider.assertContainsLogCallContaining("debug test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("info test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertContainsLogCallContaining("debug test")
         }
       }
     }

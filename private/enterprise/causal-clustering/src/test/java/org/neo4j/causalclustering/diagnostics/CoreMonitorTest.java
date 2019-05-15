@@ -35,7 +35,7 @@ public class CoreMonitorTest
         ClusterId clusterId = new ClusterId( UUID.randomUUID() );
         monitor.boundToCluster( clusterId );
 
-        user.assertContainsExactlyOneMessageMatching( Matchers.equalToIgnoringCase( "Bound to cluster with id " + clusterId.uuid() ) );
-        debug.assertContainsExactlyOneMessageMatching( Matchers.equalToIgnoringCase( "Bound to cluster with id " + clusterId.uuid() ) );
+        user.rawMessageMatcher().assertContainsExactlyOneMessageMatching( Matchers.equalToIgnoringCase( "Bound to cluster with id " + clusterId.uuid() ) );
+        debug.rawMessageMatcher().assertContainsExactlyOneMessageMatching( Matchers.equalToIgnoringCase( "Bound to cluster with id " + clusterId.uuid() ) );
     }
 }
