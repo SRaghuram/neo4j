@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.time._
 
 import org.neo4j.cypher.{ExecutionEngineFunSuite, FakeClock}
+import org.neo4j.values.storable.DurationValue
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
 class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with FakeClock {
@@ -76,6 +77,13 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val result = executeSingle("RETURN timeStamP() AS t").toList
 
     result.map(m => m("t")).head.asInstanceOf[Long] > past.toEpochSecond shouldBe true
+  }
+
+  test("should get right precision on duration") {
+    val result = executeWith(supported, "RETURN duration('P0.9Y') AS duration")
+    val duration = single(result.columnAs[DurationValue]("duration"))
+
+    duration should equal(DurationValue.parse("P10M24DT30196.8S"))
   }
 
   def single[T](values: Iterator[T]):T = {
