@@ -13,7 +13,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.server.database.Database;
+import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -33,9 +33,9 @@ public class ReadReplicaDatabaseAvailabilityService implements AdvertisableServi
 
     private final boolean isReadReplica;
 
-    public ReadReplicaDatabaseAvailabilityService( @Context OutputFormat output, @Context Database database )
+    public ReadReplicaDatabaseAvailabilityService( @Context OutputFormat output, @Context DatabaseService database )
     {
-        DatabaseInfo databaseInfo = database.getGraph().getDependencyResolver().resolveDependency( DatabaseInfo.class );
+        DatabaseInfo databaseInfo = database.getDatabase().getDependencyResolver().resolveDependency( DatabaseInfo.class );
         isReadReplica = DatabaseInfo.READ_REPLICA.equals( databaseInfo );
     }
 

@@ -38,7 +38,7 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.database.Database;
+import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
@@ -72,9 +72,9 @@ class ReadReplicaStatusTest
     void setup() throws Exception
     {
         OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        Database database = mock( Database.class );
+        DatabaseService database = mock( DatabaseService.class );
         GraphDatabaseFacade db = mock( GraphDatabaseFacade.class );
-        when( database.getGraph() ).thenReturn( db );
+        when( database.getDatabase() ).thenReturn( db );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
         dependencyResolver.satisfyDependency( DatabaseInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );

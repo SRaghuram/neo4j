@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.server.database.Database;
+import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -42,10 +42,10 @@ public class CoreDatabaseAvailabilityService implements AdvertisableService
     private final boolean coreDatabaseType;
     private final RoleProvider roleProvider;
 
-    public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context Database database )
+    public CoreDatabaseAvailabilityService( @Context OutputFormat output, @Context DatabaseService database )
     {
         this.output = output;
-        DependencyResolver dependencyResolver = database.getGraph().getDependencyResolver();
+        DependencyResolver dependencyResolver = database.getDatabase().getDependencyResolver();
         DatabaseInfo databaseInfo = dependencyResolver.resolveDependency( DatabaseInfo.class );
         coreDatabaseType = DatabaseInfo.CORE.equals( databaseInfo );
         this.roleProvider = coreDatabaseType ? dependencyResolver.resolveDependency( RoleProvider.class ) : EMPTY_PROVIDER;

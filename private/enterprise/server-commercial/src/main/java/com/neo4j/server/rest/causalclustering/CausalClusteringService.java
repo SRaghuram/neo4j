@@ -10,7 +10,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.server.database.Database;
+import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -26,7 +26,7 @@ public class CausalClusteringService implements AdvertisableService
 
     private final CausalClusteringStatus status;
 
-    public CausalClusteringService( @Context OutputFormat output, @Context Database database )
+    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseService database )
     {
         this.status = CausalClusteringStatusFactory.build( output, database );
     }

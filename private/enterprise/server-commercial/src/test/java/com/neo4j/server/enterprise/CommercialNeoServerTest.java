@@ -48,7 +48,7 @@ class CommercialNeoServerTest
         try
         {
             Path expectedPath = Paths.get( testDirectory.storeDir().getPath(), "data", "databases", DEFAULT_DATABASE_NAME );
-            GraphDatabaseFacade graph = server.getDatabase().getGraph();
+            GraphDatabaseFacade graph = server.getDatabaseService().getDatabase();
             assertEquals( expectedPath, graph.databaseLayout().databaseDirectory().toPath() );
         }
         finally

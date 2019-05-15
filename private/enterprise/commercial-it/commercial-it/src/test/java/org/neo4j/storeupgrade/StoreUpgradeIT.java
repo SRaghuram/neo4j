@@ -211,7 +211,7 @@ public class StoreUpgradeIT
             {
                 bootstrapper.start( rootDir.getAbsoluteFile(), Optional.of( configFile ), Collections.emptyMap() );
                 assertTrue( bootstrapper.isRunning() );
-                checkInstance( store, bootstrapper.getServer().getDatabase().getGraph() );
+                checkInstance( store, bootstrapper.getServer().getDatabaseService().getDatabase() );
             }
             finally
             {

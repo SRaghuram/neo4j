@@ -43,7 +43,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
-import org.neo4j.server.database.Database;
+import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
@@ -85,9 +85,9 @@ public class CoreStatusTest
     public void setup() throws Exception
     {
         OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        Database database = mock( Database.class );
+        DatabaseService database = mock( DatabaseService.class );
         databaseFacade = mock( GraphDatabaseFacade.class );
-        when( database.getGraph() ).thenReturn( databaseFacade );
+        when( database.getDatabase() ).thenReturn( databaseFacade );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
 
         raftMembershipManager = dependencyResolver.satisfyDependency( fakeRaftMembershipManager( new HashSet<>( Arrays.asList( myself, core2, core3 ) ) ) );

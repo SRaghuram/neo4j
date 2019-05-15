@@ -105,7 +105,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     @Override
     public GraphDatabaseFacade getLocalGraph()
     {
-        return server.getDatabase().getGraph();
+        return server.getDatabaseService().getDatabase();
     }
 
     @Override
