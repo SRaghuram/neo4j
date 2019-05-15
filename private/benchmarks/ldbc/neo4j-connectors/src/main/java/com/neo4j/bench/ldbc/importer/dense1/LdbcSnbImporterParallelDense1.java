@@ -57,7 +57,6 @@ import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
@@ -930,7 +929,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 Collectors.badCollector(
                         System.out,
                         tagClassesFiles.stream().map( path -> (int) path.toFile().length() ).mapToInt( i -> i ).sum(),
-                        Collectors.collect( true, false, false ) )
+                        Collectors.collect( true, false, false ) ),
+                CsvInput.NO_MONITOR
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
