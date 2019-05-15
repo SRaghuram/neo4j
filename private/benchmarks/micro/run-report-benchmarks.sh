@@ -9,9 +9,9 @@
 set -e
 set -u
 
-if [ $# -lt 21 ] ; then
-    echo "Expected at least 21 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id tarball jvm_args jmh_args neo4j_config_path jvm_path with_jfr with_async triggered_by"
+if [ $# -lt 20 ] ; then
+    echo "Expected at least 20 arguments, but got $#"
+    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path with_jfr with_async triggered_by"
     exit 1
 fi
 
@@ -28,22 +28,21 @@ results_store_password="${10}"
 benchmark_config="${11}"
 teamcity_build_id="${12}"
 parent_teamcity_build_id="${13}"
-tarball="${14}"
-jvm_args="${15}"
-jmh_args="${16}"
-neo4j_config_path="${17}"
-jvm_path="${18}"
-with_jfr="${19}"
-with_async="${20}"
-triggered_by="${21}"
+jvm_args="${14}"
+jmh_args="${15}"
+neo4j_config_path="${16}"
+jvm_path="${17}"
+with_jfr="${18}"
+with_async="${19}"
+triggered_by="${20}"
 micro_benchmarks_dir=$(pwd)
 json_path=${micro_benchmarks_dir}/results.json
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
-if [[ $# -eq 22 ]]; then
-	AWS_EXTRAS="--endpoint-url=${22}"
+if [[ $# -eq 21 ]]; then
+	AWS_EXTRAS="--endpoint-url=${21}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -63,12 +62,10 @@ echo "Tool branch owner: ${tool_branch_owner}"
 echo "Tool benchmarks commit: ${tool_commit}"
 echo "Results store uri: ${results_store_uri}"
 echo "Results store user: ${results_store_user}"
-echo "Neo4j package: ${tarball}"
 echo "Benchmark config: ${benchmark_config}"
 echo "Neo4j config path: ${neo4j_config_path}"
 echo "TeamCity Build ID: ${teamcity_build_id}"
 echo "TeamCity Parent Build ID: ${parent_teamcity_build_id}"
-echo "Tarball: ${tarball}"
 echo "JVM: ${jvm_path}"
 echo "JVM args: ${jvm_args}"
 echo "JMH args: ${jmh_args}"
@@ -99,7 +96,6 @@ ${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run
         --tool_commit "${tool_commit}" \
         --tool_branch "${tool_branch}" \
         --tool_branch_owner "${tool_branch_owner}" \
-        --neo4j_package_for_jvm_args "${tarball}" \
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
         --profiles-dir "${profiler_recording_output_dir}" \
