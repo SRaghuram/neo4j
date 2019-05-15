@@ -13,7 +13,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -203,7 +202,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         grantPrivilegeToRole( roleName, resourcePrivilege, new DatabasePrivilege() );
     }
 
-    private Map<String,Object> makePrivilegeParameters(String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege)
+    private Map<String,Object> makePrivilegeParameters( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege )
     {
         assert dbPrivilege.isAllDatabases() || !dbPrivilege.getDbName().isEmpty();
         Resource resource = resourcePrivilege.getResource();
@@ -247,11 +246,11 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String qualifierPattern = fullSegment ? "q:LabelQualifierAll" : "q:LabelQualifier {label: label}";
 
         String query = String.format(
-                "MATCH (role:Role)-[g:GRANTED]->(action:Action)-[:APPLIES_TO]->(res:Resource), "+
-                "(action)-[:SCOPE]->(segment:Segment), "+
-                "(segment)-[:FOR]->(%s), "+
-                "(segment)-[:QUALIFIED]-(%s) "+
-                "WHERE role.name = $roleName AND action.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 "+
+                "MATCH (role:Role)-[g:GRANTED]->(action:Action)-[:APPLIES_TO]->(res:Resource), " +
+                "(action)-[:SCOPE]->(segment:Segment), " +
+                "(segment)-[:FOR]->(%s), " +
+                "(segment)-[:QUALIFIED]-(%s) " +
+                "WHERE role.name = $roleName AND action.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
                 "DELETE g RETURN 0",
                 databasePattern, qualifierPattern
         );
@@ -294,7 +293,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         {
             AnyValue dbNameValue = row.fields()[0];
             NodeValue database = (NodeValue) row.fields()[1];
-            assert (database.labels().length() == 1);
+            assert database.labels().length() == 1;
             DatabasePrivilege dbpriv;
             if ( database.labels().stringValue( 0 ).equals( "Database" ) )
             {

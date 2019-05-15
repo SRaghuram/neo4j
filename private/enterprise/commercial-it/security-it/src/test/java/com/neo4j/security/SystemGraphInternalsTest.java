@@ -312,7 +312,7 @@ class SystemGraphInternalsTest
         debugPrivileges( "*" );
     }
 
-    private void debugPrivileges(String roleName)
+    private void debugPrivileges( String roleName )
     {
         System.out.println( "Privileges for '" + roleName + "'" );
         systemGraphExecutor.executeQuery(
@@ -330,7 +330,7 @@ class SystemGraphInternalsTest
                 } );
     }
 
-    private String valueToString( AnyValue value)
+    private String valueToString( AnyValue value )
     {
         if ( value instanceof org.neo4j.values.storable.Value )
         {
