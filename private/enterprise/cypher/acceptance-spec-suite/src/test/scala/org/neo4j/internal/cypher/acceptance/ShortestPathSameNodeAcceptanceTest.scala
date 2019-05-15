@@ -98,7 +98,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   def executeUsingCostPlannerOnly(db: GraphDatabaseCypherService, query: String): RewindableExecutionResult = {
     val engine = ExecutionEngineHelper.createEngine(db)
     RewindableExecutionResult(engine.execute(query,
-                                             VirtualValues.emptyMap(),
+                                             VirtualValues.EMPTY_MAP,
                                              engine.queryService.transactionalContext(query = query -> Map())))
   }
 }

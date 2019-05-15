@@ -21,7 +21,7 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     Configs.All.scenarios.map(s =>
     s"CYPHER ${s.preparserOptions} $query").foreach(q => {
       val tx = graph.beginTransaction(Type.`explicit`, AUTH_DISABLED)
-      val result = eengine.execute(q, VirtualValues.emptyMap(), graph.transactionalContext(query = q -> Map.empty))
+      val result = eengine.execute(q, VirtualValues.EMPTY_MAP, graph.transactionalContext(query = q -> Map.empty))
       tx.success()
       result.close()
       tx.close()
@@ -32,8 +32,8 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
     val runtime = CompiledRuntimeOption.name
 
-    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, false)
-    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, true)
+    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
+    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)
     description1 should equal(description2)
   }
 
@@ -41,8 +41,8 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
     val runtime = InterpretedRuntimeOption.name
 
-    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, false)
-    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, true)
+    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
+    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)
     description1 should equal(description2)
   }
 
@@ -50,8 +50,8 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
     val runtime = SlottedRuntimeOption.name
 
-    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, false)
-    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, true)
+    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
+    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)
     description1 should equal(description2)
   }
 

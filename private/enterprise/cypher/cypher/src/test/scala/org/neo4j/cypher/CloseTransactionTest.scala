@@ -467,7 +467,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
   implicit class RichExecutionEngine(engine: ExecutionEngine) {
     def execute(query: String): Result =
-      engine.execute(query, VirtualValues.emptyMap(), engine.queryService.transactionalContext(query = query -> Map()))
+      engine.execute(query, VirtualValues.EMPTY_MAP, engine.queryService.transactionalContext(query = query -> Map()))
   }
 
   class AllNodesProcedure extends CallableProcedure {
