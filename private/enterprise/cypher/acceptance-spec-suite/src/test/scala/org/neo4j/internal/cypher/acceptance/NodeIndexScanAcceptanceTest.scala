@@ -100,6 +100,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     (1 to 2262).map(i => createLabeledNode("Other"))
     as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode) }
 
+    // Empty index so that plan with NodeIndexScan becomes very cheap
     graph.createIndex("A", "id")
 
     val q =
@@ -115,6 +116,8 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))
     ) and includeSomewhere.aPlan("NodeIndexScan"))
+
+    result should be(empty)
   }
 
   test("should not union identical NodeIndexScans in a non CNF normalized predicate") {
@@ -123,6 +126,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     (1 to 2262).map(i => createLabeledNode("Other"))
     as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode, ("id", i)) }
 
+    // Empty index so that plan with NodeIndexScan becomes very cheap
     graph.createIndex("A", "id")
 
     val q =
@@ -139,5 +143,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))
     ) and includeSomewhere.aPlan("NodeIndexScan"))
+
+    result should be(empty)
   }
 }
