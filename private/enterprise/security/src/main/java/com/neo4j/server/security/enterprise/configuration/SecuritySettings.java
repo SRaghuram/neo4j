@@ -9,6 +9,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
@@ -18,6 +19,7 @@ import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.configuration.Secret;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.logging.Level;
+import org.neo4j.server.security.auth.SecureString;
 
 import static org.neo4j.configuration.Settings.BOOLEAN;
 import static org.neo4j.configuration.Settings.BYTES;
@@ -214,12 +216,27 @@ public class SecuritySettings implements LoadableConfig
     public static final Setting<String> ldap_authorization_system_username =
             setting( "dbms.security.ldap.authorization.system_username", STRING, NO_DEFAULT );
 
+    private static final Function<String,SecureString> SECURE_STRING = new Function<>()
+    {
+        @Override
+        public SecureString apply( String value )
+        {
+            return new SecureString( value.trim() );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "a secure string";
+        }
+    };
+
     @Secret
     @Description(
             "An LDAP system account password to use for authorization searches when " +
             "`dbms.security.ldap.authorization.use_system_account` is `true`." )
-    public static final Setting<String> ldap_authorization_system_password =
-            setting( "dbms.security.ldap.authorization.system_password", STRING, NO_DEFAULT );
+    public static final Setting<SecureString> ldap_authorization_system_password =
+            setting( "dbms.security.ldap.authorization.system_password", SECURE_STRING, NO_DEFAULT );
 
     @Description( "The name of the base object or named context to search for user objects when " +
                   "LDAP authorization is enabled. A common case is that this matches the last part " +
