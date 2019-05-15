@@ -23,9 +23,6 @@ import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import io.findify.s3mock.S3Mock;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -35,7 +32,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
@@ -44,12 +40,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -169,8 +163,6 @@ class EndToEndIT extends AnnotationsFixture
 
             File benchmarkConfig = createBenchmarkConfig();
 
-            File tarball = createNeo4jArchive();
-
             ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                                                                         // neo4j_version
                                                                         "3.3.0",
@@ -198,8 +190,6 @@ class EndToEndIT extends AnnotationsFixture
                                                                         "0",
                                                                         // parent_teamcity_build_id
                                                                         "1",
-                                                                        // tarball
-                                                                        tarball.getAbsolutePath(),
                                                                         // jvm_args
                                                                         "",
                                                                         // jmh_args
@@ -254,26 +244,6 @@ class EndToEndIT extends AnnotationsFixture
                 false,
                 benchmarkConfig.toPath() );
         return benchmarkConfig;
-    }
-
-    private File createNeo4jArchive() throws IOException
-    {
-        Path neo4jConfigArchive = Files.write(
-                Files.createTempFile( temporaryFolder.absolutePath().toPath(), "", "" ),
-                Arrays.asList( ExternalSettings.additionalJvm.name() + "=-Xmx1g\n" ) );
-        File tarball = temporaryFolder.file( "neo4jArchive.tgz" );
-
-        try ( FileOutputStream fileOutput = new FileOutputStream( tarball );
-              GzipCompressorOutputStream gzOutput = new GzipCompressorOutputStream( fileOutput );
-              TarArchiveOutputStream tarOutput = new TarArchiveOutputStream( gzOutput ) )
-        {
-            ArchiveEntry archiveEntry = tarOutput.createArchiveEntry( neo4jConfigArchive.toFile(), "neo4j.conf" );
-            tarOutput.putArchiveEntry( archiveEntry );
-            Files.copy( neo4jConfigArchive, tarOutput );
-            tarOutput.closeArchiveEntry();
-        }
-
-        return tarball;
     }
 
     private void assertStoreSchema()
