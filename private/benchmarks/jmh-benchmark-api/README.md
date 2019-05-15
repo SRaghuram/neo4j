@@ -6,6 +6,4 @@
   - warmup settings per benchmark
   - SuiteDescription.fromConfig should not take a SuiteDescription as input parameter
 - Overhaul Validation
-  - instead of storing strings, we should store references to the classes that contained errors, as well as the reasons 
-- Annotations
-  - split into 2 interfaces
+  - instead of storing strings, we should store references to the classes that contained errors, as well as the reasons
