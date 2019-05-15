@@ -24,12 +24,12 @@ import org.neo4j.internal.kernel
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
   */
-class OperatorFactory(val stateDefinition: ExecutionStateDefinition,
+class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
                       val queryIndexes: QueryIndexes) {
 
-  private val physicalPlan = stateDefinition.physicalPlan
+  private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
@@ -226,7 +226,7 @@ class OperatorFactory(val stateDefinition: ExecutionStateDefinition,
         Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
       case plans.Limit(_, count, ties) =>
-        val argumentStateMapId = stateDefinition.findArgumentStateMapForPlan(id)
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
       case plans.Projection(_, expressions) =>

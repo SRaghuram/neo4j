@@ -8,14 +8,14 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlanner, PipelineBuilder, ExecutionStateDefinition}
+import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.zombie.operators.CompiledQueryResultRecord
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
@@ -57,10 +57,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     val queryIndexes = new QueryIndexes(context.schemaRead)
 
-    val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, physicalPlan)
-
     DebugLog.logDiff("PhysicalPlanner.plan")
-    val stateDefinition = pipelineBuilder.build()
+    val stateDefinition = PipelineBuilder.build(ZombiePipelineBreakingPolicy, physicalPlan)
     val operatorFactory = new OperatorFactory(stateDefinition, converters, true, queryIndexes)
 
     DebugLog.logDiff("PipelineBuilder")
@@ -89,7 +87,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
-                                 stateDefinition: ExecutionStateDefinition,
+                                 executionGraphDefinition: ExecutionGraphDefinition,
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
@@ -108,7 +106,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
       new ZombieRuntimeResult(executablePipelines,
-        stateDefinition,
+        executionGraphDefinition,
         queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
         nExpressionSlots,
         prePopulateResults,
@@ -131,7 +129,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   class ZombieRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
-                            stateDefinition: ExecutionStateDefinition,
+                            executionGraphDefinition: ExecutionGraphDefinition,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
                             prePopulateResults: Boolean,
@@ -149,7 +147,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
       val executionHandle = queryExecutor.execute(executablePipelines,
-                                                  stateDefinition,
+                                                  executionGraphDefinition,
                                                   inputDataStream,
                                                   queryContext,
                                                   params,
@@ -184,7 +182,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         resultRequested = true
         querySubscription = queryExecutor.execute(
           executablePipelines,
-          stateDefinition,
+          executionGraphDefinition,
           inputDataStream,
           queryContext,
           params,

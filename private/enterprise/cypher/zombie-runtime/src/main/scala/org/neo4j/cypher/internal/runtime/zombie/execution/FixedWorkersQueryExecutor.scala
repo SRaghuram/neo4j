@@ -8,10 +8,10 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.locks.LockSupport
 
-import org.neo4j.cypher.internal.physicalplanning.ExecutionStateDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -79,7 +79,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   // ========== QUERY EXECUTOR ===========
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
-                                       stateDefinition: ExecutionStateDefinition,
+                                       executionGraphDefinition: ExecutionGraphDefinition,
                                        inputDataStream: InputDataStream,
                                        queryContext: QueryContext,
                                        params: Array[AnyValue],
@@ -110,7 +110,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
     //    a) delegate initialization so some special init-pipeline/operator and use the regular worked resources
     //    b) attempt some lazy resource creation here, because they will usually not be needed
     val initResources = queryResourceFactory()
-    val executionState = new TheExecutionState(stateDefinition,
+    val executionState = new TheExecutionState(executionGraphDefinition,
                                                executablePipelines,
                                                ConcurrentStateFactory,
                                                this,

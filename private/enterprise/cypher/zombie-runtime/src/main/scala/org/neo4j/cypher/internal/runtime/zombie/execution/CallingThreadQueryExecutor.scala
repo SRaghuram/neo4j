@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
-import org.neo4j.cypher.internal.physicalplanning.ExecutionStateDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.zombie.state.{StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -26,7 +26,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
   override def wakeOne(): Unit = ()
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
-                                       stateDefinition: ExecutionStateDefinition,
+                                       executionGraphDefinition: ExecutionGraphDefinition,
                                        inputDataStream: InputDataStream,
                                        queryContext: QueryContext,
                                        params: Array[AnyValue],
@@ -53,7 +53,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 prePopulateResults,
                                 inputDataStream)
 
-    val executionState = new TheExecutionState(stateDefinition,
+    val executionState = new TheExecutionState(executionGraphDefinition,
                                                executablePipelines,
                                                StandardStateFactory,
                                                this,

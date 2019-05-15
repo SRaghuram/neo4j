@@ -16,7 +16,7 @@ class PipelineBuilderTest extends CypherFunSuite {
       .allNodeScan("n")
       .build()
 
-    val executionStateDefinition = new PipelineBuilder(break, physicalPlan).build()
-    // TODO add assertion on executionStateDefinition
+    val executionGraphDefinition = PipelineBuilder.build(break, physicalPlan)
+    // TODO add assertion on executionGraphDefinition
   }
 }

@@ -18,7 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
   * Collection of mutable builder classes that are modified by [[PipelineTreeBuilder]] and finally
-  * converted to an [[ExecutionStateDefinition]] by the [[PipelineBuilder]].
+  * converted to an [[ExecutionGraphDefinition]] by the [[PipelineBuilder]].
   */
 object PipelineTreeBuilder {
   /**
@@ -90,7 +90,7 @@ object PipelineTreeBuilder {
                                                          val rhsArgumentStateMapId: ArgumentStateMapId) extends BufferDefinitionBuild(id)
 
   /**
-    * Builder for [[ExecutionStateDefinition]]
+    * Builder for [[ExecutionGraphDefinition]]
     */
   class ExecutionStateDefinitionBuild(val physicalPlan: PhysicalPlan) {
     val buffers = new ArrayBuffer[BufferDefinitionBuild]
@@ -148,7 +148,7 @@ object PipelineTreeBuilder {
 
 /**
   * Fills an [[ExecutionStateDefinitionBuild]] and and array of [[PipelineDefinitionBuild]]s.
-  * Final conversion to [[ExecutionStateDefinition]] is done by [[PipelineBuilder]].
+  * Final conversion to [[ExecutionGraphDefinition]] is done by [[PipelineBuilder]].
   */
 class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                           stateDefinition: ExecutionStateDefinitionBuild,

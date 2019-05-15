@@ -7,18 +7,20 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder._
 
-/**
-  * Builds an [[ExecutionStateDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
-  */
-class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
-                      physicalPlan: PhysicalPlan) {
 
-  private val executionStateDefinitionBuild = new ExecutionStateDefinitionBuild(physicalPlan)
-  private val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations)
+object PipelineBuilder {
 
-  def build(): ExecutionStateDefinition = {
+  /**
+    * Builds an [[ExecutionGraphDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
+    */
+  def build(breakingPolicy: PipelineBreakingPolicy,
+            physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
+
+    val executionStateDefinitionBuild = new ExecutionStateDefinitionBuild(physicalPlan)
+    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations)
+
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
-    ExecutionStateDefinition(physicalPlan,
+    ExecutionGraphDefinition(physicalPlan,
       executionStateDefinitionBuild.buffers.map(mapBuffer),
       executionStateDefinitionBuild.argumentStateMaps.map(mapArgumentStateDefinition),
       pipelineTreeBuilder.pipelines.map(mapPipeline)

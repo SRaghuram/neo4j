@@ -20,7 +20,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
                     tokenContext: TokenContext) {
 
-  private val physicalPlan = operatorFactory.stateDefinition.physicalPlan
+  private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
 
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator

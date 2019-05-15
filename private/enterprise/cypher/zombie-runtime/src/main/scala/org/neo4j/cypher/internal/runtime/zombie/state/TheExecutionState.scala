@@ -19,7 +19,7 @@ import org.neo4j.util.Preconditions
 /**
   * Implementation of [[ExecutionState]].
   */
-class TheExecutionState(stateDefinition: ExecutionStateDefinition,
+class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         pipelines: Seq[ExecutablePipeline],
                         stateFactory: StateFactory,
                         workerWaker: WorkerWaker,
@@ -34,8 +34,8 @@ class TheExecutionState(stateDefinition: ExecutionStateDefinition,
   for (i <- pipelines.indices)
     Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
 
-  for (i <- stateDefinition.buffers.indices)
-    Preconditions.checkState(i == stateDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
+  for (i <- executionGraphDefinition.buffers.indices)
+    Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
 
   // State
 
@@ -47,8 +47,8 @@ class TheExecutionState(stateDefinition: ExecutionStateDefinition,
   // downstream buffers that they have to reference count for, and to the argument state maps
   // of any reducing operators.
 
-  private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](stateDefinition.argumentStateMaps.size)
-  private val buffers: Buffers = new Buffers(stateDefinition.buffers.size,
+  private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
+  private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
                                              tracker,
                                              id => argumentStateMaps(id.x),
                                              stateFactory)
@@ -59,14 +59,14 @@ class TheExecutionState(stateDefinition: ExecutionStateDefinition,
     while (i >= 0) {
       val pipeline = pipelines(i)
       pipeline.outputOperator.outputBuffer.foreach(bufferId =>
-                                                   buffers.constructBuffer(stateDefinition.buffers(bufferId.x)))
+                                                   buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
       states(i) = pipeline.createState(this, queryContext, queryState, resources)
       buffers.constructBuffer(pipeline.inputBuffer)
       i -= 1
     }
     // We don't reach the first apply buffer because it is not the output buffer of any pipeline, and also
     // not the input buffer, because all apply buffers are consumed through delegates.
-    buffers.constructBuffer(stateDefinition.buffers.head)
+    buffers.constructBuffer(executionGraphDefinition.buffers.head)
     states
   }
 
@@ -188,7 +188,7 @@ class TheExecutionState(stateDefinition: ExecutionStateDefinition,
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    val argumentSlotOffset = stateDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
+    val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
     val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
     argumentStateMaps(argumentStateMapId.x) = asm
     asm

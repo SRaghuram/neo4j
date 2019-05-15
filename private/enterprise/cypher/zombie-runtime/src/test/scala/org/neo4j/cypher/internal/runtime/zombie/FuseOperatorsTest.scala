@@ -153,8 +153,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     val expressionConverters = new ExpressionConverters(converter)
 
-    val stateDefinition = ExecutionStateDefinition(physicalPlan, null, null, null)
-    val operatorFactory = new DummyOperatorFactory(stateDefinition, expressionConverters)
+    val executionGraphDefinition = ExecutionGraphDefinition(physicalPlan, null, null, null)
+    val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
                                   fusingEnabled = true,
                                   tokenContext = TokenContext.EMPTY)
@@ -190,9 +190,9 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     override def strictness: StrictnessMode = LazyMode
   }
 
-  class DummyOperatorFactory(stateDefinition: ExecutionStateDefinition,
+  class DummyOperatorFactory(executionGraphDefinition: ExecutionGraphDefinition,
                              converters: ExpressionConverters)
-    extends OperatorFactory(stateDefinition,
+    extends OperatorFactory(executionGraphDefinition,
                             converters,
                             readOnly = true,
                             queryIndexes = mock[QueryIndexes]) {

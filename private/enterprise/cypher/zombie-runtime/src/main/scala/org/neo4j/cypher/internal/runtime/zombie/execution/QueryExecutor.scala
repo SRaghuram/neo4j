@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
-import org.neo4j.cypher.internal.physicalplanning.ExecutionStateDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.zombie.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -18,7 +18,7 @@ import org.neo4j.values.AnyValue
   */
 trait QueryExecutor {
   def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
-                              stateDefinition: ExecutionStateDefinition,
+                              executionGraphDefinition: ExecutionGraphDefinition,
                               inputDataStream: InputDataStream,
                               queryContext: QueryContext,
                               params: Array[AnyValue],

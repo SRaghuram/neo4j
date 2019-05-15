@@ -116,8 +116,8 @@ case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int
 case class ReduceOutput(bufferId: BufferId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition
 
-// -- EXECUTION STATE
-case class ExecutionStateDefinition(physicalPlan: PhysicalPlan,
+// -- EXECUTION GRAPH
+case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
                                     buffers: IndexedSeq[BufferDefinition],
                                     argumentStateMaps: IndexedSeq[ArgumentStateDefinition],
                                     pipelines: IndexedSeq[PipelineDefinition]) {
