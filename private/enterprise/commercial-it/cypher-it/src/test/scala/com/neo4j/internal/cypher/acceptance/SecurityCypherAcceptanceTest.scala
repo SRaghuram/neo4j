@@ -220,12 +220,12 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
-    val result = execute("SHOW ROLE custom PRIVILEGES")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
     // THEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
     val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
@@ -238,12 +238,12 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    val result = execute("SHOW ROLE custom PRIVILEGES")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
     val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("A"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
@@ -257,12 +257,12 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
 
     // WHEN
-    val result = execute("SHOW ROLE custom PRIVILEGES")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
     val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
@@ -276,12 +276,12 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
 
     // WHEN
-    val result = execute("SHOW ROLE custom PRIVILEGES")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
     val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("*"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
@@ -295,13 +295,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
+
+    // WHEN
     execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
     execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
 
-    // WHEN
-    val result = execute("SHOW ROLE custom PRIVILEGES")
-
     // THEN
+    val result = execute("SHOW ROLE custom PRIVILEGES")
     val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A", "B"))
     val expected = Set(
       grantGraph ++ Map("action" -> "find", "role" -> "custom")
@@ -496,8 +496,9 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // GIVEN
     // User  : Roles
     // neo4j : admin
-    // Bar   : dragon, fairy
+    // Bar   :
     // Baz   :
+    // Zet   :
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
@@ -522,15 +523,15 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("CREATE USER Zet SET PASSWORD 'NeX'")
     execute("CREATE ROLE dragon")
     execute("CREATE ROLE fairy")
-    execute("GRANT ROLE dragon TO Bar")
-    execute("GRANT ROLE fairy TO Bar")
-    execute("GRANT ROLE fairy TO Zet")
     //TODO: execute("GRANT ROLE fairy TO Bar, Zet")
 
     // WHEN
-    val result = execute("SHOW USERS")
+    execute("GRANT ROLE dragon TO Bar")
+    execute("GRANT ROLE fairy TO Bar")
+    execute("GRANT ROLE fairy TO Zet")
 
     // THEN
+    val result = execute("SHOW USERS")
     result.toSet shouldBe Set(neo4jUser, user("Bar", Seq("fairy", "dragon")), user("Baz"), user("Zet", Seq("fairy")))
   }
 
@@ -912,7 +913,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
   private def prepareUser(username: String, password: String): Unit = {
     execute(s"CREATE USER $username SET PASSWORD '$password'")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }

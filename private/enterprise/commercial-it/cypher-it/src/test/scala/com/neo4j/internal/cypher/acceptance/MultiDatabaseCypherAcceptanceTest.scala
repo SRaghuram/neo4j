@@ -113,7 +113,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"The specified database 'foo' already exists\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.startsWith("The specified database 'foo' already exists") =>
+      case e :Exception => e.getMessage should startWith("The specified database 'foo' already exists")
     }
   }
 
@@ -159,7 +159,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"\"Database 'foo' does not exist\"\"")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.startsWith("Database 'foo' does not exist") =>
+      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
   }
 
@@ -179,7 +179,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"Database 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should be("Database 'foo' does not exist.")
+      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist.")
     }
   }
 
@@ -206,7 +206,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.startsWith("Database 'foo' does not exist") =>
+      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN
@@ -229,7 +229,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e: Exception if e.getMessage.startsWith("Database 'foo' does not exist") =>
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN
@@ -300,7 +300,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception if e.getMessage.startsWith("Database 'foo' does not exist") =>
+      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN
@@ -323,7 +323,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e: Exception if e.getMessage.startsWith("Database 'foo' does not exist") =>
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN

@@ -195,20 +195,20 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
            |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
            |$qualifierMerge
            |
-           |// Find the specified database, or find/create the special DatabaseAll node for '*'
            |WITH q
+           |// Find the specified database, or find/create the special DatabaseAll node for '*'
            |$databaseMerge
            |
-           |// Create a new scope connecting the database to the qualifier using a :Segment node
            |WITH q, d
+           |// Create a new scope connecting the database to the qualifier using a :Segment node
            |$scopeMerge
            |
            |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
            |MERGE (res:Resource {type: $$resource})
            |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
            |
-           |// For all roles we should apply this too, connect each to the new :Action
            |WITH q, d, a
+           |// For all roles we should apply this too, connect each to the new :Action
            |UNWIND $$roles AS role
            |MATCH (r:Role {name: role})
            |MERGE (r)-[:GRANTED]->(a)
@@ -219,7 +219,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
       )
 
-    // SHOW [ALL | USER user | ROLE role1] PRIVILEGES
+    // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope, grantee) => (_, _) =>
       val role = Values.stringValue(grantee)
       val (mainMatch, userReturn) = scope match {
