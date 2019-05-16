@@ -44,6 +44,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 class BasicSystemGraphRealmIT
 {
     private SystemGraphRealmTestHelper.TestDatabaseManager dbManager;
+    private Config defaultConfig;
 
     @Inject
     private TestDirectory testDirectory;
@@ -52,6 +53,7 @@ class BasicSystemGraphRealmIT
     void setUp()
     {
         dbManager = new SystemGraphRealmTestHelper.TestDatabaseManager( testDirectory );
+        defaultConfig = Config.defaults();
     }
 
     @AfterEach
@@ -63,7 +65,7 @@ class BasicSystemGraphRealmIT
     @Test
     void shouldCreateDefaultUserIfNoneExist() throws Throwable
     {
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder(), dbManager );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder(), dbManager, defaultConfig );
 
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
@@ -74,7 +76,8 @@ class BasicSystemGraphRealmIT
     @Test
     void shouldLoadInitialUserIfNoneExist() throws Throwable
     {
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().initialUser( "123", false ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().initialUser( "123", false );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
@@ -89,7 +92,7 @@ class BasicSystemGraphRealmIT
         simulateSetInitialPasswordCommand(testDirectory);
 
         // When
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory, defaultConfig );
 
         // Then
         final User user = realm.silentlyGetUser( INITIAL_USER_NAME );
@@ -103,7 +106,7 @@ class BasicSystemGraphRealmIT
     void shouldLoadInitialUserWithInitialPasswordOnRestart() throws Throwable
     {
         // Given
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory, defaultConfig );
 
         User user = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( user );
@@ -129,7 +132,7 @@ class BasicSystemGraphRealmIT
     void shouldNotLoadInitialUserWithInitialPasswordOnRestartWhenAlreadyChanged() throws Throwable
     {
         // Given started and stopped database
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( dbManager, testDirectory, defaultConfig );
         realm.setUserPassword( INITIAL_USER_NAME, UTF8.encode( "neo4j2" ), false );
         realm.stop();
         simulateSetInitialPasswordCommand(testDirectory);
@@ -149,7 +152,7 @@ class BasicSystemGraphRealmIT
     void shouldNotAddInitialUserIfUsersExist() throws Throwable
     {
         BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm(
-                new BasicImportOptionsBuilder().initialUser( "123", false ).migrateUser( "oldUser", "321", false ), dbManager );
+                new BasicImportOptionsBuilder().initialUser( "123", false ).migrateUser( "oldUser", "321", false ), dbManager, defaultConfig );
 
         final User initUser = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNull( initUser );
@@ -163,8 +166,10 @@ class BasicSystemGraphRealmIT
     @Test
     void shouldNotUpdateUserIfInitialUserExist() throws Throwable
     {
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm(
-                new BasicImportOptionsBuilder().initialUser( "newPassword", false ).migrateUser( INITIAL_USER_NAME, "oldPassword", true ), dbManager );
+        BasicImportOptionsBuilder importOptions =
+                new BasicImportOptionsBuilder().initialUser( "newPassword", false ).migrateUser( INITIAL_USER_NAME, "oldPassword", true );
+
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         final User oldUser = realm.silentlyGetUser( INITIAL_USER_NAME );
         assertNotNull( oldUser );
@@ -176,7 +181,8 @@ class BasicSystemGraphRealmIT
     void shouldRateLimitAuthentication() throws Throwable
     {
         int maxFailedAttempts = Config.defaults().get( GraphDatabaseSettings.auth_max_failed_attempts );
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         // First make sure one of the users will have a cached successful authentication result for variation
         assertAuthenticationSucceeds( realm, "alice" );
@@ -188,7 +194,8 @@ class BasicSystemGraphRealmIT
     @Test
     void shouldClearPasswordOnNewUser() throws Throwable
     {
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         byte[] password = password( "jake" );
 
@@ -204,7 +211,8 @@ class BasicSystemGraphRealmIT
     void shouldClearPasswordOnNewUserAlreadyExists() throws Throwable
     {
         // Given
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         realm.newUser( "jake", password( "jake" ), true );
         byte[] password = password( "abc123" );
@@ -221,7 +229,8 @@ class BasicSystemGraphRealmIT
     void shouldClearPasswordOnSetUserPassword() throws Throwable
     {
         // Given
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         realm.newUser( "jake", password( "abc123" ), false );
 
@@ -239,7 +248,8 @@ class BasicSystemGraphRealmIT
     void shouldClearPasswordOnSetUserPasswordWithInvalidPassword() throws Throwable
     {
         // Given
-        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" ), dbManager );
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice", "bob" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
 
         realm.newUser( "jake", password( "jake" ), false );
         byte[] newPassword = password( "jake" );

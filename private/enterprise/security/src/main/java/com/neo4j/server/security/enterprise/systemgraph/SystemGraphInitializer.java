@@ -46,19 +46,15 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
 {
     private final SystemGraphOperations systemGraphOperations;
     private final SystemGraphImportOptions importOptions;
-    private final Log log;
-    private final String defaultDbName;
 
     public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations,
             SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log, Config config )
     {
         super( queryExecutor, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
-                importOptions.initialUserRepositorySupplier, secureHasher, log );
+                importOptions.initialUserRepositorySupplier, secureHasher, log, config );
 
         this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
-        this.log = log;
-        this.defaultDbName = config.get( GraphDatabaseSettings.default_database );
     }
 
     @Override
@@ -124,12 +120,6 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         {
             ensureCorrectInitialPassword();
         }
-    }
-
-    private void ensureDefaultDatabases() throws InvalidArgumentsException
-    {
-        newDb( defaultDbName );
-        newDb( SYSTEM_DATABASE_NAME );
     }
 
     /* Tries to find an admin candidate among the existing users */
@@ -264,16 +254,6 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
 
         stopUserRepository( userRepository );
         stopRoleRepository( roleRepository );
-    }
-
-    private void newDb( String dbName ) throws InvalidArgumentsException
-    {
-        SystemGraphOperations.assertValidDbName( dbName );
-
-        String query = "CREATE (db:Database {name: $dbName, status: 'online'})";
-        Map<String,Object> params = Collections.singletonMap( "dbName", dbName );
-
-        queryExecutor.executeQueryWithConstraint( query, params, "The specified database '" + dbName + "' already exists." );
     }
 
     private boolean noRoles()

@@ -34,7 +34,7 @@ import static org.mockito.Mockito.mock;
 
 public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
-static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
+    static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
     {
         Config config = Config.defaults();
         config.augment(  DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString()  );
