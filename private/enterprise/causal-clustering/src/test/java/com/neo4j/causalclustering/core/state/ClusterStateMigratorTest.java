@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -65,15 +66,15 @@ class ClusterStateMigratorTest
     }
 
     @Test
-    void shouldDeleteClusterStateDirWhenVersionStorageIsUnreadable() throws Exception
+    void shouldThrowWhenVersionStorageExistsButIsUnreadable() throws Exception
     {
         // create an empty file so that reading a version from it fails
         fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParentFile() );
         fs.write( clusterStateLayout.clusterStateVersionFile() ).close();
 
-        migrator.migrateIfNeeded();
+        assertThrows( UncheckedIOException.class, migrator::migrateIfNeeded );
 
-        assertMigrationHappened();
+        assertMigrationDidNotHappen();
     }
 
     @Test
@@ -92,6 +93,8 @@ class ClusterStateMigratorTest
         clusterStateVersionStorage.writeState( new ClusterStateVersion( 42, 3 ) );
 
         assertThrows( IllegalStateException.class, migrator::migrateIfNeeded );
+
+        assertMigrationDidNotHappen();
     }
 
     private void writeRandomClusterId( File file, FormattedLogProvider logProvider ) throws IOException

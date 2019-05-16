@@ -73,7 +73,7 @@ public class ClusterStateMigrator
             }
             catch ( IOException e )
             {
-                log.warn( "Unable to read cluster state version", e );
+                throw new UncheckedIOException( "Unable to read cluster state version", e );
             }
         }
         return null;
