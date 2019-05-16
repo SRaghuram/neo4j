@@ -111,9 +111,9 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
       Cardinality(nodeLabel.count)
     }
 
-    override def cardinalityByLabelsAndRelationshipType(fromLabel: Option[LabelId],
-                                                        relTypeId: Option[RelTypeId],
-                                                        toLabel: Option[LabelId]): Cardinality = {
+    override def patternStepCardinality(fromLabel: Option[LabelId],
+                                        relTypeId: Option[RelTypeId],
+                                        toLabel: Option[LabelId]): Cardinality = {
       val fromName = fromLabel.map(x => getLabelName(x.id))
       val relName = relTypeId.map(x => getRelTypeName(x.id))
       val toName = toLabel.map(x => getLabelName(x.id))

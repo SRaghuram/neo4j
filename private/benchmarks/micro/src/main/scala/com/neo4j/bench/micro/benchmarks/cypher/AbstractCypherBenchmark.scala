@@ -209,7 +209,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
     override def nodesAllCardinality(): Cardinality = ???
 
-    override def cardinalityByLabelsAndRelationshipType(fromLabel: Option[LabelId], relTypeId: Option[RelTypeId], toLabel: Option[LabelId]): Cardinality = ???
+    override def patternStepCardinality(fromLabel: Option[LabelId], relTypeId: Option[RelTypeId], toLabel: Option[LabelId]): Cardinality = ???
 
     override def indexPropertyExistsSelectivity(index: IndexDescriptor): Option[Selectivity] = ???
 
