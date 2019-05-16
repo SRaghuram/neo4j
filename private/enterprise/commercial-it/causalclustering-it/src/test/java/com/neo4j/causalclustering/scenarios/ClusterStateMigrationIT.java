@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -58,7 +59,7 @@ class ClusterStateMigrationIT
         {
             var versionStorage = clusterStateVersionStorage( member );
             assertTrue( versionStorage.exists() );
-            assertEquals( 1, versionStorage.readState() );
+            assertEquals( new ClusterStateVersion( 1, 0 ), versionStorage.readState() );
         }
     }
 
@@ -94,7 +95,7 @@ class ClusterStateMigrationIT
             // version files should exist
             var versionStorage = clusterStateVersionStorage( member );
             assertTrue( versionStorage.exists() );
-            assertEquals( 1, versionStorage.readState() );
+            assertEquals( new ClusterStateVersion( 1, 0 ), versionStorage.readState() );
         }
     }
 
@@ -112,7 +113,7 @@ class ClusterStateMigrationIT
         // write illegal version in all storages
         for ( var storage : clusterStateVersionStorages )
         {
-            storage.writeState( 42L );
+            storage.writeState( new ClusterStateVersion( 42, 0 ) );
         }
 
         // cluster should not be able to start
@@ -121,12 +122,12 @@ class ClusterStateMigrationIT
         // write the correct version and restart the cluster
         for ( var storage : clusterStateVersionStorages )
         {
-            storage.writeState( 1L );
+            storage.writeState( new ClusterStateVersion( 1, 0 ) );
         }
         cluster.start();
     }
 
-    private static SimpleStorage<Long> clusterStateVersionStorage( ClusterMember member )
+    private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )
     {
         var storageFactory = storageFactory( member );
         return storageFactory.createClusterStateVersionStorage();

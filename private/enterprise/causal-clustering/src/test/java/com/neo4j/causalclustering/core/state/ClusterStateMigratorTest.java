@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.ClusterId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class ClusterStateMigratorTest
     private TestDirectory testDirectory;
 
     private ClusterStateLayout clusterStateLayout;
-    private SimpleStorage<Long> clusterStateVersionStorage;
+    private SimpleStorage<ClusterStateVersion> clusterStateVersionStorage;
     private ClusterStateMigrator migrator;
 
     @BeforeEach
@@ -78,7 +79,7 @@ class ClusterStateMigratorTest
     @Test
     void shouldNotMigrateWhenVersionStorageExistsAndHasExpectedVersion() throws Exception
     {
-        clusterStateVersionStorage.writeState( 1L );
+        clusterStateVersionStorage.writeState( new ClusterStateVersion( 1, 0 ) );
 
         migrator.migrateIfNeeded();
 
@@ -88,7 +89,7 @@ class ClusterStateMigratorTest
     @Test
     void shouldThrowWhenVersionStorageExistsButContainsUnknownVersion() throws Exception
     {
-        clusterStateVersionStorage.writeState( 42L );
+        clusterStateVersionStorage.writeState( new ClusterStateVersion( 42, 3 ) );
 
         assertThrows( IllegalStateException.class, migrator::migrateIfNeeded );
     }
@@ -106,7 +107,7 @@ class ClusterStateMigratorTest
         assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
         assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile() ) );
         assertFalse( fs.fileExists( clusterStateLayout.clusterIdStateFile() ) );
-        assertEquals( 1, clusterStateVersionStorage.readState() );
+        assertEquals( new ClusterStateVersion( 1, 0 ), clusterStateVersionStorage.readState() );
     }
 
     private void assertMigrationDidNotHappen()

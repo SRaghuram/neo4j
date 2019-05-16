@@ -14,6 +14,8 @@ import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -51,8 +53,8 @@ public class CoreStateFiles<STATE>
 
     // global state
 
-    public static final CoreStateFiles<Long> VERSION =
-            new CoreStateFiles<>( "version", GLOBAL, new LongIndexMarshal(), CoreStateType.VERSION );
+    public static final CoreStateFiles<ClusterStateVersion> VERSION =
+            new CoreStateFiles<>( "version", GLOBAL, new ClusterStateVersionMarshal(), CoreStateType.VERSION );
     public static final CoreStateFiles<ClusterId> CLUSTER_ID =
             new CoreStateFiles<>( "cluster-id", GLOBAL, new ClusterId.Marshal(), CoreStateType.CLUSTER_ID );
     public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =

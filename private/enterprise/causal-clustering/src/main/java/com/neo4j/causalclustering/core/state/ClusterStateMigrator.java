@@ -6,9 +6,11 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
@@ -16,15 +18,15 @@ import org.neo4j.logging.LogProvider;
 
 public class ClusterStateMigrator
 {
-    private static final long CURRENT_CLUSTER_STATE_VERSION = 1;
+    private static final ClusterStateVersion CURRENT_VERSION = new ClusterStateVersion( 1, 0 );
 
     private final ClusterStateLayout clusterStateLayout;
-    private final SimpleStorage<Long> clusterStateVersionStorage;
+    private final SimpleStorage<ClusterStateVersion> clusterStateVersionStorage;
     private final FileSystemAbstraction fs;
     private final Log log;
 
-    public ClusterStateMigrator( FileSystemAbstraction fs, ClusterStateLayout clusterStateLayout, SimpleStorage<Long> clusterStateVersionStorage,
-            LogProvider logProvider )
+    public ClusterStateMigrator( FileSystemAbstraction fs, ClusterStateLayout clusterStateLayout,
+            SimpleStorage<ClusterStateVersion> clusterStateVersionStorage, LogProvider logProvider )
     {
         this.clusterStateLayout = clusterStateLayout;
         this.clusterStateVersionStorage = clusterStateVersionStorage;
@@ -52,8 +54,8 @@ public class ClusterStateMigrator
         try
         {
             fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
-            clusterStateVersionStorage.writeState( CURRENT_CLUSTER_STATE_VERSION );
-            log.info( "Deleted existing cluster state and created a version storage for version " + CURRENT_CLUSTER_STATE_VERSION );
+            clusterStateVersionStorage.writeState( CURRENT_VERSION );
+            log.info( "Deleted existing cluster state and created a version storage for version " + CURRENT_VERSION );
         }
         catch ( IOException e )
         {
@@ -61,7 +63,7 @@ public class ClusterStateMigrator
         }
     }
 
-    private Long readClusterStateVersion()
+    private ClusterStateVersion readClusterStateVersion()
     {
         if ( clusterStateVersionStorage.exists() )
         {
@@ -77,9 +79,9 @@ public class ClusterStateMigrator
         return null;
     }
 
-    private static void validatePersistedClusterStateVersion( Long persistedVersion )
+    private static void validatePersistedClusterStateVersion( ClusterStateVersion persistedVersion )
     {
-        if ( persistedVersion == null || persistedVersion != CURRENT_CLUSTER_STATE_VERSION )
+        if ( !Objects.equals( persistedVersion, CURRENT_VERSION ) )
         {
             throw new IllegalStateException( "Illegal cluster state version: " + persistedVersion + ". Migration for this version does not exist" );
         }

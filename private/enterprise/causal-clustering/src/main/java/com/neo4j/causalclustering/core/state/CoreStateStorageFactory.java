@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
+import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -41,7 +42,7 @@ public class CoreStateStorageFactory
         this.config = config;
     }
 
-    public SimpleStorage<Long> createClusterStateVersionStorage()
+    public SimpleStorage<ClusterStateVersion> createClusterStateVersionStorage()
     {
         return createSimpleStorage( layout.clusterStateVersionFile(), CoreStateFiles.VERSION );
     }
