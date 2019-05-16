@@ -80,6 +80,12 @@
             <artifactId>neo4j-metrics</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-enterprise-cypher</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.junit.vintage</groupId>

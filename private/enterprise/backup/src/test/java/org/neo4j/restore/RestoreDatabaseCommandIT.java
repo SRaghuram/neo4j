@@ -218,7 +218,7 @@ class RestoreDatabaseCommandIT
     {
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
         File fromPath = directory.directory( "from" );
-        DatabaseLayout testLayout = directory.databaseLayout("testDatabase");
+        DatabaseLayout testLayout = directory.databaseLayout("testdatabase");
         File relativeLogDirectory = directory.directory( "relativeDirectory" );
 
         Config config = configWith( directory.absolutePath().getAbsolutePath() );

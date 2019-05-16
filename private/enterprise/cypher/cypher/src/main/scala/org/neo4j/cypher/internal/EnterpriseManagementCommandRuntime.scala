@@ -153,7 +153,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.status = $status
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName), DatabaseStatus.Online))
+        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online))
       )
 
     // DROP DATABASE foo
@@ -164,7 +164,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
+        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
         record => {
           if (record.get("name") == null) throw new InvalidArgumentsException("Database '" + dbName + "' does not exist.")
         }

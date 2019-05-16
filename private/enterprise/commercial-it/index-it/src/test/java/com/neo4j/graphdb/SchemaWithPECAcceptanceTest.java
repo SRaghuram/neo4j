@@ -33,10 +33,10 @@ class SchemaWithPECAcceptanceTest
     @Inject
     private GraphDatabaseService db;
 
-    private Label label = Labels.MY_LABEL;
-    private Label label2 = Labels.MY_OTHER_LABEL;
-    private String propertyKey = "my_property_key";
-    private String propertyKey2 = "my_other_property";
+    private final Label label = Labels.MY_LABEL;
+    private final Label label2 = Labels.MY_OTHER_LABEL;
+    private final String propertyKey = "my_property_key";
+    private final String propertyKey2 = "my_other_property";
 
     private enum Labels implements Label
     {

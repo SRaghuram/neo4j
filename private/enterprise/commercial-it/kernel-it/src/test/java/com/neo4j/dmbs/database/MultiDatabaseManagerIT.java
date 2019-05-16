@@ -278,8 +278,8 @@ class MultiDatabaseManagerIT
         DatabaseId logTestDb = new DatabaseId( "logTestDb" );
         databaseManager.createDatabase( logTestDb );
         databaseManager.stopDatabase( logTestDb );
-        logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
-        logProvider.assertLogStringContains( "Stop 'logTestDb' database." );
+        logProvider.assertLogStringContains( "Creating 'logtestdb' database." );
+        logProvider.assertLogStringContains( "Stop 'logtestdb' database." );
     }
 
     @Test

@@ -31,7 +31,7 @@ class MultiDatabaseDiagnosticsLoggingIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
-    private AssertableLogProvider provider = new AssertableLogProvider();
+    private final AssertableLogProvider provider = new AssertableLogProvider();
     private DatabaseManagementService managementService;
 
     @BeforeEach
@@ -70,7 +70,7 @@ class MultiDatabaseDiagnosticsLoggingIT
 
         DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         databaseManager.createDatabase( new DatabaseId( "NewDatabase" ) );
-        provider.assertContainsMessageContaining( "Database: NewDatabase" );
+        provider.assertContainsMessageContaining( "Database: newdatabase" );
         provider.assertContainsMessageContaining( "Version" );
         provider.assertContainsMessageContaining( "Store files" );
         provider.assertContainsMessageContaining( "Transaction log" );
