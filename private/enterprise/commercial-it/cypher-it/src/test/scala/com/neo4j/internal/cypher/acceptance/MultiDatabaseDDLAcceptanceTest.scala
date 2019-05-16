@@ -115,13 +115,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should create database in systemdb") {
     setup( defaultConfig )
 
-    // GIVEN
+    // WHEN
     execute("CREATE DATABASE foo")
 
-    // WHEN
-    val result = execute("SHOW DATABASE foo")
-
     // THEN
+    val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
@@ -174,15 +172,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       Map("name" -> "baz", "status" -> onlineStatus, "default" -> false)
     )
 
-    // GIVEN
+    // WHEN
     execute("DROP DATABASE baz") //online database
     execute("STOP DATABASE bar")
     execute("DROP DATABASE bar") //offline database
 
-    // WHEN
-    val result2 = execute("SHOW DATABASES")
 
     // THEN
+    val result2 = execute("SHOW DATABASES")
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should contain("foo")
     databaseNames should not contain allOf("bar", "baz")
@@ -242,13 +239,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should start database on create") {
     setup( defaultConfig )
 
-    // GIVEN
+    // WHEN
     execute("CREATE DATABASE foo")
 
-    // WHEN
-    val result = execute("SHOW DATABASE foo")
-
     // THEN
+    val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
@@ -351,15 +346,13 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // GIVEN
     execute("CREATE DATABASE foo")
-
-    // WHEN
     val result = execute("SHOW DATABASE foo")
-
-    // THEN
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
     // WHEN
     execute("STOP DATABASE foo")
+
+    // THEN
     val result2 = execute("SHOW DATABASE foo")
     result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
   }

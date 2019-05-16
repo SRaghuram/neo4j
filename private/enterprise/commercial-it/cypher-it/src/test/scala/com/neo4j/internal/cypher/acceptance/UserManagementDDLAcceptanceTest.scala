@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
@@ -220,8 +221,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    // WHEN
     try {
+      // WHEN
       execute("CREATE USER neo4j SET PASSWORD 'password'")
 
       fail("Expected error \"The specified user 'neo4j' already exists.\" but succeeded.")
@@ -234,6 +235,39 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
+  test("should fail on creating already user with illegal username") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    try {
+      // WHEN
+      execute("CREATE USER `neo:4j` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
+
+      fail("Expected error \"Username 'neo:4j' contains illegal characters.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage.contains("Username 'neo:4j' contains illegal characters.")
+    }
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    try {
+      // WHEN
+      execute("CREATE USER `3neo4j` SET PASSWORD 'password'")
+      execute("CREATE USER 4neo4j SET PASSWORD 'password'")
+
+      fail("Expected error \"Invalid input '4'\" for the unescaped username but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage.contains("Invalid input '4'")
+    }
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
+  }
+
   test("should drop user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -244,6 +278,20 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
+  }
+
+  test("should re-create dropped user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("DROP USER foo")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    // WHEN
+    execute("CREATE USER foo SET PASSWORD 'bar'")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo")))
   }
 
   test("should fail on dropping non-existing user") {
@@ -259,6 +307,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } catch {
       // THEN
       case e: Exception => e.getMessage should be("User 'foo' does not exist.")
+    }
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    try {
+      // WHEN
+      execute("DROP USER `:foo`")
+
+      fail("Expected error \"User ':foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("User ':foo' does not exist.")
     }
 
     // THEN
@@ -330,6 +391,22 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } catch {
       // THEN
       case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
+    }
+  }
+
+  test("should fail on alter user password as string and parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'imAString'+$password", Map("password" -> "imAParameter"))
+
+      fail("Expected error \"Invalid input '+': expected whitespace, SET, ';' or end of input\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage.contains("Invalid input '+': expected whitespace, SET, ';' or end of input")
     }
   }
 
@@ -447,6 +524,38 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+  }
+
+  test("should fail on altering a non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a dropped user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("DROP USER foo")
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
   }
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {

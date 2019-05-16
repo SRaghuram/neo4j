@@ -786,11 +786,12 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE dragon TO Bar")
     execute("GRANT ROLE fairy TO Bar")
     execute("GRANT ROLE fairy TO Zet")
+    // TODO: execute("GRANT ROLE fairy TO Bar, Zet")
 
     // THEN
     val result = execute("SHOW USERS")
     result.toSet shouldBe Set(
-      user("neo4j", Seq("admin")),
+      neo4jUser,
       user("Bar", Seq("fairy", "dragon")),
       user("Baz"),
       user("Zet", Seq("fairy"))
@@ -857,6 +858,74 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
+  test("should be able to grant already granted role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    execute("GRANT ROLE dragon TO Bar")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+  }
+
+  test("should do nothing when granting non-existing role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+  }
+
+  test("should do nothing when granting role to non-existing user") {
+    // GIVEN
+    val rolesWithUsers = Set(
+      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null),
+      Map("role" -> "dragon", "is_built_in" -> false, "member" -> null)
+    )
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE dragon")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+  }
+
+  test("should do nothing when granting non-existing role to non-existing user") {
+    // GIVEN
+    val defaultRolesWithUsers = Set(
+      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
+    )
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+  }
+
   test("should fail on granting role to user when not on system database") {
     try {
       // WHEN
@@ -884,6 +953,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
     }
   }
+
+  private val neo4jUser = user("neo4j", Seq("admin"))
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
