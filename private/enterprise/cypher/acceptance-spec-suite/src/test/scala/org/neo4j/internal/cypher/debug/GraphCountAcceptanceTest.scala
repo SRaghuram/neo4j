@@ -27,13 +27,25 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     val file = new File("/home/satia/dev/temp/graphCounts.json")
     val graphCounts = GraphCountsJson.parse(file)
     val row = graphCounts.results.head.data.head.row
-    Cypher35Planner.customPlanContextCreator = Some((tc: TransactionalContextWrapper, logger: InternalNotificationLogger) => new GraphCountsPlanContext(row)(tc, logger))
+
+    def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
+      val context = new GraphCountsPlanContext(row)(tc, logger)
+      // Add UDFs here, if you have any in your query
+      context
+    }
+
+    Cypher35Planner.customPlanContextCreator = Some(getPlanContext)
 
     createGraph(graphCounts)
 
     // Modify graph to account for predicates in the query, add relationships, etc.
 
     // Execute your buggy query
+    val query = ???
+
+    val r = graph.execute(query)
+    println(r.resultAsString())
+    println(r.getExecutionPlanDescription)
   }
 
   test("should create graph from data collector graph counts")  {

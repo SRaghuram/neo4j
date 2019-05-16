@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.v3_5.util._
 import org.neo4j.internal.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory
 
+import scala.collection.mutable
+
 /**
   * This PlanContext is used for injecting customer statistics into the planner, which can help in
   * reproducing bug and support cases. It is not fit for production use. You can plug it into the
@@ -26,6 +28,11 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
   extends TransactionBoundTokenContext(tc.kernelTransaction) with PlanContext {
 
   private val indexes = row.data.indexes
+  private val userDefinedFunctions = mutable.Map.empty[QualifiedName, UserFunctionSignature]
+
+  def addUDF(udf: UserFunctionSignature): Unit = {
+    userDefinedFunctions.put(udf.name, udf)
+  }
 
   override val statistics: InstrumentedGraphStatistics = InstrumentedGraphStatistics(
     new StatisticsCompletingGraphStatistics(Stats(row.data.nodes, row.data.relationships)),
@@ -124,7 +131,7 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
       indexes.find(x =>
                      x.labels.contains(getLabelName(index.label)) &&
                        x.properties == index.properties.map(x => getPropertyKeyName(x.id))
-      ).map(x => Selectivity(1.0 / x.estimatedUniqueSize))
+      ).map(x => if(x.estimatedUniqueSize == 0L) Selectivity.ZERO else Selectivity(1.0 / x.estimatedUniqueSize))
 
     override def indexPropertyExistsSelectivity(index: IndexDescriptor): Option[Selectivity] = {
       val labelCardinality = nodesWithLabelCardinality(Some(index.label))
@@ -141,5 +148,5 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
 
   override def procedureSignature(name: QualifiedName): ProcedureSignature = ???
 
-  override def functionSignature(name: QualifiedName): Option[UserFunctionSignature] = ???
+  override def functionSignature(name: QualifiedName): Option[UserFunctionSignature] = userDefinedFunctions.get(name)
 }
