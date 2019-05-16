@@ -35,7 +35,7 @@ object Configs {
   def All: TestConfiguration = {
     val all = TestConfiguration(Planners.all, Runtimes.all)
     if (runOnlySafeScenarios) {
-      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel))
+      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel, Runtimes.MorselSingleThreaded))
     } else {
       all
     }

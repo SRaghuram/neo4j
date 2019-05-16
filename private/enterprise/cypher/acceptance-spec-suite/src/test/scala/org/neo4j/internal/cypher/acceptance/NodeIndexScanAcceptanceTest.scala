@@ -94,4 +94,57 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should be(empty)
   }
+
+  test("should not union identical NodeIndexScans") {
+    val as = (1 to 209).map(_ => createLabeledNode("A"))
+    val cs = (1 to 12).map(_ => createLabeledNode("C"))
+    (1 to 2262).map(i => createLabeledNode("Other"))
+    as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode) }
+
+    // Empty index so that plan with NodeIndexScan becomes very cheap
+    graph.createIndex("A", "id")
+
+    val q =
+      """
+        |MATCH (c:C)-[:REL]->(a:A)
+        |MATCH (c)-[:REL]->(b:A)
+        |  WHERE a.id = b.id OR a.id < b.id
+        |RETURN *
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, q)
+    result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
+      .withLHS(aPlan("NodeIndexScan"))
+      .withRHS(aPlan("NodeIndexScan"))
+    ) and includeSomewhere.aPlan("NodeIndexScan"))
+
+    result should be(empty)
+  }
+
+  test("should not union identical NodeIndexScans in a non CNF normalized predicate") {
+    val as = (1 to 209).map(_ => createLabeledNode("A"))
+    val cs = (1 to 12).map(_ => createLabeledNode("C"))
+    (1 to 2262).map(i => createLabeledNode("Other"))
+    as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode, ("id", i)) }
+
+    // Empty index so that plan with NodeIndexScan becomes very cheap
+    graph.createIndex("A", "id")
+
+    val q =
+      """
+        |MATCH (c:C)-[r1:REL]->(a:A)
+        |MATCH (c)-[r2:REL]->(b:A)
+        |  WHERE (a.id = b.id AND r1.id < r2.id) OR a.id < b.id
+        |RETURN *
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, q)
+    println(result.executionPlanDescription())
+    result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
+      .withLHS(aPlan("NodeIndexScan"))
+      .withRHS(aPlan("NodeIndexScan"))
+    ) and includeSomewhere.aPlan("NodeIndexScan"))
+
+    result should be(empty)
+  }
 }
