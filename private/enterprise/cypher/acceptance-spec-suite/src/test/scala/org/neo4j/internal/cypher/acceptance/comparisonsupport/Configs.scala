@@ -5,12 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledBytecode
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledSource
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpreted
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.MorselSingleThreaded
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithCompiledExpressions
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, MorselSingleThreaded, Slotted, SlottedWithCompiledExpressions}
 
 object Configs {
 
