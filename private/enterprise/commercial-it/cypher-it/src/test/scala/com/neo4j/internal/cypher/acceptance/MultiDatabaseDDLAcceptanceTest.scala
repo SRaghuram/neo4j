@@ -5,24 +5,16 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.util.Optional
-
-import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher._
+import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.cypher.internal.DatabaseStatus
-import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
-import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
 
-class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
+class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults()
@@ -349,7 +341,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   protected def setup(config: Config): Unit = {
-    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), threadToStatementContextBridge())
+    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
@@ -360,18 +352,5 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     systemGraphInitializer.initializeSystemGraph()
     systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-  }
-
-  private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-
-  private def threadToStatementContextBridge() = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-
-  private def selectDatabase(name: String): Unit = {
-    val manager = databaseManager()
-    val maybeCtx: Optional[DatabaseContext] = manager.getDatabaseContext(new DatabaseId(name))
-    val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
-    graphOps = dbCtx.databaseFacade()
-    graph = new GraphDatabaseCypherService(graphOps)
-    eengine = ExecutionEngineHelper.createEngine(graph)
   }
 }
