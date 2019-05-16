@@ -9,7 +9,7 @@ URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
 PreReq: dialog
-Requires: cypher-shell, jre-headless >= 11
+Requires: cypher-shell >= 1.2, jre-11 >= 11
 
 BuildArch: noarch
 
