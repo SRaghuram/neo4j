@@ -9,19 +9,32 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/1.1.3 http://maven.apache.org/xsd/assembly-1.1.3.xsd">
 
-	<id>macro-benchmark-assembly</id>
+	<id>ldbc-benchmarks</id>
 
 	<formats>
 		<format>dir</format>
 	</formats>
 
-	<files>
-		<file>
-			<source>run-report-benchmarks.sh</source>
-		</file>
-	</files>
-	
-	<moduleSets>	
+	<moduleSets>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<!-- this is wrong, but needed due to assembly plugin bug, https://issues.apache.org/jira/browse/MASSEMBLY-600 -->
+			<includeSubModules>false</includeSubModules>
+			<includes>
+				<include>com.neo4j.bench:ldbc</include>
+			</includes>
+			<sources>
+				<outputDirectoryMapping>.</outputDirectoryMapping>
+				<fileSets>
+					<fileSet>
+						<fileMode>777</fileMode>
+						<includes>
+							<include>run-report-benchmark.sh</include>
+						</includes>
+					</fileSet>
+				</fileSets>
+			</sources>
+		</moduleSet>
 		<moduleSet>
 			<useAllReactorProjects>true</useAllReactorProjects>
 			<!-- this is wrong, but needed due to assembly plugin bug, https://issues.apache.org/jira/browse/MASSEMBLY-600 -->
@@ -42,15 +55,23 @@
 			</sources>
 		</moduleSet>
 	</moduleSets>
-	
+
 	<dependencySets>
 		<dependencySet>
-			<outputDirectory>.</outputDirectory>
-			<outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+			<outputFileNameMapping>ldbc.jar</outputFileNameMapping>
 			<includes>
-				<include>com.neo4j.bench:macro</include>
+				<include>com.neo4j.bench:neo4j-connectors</include>
 			</includes>
 		</dependencySet>
 	</dependencySets>
+
+	<fileSets>
+		<fileSet>
+			<outputDirectory>neo4j-connectors</outputDirectory>
+			<includes>
+				<include>src/main/resources/**</include>
+			</includes>
+		</fileSet>
+	</fileSets>
 
 </assembly>

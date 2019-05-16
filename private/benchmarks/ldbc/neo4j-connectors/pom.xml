@@ -182,9 +182,8 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
-							<descriptors>
-								<descriptor>src/main/assembly/ldbc-benchmark-assembly.xml</descriptor>
-							</descriptors>
+							<finalName>assembly</finalName>
+							<descriptor>src/main/assembly/ldbc-benchmarks-assembly.xml</descriptor>
 						</configuration>
 					</execution>
 				</executions>
