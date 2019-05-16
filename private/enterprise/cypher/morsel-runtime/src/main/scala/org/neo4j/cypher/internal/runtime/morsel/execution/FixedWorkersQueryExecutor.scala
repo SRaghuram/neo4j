@@ -123,6 +123,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                             queryState,
                                             tracer)
 
+    queryContext.transactionalContext.transaction.forbidLockInteractions()
+
     queryManager.addQuery(executingQuery)
     executionState.initializeState()
     tracker

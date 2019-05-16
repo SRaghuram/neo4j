@@ -5,29 +5,50 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito._
+import org.mockito.verification.VerificationMode
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics, QueryTransactionalContext}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
-class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
-  override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         mock[QueryContext](RETURNS_DEEP_STUBS),
-                                                                                         mock[QueryExecutionTracer])
+class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(never()) {
+  override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(subscriber,
+                                                                                         queryContext,
+                                                                                         tracer)
 }
 
-class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest {
-  override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
-                                                                                         mock[QueryContext](RETURNS_DEEP_STUBS),
-                                                                                         mock[QueryExecutionTracer])
+class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(times(1)) {
+  override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(subscriber,
+                                                                                           queryContext,
+                                                                                           tracer)
 }
 
-abstract class QueryCompletionTrackerTest extends CypherFunSuite {
+abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends CypherFunSuite {
+
+  var subscriber: QuerySubscriber = _
+  var queryContext: QueryContext = _
+  var tracer: QueryExecutionTracer = _
+  var transaction: Transaction = _
+  val stats = QueryStatistics()
 
   def newTracker(): QueryCompletionTracker
 
-  test("await should return normally if query has completed") {
+  override protected def beforeEach(): Unit = {
+    subscriber = mock[QuerySubscriber]
+    queryContext = mock[QueryContext](RETURNS_DEEP_STUBS)
+    tracer = mock[QueryExecutionTracer]
+    transaction = mock[Transaction]
+
+    val txContext = mock[QueryTransactionalContext]
+    when(queryContext.getOptStatistics).thenReturn(Some(stats))
+    when(queryContext.transactionalContext).thenReturn(txContext)
+    when(txContext.transaction).thenReturn(transaction)
+  }
+
+  test("should behave correctly on query completion") {
     val x = newTracker()
 
     // when
@@ -35,10 +56,15 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     x.decrement()
 
     // then
+    verify(subscriber).onResultCompleted(stats)
+    verify(subscriber, never()).onError(any())
+    verify(tracer).stopQuery()
+    verify(transaction, lockTimes).allowLockInteractions()
     x.await() shouldBe false
+    x.isCompleted shouldBe true
   }
 
-  test("await should return normally if query has been cancelled") {
+  test("should behave correctly on query cancel") {
     val x = newTracker()
 
     // when
@@ -46,10 +72,15 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     x.cancel()
 
     // then
+//    verify(subscriber).onResultCompleted(stats)
+    verify(subscriber, never()).onError(any())
+    verify(tracer).stopQuery()
+    verify(transaction, lockTimes).allowLockInteractions()
     x.await() shouldBe false
+    x.isCompleted shouldBe true
   }
 
-  test("await should return normally if query has no demand") {
+  test("should behave correctly if query has no demand") {
     val x = newTracker()
 
     // when
@@ -58,16 +89,28 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     x.addServed(1)
 
     // then
+    verify(subscriber, never()).onResultCompleted(stats)
+    verify(subscriber, never()).onError(any())
+    verify(tracer, never()).stopQuery()
+    verify(transaction, never()).allowLockInteractions()
     x.await() shouldBe true
+    x.isCompleted shouldBe false
   }
 
-  test("await should throw if query has failed") {
+  test("should behave correctly if query has failed") {
     val x = newTracker()
+    val exception = new IllegalArgumentException
 
     // when
-    x.error(new IllegalArgumentException)
+    x.increment()
+    x.error(exception)
 
     // then
+    verify(subscriber).onError(exception)
+    verify(subscriber, never()).onResultCompleted(stats)
+    verify(tracer).stopQuery()
+    verify(transaction, lockTimes).allowLockInteractions()
+    x.isCompleted shouldBe true
     intercept[IllegalArgumentException] {
       x.await()
     }
@@ -82,38 +125,4 @@ abstract class QueryCompletionTrackerTest extends CypherFunSuite {
     // then
     x.isCompleted should be(false)
   }
-
-  test("isCompleted when completed") {
-    val x = newTracker()
-
-    // when
-    x.increment()
-    x.decrement()
-
-    // then
-    x.isCompleted should be(true)
-  }
-
-  test("isCompleted when error") {
-    val x = newTracker()
-
-    // when
-    x.increment()
-    x.error(new IllegalArgumentException)
-
-    // then
-    x.isCompleted should be(true)
-  }
-
-  test("isCompleted when cancelled") {
-    val x = newTracker()
-
-    // when
-    x.increment()
-    x.cancel()
-
-    // then
-    x.isCompleted should be(true)
-  }
-
 }

@@ -64,15 +64,22 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
     if (count == 0) {
-      tracer.stopQuery()
-      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      try {
+        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      } finally {
+        tracer.stopQuery()
+      }
     }
     count
   }
 
   override def error(throwable: Throwable): Unit = {
     this.throwable = throwable
-    subscriber.onError(throwable)
+    try {
+      subscriber.onError(throwable)
+    } finally {
+      tracer.stopQuery()
+    }
   }
 
   override def getDemand: Long = demand
@@ -99,6 +106,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def cancel(): Unit = {
     cancelled = true
+    tracer.stopQuery()
   }
 
   override def await(): Boolean = {
@@ -141,16 +149,14 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     val newCount = count.decrementAndGet()
     debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
-        try {
-          tracer.stopQuery()
-          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
-        } finally {
-          completed = true
-          releaseLatch()
+      try {
+        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      } finally {
+        completeQuery()
       }
-    }
-    else if (newCount < 0)
+    } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")
+    }
     newCount
   }
 
@@ -160,11 +166,16 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       synchronized {
         subscriber.onError(throwable)
       }
+    } finally {
+      completeQuery()
     }
-    finally {
-      completed = true
-      releaseLatch()
-    }
+  }
+
+  private def completeQuery(): Unit = {
+    tracer.stopQuery()
+    completed = true
+    queryContext.transactionalContext.transaction.allowLockInteractions()
+    releaseLatch()
   }
 
   override def isCompleted: Boolean = completed
@@ -207,8 +218,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     try {
       cancelled.set(true)
     } finally {
-      completed = true
-      releaseLatch()
+      completeQuery()
     }
   }
 
