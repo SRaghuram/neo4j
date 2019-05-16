@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.planner.spi.GraphStatistics
+import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults._
 import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
 import org.neo4j.cypher.internal.plandescription.{Argument, InternalPlanDescription}
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
@@ -283,7 +283,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("LIMIT should influence cardinality estimation even when parameterized") {
     (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT {limit}", params = Map("limit" -> 10))
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation with literal") {
@@ -307,14 +307,14 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("LIMIT should influence cardinality estimation by default value when expression contains parameter") {
     (0 until 100).map(_ => createLabeledNode("Person"))
     val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(sin({limit}))", params = Map("limit" -> 1))
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation by default value when expression contains rand()") {
     (0 until 100).map(_ => createLabeledNode("Person"))
     // NOTE: We cannot executeWith because of random result
     val result = executeSingle(s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(rand()*10)", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation by default value when expression contains timestamp()") {
@@ -323,13 +323,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     //to fix this on 2.3. So if we fix the issue on 2.3 or if we no longer need to depend on 2.3 we should update test
     //to run with `executeWith`
     val r1 = executeSingle(s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r1.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    r1.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
 
     val r2 = executeSingle(s"PROFILE CYPHER runtime=slotted MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r2.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    r2.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
 
     val r3 = executeSingle(s"PROFILE CYPHER runtime=interpreted MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r3.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    r3.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("should support profiling union queries") {
