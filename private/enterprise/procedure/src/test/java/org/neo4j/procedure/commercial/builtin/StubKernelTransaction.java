@@ -124,6 +124,16 @@ class StubKernelTransaction implements KernelTransaction
     }
 
     @Override
+    public void forbidLockInteractions()
+    {
+    }
+
+    @Override
+    public void allowLockInteractions()
+    {
+    }
+
+    @Override
     public CursorFactory cursors()
     {
         return null;
