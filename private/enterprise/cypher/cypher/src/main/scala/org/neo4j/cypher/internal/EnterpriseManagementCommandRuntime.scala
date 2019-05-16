@@ -12,7 +12,8 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, QueryHandler, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
 import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.v4_0.ast.{LabelQualifier, NamedGraphScope}
+import org.neo4j.cypher.internal.v4_0.ast
+import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.database.DatabaseNotFoundException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
@@ -178,64 +179,30 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(database, qualifier, roleName) => (_, _) =>
-      val action = Values.stringValue(ResourcePrivilege.Action.FIND.toString)
-      val resource = Values.stringValue(Resource.Type.GRAPH.toString)
-      val roles = Values.stringArray(roleName)
-      val (labels:Value, qualifierMerge:String) = qualifier match {
-        case LabelQualifier(label) => (Values.stringArray(label), "UNWIND $labels AS label MERGE (q:LabelQualifier {label: label})")
-        case _ => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
-      }
-      val (dbName, db, databaseMerge, scopeMerge) = database match {
-        case NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-        case _ => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      }
-      //TODO: Return error when we don't get at least one row (eg. database does not exist)
-      UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
-        s"""
-           |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
-           |$qualifierMerge
-           |
-           |WITH q
-           |// Find the specified database, or find/create the special DatabaseAll node for '*'
-           |$databaseMerge
-           |
-           |WITH q, d
-           |// Create a new scope connecting the database to the qualifier using a :Segment node
-           |$scopeMerge
-           |
-           |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
-           |MERGE (res:Resource {type: $$resource})
-           |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
-           |
-           |WITH q, d, a
-           |// For all roles we should apply this too, connect each to the new :Action
-           |UNWIND $$roles AS role
-           |MATCH (r:Role {name: role})
-           |MERGE (r)-[:GRANTED]->(a)
-           |
-           |// Return the table of results
-           |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-        VirtualValues.map(Array("action", "resource", "database", "labels", "roles"), Array(action, resource, dbName, labels, roles)),
-        QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
-      )
+      makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
+
+    // GRANT READ (prop) ON GRAPH foo NODES A (*) TO role
+    case GrantRead(resource, database, qualifier, roleName) => (_, _) =>
+      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(scope, grantee) => (_, _) =>
-      val role = Values.stringValue(grantee)
-      val (mainMatch, userReturn) = scope match {
-        case "ROLE" => (s"(r:Role) WHERE r.name = '$grantee'", "")
-        case "USER" => (s"(u:User)-[a:HAS_ROLE]->(r:Role) WHERE u.name = '$grantee'", "u.name AS user, ")
-        case _ => ("(r:Role)", "")
+    case ShowPrivileges(scope) => (_, _) =>
+      val (grantee: Value, mainMatch, userReturn) = scope match {
+        case ast.ShowRolePrivileges(name) => (Values.stringValue(name), "OPTIONAL MATCH (r:Role) WHERE r.name = $grantee WITH r", "")
+        case ast.ShowUserPrivileges(name) => (Values.stringValue(name), "OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $grantee WITH r, u", ", u.name AS user")
+        case ast.ShowAllPrivileges() => (Values.NO_VALUE, "OPTIONAL MATCH (r:Role) WITH r", "")
+        case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine,
-        s"""MATCH $mainMatch
+        s"""$mainMatch
            |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
            |    (a)-[:APPLIES_TO]->(res:Resource),
            |    (s)-[:FOR]->(d),
            |    (s)-[:QUALIFIED]->(q)
            |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
-           |RETURN type(g) AS grant, a.action AS action, res.type AS resource, coalesce(d.name, '*') AS database, collect(q.label) AS labels, ${userReturn}r.name AS role""".stripMargin,
-        VirtualValues.map(Array("role"), Array(role))
+           |RETURN type(g) AS grant, a.action AS action, res.type AS resource, coalesce(d.name, '*') AS database, collect(q.label) AS labels, r.name AS role$userReturn""".stripMargin,
+        VirtualValues.map(Array("grantee"), Array(grantee)),
+        e => throw new InvalidArgumentsException(s"The specified grantee '${grantee.asObject()}' does not exist.", e)
       )
 
     // CREATE DATABASE foo
@@ -247,7 +214,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online)),
-        e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.")
+        e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.", e)
       )
 
     // DROP DATABASE foo
@@ -261,6 +228,55 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
         QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
       )
+  }
+
+  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String): UpdatingSystemCommandExecutionPlan = {
+    val action = Values.stringValue(actionName)
+    val role = Values.stringValue(roleName)
+    val (property: Value, resourceType: Value, resourceMerge: String) = resource match {
+      case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MERGE (res:Resource {type: $resource, arg1: $property})")
+      case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MERGE (res:Resource {type: $resource})")
+      case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MERGE (res:Resource {type: $resource})") // The label is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant resource type $resource")
+    }
+    val (label: Value, qualifierMerge: String) = qualifier match {
+      case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
+      case ast.AllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
+    }
+    val (dbName, db, databaseMerge, scopeMerge) = database match {
+      case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
+    }
+    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+      s"""
+         |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
+         |$qualifierMerge
+         |
+         |WITH q
+         |// Find the specified database, or find/create the special DatabaseAll node for '*'
+         |$databaseMerge
+         |
+         |WITH q, d
+         |// Create a new scope connecting the database to the qualifier using a :Segment node
+         |$scopeMerge
+         |
+         |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
+         |$resourceMerge
+         |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
+         |
+         |WITH q, d, a
+         |// Connect the role to the action to complete the privilege assignment
+         |OPTIONAL MATCH (r:Role {name: $$role})
+         |MERGE (r)-[:GRANTED]->(a)
+         |
+         |// Return the table of results
+         |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+      VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
+      QueryHandler.handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)
+      ).handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
+    )
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =
