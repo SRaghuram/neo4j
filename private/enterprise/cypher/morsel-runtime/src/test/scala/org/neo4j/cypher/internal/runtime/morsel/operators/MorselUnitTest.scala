@@ -5,33 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.ArgumentMatchers.{any, anyInt}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
-import org.neo4j.cypher.internal.runtime.morsel.ContinuableOperatorTask
-import org.neo4j.cypher.internal.runtime.morsel.EagerReduceOperator
-import org.neo4j.cypher.internal.runtime.morsel.EmptyQueryState
-import org.neo4j.cypher.internal.runtime.morsel.Morsel
-import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.morsel.QueryResources
-import org.neo4j.cypher.internal.runtime.morsel.QueryState
-import org.neo4j.cypher.internal.runtime.morsel.StatelessOperator
-import org.neo4j.cypher.internal.runtime.morsel.StreamingOperator
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.Scan
+import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 abstract class MorselUnitTest extends CypherFunSuite {
-  protected val resources = mock[QueryResources](RETURNS_DEEP_STUBS)
+  protected val resources: QueryResources = mock[QueryResources](RETURNS_DEEP_STUBS)
 
   protected val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -77,9 +66,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   }
 
   private def answer[T](a: InvocationOnMock => T): Answer[T] = {
-    new Answer[T] {
-      override def answer(invocationOnMock: InvocationOnMock): T = a(invocationOnMock)
-    }
+    invocationOnMock: InvocationOnMock => a(invocationOnMock)
   }
 
   class Input {
@@ -169,22 +156,8 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def withOperator(operator: StreamingOperator): StreamingOperatorGiven = {
-      val res = new StreamingOperatorGiven(operator)
-      res.context = this.context
-      res.state = this.state
-      res
-    }
-
     def withOperator(operator: StatelessOperator): StatelessOperatorGiven = {
       val res = new StatelessOperatorGiven(operator)
-      res.context = this.context
-      res.state = this.state
-      res
-    }
-
-    def withOperator(operator: EagerReduceOperator): EagerReduceOperatorGiven = {
-      val res = new EagerReduceOperatorGiven(operator)
       res.context = this.context
       res.state = this.state
       res
@@ -221,67 +194,12 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  trait HasOutput {
-    self: Given =>
-    protected var output = Counts(0, 0, 0)
-
-    def withOutput(setters: Counts => Counts*): this.type = {
-      output = setters.foldLeft(output)((o, setter) => setter(o))
-      this
-    }
-  }
-
-  class StreamingOperatorGiven(operator: StreamingOperator) extends Given with HasOneInput with HasOutput {
-
-    def whenInit(rowNum: Int = 0): ThenTasks = {
-      val morsel = new Morsel(input.longs, input.refs)
-      val row = MorselExecutionContext(morsel, input.longSlots, input.refSlots, input.rows)
-      (0 until rowNum).foreach(_ => row.moveToNextRow())
-      val tasks = operator.init(context, state, row, resources)
-      new ThenTasks(tasks, context, output)
-    }
-  }
-
   class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
 
     def whenOperate(): ThenOutput = {
       val (morsel, row) = input.build
       operator.operate(row, context, state, resources)
       new ThenOutput(morsel, row, input.longSlots, input.refSlots)
-    }
-  }
-
-  class EagerReduceOperatorGiven(operator: EagerReduceOperator) extends Given with HasOutput {
-    private var inputs = Array.newBuilder[Input]
-
-    def addInput(input: Input): this.type = {
-      inputs += input
-      this
-    }
-
-    def whenInit(): WhenContinuableOperatorTask = {
-      val rows = inputs.result().map { input =>
-        val morsel = new Morsel(input.longs, input.refs)
-        MorselExecutionContext(morsel, input.longSlots, input.refSlots, input.rows)
-      }
-      val task = operator.init(context, state, rows, resources)
-      new WhenContinuableOperatorTask(task, context, output)
-    }
-  }
-
-  class ThenTasks(tasks: IndexedSeq[ContinuableOperatorTask], context: QueryContext, output: Counts) {
-    def shouldReturnNTasks(n: Int): IndexedSeq[WhenContinuableOperatorTask] = {
-      tasks.size should be(n)
-      tasks.map(new WhenContinuableOperatorTask(_, context, output))
-    }
-  }
-
-  class WhenContinuableOperatorTask(task: ContinuableOperatorTask, context: QueryContext, output: Counts) {
-    def whenOperate: ThenContinuableOutput = {
-      val outputMorsel = new Morsel(new Array[Long](output.longSlots * output.rows), new Array[AnyValue](output.refSlots * output.rows))
-      val outputRow = MorselExecutionContext(outputMorsel, output.longSlots, output.refSlots, output.rows)
-      task.operate(outputRow, context, EmptyQueryState(), resources)
-      new ThenContinuableOutput(task, outputMorsel, outputRow, output.longSlots, output.refSlots)
     }
   }
 

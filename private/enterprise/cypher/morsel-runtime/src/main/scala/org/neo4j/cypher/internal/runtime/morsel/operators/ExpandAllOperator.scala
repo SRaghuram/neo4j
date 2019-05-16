@@ -5,16 +5,23 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
-import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
-import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor}
+import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
+import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor, TokenRead}
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromOffset: Int,
@@ -23,13 +30,17 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         dir: SemanticDirection,
                         types: RelationshipTypes) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] =
-    IndexedSeq(new OTask(inputMorsel))
+  override def toString: String = "ExpandAll"
 
-  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+    IndexedSeq(new OTask(inputMorsel.nextCopy))
+
+  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+
+    override def toString: String = "ExpandAllTask"
 
     /*
     This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -42,7 +53,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     private var relationships: RelationshipSelectionCursor = _
 
     protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
-      val fromNode = inputRow.getLongAt(fromOffset)
+      val fromNode = inputMorsel.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
         false
       else {
@@ -63,7 +74,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         val otherSide = relationships.otherNodeReference()
 
         // Now we have everything needed to create a row.
-        outputRow.copyFrom(inputRow)
+        outputRow.copyFrom(inputMorsel)
         outputRow.setLongAt(relOffset, relId)
         outputRow.setLongAt(toOffset, otherSide)
         outputRow.moveToNextRow()
@@ -94,5 +105,174 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         }
       }
     }
+  }
+}
+
+class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                    innermost: DelegateOperatorTaskTemplate,
+                                    fromOffset: Int,
+                                    relOffset: Int,
+                                    toOffset: Int,
+                                    dir: SemanticDirection,
+                                    types: Array[Int],
+                                    missingTypes: Array[String])
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
+  import OperatorCodeGenHelperTemplates._
+
+  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
+  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName())
+  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName())
+  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName())
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
+                                            if (types.isEmpty && missingTypes.isEmpty) constant(null)
+                                            else arrayOf[Int](types.map(constant):_*)
+  )
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
+                                                      arrayOf[String](missingTypes.map(constant):_*))
+
+  override def genFields: Seq[Field] = {
+    val localFields =
+      ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField)
+    if (missingTypes.nonEmpty) {
+      localFields += missingTypeField
+    }
+
+    super.genFields ++ localFields ++ inner.genFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    inner.genLocalVariables :+ CURSOR_POOL_V
+  }
+
+  /**
+    * {{{
+    *    val fromNode = inputMorsel.getLongAt(fromOffset)
+    *    if (entityIsNull(fromNode))
+    *      false
+    *    else {
+    *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+    *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
+    *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
+    *      read.singleNode(node, nodeCursor)
+    *      relationships = if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+    *                      else {
+    *                        //or incomingCursor or allCursor depending on the direction
+    *                        outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
+    *                      }
+    *      this.canContinue = relationships.next()
+    *      true
+    *      }
+    * }}}
+    *
+    */
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    val methodToCall = dir match {
+      case OUTGOING => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingCursor")
+      case INCOMING => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingCursor")
+      case BOTH => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allCursor")
+    }
+    val resultBoolean = codeGen.namer.nextVariableName()
+
+    block(
+      declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
+      condition(notEqual(codeGen.getLongAt(fromOffset), constant(-1L))){
+       block(
+         loadTypes,
+         setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
+         setField(groupCursorField, ALLOCATE_GROUP_CURSOR),
+         setField(traversalCursorField, ALLOCATE_TRAVERSAL_CURSOR),
+         singleNode(codeGen.getLongAt(fromOffset), loadField(nodeCursorField)),
+         setField(relationshipsField,
+                  ///node.next() ? getRelCursor : EMPTY
+                  ternary(cursorNext[NodeCursor](loadField(nodeCursorField)),
+                          invokeStatic(methodToCall, loadField(groupCursorField), loadField(traversalCursorField),
+                                       loadField(nodeCursorField), loadField(typeField)),
+                          getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY")
+                  )
+         ),
+         assign(resultBoolean, constant(true))
+       )
+      },
+      setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+      load(resultBoolean)
+    )
+  }
+
+  private def loadTypes = {
+    if (missingTypes.isEmpty) noop()
+    else {
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
+        setField(typeField,
+                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
+                              loadField(typeField), loadField(missingTypeField), DB_ACCESS))
+      }
+    }
+  }
+
+  /**
+    * {{{
+    *     while (hasDemand && this.canContinue) {
+    *         val relId = relationships.relationshipReference()
+    *         val otherSide = relationships.otherNodeReference()
+    *
+    *         outputRow.copyFrom(inputMorsel)
+    *         outputRow.setLongAt(relOffset, relId)
+    *         outputRow.setLongAt(toOffset, otherSide)
+    *          <<< inner.genOperate() >>>
+    *          this.canContinue = relationships.next()
+    * }}}
+    */
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    val otherNode = dir match {
+      case OUTGOING => method[RelationshipSelectionCursor, Long]("targetNodeReference")
+      case INCOMING => method[RelationshipSelectionCursor, Long]("sourceNodeReference")
+      case BOTH => method[RelationshipSelectionCursor, Long]("otherNodeReference")
+    }
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        if (innermost.shouldWriteToContext) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, MorselExecutionContext]("copyFrom"),
+                           loadField(INPUT_MORSEL))
+        } else {
+          noop()
+        },
+        codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
+                                            method[RelationshipSelectionCursor, Long]("relationshipReference"))),
+        codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
+        inner.genOperate,
+        setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
+      )
+    )
+  }
+
+  /**
+    * {{{
+    *     val pools = resources.cursorPools
+    *     pools.nodeCursorPool.free(nodeCursor)
+    *     pools.relationshipGroupCursorPool.free(groupCursor)
+    *     pools.relationshipTraversalCursorPool.free(traversalCursor)
+    *     relationships = null
+    * }}}
+    */
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+   block(
+     freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
+     freeCursor[RelationshipGroupCursor](loadField(groupCursorField), GroupCursorPool),
+     freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
+     setField(relationshipsField, constant(null))
+   )
+  }
+}
+
+object ExpandAllOperatorTaskTemplate {
+  def computeTypes(computed: Array[Int], missing: Array[String], dbAccess: DbAccess): Array[Int] = {
+    val newTokens = mutable.ArrayBuffer(computed:_*)
+    missing.foreach(s => {
+      val token = dbAccess.relationshipType(s)
+      if (token != TokenRead.NO_TOKEN && !newTokens.contains(token)) {
+        newTokens.append(token)
+      }
+    })
+    newTokens.toArray
   }
 }

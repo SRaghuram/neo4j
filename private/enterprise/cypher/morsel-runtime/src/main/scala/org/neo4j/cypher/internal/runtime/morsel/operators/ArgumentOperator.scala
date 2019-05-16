@@ -7,27 +7,36 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = IndexedSeq(new OTask(inputMorsel))
+  override def toString: String = "Argument"
 
-  class OTask(argument: MorselExecutionContext) extends ContinuableOperatorTask {
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+    IndexedSeq(new OTask(inputMorsel.nextCopy))
+
+  class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+
+    override def toString: String = "ArgumentTask"
+
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      outputRow.copyFrom(argument, argumentSize.nLongs, argumentSize.nReferences)
+      while (outputRow.isValidRow && inputMorsel.isValidRow) {
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
 
-      outputRow.moveToNextRow()
+        inputMorsel.moveToNextRow()
+        outputRow.moveToNextRow()
+      }
       outputRow.finishedWriting()
     }
 

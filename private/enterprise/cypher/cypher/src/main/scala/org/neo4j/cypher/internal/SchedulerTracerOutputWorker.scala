@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.runtime.scheduling.{DataPointFlusher, SingleConsumerDataBuffers}
+import org.neo4j.cypher.internal.runtime.morsel.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
 
 /**
   * Worker which polls scheduler tracer data and writes it to a [[DataPointFlusher]]. Makes sure to close

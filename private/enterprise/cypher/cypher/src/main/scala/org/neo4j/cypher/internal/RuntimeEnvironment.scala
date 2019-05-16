@@ -5,12 +5,9 @@
  */
 package org.neo4j.cypher.internal
 
-import java.util.concurrent.ExecutorService
-
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
-import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, NO_TRANSACTION_BINDER, QueryResources}
-import org.neo4j.cypher.internal.runtime.scheduling._
-import org.neo4j.cypher.internal.runtime.zombie.execution.{CallingThreadQueryExecutor, FixedWorkersQueryExecutor, QueryExecutor}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{CallingThreadQueryExecutor, FixedWorkersQueryExecutor, NO_TRANSACTION_BINDER, QueryExecutor, QueryResources}
+import org.neo4j.cypher.internal.runtime.morsel.tracing.{CsvFileDataWriter, CsvStdOutDataWriter, DataPointSchedulerTracer, SchedulerTracer, SingleConsumerDataBuffers}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -29,30 +26,9 @@ object RuntimeEnvironment {
          lifeSupport: LifeSupport): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
-                           createDispatcher(config, jobScheduler, cursors, txBridge),
                            createQueryExecutor(config, jobScheduler, cursors, txBridge, lifeSupport),
                            createTracer(config, jobScheduler),
                            cursors)
-  }
-
-  def createDispatcher(config: CypherRuntimeConfiguration,
-                       jobScheduler: JobScheduler,
-                       cursors: CursorFactory,
-                       txBridge: ThreadToStatementContextBridge): Dispatcher = {
-    val (scheduler, transactionBinder) = config.scheduler match {
-      case SingleThreaded =>
-        (new SingleThreadScheduler(() => new QueryResources(cursors)), NO_TRANSACTION_BINDER)
-      case Simple =>
-        val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
-        jobScheduler.setParallelism(Group.CYPHER_WORKER, numberOfThreads)
-        val executorService = jobScheduler.executor(Group.CYPHER_WORKER).asInstanceOf[ExecutorService]
-        (new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads), new TxBridgeTransactionBinder(txBridge))
-      case LockFree =>
-        val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
-        val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
-        (new LockFreeScheduler(threadFactory, numberOfThreads, config.waitTimeout, () => new QueryResources(cursors)), new TxBridgeTransactionBinder(txBridge))
-    }
-    new Dispatcher(config.morselSize, scheduler, transactionBinder)
   }
 
   def createQueryExecutor(config: CypherRuntimeConfiguration,
@@ -94,7 +70,6 @@ object RuntimeEnvironment {
 }
 
 class RuntimeEnvironment(config: CypherRuntimeConfiguration,
-                         dispatcher: Dispatcher,
                          queryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory) {
@@ -104,12 +79,6 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
       new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
     else
       queryExecutor
-
-  def getDispatcher(debugOptions: Set[String]): Dispatcher =
-    if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)
-      new Dispatcher(config.morselSize, new SingleThreadScheduler(() => new QueryResources(cursors)), NO_TRANSACTION_BINDER)
-    else
-      dispatcher
 
   private def isAlreadySingleThreaded = config.scheduler == SingleThreaded
 }

@@ -5,34 +5,37 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.Scan
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
 
 class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
                           argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     if (state.singeThreaded) {
       // Single threaded scan
-      IndexedSeq(new SingleThreadedScanTask(inputMorsel))
+      IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
     } else {
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
-      val tasks = new Array[ContinuableOperatorTask](state.numberOfWorkers)
+      val tasks = new Array[ContinuableOperatorTaskWithMorsel](state.numberOfWorkers)
       var i = 0
       while (i < state.numberOfWorkers) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
-        val rowForTask = inputMorsel.shallowCopy()
+        val rowForTask = inputMorsel.nextCopy
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)
         i += 1
       }
@@ -43,9 +46,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   /**
     * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
     *
-    * @param inputRow the input row, pointing to the beginning of the input morsel
+    * @param inputMorsel the input row, pointing to the beginning of the input morsel
     */
-  class SingleThreadedScanTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+
+    override def toString: String = "AllNodeScanSerialTask"
+
     private var cursor: NodeCursor = _
 
     override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
@@ -56,7 +62,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && cursor.next()) {
-        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
       }
@@ -74,10 +80,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     *
     * For each batch, it process all the nodes and combines them with each input row.
     */
-  class ParallelScanTask(val inputRow: MorselExecutionContext,
+  class ParallelScanTask(val inputMorsel: MorselExecutionContext,
                          scan: Scan[NodeCursor],
                          val cursor: NodeCursor,
-                         val batchSizeHint: Int) extends ContinuableOperatorTask {
+                         val batchSizeHint: Int) extends ContinuableOperatorTaskWithMorsel {
+
+    override def toString: String = "AllNodeScanParallelTask"
 
     private var _canContinue: Boolean = true
     private var deferredRow: Boolean = false
@@ -86,11 +94,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       * These 2 lines make sure that the first call to [[next]] is correct.
       */
     scan.reserveBatch(cursor, batchSizeHint)
-    inputRow.setToAfterLastRow()
+    inputMorsel.setToAfterLastRow()
 
     override def operate(outputRow: MorselExecutionContext, context: QueryContext, queryState: QueryState, resources: QueryResources): Unit = {
       while (next(queryState) && outputRow.isValidRow) {
-        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
       }
@@ -108,11 +116,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
         if (deferredRow) {
           deferredRow = false
           return true
-        } else if (inputRow.hasNextRow) {
-          inputRow.moveToNextRow()
+        } else if (inputMorsel.hasNextRow) {
+          inputMorsel.moveToNextRow()
           return true
         } else if (cursor.next()) {
-          inputRow.resetToBeforeFirstRow()
+          inputMorsel.resetToBeforeFirstRow()
         } else if (scan.reserveBatch(cursor, batchSizeHint)) {
           // Do nothing
         } else {
@@ -127,6 +135,88 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     }
 
     override def canContinue: Boolean = _canContinue
+  }
+
+}
+
+class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
+                                            val innermost: DelegateOperatorTaskTemplate,
+                                            val nodeVarName: String,
+                                            val offset: Int,
+                                            val argumentSize: SlotConfiguration.Size)
+                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
+  import OperatorCodeGenHelperTemplates._
+
+  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
+
+  override def genFields: Seq[Field] = {
+    (super.genFields :+ nodeCursorField) ++ inner.genFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    inner.genLocalVariables :+ CURSOR_POOL_V
+  }
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+      *   context.transactionalContext.dataRead.allNodesScan(cursor)
+      *   this.canContinue = nodeCursor.next()
+      *   true
+      * }}}
+      */
+    block(
+      setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
+      allNodeScan(loadField(nodeCursorField)),
+      setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
+      constant(true)
+    )
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+     /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     ...
+      *     << inner.genOperate >>
+      *     this.canContinue = this.nodeCursor.next()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
+        //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
+        //       that needs to be array-copied because a pipeline of an outer nesting may need them later on,
+        //       and an suffix range of n+1 to m arguments that are being used in this pipeline, and thus declared as locals.
+        //       The suffix range will be written from locals to the context by the innermost template,
+        //       (unless this pipeline ends with a ProduceResult, in which case it is written directly to the result),
+        //       so we do not need to include it in this copy.
+        // If the pipeline ends with a ProduceResult, the prefix range array copy could be skipped entirely
+        // since it means nobody is interested in those arguments.
+        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+        } else {
+          noop()
+        },
+        codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
+        inner.genOperate,
+        setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField)))
+        )
+      )
+  }
+
+
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    //resources.cursorPools.nodeCursorPool.free(cursor)
+    //cursor = null
+    block(
+      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
+      setField(nodeCursorField, constant(null))
+    )
   }
 
 }

@@ -27,7 +27,6 @@ object ENTERPRISE {
         GeneratedQueryStructure,
         NullLog.getInstance(),
         runtimeConfig,
-        RuntimeEnvironment.createDispatcher(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
         RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge, lifeSupport),
         kernel.cursors(),
         () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler),

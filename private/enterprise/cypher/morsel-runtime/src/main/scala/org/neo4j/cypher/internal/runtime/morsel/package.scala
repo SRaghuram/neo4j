@@ -6,12 +6,11 @@
 package org.neo4j.cypher.internal.runtime
 
 package object morsel {
-  /**
-    * An argument that can be passed to a pipeline task that will be forwarded to downstream pipeline tasks
-    * TBD: This could be merged into QueryState if we copy the QueryState at the appropriate points
-    * which would resemble how we do things in the interpreted/slotted runtime
-    */
-  type SinglePARG = MorselExecutionContext
-  type PipelineArgument = List[SinglePARG]
-  val EmptyPipelineArgument: PipelineArgument = Nil
+  val DEBUG = false
+  def debug(msg: => String): Unit =
+    if (DEBUG) {
+      // Not using println because that is synchronized and can hide
+      // parallel problems.
+      print(msg + "\n")
+    }
 }

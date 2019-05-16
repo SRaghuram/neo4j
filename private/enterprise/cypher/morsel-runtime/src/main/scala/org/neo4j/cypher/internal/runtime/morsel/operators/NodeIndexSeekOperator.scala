@@ -10,9 +10,10 @@ import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedInd
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker}
-import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.Value
@@ -32,16 +33,17 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def init(context: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
-    IndexedSeq(new OTask(inputMorsel))
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+
+    IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
 
-  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
     private var nodeCursors: Iterator[NodeValueIndexCursor] = _
     private var nodeCursor: NodeValueIndexCursor = _
@@ -59,20 +61,23 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       throw new IllegalStateException("Unreachable code")
     }
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): Boolean = {
+
       val queryState = new OldQueryState(context,
                                          resources = null,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))
-      nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputRow)
+      nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputMorsel)
       true
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && next()) {
-        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {

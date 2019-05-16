@@ -10,24 +10,33 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 
 class LabelScanOperator(val workIdentity: WorkIdentity,
                         offset: Int,
                         label: LazyLabel,
                         argumentSize: SlotConfiguration.Size)
-  extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
+  extends StreamingOperator {
 
-  override def init(context: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
-    IndexedSeq(new OTask(inputMorsel))
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+
+    // Single threaded scan
+    IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
   }
 
-  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  /**
+    * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
+    *
+    * @param inputMorsel the input row, pointing to the beginning of the input morsel
+    */
+  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+
+    override def toString: String = "LabelScanSerialTask"
 
     private var cursor: NodeLabelIndexCursor = _
 
@@ -43,7 +52,11 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      iterate(inputRow, outputRow, cursor, argumentSize)
+      while (outputRow.isValidRow && cursor.next()) {
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.setLongAt(offset, cursor.nodeReference())
+        outputRow.moveToNextRow()
+      }
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {

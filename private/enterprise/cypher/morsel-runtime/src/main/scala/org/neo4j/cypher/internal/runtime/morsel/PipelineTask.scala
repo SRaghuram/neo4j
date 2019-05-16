@@ -5,157 +5,73 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import java.util
-
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.{Task, WorkIdentity}
-import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln
-
-abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
-                                    slots: SlotConfiguration,
-                                    workIdentity: WorkIdentity,
-                                    queryContext: QueryContext,
-                                    state: QueryState,
-                                    downstream: Option[Pipeline]) extends Task[QueryResources] {
-
-  def ownerPipeline: Pipeline
-  def pipelineArgument: PipelineArgument
-  def doExecuteWorkUnit(cursors: QueryResources): Seq[Task[QueryResources]]
-
-  override final def executeWorkUnit(expressionCursors: QueryResources): Seq[Task[QueryResources]] = {
-    try {
-      state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
-      doExecuteWorkUnit(expressionCursors)
-    } finally {
-      state.transactionBinder.unbindFromThread()
-    }
-  }
-
-  protected def doStatelessOperators(resources: QueryResources,
-                                     outputRow: MorselExecutionContext,
-                                     queryContext: QueryContext): Unit = {
-    for (op <- operators) {
-      outputRow.resetToFirstRow()
-      op.operate(outputRow, queryContext, state, resources)
-    }
-  }
-
-  protected def getDownstreamTasks(resources: QueryResources,
-                                   outputRow: MorselExecutionContext,
-                                   queryContext: QueryContext): Seq[Task[QueryResources]] = {
-    outputRow.resetToFirstRow()
-    val downstreamTasks = downstream.toSeq.flatMap(_.acceptMorsel(outputRow, queryContext, state, resources, pipelineArgument, this))
-
-    if (org.neo4j.cypher.internal.runtime.morsel.Pipeline.DEBUG && downstreamTasks.nonEmpty) {
-      dprintln(() => s">>> downstream tasks=$downstreamTasks")
-    }
-
-    // REV: I think that this reduceCollector can never be None or else there may be nothing tracking that we have completed when we get no more tasks
-    state.reduceCollector match {
-      case Some(x) if !canContinue =>
-        // Signal the downstream reduce collector that we have completed. This may produce new tasks from the
-        // downstream reduce pipeline if it has received enough completed tasks to proceed.
-        val downstreamReduceTasks = x.produceTaskCompleted(queryContext, state, resources)
-        downstreamTasks ++ downstreamReduceTasks
-
-      case _ =>
-        downstreamTasks
-    }
-  }
-
-  override def workId: Int = workIdentity.workId
-
-  override def workDescription: String = workIdentity.workDescription
-}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
+import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
 /**
-  * The [[Task]] of executing a [[Pipeline]] once.
+  * The [[Task]] of executing an [[ExecutablePipeline]] once.
   *
-  * @param start                task for executing the start operator
-  * @param operators            the subsequent [[OperatorTask]]s
-  * @param slots                the slotConfiguration of this Pipeline
-  * @param workIdentity         description of computation performed by this task
-  * @param originalQueryContext the query context
-  * @param state                the current QueryState
-  * @param pipelineArgument     an argument passed to this task
-  * @param ownerPipeline        the Pipeline from where this task originated
-  * @param downstream           the downstream Pipeline
+  * @param startTask  task for executing the start operator
+  * @param state  the current QueryState
   */
-case class PipelineTask(start: ContinuableOperatorTask,
-                        operators: IndexedSeq[OperatorTask],
-                        slots: SlotConfiguration,
-                        workIdentity: WorkIdentity,
+case class PipelineTask(startTask: ContinuableOperatorTask,
+                        middleTasks: Array[OperatorTask],
+                        outputOperatorState: OutputOperatorState,
                         queryContext: QueryContext,
                         state: QueryState,
-                        pipelineArgument: PipelineArgument,
-                        ownerPipeline: Pipeline,
-                        downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, workIdentity, queryContext, state, downstream) {
+                        pipelineState: PipelineState)
+  extends Task[QueryResources] {
 
-  override def doExecuteWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
-    val outputMorsel = Morsel.create(slots, state.morselSize)
-    val outputRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, state.morselSize, 0, slots)
+  private var _output: MorselExecutionContext = _
 
-    start.operate(outputRow, queryContext, state, resources)
-
-    doStatelessOperators(resources, outputRow, queryContext)
-
-    if (org.neo4j.cypher.internal.runtime.morsel.Pipeline.DEBUG) {
-      dprintln(() => s"Pipeline: $toString")
-
-      val longCount = slots.numberOfLongs
-      val refCount = slots.numberOfReferences
-
-      dprintln(() => "Resulting rows")
-      for (i <- 0 until outputRow.getValidRows) {
-        val ls = util.Arrays.toString(outputMorsel.longs.slice(i * longCount, (i + 1) * longCount))
-        val rs = util.Arrays.toString(outputMorsel.refs.slice(i * refCount, (i + 1) * refCount).asInstanceOf[Array[AnyRef]])
-        println(s"$ls $rs")
-      }
-      dprintln(() => s"can continue: ${start.canContinue}")
-      println()
-      dprintln(() => "-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/")
+  override final def executeWorkUnit(resources: QueryResources, workUnitEvent: WorkUnitEvent): PreparedOutput = {
+    if (_output == null) {
+      _output = pipelineState.allocateMorsel(workUnitEvent, state)
+      executeStartOperators(resources)
     }
-
-    getDownstreamTasks(resources, outputRow, queryContext)
+    executeOutputOperator(resources)
   }
 
-  override def canContinue: Boolean = start.canContinue
-}
-
-/**
-  * The [[Task]] of executing a [[LazyReducePipeline]].
-  *
-  * This can be created multiple times per [[LazyReducePipeline]], depending on the scheduling.
-  * It will get called once for every [[LazyReduceOperatorTask]] that is created.
-  *
-  * @param start                task for executing the start operator
-  * @param operators            the subsequent [[OperatorTask]]s
-  * @param slots                the slotConfiguration of this Pipeline
-  * @param workIdentity         description of computation performed by this task
-  * @param originalQueryContext the query context
-  * @param state                the current QueryState
-  * @param pipelineArgument     an argument passed to this task
-  * @param ownerPipeline        the Pipeline from where this task originated
-  * @param downstream           the downstream Pipeline
-  */
-case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
-                                  operators: IndexedSeq[OperatorTask],
-                                  slots: SlotConfiguration,
-                                  workIdentity: WorkIdentity,
-                                  queryContext: QueryContext,
-                                  state: QueryState,
-                                  pipelineArgument: PipelineArgument,
-                                  ownerPipeline: Pipeline,
-                                  downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, workIdentity, queryContext, state, downstream) {
-
-  override def doExecuteWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
-    val morsels = start.operate(queryContext, state, resources)
-    morsels.foreach(doStatelessOperators(resources, _, queryContext))
-    morsels.flatMap(getDownstreamTasks(resources, _, queryContext))
+  private def executeStartOperators(resources: QueryResources): Unit = {
+    startTask.operate(_output, queryContext, state, resources)
+    for (op <- middleTasks) {
+      _output.resetToFirstRow()
+      op.operate(_output, queryContext, state, resources)
+    }
+    _output.resetToFirstRow()
   }
 
-  override def canContinue: Boolean = false
+  private def executeOutputOperator(resources: QueryResources): PreparedOutput = {
+    val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources)
+    if (!outputOperatorState.canContinue) {
+      // There is no continuation on the output operator,
+      // next-time around we need a new output morsel
+      _output = null
+    }
+    preparedOutput
+  }
+
+  /**
+    * Remove everything related to cancelled argumentRowIds from to the task's input.
+    *
+    * @return `true` if the task has become obsolete.
+    */
+  def filterCancelledArguments(): Boolean = {
+    startTask.filterCancelledArguments(pipelineState)
+  }
+
+  /**
+    * Close resources related to this task and update relevant counts.
+    */
+  def close(): Unit = {
+    startTask.close(pipelineState)
+  }
+
+  override def workId: Int = pipelineState.pipeline.workId
+
+  override def workDescription: String = pipelineState.pipeline.workDescription
+
+  override def canContinue: Boolean = startTask.canContinue || outputOperatorState.canContinue
 }

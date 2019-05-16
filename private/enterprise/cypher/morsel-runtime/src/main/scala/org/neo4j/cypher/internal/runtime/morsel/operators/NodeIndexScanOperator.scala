@@ -6,36 +6,38 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueIndexCursor}
-
 
 class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                             nodeOffset: Int,
-                            label: Int,
                             properties: Array[SlottedIndexedProperty],
                             queryIndexId: Int,
                             indexOrder: IndexOrder,
                             argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, properties) {
+
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def init(context: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     val indexSession = state.queryIndexes(queryIndexId)
-    IndexedSeq(new OTask(inputMorsel, indexSession))
+    IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
-  class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
-    var cursor: NodeValueIndexCursor = _
+  class OTask(val inputMorsel: MorselExecutionContext, index: IndexReadSession) extends InputLoopTask {
 
-    protected override def initializeInnerLoop(context: QueryContext, state: QueryState,
+    private var cursor: NodeValueIndexCursor = _
+
+    protected override def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
                                                resources: QueryResources): Boolean = {
+
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead
       read.nodeIndexScan(index, cursor, indexOrder, needsValues)
@@ -43,7 +45,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      iterate(inputRow, outputRow, cursor, argumentSize)
+      iterate(inputMorsel, outputRow, cursor, argumentSize)
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {

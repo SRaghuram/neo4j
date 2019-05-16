@@ -18,7 +18,7 @@
     <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
     <properties>
-        <moduleName>org.neo4j.cypher.internal.runtime.vectorized</moduleName>
+        <moduleName>org.neo4j.cypher.internal.runtime.morsel</moduleName>
     </properties>
 
     <scm>
@@ -27,7 +27,7 @@
         <url>https://github.com/neo4j/neo4j</url>
     </scm>
 
-  <dependencies>
+    <dependencies>
 
         <!-- shared versions are defined in the parent pom -->
 
@@ -101,8 +101,9 @@
 
         <dependency>
             <groupId>org.neo4j</groupId>
-            <artifactId>kernel-api-test-utils</artifactId>
+            <artifactId>neo4j-kernel-api</artifactId>
             <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 
