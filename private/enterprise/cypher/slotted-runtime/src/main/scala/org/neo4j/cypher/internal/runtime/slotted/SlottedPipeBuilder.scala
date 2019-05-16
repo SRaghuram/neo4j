@@ -234,6 +234,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
             case RelationshipFromSlot(offset, _) => offset
             case NullCheckVariable(_, NodeFromSlot(offset, _)) => offset
             case NullCheckVariable(_, RelationshipFromSlot(offset, _)) => offset
+            case x => throw new InternalException(s"Cannot build slotted aggregation pipe. Unexpected grouping expression: $x")
           }
         }
 
