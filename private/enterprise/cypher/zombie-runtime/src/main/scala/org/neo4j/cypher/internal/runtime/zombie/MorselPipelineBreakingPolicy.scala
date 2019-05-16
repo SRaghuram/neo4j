@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
-object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
+object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 

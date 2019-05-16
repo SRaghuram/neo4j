@@ -5,28 +5,27 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpressions, PipeTreeBuilder}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
-import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineBuilder}
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipeMapper, SlottedPipelineBreakingPolicy}
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
+import org.neo4j.cypher.internal.runtime.zombie.operators.CompiledQueryResultRecord
+import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics, createParameterArray}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
+import org.neo4j.graphdb
 import org.neo4j.graphdb.ResourceIterator
-import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
-import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -34,10 +33,12 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "morsel"
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+    DebugLog.log("MorselRuntime.compileToExecutable()")
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
-                                            SlottedPipelineBreakingPolicy)
+                                            MorselPipelineBreakingPolicy,
+                                            allocateArgumentSlots = true)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -54,78 +55,67 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     val queryIndexes = new QueryIndexes(context.schemaRead)
 
-    // We can use lazy slotted pipes as a fallback for some missing operators. This also converts nested logical plans
-    val (slottedPipeMapper: SlottedPipeMapper, logicalPlanWithConvertedNestedPlans: LogicalPlan) =
-      createSlottedPipeFallback(query, context, physicalPlan, converters, queryIndexes)
+    DebugLog.logDiff("PhysicalPlanner.plan")
+    val stateDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
+    val operatorFactory = new OperatorFactory(stateDefinition, converters, true, queryIndexes)
 
-    val operatorBuilder = new PipelineBuilder(physicalPlan, converters, query.readOnly, queryIndexes, slottedPipeMapper)
+    DebugLog.logDiff("PipelineBuilder")
+    //=======================================================
+    val fuseOperators = new FuseOperators(operatorFactory, context.config.fuseOperators, context.tokenContext)
 
-    val operators = operatorBuilder.create(logicalPlanWithConvertedNestedPlans)
-    val dispatcher = context.runtimeEnvironment.getDispatcher(context.debugOptions)
-    val tracer = context.runtimeEnvironment.tracer
-    val fieldNames = query.resultColumns
+    val executablePipelines =
+      for (p <- stateDefinition.pipelines) yield {
+        fuseOperators.compilePipeline(p)
+      }
 
-    val maybeThreadSafeCursors = if (context.config.scheduler == SingleThreaded) None else Some(context.runtimeEnvironment.cursors)
+    DebugLog.logDiff("FuseOperators")
+    //=======================================================
 
-    MorselExecutionPlan(operators,
-                        physicalPlan.slotConfigurations,
-                        queryIndexes,
-                        physicalPlan.nExpressionSlots,
-                        physicalPlan.logicalPlan,
-                        physicalPlan.parameterMapping,
-                        fieldNames,
-                        dispatcher,
-                        tracer,
-                        maybeThreadSafeCursors)
+    val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
+
+    MorselExecutionPlan(executablePipelines,
+      stateDefinition,
+      queryIndexes,
+      physicalPlan.nExpressionSlots,
+      physicalPlan.logicalPlan,
+      physicalPlan.parameterMapping,
+      query.resultColumns,
+      executor,
+      context.runtimeEnvironment.tracer)
   }
 
-  private def createSlottedPipeFallback(query: LogicalQuery,
-                                        context: EnterpriseRuntimeContext,
-                                        physicalPlan: PhysicalPlan,
-                                        converters: ExpressionConverters,
-                                        queryIndexes: QueryIndexes): (SlottedPipeMapper, LogicalPlan) = {
-    val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
-    val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
-    val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
-    val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan, physicalPlan.availableExpressionVariables)
-    (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)
-  }
-
-  case class MorselExecutionPlan(operators: Pipeline,
-                                 slots: SlotConfigurations,
+  case class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
+                                 executionGraphDefinition: ExecutionGraphDefinition,
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
                                  parameterMapping: Map[String, Int],
                                  fieldNames: Array[String],
-                                 dispatcher: Dispatcher,
-                                 schedulerTracer: SchedulerTracer,
-                                 maybeThreadSafeCursors: Option[CursorFactory]) extends ExecutionPlan {
-
-    override def threadSafeCursorFactory(debugOptions: Set[String]): Option[CursorFactory] =
-      if (MorselOptions.singleThreaded(debugOptions)) None else maybeThreadSafeCursors
+                                 queryExecutor: QueryExecutor,
+                                 schedulerTracer: SchedulerTracer) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
                      params: MapValue,
                      prePopulateResults: Boolean,
-                     input: InputDataStream,
+                     inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
-
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
-      new MorselRuntimeResult(operators,
-                              queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
-                              nExpressionSlots,
-                              prePopulateResults,
-                              logicalPlan,
-                              queryContext,
-                              createParameterArray(params, parameterMapping),
-                              fieldNames,
-                              dispatcher,
-                              schedulerTracer,
-                              input, subscriber)
+      new MorselRuntimeResult(executablePipelines,
+        executionGraphDefinition,
+        queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+        nExpressionSlots,
+        prePopulateResults,
+        inputDataStream,
+        logicalPlan,
+        queryContext,
+        createParameterArray(params, parameterMapping),
+        fieldNames,
+        queryExecutor,
+        schedulerTracer,
+        subscriber: QuerySubscriber)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -133,34 +123,41 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def metadata: Seq[Argument] = Nil
 
     override def notifications: Set[InternalNotification] = Set(ExperimentalFeatureNotification("use the morsel runtime at your own peril, " +
-                                                                                                   "not recommended to be run on production systems"))
+      "not recommended to be run on production systems"))
   }
 
-  class MorselRuntimeResult(operators: Pipeline,
+  class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
+                            executionGraphDefinition: ExecutionGraphDefinition,
                             queryIndexes: Array[IndexReadSession],
                             nExpressionSlots: Int,
                             prePopulateResults: Boolean,
+                            inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
                             params: Array[AnyValue],
                             override val fieldNames: Array[String],
-                            dispatcher: Dispatcher,
+                            queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,
-                            input: InputDataStream,
-                            subscriber: QuerySubscriber) extends NaiveQuerySubscription(subscriber) {
-
+                            subscriber: QuerySubscriber) extends RuntimeResult {
     private var resultRequested = false
 
+    private var querySubscription: QuerySubscription = _
+
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      dispatcher.execute(operators,
-                         queryContext,
-                         params,
-                         schedulerTracer,
-                         queryIndexes,
-                         nExpressionSlots,
-                         prePopulateResults,
-                         input)(visitor)
+      val executionHandle = queryExecutor.execute(executablePipelines,
+                                                  executionGraphDefinition,
+                                                  inputDataStream,
+                                                  queryContext,
+                                                  params,
+                                                  schedulerTracer,
+                                                  queryIndexes,
+                                                  nExpressionSlots,
+                                                  prePopulateResults,
+                                                  new VisitSubscriber(visitor, fieldNames.length))
+
+      executionHandle.request(Long.MaxValue)
       resultRequested = true
+      executionHandle.await()
     }
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
@@ -177,6 +174,58 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def close(): Unit = {}
 
     override def queryProfile(): QueryProfile = QueryProfile.NONE
+
+    override def request(numberOfRecords: Long): Unit = {
+      if (querySubscription == null) {
+        resultRequested = true
+        querySubscription = queryExecutor.execute(
+          executablePipelines,
+          executionGraphDefinition,
+          inputDataStream,
+          queryContext,
+          params,
+          schedulerTracer,
+          queryIndexes,
+          nExpressionSlots,
+          prePopulateResults,
+          subscriber)
+      }
+      querySubscription.request(numberOfRecords)
+      subscriber.onResult(fieldNames.length)
+    }
+
+    override def cancel(): Unit =
+      querySubscription.cancel()
+
+    override def await(): Boolean = {
+      querySubscription.await()
+    }
   }
 
+}
+
+class VisitSubscriber(visitor: QueryResultVisitor[_], numberOfFields: Int) extends QuerySubscriber {
+  private val array: Array[AnyValue] = new Array[AnyValue](numberOfFields)
+  private val results: QueryResult.Record = new CompiledQueryResultRecord(array)
+
+  override def onResult(numberOfFields: Int): Unit = {
+  }
+
+  override def onRecord(): Unit = {}
+
+  override def onField(offset: Int, value: AnyValue): Unit = {
+    array(offset) = value
+  }
+
+  override def onRecordCompleted(): Unit = {
+    visitor.visit(results)
+  }
+
+  override def onError(throwable: Throwable): Unit = {
+    //errors are propagated via the QueryCompletionTracker
+  }
+
+  override def onResultCompleted(statistics: graphdb.QueryStatistics): Unit = {
+
+  }
 }

@@ -5,260 +5,405 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
+import java.util.concurrent.{Callable, Executors, TimeUnit}
+
+import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
+import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
+import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
+import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.{NodeReference, RelationshipReference}
+
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 object MorselSpecSuite {
   val SIZE_HINT = 1000
 }
 
-class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
+// INPUT
+class MorselInputTest extends ParallelInputTestBase(MorselRuntime)
 
 // ALL NODE SCAN
 class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 class MorselAllNodeScanStressTest extends AllNodeScanStressTestBase(MorselRuntime)
+
+// LABEL SCAN
+class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselLabelScanNoFusingTest extends LabelScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselLabelScanStressTest extends LabelScanStressTestBase(MorselRuntime)
 
 // INDEX SEEK
 class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-                              with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+  with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+class MorselNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+  with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
 
 class MorselIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(MorselRuntime)
 class MorselIndexSeekExactStressTest extends IndexSeekExactStressTest(MorselRuntime)
 
-// LABEL SCAN
-class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-class MorselLabelScanStressTest extends LabelScanStressTestBase(MorselRuntime)
-
 // INDEX SCAN
 class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 class MorselIndexScanStressTest extends IndexScanStressTestBase(MorselRuntime)
 
 // INDEX CONTAINS SCAN
 class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 class MorselIndexContainsScanStressTest extends IndexContainsScanStressTestBase(MorselRuntime)
+
+// ARGUMENT
+class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselArgumentNoFusingTest extends ArgumentTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselArgumentStressTest extends ArgumentStressTestBase(MorselRuntime)
+
+// APPLY
+class MorselApplyStressTest extends ApplyStressTestBase(MorselRuntime)
 
 // EXPAND
 class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 class MorselExpandStressTest extends ExpandStressTestBase(MorselRuntime)
-
-// EAGER AGGREGATION
-
-class MorselAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-
-class MorselAggregationStressTest extends ParallelStressSuite(MorselRuntime) /*with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite*/ with OnTopOfParallelInputStressTest {
-
-  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
-    OnTopOfParallelInputTD(
-      _.aggregation(
-        Map("g" -> modulo(varFor(propVariable), literalInt(2))),
-        Map("amount" -> sum(varFor(propVariable)))),
-      rowsComingIntoTheOperator =>
-        for {
-          (g, rowsForX) <- rowsComingIntoTheOperator.groupBy(_ (0).getId.toInt % 2) // group by x.prop % 2
-          amount = rowsForX.map { row =>
-            val Array(y) = row
-            y.getId
-          }.sum
-        } yield Array(g, amount)
-      ,
-      Seq("g", "amount")
-    )
-
-  // FIXME broken in Morsel right now
-//  override def rhsOfApplyOperator(variable: String) =
-//    RHSOfApplyOneChildTD(
-//      _.aggregation(
-//        Map("g" -> modulo(prop("y", "prop"), literalInt(2))),
-//        Map("amount" -> sum(add(varFor("prop"), prop("y", "prop"))))),
-//      rowsComingIntoTheOperator =>
-//        for {
-//          (_, rowsForX) <- rowsComingIntoTheOperator.groupBy(_ (0)) // group by x
-//          (g, rowsForXAndY) <- rowsForX.groupBy(_ (1).getId.toInt % 2) // group by y.prop % 2
-//          amount = rowsForXAndY.map { row =>
-//            val Array(x, y) = row
-//            x.getId + y.getId
-//          }.sum
-//        } yield Array(g, amount)
-//      ,
-//      Seq("g", "amount")
-//    )
-//
-//  override def rhsOfCartesianOperator(variable: String) =
-//    RHSOfCartesianOneChildTD(
-//      _.aggregation(
-//        Map("g" -> modulo(prop("y", "prop"), literalInt(2))),
-//        Map("amount" -> sum(prop("y", "prop")))),
-//      rowsComingIntoTheOperator =>
-//        for {
-//          (g, rowsForY) <- rowsComingIntoTheOperator.groupBy(_ (0).getId.toInt % 2) // group by y.prop % 2
-//          amount = rowsForY.map { row =>
-//            val Array(y) = row
-//            y.getId
-//          }.sum
-//        } yield Array(g, amount)
-//      ,
-//      Seq("g", "amount")
-//    )
-
-  test("should support chained aggregations") {
-    // given
-    init()
-
-    val input = allNodesNTimes(10)
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("s")
-      .aggregation(Map.empty, Map("s" -> sum(varFor("amount"))))
-      .aggregation(
-        Map("g" -> modulo(prop("x", "prop"), literalInt(2))),
-        Map("amount" -> sum(prop("x", "prop"))))
-      .input(nodes = Seq("x"))
-      .build()
-
-    val runtimeResult = execute(logicalQuery, runtime, input)
-
-    // then
-    val expectedSingleRow = for {
-      (_, rows) <- singleNodeInput(input).groupBy(_ (0).getId.toInt % 2) // group by x.prop % 2
-      amount = rows.map { row =>
-        val Array(x) = row
-        x.getId
-      }.sum
-    } yield amount
-    runtimeResult should beColumns("s").withSingleRow(expectedSingleRow.sum)
-  }
-
-  test("should support aggregations after two expands") {
-    // given
-    init()
-
-    val input = allNodesNTimes(1)
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("s")
-      .aggregation(Map.empty, Map("s" -> count(varFor("x"))))
-      .expand("(next)-[:NEXT]->(secondNext)")
-      .expand("(x)-[:NEXT]->(next)")
-      .input(nodes = Seq("x"))
-      .build()
-
-    val runtimeResult = execute(logicalQuery, runtime, input)
-
-    // then
-    runtimeResult should beColumns("s").withSingleRow(singleNodeInput(input).size * 5 * 5)
-  }
-}
-
-// FILTER
-
-class MorselFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
-class MorselFilterStressTest extends FilterStressTestBase(MorselRuntime)
 
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselProjectionNoFusingTest extends ProjectionTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 class MorselProjectionStressTest extends ProjectionStressTestBase(MorselRuntime)
+
+// FILTER
+class MorselFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselFilterNoFusingTest extends FilterTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselFilterStressTest extends FilterStressTestBase(MorselRuntime)
+
+// LIMIT
+class MorselLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselLimitNoFusingTest extends LimitTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 
 // UNWIND
 class MorselUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselUnwindNoFusingTest extends UnwindTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 class MorselUnwindStressTest extends UnwindStressTestBase(MorselRuntime)
 
-// ARGUMENT
+// SORT
+class MorselSortTest extends SortTestBase(ENTERPRISE.PARALLEL, MorselRuntime, 1000)
 
-// FIXED IN Zombie
-//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
+// AGGREGATION
+class MorselSingleThreadedAggregationTest extends AggregationTestBase(ENTERPRISE.SINGLE_THREADED, MorselRuntime, SIZE_HINT)
+class MorselParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselAggregationStressTest extends AggregationStressTestBase(MorselRuntime)
 
-//class MorselArgumentStressTest extends ParallelStressSuite(MorselRuntime) with RHSOfApplyLeafStressSuite {
-//  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
-//    RHSOfApplyLeafTD(
-//      _.projection(s"$nodeArgument AS $variable").|.argument(variable),
-//      rowsComingIntoTheOperator =>
-//        for {
-//          Array(x) <- rowsComingIntoTheOperator
-//        } yield Array(x, x)
-//    )
-//}
+// NODE HASH JOIN
+class MorselNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, MorselRuntime, 1000)
 
-// INPUT
+// REACTIVE
+class MorselReactiveSingleThreadedTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED, MorselRuntime)
+class MorselReactiveSingleThreadedNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, MorselRuntime)
+class MorselReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, MorselRuntime)
+class MorselReactiveParallelNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime)
+class MorselReactiveSingleThreadedStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED, MorselRuntime, SIZE_HINT)
+class MorselReactiveSingleThreadedNoFusingStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselReactiveParallelStressTest
+  extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL, MorselRuntime,
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
+class MorselReactiveParallelNoFusingStressTest
+  extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime,
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
-class MorselInputTest extends ParallelInputTestBase(MorselRuntime)
+// GENERAL
+class MorselSingleThreadedTest extends MorselTestSuite(ENTERPRISE.SINGLE_THREADED)
+class MorselSingleThreadedNoFusingTest extends MorselTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
+class MorselParallelTest extends MorselTestSuite(ENTERPRISE.PARALLEL)
+class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
 
-// APPLY
+abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, MorselRuntime) {
 
-class MorselApplyStressTest extends ApplyStressTestBase(MorselRuntime)
-
-// CARTESIAN PRODUCT
-
-class MorselLabelScanCartesianStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime)
-    with RHSOfCartesianLeafStressSuite {
-
-  override def rhsOfCartesianLeaf(variable: String) =
-    RHSOfCartesianLeafTD(
-      _.nodeByLabelScan(variable, "Label"),
-      () => nodes.map(Array(_))
-    )
-}
-
-// REACTIVE RESULTS
-class MorselReactiveResultTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, MorselRuntime)
-
-class MorselCartesianProductStressTest extends ParallelStressSuite(MorselRuntime) {
-
-  ignore("should support nested Cartesian Product") {
+  test("should handle allNodeScan") {
     // given
-    init()
+    val nodes = nodeGraph(11)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("a", "b", "c")
-      .cartesianProduct()
-      .|.cartesianProduct()
-      .|.|.nodeIndexOperator("c:Label(prop <= 10)")
-      .|.nodeIndexOperator("b:Label(prop <= 20)")
-      .nodeIndexOperator("a:Label(prop <= 40)")
+      .produceResults("x")
+      .allNodeScan("x")
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
 
     // then
-    val expected = for {
-      a <- nodes if a.getId <= 40
-      b <- nodes if b.getId <= 20
-      c <- nodes if c.getId <= 10
-    } yield Array(a, b, c)
-    runtimeResult should beColumns("a", "b", "c").withRows(expected)
+    val expected = for { n <- nodes } yield Array(n)
+    runtimeResult should beColumns("x").withRows(expected)
   }
 
-  // FIXME broken
-//  test("should support Cartesian Product on RHS of apply") {
-//    // given
-//    init()
-//
-//    // when
-//    val logicalQuery = new LogicalQueryBuilder(this)
-//      .produceResults("a", "b", "c")
-//      .apply()
-//      .|.cartesianProduct()
-//      .|.|.nodeIndexOperator("c:Label(prop > ???)", paramExpr = Some(prop("a", "prop")), argumentIds = Set("a"))
-//      .|.nodeIndexOperator("b:Label(prop < ???)", paramExpr = Some(prop("a", "prop")), argumentIds = Set("a"))
-//      .nodeIndexOperator("a:Label(prop <= 40)")
-//      .build()
-//
-//    val runtimeResult = execute(logicalQuery, runtime)
-//
-//    // then
-//    val expected = for {
-//      a <- nodes if a.getId <= 40
-//      b <- nodes if b.getId < a.getId
-//      c <- nodes if c.getId > a.getId
-//    } yield Array(a, b, c)
-//    runtimeResult should beColumns("a", "b", "c").withRows(expected)
-//  }
+  test("should handle allNodeScan and filter") {
+    // given
+    val nodes = nodeGraph(11)
 
-  // SORT
-  class MorselSortTest extends SortTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .filter("id(x) >= 3")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    val expected = for { n <- nodes if n.getId >= 3 } yield Array(n)
+    runtimeResult should beColumns("x").withRows(expected)
+  }
+
+  test("should handle expand + filter") {
+    // given
+    val size = 1000
+    val (_, rels) = circleGraph(size)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .filter(s"id(y) >= ${size / 2}")
+      .expandAll("(x)-->(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    val expected =
+      for {
+        r <- rels
+        if r.getEndNode.getId >= size /2
+        row <- List(Array(r.getStartNode, r.getEndNode))
+      } yield row
+    runtimeResult should beColumns("x", "y").withRows(expected)
+  }
+
+  test("should handle expand") {
+    // given
+    val (_, rels) = circleGraph(10000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .expandAll("(x)--(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    val expected =
+      for {
+        r <- rels
+        row <- List(Array(r.getStartNode, r.getEndNode),
+                    Array(r.getEndNode, r.getStartNode))
+      } yield row
+    runtimeResult should beColumns("x", "y").withRows(expected)
+  }
+
+  test("should sort") {
+    // given
+    circleGraph(10000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .sort(Seq(Descending("y")))
+      .expandAll("(x)--(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y").withRows(sortedDesc("y"))
+  }
+
+  test("should reduce twice in a row") {
+    // given
+    val nodes = nodeGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .sort(sortItems = Seq(Ascending("x")))
+      .sort(sortItems = Seq(Descending("x")))
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("x").withRows(singleColumnInOrder(nodes))
+  }
+
+  test("should all node scan and sort on rhs of apply") {
+    // given
+    val nodes = nodeGraph(10)
+    val inputRows = inputValues(nodes.map(node => Array[Any](node)): _*)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .apply()
+      .|.sort(sortItems = Seq(Descending("x")))
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, inputRows)
+
+    runtimeResult should beColumns("x").withRows(rowCount(100))
+  }
+
+  // TODO  Sort-Apply-Sort-Bug: re-enable
+  ignore("should sort on top of apply with all node scan and sort on rhs of apply") {
+    // given
+    val nodes = nodeGraph(10)
+    val inputRows = inputValues(nodes.map(node => Array[Any](node)): _*)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .sort(sortItems = Seq(Descending("x")))
+      .apply()
+      .|.sort(sortItems = Seq(Descending("x")))
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, inputRows)
+
+    runtimeResult should beColumns("x").withRows(rowCount(100))
+  }
+
+  test("should apply-sort") {
+    // given
+    circleGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .apply()
+      .|.sort(Seq(Descending("y")))
+      .|.expandAll("(x)--(y)")
+      .|.argument()
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y").withRows(groupedBy("x").desc("y"))
+  }
+
+  test("should apply-apply-sort") {
+    // given
+    circleGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "z")
+      .apply()
+      .|.apply()
+      .|.|.sort(Seq(Ascending("z")))
+      .|.|.expandAll("(y)--(z)")
+      .|.|.argument()
+      .|.sort(Seq(Descending("y")))
+      .|.expandAll("(x)--(y)")
+      .|.argument()
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y", "z").withRows(groupedBy("x", "y").asc("z"))
+  }
+
+  test("should deal with concurrent queries") {
+    // given
+    val nodes = nodeGraph(10)
+    val executor = Executors.newFixedThreadPool(8)
+    val QUERIES_PER_THREAD = 50
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .allNodeScan("x")
+      .build()
+
+    val futureResultSets = (0 until 8).map(_ =>
+      executor.submit(new Callable[Seq[RuntimeResult]] {
+        override def call(): Seq[RuntimeResult] = {
+          for (_ <- 0 until QUERIES_PER_THREAD) yield execute(logicalQuery, runtime)
+        }
+      })
+    )
+
+    // then
+    for (futureResultSet <- futureResultSets) {
+
+      val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
+      resultSet.size should be(QUERIES_PER_THREAD)
+      for (result <- resultSet) {
+        inTx(
+          result should beColumns("x").withRows(singleColumn(nodes))
+        )
+      }
+    }
+  }
+
+  test("should complete query with error") {
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .filter("x = 0/0") // will explode!
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    import scala.concurrent.ExecutionContext.global
+    val futureResult = Future(consume(execute(logicalQuery, runtime, inputValues(Array(1)))))(global)
+
+    // then
+    intercept[org.neo4j.cypher.internal.v4_0.util.ArithmeticException] {
+      Await.result(futureResult, 10.seconds)
+    }
+  }
+
+  //NOTE: this could maybe be removed once morsel and morsel are merged since then
+  //      we get test coverage also from PrePopulateAcceptanceTests. However this might
+  //      be nice to have since it will test both with fusing enabled and disabled.
+  test("should prepopulate results") {
+    // given
+    circleGraph(11)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "r")
+      .expandAll("(x)-[r]-(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y", "r").withRows(populated)
+  }
+
+  case object populated extends RowsMatcher {
+    override def toString: String = "All entities should have been populated"
+    override def matches(columns: IndexedSeq[String], rows: IndexedSeq[Array[AnyValue]]): Boolean = {
+      rows.forall(row => row.forall {
+        case _: NodeReference => false
+        case n: NodeProxyWrappingNodeValue => n.isPopulated
+        case _ : RelationshipReference => false
+        case r: RelationshipProxyWrappingValue => r.isPopulated
+        case _ => true
+      })
+    }
+  }
 }
