@@ -6,7 +6,7 @@ set -u
 if [ $# -lt 32 ] ; then
     echo "Expected at least 32 arguments, but got $#"
     echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment"
-    exit -1
+    exit 1
 fi
 
 
