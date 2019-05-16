@@ -39,9 +39,15 @@ import static org.mockito.Mockito.mock;
 
 class TestBasicSystemGraphRealm
 {
+    private static GlobalTransactionEventListeners transactionEventListeners;
+    private static Collection<TransactionEventListener<?>> systemListeners;
+    private static final TestThreadToStatementContextBridge threadToStatementContextBridge = new TestThreadToStatementContextBridge();
+
+    static final SecureHasher secureHasher = new SecureHasher();
+
     static BasicSystemGraphRealm testRealm( BasicImportOptionsBuilder importOptions, TestDatabaseManager dbManager, Config config ) throws Throwable
     {
-        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, threadToStatementContextBridge );
         return testRealm( importOptions.migrationSupplier(), importOptions.initialUserSupplier(), newRateLimitedAuthStrategy(),
                 dbManager.getManagementService(), executor, config );
     }
@@ -55,7 +61,7 @@ class TestBasicSystemGraphRealm
         Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
         Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
 
-        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, threadToStatementContextBridge );
         return testRealm( migrationUserRepositorySupplier, initialUserRepositorySupplier, newRateLimitedAuthStrategy(), dbManager.getManagementService(),
                 executor, config );
     }
@@ -68,17 +74,8 @@ class TestBasicSystemGraphRealm
             QueryExecutor executor,
             Config config ) throws Throwable
     {
-        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
-        GlobalTransactionEventListeners transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
-        Collection<TransactionEventListener<?>> systemListeners =
-                transactionEventListeners.getDatabaseTransactionEventListeners( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        unregisterListeners( managementService, config );
 
-        for ( TransactionEventListener<?> listener : systemListeners )
-        {
-            transactionEventListeners.unregisterTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
-        }
-
-        SecureHasher secureHasher = new SecureHasher();
         BasicSystemGraphOperations systemGraphOperations = new BasicSystemGraphOperations( executor, secureHasher );
         BasicSystemGraphInitializer systemGraphInitializer =
                 new BasicSystemGraphInitializer(
@@ -102,12 +99,29 @@ class TestBasicSystemGraphRealm
         );
         realm.start();
 
+        registerListeners();
+
+        return realm;
+    }
+
+    static void unregisterListeners( DatabaseManagementService managementService, Config config )
+    {
+        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
+        transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
+        systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+
+        for ( TransactionEventListener<?> listener : systemListeners )
+        {
+            transactionEventListeners.unregisterTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
+        }
+    }
+
+    static void registerListeners()
+    {
         for ( TransactionEventListener<?> listener : systemListeners )
         {
             transactionEventListeners.registerTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
         }
-
-        return realm;
     }
 
     static AuthenticationStrategy newRateLimitedAuthStrategy()

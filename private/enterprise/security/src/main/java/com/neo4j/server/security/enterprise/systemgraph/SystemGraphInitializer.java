@@ -67,13 +67,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         // 3) If no users or roles were imported or migrated, create the predefined roles and one default admin user
         if ( isSystemGraphEmpty() )
         {
-            // Ensure that multiple users, roles or databases cannot have the same name and are indexed
-            final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row -> true;
-            queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-            queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-            queryExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-
-            ensureDefaultDatabases();
+            setupDefaultDatabasesAndConstraints();
 
             if ( importOptions.shouldPerformImport )
             {
@@ -92,15 +86,6 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         // If no users or roles were imported we setup the
         // default predefined roles and user and make sure we have an admin user
         ensureDefaultUserAndRoles();
-    }
-
-    private boolean isSystemGraphEmpty()
-    {
-        // Execute a query to see if the system database exists
-        String query = "MATCH (db:Database {name: $name}) RETURN db.name";
-        Map<String,Object> params = map( "name", SYSTEM_DATABASE_NAME );
-
-        return !queryExecutor.executeQueryWithParamCheck( query, params );
     }
 
     private void ensureDefaultUserAndRoles() throws Exception
