@@ -37,6 +37,18 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRoles)
   }
 
+  test("should fail on listing roles when not on system database") {
+    try {
+      // WHEN
+      execute("SHOW ROLES")
+
+      fail("Expected error \"Trying to run `CATALOG SHOW ALL ROLES` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW ALL ROLES` against non-system database")
+    }
+  }
+
   test("should list populated default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -161,6 +173,18 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     val result2 = execute("SHOW ROLES")
     result2.toSet should be(defaultRoles ++ Set(foo))
+  }
+
+  test("should fail on creating role when not on system database") {
+    try {
+      // WHEN
+      execute("CREATE ROLE foo")
+
+      fail("Expected error \"Trying to run `CATALOG CREATE ROLE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE ROLE` against non-system database")
+    }
   }
 
   test("should create role from existing role") {
@@ -290,5 +314,17 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result2 = execute("SHOW ROLES")
     result2.toSet should be(defaultRoles ++ Set.empty)
+  }
+
+  test("should fail on dropping role when not on system database") {
+    try {
+      // WHEN
+      execute("DROP ROLE foo")
+
+      fail("Expected error \"Trying to run `CATALOG DROP ROLE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG DROP ROLE` against non-system database")
+    }
   }
 }

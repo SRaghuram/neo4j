@@ -24,6 +24,18 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(neo4jUser))
   }
 
+  test("should fail on listing users when not on system database") {
+    try {
+      // WHEN
+      execute("SHOW USERS")
+
+      fail("Expected error \"Trying to run `CATALOG SHOW USERS` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW USERS` against non-system database")
+    }
+  }
+
   test("should list all users") {
     // GIVEN
     // User  : Roles
@@ -137,6 +149,18 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
+  test("should fail on creating user when not on system database") {
+    try {
+      // WHEN
+      execute("CREATE USER foo SET PASSWORD 'bar'")
+
+      fail("Expected error \"Trying to run `CATALOG CREATE USER` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE USER` against non-system database")
+    }
+  }
+
   test("should create user with password change not required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -241,6 +265,18 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
+  test("should fail on dropping user when not on system database") {
+    try {
+      // WHEN
+      execute("DROP USER foo")
+
+      fail("Expected error \"Trying to run `CATALOG DROP USER` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG DROP USER` against non-system database")
+    }
+  }
+
   test("should alter user password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -281,6 +317,22 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
+  test("should fail on alter user password as list parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> Seq("baz", "boo")))
+
+      fail("Expected error \"Only string values are accepted as password, got: List\" but succeeded.")
+    } catch {
+      // THEN
+      case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
+    }
+  }
+
   test("should fail on altering user password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -294,6 +346,18 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } catch {
       // THEN
       case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
+    }
+  }
+
+  test("should fail on altering user when not on system database") {
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'bar'")
+
+      fail("Expected error \"Trying to run `CATALOG ALTER USER` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG ALTER USER` against non-system database")
     }
   }
 
@@ -383,22 +447,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
-  }
-
-  test("should fail on alter user password as list parameter") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    prepareUser("foo", "bar")
-
-    try {
-      // WHEN
-      execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> Seq("baz", "boo")))
-
-      fail("Expected error \"Only string values are accepted as password, got: List\" but succeeded.")
-    } catch {
-      // THEN
-      case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
-    }
   }
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {

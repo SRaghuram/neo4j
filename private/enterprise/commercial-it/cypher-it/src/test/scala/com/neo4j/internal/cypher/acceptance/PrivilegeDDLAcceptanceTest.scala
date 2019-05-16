@@ -58,6 +58,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(expected)
   }
 
+  test("should fail on listing privileges for users when not on system database") {
+    try {
+      // WHEN
+      execute("SHOW ALL PRIVILEGES")
+
+      fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
+    }
+  }
+
   test("should show privileges for specific role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -95,6 +107,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(expected)
   }
 
+  test("should fail on listing privileges for roles when not on system database") {
+    try {
+      // WHEN
+      execute("SHOW ROLE editor PRIVILEGES")
+
+      fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
+    }
+  }
+
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -105,6 +129,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
+  }
+
+  test("should fail on granting traversal privilege to custom role when not on system database") {
+    try {
+      // WHEN
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+
+      fail("Expected error \"Trying to run `CATALOG GRANT TRAVERSE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT TRAVERSE` against non-system database")
+    }
   }
 
   test("should grant traversal privilege to custom role for all databases but only a specific label") {
@@ -819,6 +855,34 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+  }
+
+  test("should fail on granting role to user when not on system database") {
+    try {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+
+      fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
+    }
+
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+
+      fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
+    } catch {
+      // THEN
+      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
+    }
   }
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
