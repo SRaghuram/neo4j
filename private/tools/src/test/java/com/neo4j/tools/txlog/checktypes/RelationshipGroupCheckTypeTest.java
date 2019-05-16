@@ -18,7 +18,7 @@ class RelationshipGroupCheckTypeTest
     {
         RelationshipGroupRecord record1 = new RelationshipGroupRecord( 1 );
         record1.initialize( true, 1, 2, 3, 4, 5, 6 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         RelationshipGroupRecord record2 = record1.clone();
 
@@ -32,11 +32,11 @@ class RelationshipGroupCheckTypeTest
     {
         RelationshipGroupRecord record1 = new RelationshipGroupRecord( 1 );
         record1.initialize( false, 1, 2, 3, 4, 5, 6 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         RelationshipGroupRecord record2 = new RelationshipGroupRecord( 1 );
         record1.initialize( false, 11, 22, 33, 44, 55, 66 );
-        record2.setSecondaryUnitId( 24 );
+        record2.setSecondaryUnitIdOnLoad( 24 );
 
         RelationshipGroupCheckType check = new RelationshipGroupCheckType();
 

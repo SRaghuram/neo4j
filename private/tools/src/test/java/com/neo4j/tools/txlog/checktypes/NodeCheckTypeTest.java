@@ -18,7 +18,7 @@ class NodeCheckTypeTest
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( true, 1, false, 2, 3 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         NodeRecord record2 = record1.clone();
 
@@ -32,11 +32,11 @@ class NodeCheckTypeTest
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( false, 1, true, 2, 3 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         NodeRecord record2 = new NodeRecord( 1 );
         record2.initialize( false, 11, true, 22, 33 );
-        record2.setSecondaryUnitId( 24 );
+        record2.setSecondaryUnitIdOnLoad( 24 );
 
         NodeCheckType check = new NodeCheckType();
 

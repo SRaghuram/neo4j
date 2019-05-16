@@ -125,7 +125,7 @@ abstract class BaseHighLimitRecordFormatV3_0_0<RECORD extends AbstractBaseRecord
             PageCursor composite = CompositePageCursor.compose(
                     primaryCursor, primarySize, secondaryCursor, secondarySize );
             doReadInternal( record, composite, recordSize, headerByte, inUse );
-            record.setSecondaryUnitId( secondaryId );
+            record.setSecondaryUnitIdOnLoad( secondaryId );
         }
         else
         {
@@ -230,7 +230,7 @@ abstract class BaseHighLimitRecordFormatV3_0_0<RECORD extends AbstractBaseRecord
             {
                 // Allocate a new id at this point, but this is not the time to free this ID the the case where
                 // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
-                record.setSecondaryUnitId( idSequence.nextId() );
+                record.setSecondaryUnitIdOnCreate( idSequence.nextId() );
             }
         }
     }

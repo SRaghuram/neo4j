@@ -18,7 +18,7 @@ class PropertyCheckTypeTest
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( true, 1, 2 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         PropertyRecord record2 = record1.clone();
 
@@ -32,11 +32,11 @@ class PropertyCheckTypeTest
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( false, 1, 2 );
-        record1.setSecondaryUnitId( 42 );
+        record1.setSecondaryUnitIdOnLoad( 42 );
 
         PropertyRecord record2 = new PropertyRecord( 1 );
         record2.initialize( false, 11, 22 );
-        record2.setSecondaryUnitId( 24 );
+        record2.setSecondaryUnitIdOnLoad( 24 );
 
         PropertyCheckType check = new PropertyCheckType();
 
