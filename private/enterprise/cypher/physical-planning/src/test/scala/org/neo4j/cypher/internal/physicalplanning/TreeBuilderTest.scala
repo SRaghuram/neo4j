@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.mutable.ArrayBuffer
 
-class TreeBuilderWithArgumentTest extends CypherFunSuite {
+class TreeBuilderTest extends CypherFunSuite {
 
   implicit val idGen: SequentialIdGen = new SequentialIdGen
 
@@ -94,7 +94,7 @@ class TreeBuilderWithArgumentTest extends CypherFunSuite {
     )
   }
 
-  class TestTreeBuilder extends TreeBuilderWithArgument[String, Option[String]] {
+  class TestTreeBuilder extends TreeBuilder[String, Option[String]] {
 
     val callbacks = new ArrayBuffer[CallBack]
 

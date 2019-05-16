@@ -11,8 +11,6 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import scala.collection.mutable
 
 /**
-  * Refinement of [[org.neo4j.cypher.internal.logical.plans.TreeBuilder]].
-  *
   * Traverses the logical plan tree structure and builds up the corresponding output structure.
   * The traversal order is a kind of depth-first combined in/post-order (left first), in that
   * we visit (1) the left subtree, (2) the root, (3) the right subtree, and then (4) revisit the root.
@@ -23,7 +21,7 @@ import scala.collection.mutable
   *
   * We model the whole plan tree as being encompassed by an implicit outer apply which is executed
   * with a single row. This lets us avoid specializing reducing operators that are not on the rhs of an apply.
-  * This single argument is constructed using the [[TreeBuilderWithArgument#initialArgument]] callback.
+  * This single argument is constructed using the [[TreeBuilder#initialArgument]] callback.
   *
   * The argument handling can be used to flatten the output structure, e.g. an Apply plan `a` can be turned into:
   *
@@ -60,7 +58,7 @@ import scala.collection.mutable
   * @tparam T type of build output
   * @tparam ARGUMENT type of argument
   */
-trait TreeBuilderWithArgument[T, ARGUMENT] {
+trait TreeBuilder[T, ARGUMENT] {
 
   protected def initialArgument(leftLeaf: LogicalPlan): ARGUMENT
   protected def onLeaf(plan: LogicalPlan, argument: ARGUMENT): T

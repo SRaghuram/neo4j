@@ -152,7 +152,7 @@ object PipelineTreeBuilder {
 class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                           stateDefinition: ExecutionStateDefinitionBuild,
                           slotConfigurations: SlotConfigurations)
-  extends TreeBuilderWithArgument[PipelineDefinitionBuild, ApplyBufferDefinitionBuild] {
+  extends TreeBuilder[PipelineDefinitionBuild, ApplyBufferDefinitionBuild] {
 
   private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefinitionBuild]
 
