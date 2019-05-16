@@ -1,0 +1,77 @@
+<!--
+
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/1.1.3"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/1.1.3 http://maven.apache.org/xsd/assembly-1.1.3.xsd">
+
+	<id>ldbc-benchmark-assembly</id>
+
+	<formats>
+		<format>dir</format>
+	</formats>
+
+	<moduleSets>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<!-- this is wrong, but needed due to assembly plugin bug, https://issues.apache.org/jira/browse/MASSEMBLY-600 -->
+			<includeSubModules>false</includeSubModules>
+			<includes>
+				<include>com.neo4j.bench:ldbc</include>
+			</includes>
+			<sources>
+				<outputDirectoryMapping>.</outputDirectoryMapping>
+				<fileSets>
+					<fileSet>
+						<fileMode>777</fileMode>
+						<includes>
+							<include>run-report-benchmark.sh</include>
+						</includes>
+					</fileSet>
+				</fileSets>
+			</sources>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<!-- this is wrong, but needed due to assembly plugin bug, https://issues.apache.org/jira/browse/MASSEMBLY-600 -->
+			<includeSubModules>false</includeSubModules>
+			<includes>
+				<include>com.neo4j.bench:benchmark-results-client</include>
+			</includes>
+			<sources>
+				<outputDirectoryMapping>.</outputDirectoryMapping>
+				<fileSets>
+					<fileSet>
+						<fileMode>777</fileMode>
+						<includes>
+							<include>on-out-of-memory.sh</include>
+						</includes>
+					</fileSet>
+				</fileSets>
+			</sources>
+		</moduleSet>
+	</moduleSets>
+
+	<dependencySets>
+		<dependencySet>
+			<outputFileNameMapping>ldbc.jar</outputFileNameMapping>
+			<includes>
+				<include>com.neo4j.bench:neo4j-connectors</include>
+			</includes>
+		</dependencySet>
+	</dependencySets>
+
+	<fileSets>
+		<fileSet>
+			<outputDirectory>neo4j-connectors</outputDirectory>
+			<includes>
+				<include>src/main/resources/**</include>
+			</includes>
+		</fileSet>
+	</fileSets>
+
+</assembly>
