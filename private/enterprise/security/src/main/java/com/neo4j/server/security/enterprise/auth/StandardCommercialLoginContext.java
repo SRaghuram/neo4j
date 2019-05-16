@@ -11,7 +11,6 @@ import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +20,11 @@ import java.util.TreeSet;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -189,12 +188,30 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
-        public boolean allowsReadProperty( Supplier<int[]> labelSupplier, int propertyKey )
+        public boolean allowsReadProperty( Supplier<LabelSet> labelSupplier, int propertyKey )
         {
-            IntStream labels = Arrays.stream( labelSupplier.get() );
-            return allowsReadPropertyAllLabels( propertyKey ) ||
-                    labels.anyMatch( l1 -> whitelistedLabelsForProperty.getOrDefault( propertyKey, Collections.emptySet() ).contains( l1 ) ) ||
-                    Arrays.stream( labelSupplier.get() ).anyMatch( whitelistedLabelsForAllProperties::contains );
+            LabelSet labelSet = labelSupplier.get();
+
+            if ( allowsReadPropertyAllLabels( propertyKey ) )
+            {
+                return true;
+            }
+
+            for ( long labelAsLong : labelSet.all() )
+            {
+                Integer label = (int) labelAsLong;
+                Set<Integer> whiteListed = whitelistedLabelsForProperty.get( propertyKey );
+                if ( whiteListed != null && whiteListed.contains( label ) )
+                {
+                    return true;
+                }
+                if ( whitelistedLabelsForAllProperties.contains( label ) )
+                {
+                    return true;
+                }
+
+            }
+            return false;
         }
 
         @Override
