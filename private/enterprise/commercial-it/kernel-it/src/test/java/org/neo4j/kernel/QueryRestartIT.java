@@ -96,7 +96,7 @@ class QueryRestartIT
 
     private void prepareCursorContext( String databaseName )
     {
-        testCursorContext = testCursorContext(databaseName);
+        testCursorContext = testCursorContext( databaseName );
         testContextSupplier.setCursorContext( testCursorContext );
     }
 
