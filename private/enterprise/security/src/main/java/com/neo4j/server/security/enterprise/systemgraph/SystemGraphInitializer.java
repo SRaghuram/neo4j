@@ -81,6 +81,11 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         else if ( importOptions.shouldPerformImport )
         {
             importUsersAndRoles();
+            updateDefaultDatabase( false );
+        }
+        else
+        {
+            updateDefaultDatabase( false );
         }
 
         // If no users or roles were imported we setup the

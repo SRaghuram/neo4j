@@ -151,6 +151,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       SystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         """CREATE (d:Database {name: $name})
           |SET d.status = $status
+          |Set d.default = false
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online))

@@ -33,7 +33,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val result = execute("SHOW DATABASE neo4j")
 
     // THEN
-    result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
   }
 
   test("should list default databases") {
@@ -44,8 +44,9 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val result = execute("SHOW DATABASES")
 
     // THEN
-    val databaseNames: Set[String] = result.columnAs("name").toSet
-    databaseNames should contain allOf("system", "neo4j")
+    result.toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should create database in systemdb") {
@@ -58,7 +59,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should fail on creating already existing database") {
@@ -67,7 +68,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
     try{
       // WHEN
@@ -93,9 +94,9 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
 
     // THEN
     result.toList should contain allOf(
-      Map("name" -> "foo", "status" -> onlineStatus),
-      Map("name" -> "bar", "status" -> onlineStatus),
-      Map("name" -> "baz", "status" -> onlineStatus)
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "bar", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false)
     )
 
     // GIVEN
@@ -156,7 +157,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should not be able to start non-existing database") {
@@ -206,14 +207,14 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
     // WHEN
     execute("START DATABASE foo")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result2.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should re-start database") {
@@ -222,17 +223,17 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus))) // make sure it was started
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))) // make sure it was started
     execute("STOP DATABASE foo")
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus))) // and stopped
+    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false))) // and stopped
 
     // WHEN
     execute("START DATABASE foo")
 
     // THEN
     val result3 = execute("SHOW DATABASE foo")
-    result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should stop database") {
@@ -245,12 +246,12 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
     // WHEN
     execute("STOP DATABASE foo")
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus)))
+    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
   }
 
   test("should not be able to stop non-existing database") {
@@ -301,14 +302,14 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus)))
+    result.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
 
     // WHEN
     execute("STOP DATABASE foo")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus)))
+    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
   }
 
   protected override def initTest(): Unit = {
