@@ -8,13 +8,16 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.IntSet;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
@@ -109,19 +112,19 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
         private final boolean allowsReadAllPropertiesAllLabels;
-        private final Set<Integer> whitelistedNodeProperties;
-        private final Set<Integer> whitelistedLabelsForAllProperties;
-        private final Map<Integer, Set<Integer>> whitelistedLabelsForProperty;
+        private final IntSet whitelistedNodeProperties;
+        private final IntSet whitelistedLabelsForAllProperties;
+        private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
         private final IntPredicate propertyPermissions;
         private final boolean isAdmin;
         private final boolean allowsTraverseAllLabels;
-        private final Set<Integer> whitelistTraverseLabels;
+        private final IntSet whitelistTraverseLabels;
 
         StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
                 boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions,
-                boolean allowsReadAllPropertiesAllLabels, Set<Integer> whitelistedLabelsForAllProperties,
-                Map<Integer,Set<Integer>> whitelistedLabelsForProperty, Set<Integer> whitelistedNodeProperties,
-                boolean allowsTraverseAllLabels, Set<Integer> whitelistTraverseLabels )
+                boolean allowsReadAllPropertiesAllLabels, IntSet whitelistedLabelsForAllProperties,
+                IntObjectMap<IntSet> whitelistedLabelsForProperty, IntSet whitelistedNodeProperties,
+                boolean allowsTraverseAllLabels, IntSet whitelistTraverseLabels )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
@@ -199,8 +202,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
 
             for ( long labelAsLong : labelSet.all() )
             {
-                Integer label = (int) labelAsLong;
-                Set<Integer> whiteListed = whitelistedLabelsForProperty.get( propertyKey );
+                int label = (int) labelAsLong;
+                IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
                 if ( whiteListed != null && whiteListed.contains( label ) )
                 {
                     return true;
@@ -272,11 +275,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean admin;
             private IntPredicate propertyPermissions;
             private boolean whitelistAllPropertiesInWholeGraph;
-            private Set<Integer> allowedSegmentForAllProperties = new HashSet<>();
-            private Map<Integer, Set<Integer>> allowedSegmentForProperty = new HashMap<>();
-            private Set<Integer> whitelistNodeProperties = new HashSet<>();
+            private MutableIntSet allowedSegmentForAllProperties = IntSets.mutable.empty();
+
+            private MutableIntObjectMap<IntSet> allowedSegmentForProperty = IntObjectMaps.mutable.empty();
+            private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllLabels;
-            private Set<Integer> whitelistTraverseLabels = new HashSet<>();
+            private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -349,7 +353,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                Set<Integer> allowedNodesWithLabels = allowedSegmentForProperty.computeIfAbsent( propertyId, label -> new HashSet<>() );
+                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty.getIfAbsentPut( propertyId, IntSets.mutable.empty() );
                                 for ( String label : privilege.getSegment().getLabels() )
                                 {
                                     int labelId = resolveLabelId( label );
