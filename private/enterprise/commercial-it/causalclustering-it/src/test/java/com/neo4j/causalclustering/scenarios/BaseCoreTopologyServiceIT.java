@@ -12,6 +12,8 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +36,7 @@ public abstract class BaseCoreTopologyServiceIT
 {
     private final DiscoveryServiceType discoveryServiceType;
     protected CoreTopologyService service;
+    private JobScheduler jobScheduler;
 
     protected BaseCoreTopologyServiceIT( DiscoveryServiceType discoveryServiceType )
     {
@@ -50,7 +53,7 @@ public abstract class BaseCoreTopologyServiceIT
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
         LogProvider logProvider = NullLogProvider.getInstance();
-        JobScheduler jobScheduler = createInitialisedScheduler();
+        jobScheduler = createInitialisedScheduler();
         InitialDiscoveryMembersResolver initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
@@ -58,6 +61,12 @@ public abstract class BaseCoreTopologyServiceIT
                 .createFactory()
                 .coreTopologyService( config, new TestDiscoveryMember(), jobScheduler, logProvider, logProvider,
                         initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, new Monitors(), Clocks.systemClock() );
+    }
+
+    @AfterEach
+    void cleanUp() throws Exception
+    {
+        jobScheduler.shutdown();
     }
 
     @Test

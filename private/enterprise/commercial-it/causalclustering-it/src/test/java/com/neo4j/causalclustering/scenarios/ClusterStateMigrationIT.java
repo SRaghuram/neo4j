@@ -25,6 +25,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SkipThreadLeakageGuard
 @ClusterExtension
 @ExtendWith( SuppressOutputExtension.class )
 class ClusterStateMigrationIT

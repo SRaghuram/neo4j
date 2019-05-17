@@ -29,6 +29,8 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -69,6 +71,23 @@ class RaftSenderIT
             new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
     private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
+
+    private static ThreadPoolJobScheduler scheduler;
+    private static ExecutorService serverExecutor;
+
+    @BeforeAll
+    static void setUp()
+    {
+        scheduler = new ThreadPoolJobScheduler();
+        serverExecutor = Executors.newCachedThreadPool();
+    }
+
+    @AfterAll
+    static void cleanUp()
+    {
+        scheduler.shutdown();
+        serverExecutor.shutdown();
+    }
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "^RAFT_\\d" )
@@ -136,7 +155,7 @@ class RaftSenderIT
                 installer, pipelineFactory, logProvider );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
-        ExecutorService serverExecutor = Executors.newCachedThreadPool();
+
         return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor,
                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
@@ -164,7 +183,7 @@ class RaftSenderIT
                 logProvider,
                 logProvider );
 
-        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), logProvider,
+        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider,
                 channelInitializer );
     }
 

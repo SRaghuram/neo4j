@@ -33,6 +33,7 @@ import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-
+@SkipThreadLeakageGuard
 @ClusterExtension
 class CoreReplicationIT
 {

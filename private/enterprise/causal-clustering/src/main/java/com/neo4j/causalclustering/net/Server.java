@@ -92,6 +92,7 @@ public class Server extends LifecycleAdapter
                     format( "%s: cannot bind to '%s' with transport '%s'.", serverName, listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
             userLog.error( message + " Message: " + e.getMessage() );
             debugLog.error( message, e );
+            workerGroup.shutdownGracefully();
             throw e;
         }
     }

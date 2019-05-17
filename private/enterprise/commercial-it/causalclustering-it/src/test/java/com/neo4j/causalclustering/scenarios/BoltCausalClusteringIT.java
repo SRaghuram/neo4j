@@ -16,6 +16,7 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +83,12 @@ class BoltCausalClusteringIT
                 .withNumberOfCoreMembers( 3 )
                 .withSharedCoreParams( stringMap( GraphDatabaseSettings.routing_ttl.name(), "3s" ) ) );
         cluster.start();
+    }
+
+    @AfterAll
+    void shutdownCluster()
+    {
+        cluster.shutdown();
     }
 
     @BeforeEach
@@ -502,34 +509,38 @@ class BoltCausalClusteringIT
 
         readReplica.txPollingClient().stop();
 
-        Driver driver = makeDriver( leader.directURI() );
-
-        String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
+        try ( Driver driver1 = makeDriver( leader.directURI() ) )
         {
-            try ( Transaction tx = session.beginTransaction() )
+
+            String bookmark = inExpirableSession( driver1, d -> d.session( AccessMode.WRITE ), session ->
             {
-                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Chris" ) );
-                tx.success();
-            }
+                try ( Transaction tx = session.beginTransaction() )
+                {
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) );
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Chris" ) );
+                    tx.success();
+                }
 
-            return session.lastBookmark();
-        } );
+                return session.lastBookmark();
+            } );
 
-        assertNotNull( bookmark );
-        readReplica.txPollingClient().start();
+            assertNotNull( bookmark );
+            readReplica.txPollingClient().start();
 
-        driver = makeDriver( readReplica.directURI() );
-
-        try ( Session session = driver.session( AccessMode.READ, bookmark ) )
-        {
-            try ( Transaction tx = session.beginTransaction() )
+            try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
             {
-                Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                tx.success();
-                assertEquals( 4, record.get( "count" ).asInt() );
+
+                try ( Session session = driver2.session( AccessMode.READ, bookmark ) )
+                {
+                    try ( Transaction tx = session.beginTransaction() )
+                    {
+                        Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
+                        tx.success();
+                        assertEquals( 4, record.get( "count" ).asInt() );
+                    }
+                }
             }
         }
     }
@@ -539,61 +550,63 @@ class BoltCausalClusteringIT
     {
         // given
         CoreClusterMember leader = cluster.awaitLeader();
-        Driver driver = makeDriver( leader.routingURI() );
-
-        String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
+        try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
-            try ( Transaction tx = session.beginTransaction() )
+
+            String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
             {
-                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
-                tx.success();
+                try ( Transaction tx = session.beginTransaction() )
+                {
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                    tx.success();
+                }
+
+                return session.lastBookmark();
+            } );
+
+            // when
+            Set<String> readReplicas = new HashSet<>();
+
+            for ( ReadReplica readReplica : cluster.readReplicas() )
+            {
+                readReplicas.add( readReplica.boltAdvertisedAddress() );
             }
 
-            return session.lastBookmark();
-        } );
-
-        // when
-        Set<String> readReplicas = new HashSet<>();
-
-        for ( ReadReplica readReplica : cluster.readReplicas() )
-        {
-            readReplicas.add( readReplica.boltAdvertisedAddress() );
-        }
-
-        for ( int i = 10; i <= 13; i++ )
-        {
-            ReadReplica newReadReplica = cluster.addReadReplicaWithId( i );
-            readReplicas.add( newReadReplica.boltAdvertisedAddress() );
-            newReadReplica.start();
-        }
-
-        assertEventually( "Failed to send requests to all servers", () ->
-        {
-            for ( int i = 0; i < cluster.readReplicas().size(); i++ ) // don't care about cores
+            for ( int i = 10; i <= 13; i++ )
             {
-                try ( Session session = driver.session( AccessMode.READ, bookmark ) )
-                {
-                    executeReadQuery( session );
+                ReadReplica newReadReplica = cluster.addReadReplicaWithId( i );
+                readReplicas.add( newReadReplica.boltAdvertisedAddress() );
+                newReadReplica.start();
+            }
 
-                    session.readTransaction( (TransactionWork<Void>) tx ->
+            assertEventually( "Failed to send requests to all servers", () ->
+            {
+                for ( int i = 0; i < cluster.readReplicas().size(); i++ ) // don't care about cores
+                {
+                    try ( Session session = driver.session( AccessMode.READ, bookmark ) )
                     {
-                        StatementResult result = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
+                        executeReadQuery( session );
 
-                        assertEquals( 1, result.next().get( "count" ).asInt() );
+                        session.readTransaction( (TransactionWork<Void>) tx ->
+                        {
+                            StatementResult result = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
 
-                        readReplicas.remove( result.summary().server().address() );
+                            assertEquals( 1, result.next().get( "count" ).asInt() );
 
-                        return null;
-                    } );
+                            readReplicas.remove( result.summary().server().address() );
+
+                            return null;
+                        } );
+                    }
+                    catch ( Throwable throwable )
+                    {
+                        return false;
+                    }
                 }
-                catch ( Throwable throwable )
-                {
-                    return false;
-                }
-            }
 
-            return readReplicas.size() == 0; // have sent something to all replicas
-        }, is( true ), 30, SECONDS );
+                return readReplicas.size() == 0; // have sent something to all replicas
+            }, is( true ), 30, SECONDS );
+        }
     }
 
     @Test
@@ -655,57 +668,61 @@ class BoltCausalClusteringIT
         Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
         cluster.start();
 
-        Driver driver = makeDriver( cluster.awaitLeader().routingURI() );
-
-        try ( Session session = driver.session() )
+        int happyCount;
+        int numberOfRequests;
+        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ) )
         {
-            session.writeTransaction( tx ->
+
+            try ( Session session = driver.session() )
             {
-                tx.run( "MERGE (n:Person {name: 'Jim'})" );
-                return null;
-            } );
-        }
-
-        ReadReplica replica = cluster.findAnyReadReplica();
-
-        CatchupPollingProcess pollingClient = replica.defaultDatabase().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
-
-        pollingClient.stop();
-
-        String lastBookmark = null;
-        int iterations = 5;
-        final int nodesToCreate = 20000;
-        for ( int i = 0; i < iterations; i++ )
-        {
-            try ( Session writeSession = driver.session() )
-            {
-                writeSession.writeTransaction( tx ->
+                session.writeTransaction( tx ->
                 {
-
-                    tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", parameters( "nodesToCreate", nodesToCreate ) );
+                    tx.run( "MERGE (n:Person {name: 'Jim'})" );
                     return null;
                 } );
-
-                lastBookmark = writeSession.lastBookmark();
             }
-        }
 
-        // when the poller is resumed, it does make it to the read replica
-        pollingClient.start();
+            ReadReplica replica = cluster.findAnyReadReplica();
 
-        pollingClient.upToDateFuture().get();
+            CatchupPollingProcess pollingClient = replica.defaultDatabase().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
 
-        int happyCount = 0;
-        int numberOfRequests = 1_000;
-        for ( int i = 0; i < numberOfRequests; i++ ) // don't care about cores
-        {
-            try ( Session session = driver.session( lastBookmark ) )
+            pollingClient.stop();
+
+            String lastBookmark = null;
+            int iterations = 5;
+            final int nodesToCreate = 20000;
+            for ( int i = 0; i < iterations; i++ )
             {
-                happyCount += session.readTransaction( tx ->
+                try ( Session writeSession = driver.session() )
                 {
-                    tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
-                    return 1;
-                } );
+                    writeSession.writeTransaction( tx ->
+                    {
+
+                        tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", parameters( "nodesToCreate", nodesToCreate ) );
+                        return null;
+                    } );
+
+                    lastBookmark = writeSession.lastBookmark();
+                }
+            }
+
+            // when the poller is resumed, it does make it to the read replica
+            pollingClient.start();
+
+            pollingClient.upToDateFuture().get();
+
+            happyCount = 0;
+            numberOfRequests = 1_000;
+            for ( int i = 0; i < numberOfRequests; i++ ) // don't care about cores
+            {
+                try ( Session session = driver.session( lastBookmark ) )
+                {
+                    happyCount += session.readTransaction( tx ->
+                    {
+                        tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
+                        return 1;
+                    } );
+                }
             }
         }
 
