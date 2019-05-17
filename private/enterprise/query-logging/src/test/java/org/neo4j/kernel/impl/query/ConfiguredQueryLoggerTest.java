@@ -530,9 +530,8 @@ public class ConfiguredQueryLoggerTest
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser" ), QUERY_1 ) ),
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, "otherDb", "AnotherUser" ), QUERY_1 ) )
+                        sessionConnectionDetails( SESSION_1, "otherdb", "AnotherUser" ), QUERY_1 ) )
         );
-
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )

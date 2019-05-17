@@ -128,17 +128,17 @@ class MultiDatabaseEventsIT
 
     private static int getStartedEvents( MultiDatabaseEventListener eventListener, String dbName )
     {
-        return eventListener.getStartEvents().getOrDefault( dbName, ZERO ).intValue();
+        return eventListener.getStartEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
     }
 
     private static int getShutdownEvents( MultiDatabaseEventListener eventListener, String dbName )
     {
-        return eventListener.getShutdownEvents().getOrDefault( dbName, ZERO ).intValue();
+        return eventListener.getShutdownEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
     }
 
     private static int getPanicEvents( MultiDatabaseEventListener eventListener, String dbName )
     {
-        return eventListener.getPanicEvents().getOrDefault( dbName, ZERO ).intValue();
+        return eventListener.getPanicEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
     }
 
     private static class MultiDatabaseEventListener implements DatabaseEventListener
