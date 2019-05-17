@@ -98,28 +98,28 @@ public class CreateAnnotationsTest
                 .build();
         generateStoreUsing( generator );
 
-        StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD );
-        try ( Session session = client.session() )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD ) )
         {
-            long expectedAnnotationCount = generator.days() * generator.resultsPerDay();
-            long testRunCount = session.run( "MATCH (tr:TestRun) RETURN count(tr) AS c" ).next().get( "c" ).asLong();
+            try ( Session session = client.session() )
+            {
+                long expectedAnnotationCount = generator.days() * generator.resultsPerDay();
+                long testRunCount = session.run( "MATCH (tr:TestRun) RETURN count(tr) AS c" ).next().get( "c" ).asLong();
 
-            long now = Instant.now().toEpochMilli();
+                long now = Instant.now().toEpochMilli();
 
-            String comment = "this is a comment with words";
-            String author = "Alex";
-            StatementResult result = session.run(
-                    "MATCH (tr:TestRun)\n" +
-                    "CALL bench.createTestRunAnnotation(tr.id,'" + comment + "','" + author + "')\n" +
-                    "YIELD annotation\n" +
-                    "RETURN annotation" );
+                String comment = "this is a comment with words";
+                String author = "Alex";
+                StatementResult result = session.run(
+                        "MATCH (tr:TestRun)\n" + "CALL bench.createTestRunAnnotation(tr.id,'" + comment + "','" + author + "')\n" + "YIELD annotation\n" +
+                                "RETURN annotation" );
 
-            List<Record> records = result.list();
-            assertThat( (long) records.size(), equalTo( testRunCount ) );
-            assertThat( (long) records.size(), equalTo( expectedAnnotationCount ) );
-            assertAnnotations( records, now, comment, author );
+                List<Record> records = result.list();
+                assertThat( (long) records.size(), equalTo( testRunCount ) );
+                assertThat( (long) records.size(), equalTo( expectedAnnotationCount ) );
+                assertAnnotations( records, now, comment, author );
+            }
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
         }
-        QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
     }
 
     @Test
@@ -142,33 +142,30 @@ public class CreateAnnotationsTest
                 .withAssertions( true )
                 .build();
         generateStoreUsing( generator );
-        StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD );
-        try ( Session session = client.session() )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD ) )
         {
-            long expectedAnnotationCount = generator.days() *
-                                           generator.resultsPerDay() *
-                                           generator.benchmarkGroupCount() *
-                                           generator.benchmarkPerGroupCount();
-            long metricsCount = session.run( "MATCH (m:Metrics) RETURN count(m) AS c" ).next().get( "c" ).asLong();
+            try ( Session session = client.session() )
+            {
+                long expectedAnnotationCount =
+                        generator.days() * generator.resultsPerDay() * generator.benchmarkGroupCount() * generator.benchmarkPerGroupCount();
+                long metricsCount = session.run( "MATCH (m:Metrics) RETURN count(m) AS c" ).next().get( "c" ).asLong();
 
-            long now = Instant.now().toEpochMilli();
+                long now = Instant.now().toEpochMilli();
 
-            String comment = "this is a comment with words";
-            String author = "Alex";
-            StatementResult result = session.run(
-                    "MATCH (tr:TestRun)-[:HAS_METRICS]->(m:Metrics),\n" +
-                    "      (m)-[:METRICS_FOR]->(b:Benchmark),\n" +
-                    "      (b)<-[:HAS_BENCHMARK]-(bg:BenchmarkGroup)\n" +
-                    "CALL bench.createMetricsAnnotation(tr.id,b.name,bg.name,'" + comment + "','" + author + "')\n" +
-                    "YIELD annotation\n" +
-                    "RETURN annotation" );
+                String comment = "this is a comment with words";
+                String author = "Alex";
+                StatementResult result =
+                        session.run( "MATCH (tr:TestRun)-[:HAS_METRICS]->(m:Metrics),\n" + "      (m)-[:METRICS_FOR]->(b:Benchmark),\n" +
+                        "      (b)<-[:HAS_BENCHMARK]-(bg:BenchmarkGroup)\n" + "CALL bench.createMetricsAnnotation(tr.id,b.name,bg.name,'" + comment + "','" +
+                        author + "')\n" + "YIELD annotation\n" + "RETURN annotation" );
 
-            List<Record> records = result.list();
-            assertThat( (long) records.size(), equalTo( metricsCount ) );
-            assertThat( (long) records.size(), equalTo( expectedAnnotationCount ) );
-            assertAnnotations( records, now, comment, author );
+                List<Record> records = result.list();
+                assertThat( (long) records.size(), equalTo( metricsCount ) );
+                assertThat( (long) records.size(), equalTo( expectedAnnotationCount ) );
+                assertAnnotations( records, now, comment, author );
+            }
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
         }
-        QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
     }
 
     private void assertAnnotations( List<Record> records,

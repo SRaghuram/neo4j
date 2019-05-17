@@ -17,6 +17,7 @@ import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -30,6 +31,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
 
+@SkipThreadLeakageGuard
 @ExtendWith( TestDirectoryExtension.class )
 public class SpatialBitmapIT
 {

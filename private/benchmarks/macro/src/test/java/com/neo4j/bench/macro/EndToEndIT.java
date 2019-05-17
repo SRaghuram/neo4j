@@ -149,104 +149,115 @@ class EndToEndIT
                 .withPort( s3Port )
                 .withFileBackend( s3Path.toString() )
                 .build();
-        api.start();
-
-        // make sure we have a s3 bucket created
-        String endpointUrl = String.format( "http://localhost:%d", s3Port );
-        EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
-        AmazonS3 client = AmazonS3ClientBuilder.standard()
-                                               .withPathStyleAccessEnabled( true )
-                                               .withEndpointConfiguration( endpoint )
-                                               .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
-                                               .build();
-        client.createBucket( "benchmarking.neo4j.com" );
-
-        // prepare neo4j config file
-        Path neo4jConfig = absoluteTempPath.resolve( "neo4j.config" );
-        Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
-
-        // create empty store
-        Path dbPath = absoluteTempPath.resolve( "db" );
-        TestSupport.createEmptyStore( dbPath );
-
-        Path resultsPath = absoluteTempPath.resolve( "results.json" );
-
-        Path workPath = temporaryFolder.directory( "work" ).toPath();
-
-        Neo4jDeployment deployment = Neo4jDeployment.embedded();
-
-        ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
-                                                                    // workload
-                                                                    "zero",
-                                                                    // db
-                                                                    dbPath.toString(),
-                                                                    // warmup_count
-                                                                    "1",
-                                                                    // measurement_count
-                                                                    "1",
-                                                                    // db_edition
-                                                                    Edition.ENTERPRISE.name(),
-                                                                    // jvm
-                                                                    Jvm.defaultJvmOrFail().launchJava(),
-                                                                    // neo4j_config
-                                                                    neo4jConfig.toString(),
-                                                                    // work_dir
-                                                                    workPath.toString(),
-                                                                    // profilers
-                                                                    profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
-                                                                    // forks
-                                                                    "1",
-                                                                    // results_path
-                                                                    resultsPath.toString(),
-                                                                    // time_unit
-                                                                    MILLISECONDS.name(),
-                                                                    // results_store_uri
-                                                                    boltUri.toString(),
-                                                                    "results_store_user",
-                                                                    "results_store_password",
-                                                                    "neo4j_commit",
-                                                                    // neo4j_version
-                                                                    "3.5.1",
-                                                                    "neo4j_branch",
-                                                                    "neo4j_branch_owner",
-                                                                    "tool_commit",
-                                                                    "tool_branch_owner",
-                                                                    "tool_branch",
-                                                                    // teamcity_build
-                                                                    "1",
-                                                                    // parent_teamcity_build
-                                                                    "0",
-                                                                    // execution_mode
-                                                                    ExecutionMode.EXECUTE.name(),
-                                                                    // jvm_args
-                                                                    "-Xmx1g",
-                                                                    // recreate_schema
-                                                                    "false",
-                                                                    // planner
-                                                                    Planner.DEFAULT.name(),
-                                                                    // runtime
-                                                                    Runtime.DEFAULT.name(),
-                                                                    "triggered_by",
-                                                                    // error_policy
-                                                                    ErrorPolicy.FAIL.name(),
-                                                                    // embedded OR server:<path>
-                                                                    deployment.toString(),
-                                                                    // AWS endpoint URL
-                                                                    endpointUrl ) )
-                .directory( baseDir.toFile() )
-                .redirectOutput( Redirect.PIPE )
-                .redirectErrorStream( true );
-
-        Process process = processBuilder.start();
-        BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
-        String line;
-        while ( (line = reader.readLine()) != null )
+        AmazonS3 client = null;
+        try
         {
-            System.out.println( line );
+            api.start();
+            // make sure we have a s3 bucket created
+            String endpointUrl = String.format( "http://localhost:%d", s3Port );
+            EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
+            client = AmazonS3ClientBuilder.standard()
+                                                   .withPathStyleAccessEnabled( true )
+                                                   .withEndpointConfiguration( endpoint )
+                                                   .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
+                                                   .build();
+            client.createBucket( "benchmarking.neo4j.com" );
+
+            // prepare neo4j config file
+            Path neo4jConfig = absoluteTempPath.resolve( "neo4j.config" );
+            Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
+
+            // create empty store
+            Path dbPath = absoluteTempPath.resolve( "db" );
+            TestSupport.createEmptyStore( dbPath );
+
+            Path resultsPath = absoluteTempPath.resolve( "results.json" );
+
+            Path workPath = temporaryFolder.directory( "work" ).toPath();
+
+            Neo4jDeployment deployment = Neo4jDeployment.embedded();
+
+            ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
+                                                                        // workload
+                                                                        "zero",
+                                                                        // db
+                                                                        dbPath.toString(),
+                                                                        // warmup_count
+                                                                        "1",
+                                                                        // measurement_count
+                                                                        "1",
+                                                                        // db_edition
+                                                                        Edition.ENTERPRISE.name(),
+                                                                        // jvm
+                                                                        Jvm.defaultJvmOrFail().launchJava(),
+                                                                        // neo4j_config
+                                                                        neo4jConfig.toString(),
+                                                                        // work_dir
+                                                                        workPath.toString(),
+                                                                        // profilers
+                                                                        profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
+                                                                        // forks
+                                                                        "1",
+                                                                        // results_path
+                                                                        resultsPath.toString(),
+                                                                        // time_unit
+                                                                        MILLISECONDS.name(),
+                                                                        // results_store_uri
+                                                                        boltUri.toString(),
+                                                                        "results_store_user",
+                                                                        "results_store_password",
+                                                                        "neo4j_commit",
+                                                                        // neo4j_version
+                                                                        "3.5.1",
+                                                                        "neo4j_branch",
+                                                                        "neo4j_branch_owner",
+                                                                        "tool_commit",
+                                                                        "tool_branch_owner",
+                                                                        "tool_branch",
+                                                                        // teamcity_build
+                                                                        "1",
+                                                                        // parent_teamcity_build
+                                                                        "0",
+                                                                        // execution_mode
+                                                                        ExecutionMode.EXECUTE.name(),
+                                                                        // jvm_args
+                                                                        "-Xmx1g",
+                                                                        // recreate_schema
+                                                                        "false",
+                                                                        // planner
+                                                                        Planner.DEFAULT.name(),
+                                                                        // runtime
+                                                                        Runtime.DEFAULT.name(),
+                                                                        "triggered_by",
+                                                                        // error_policy
+                                                                        ErrorPolicy.FAIL.name(),
+                                                                        // embedded OR server:<path>
+                                                                        deployment.toString(),
+                                                                        // AWS endpoint URL
+                                                                        endpointUrl ) )
+                    .directory( baseDir.toFile() )
+                    .redirectOutput( Redirect.PIPE )
+                    .redirectErrorStream( true );
+
+            Process process = processBuilder.start();
+            BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
+            String line;
+            while ( (line = reader.readLine()) != null )
+            {
+                System.out.println( line );
+            }
+            assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
+            assertStoreSchema();
+            assertRecordingFilesExist( s3Path, profilers, deployment.mode() );
         }
-        assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
-        assertStoreSchema();
-        assertRecordingFilesExist( s3Path, profilers, deployment.mode() );
+        finally
+        {
+            api.shutdown();
+            if ( client != null )
+            {
+                client.shutdown();
+            }
+        }
     }
 
     private void assertStoreSchema()

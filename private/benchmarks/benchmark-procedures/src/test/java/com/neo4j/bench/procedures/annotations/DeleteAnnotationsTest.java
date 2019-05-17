@@ -85,47 +85,41 @@ public class DeleteAnnotationsTest
                 .withAssertions( true )
                 .build();
         generateStoreUsing( generator );
-        StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD );
-
-        QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
-
-        try ( Session session = client.session() )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD ) )
         {
-            long annotationCount1 = session.run(
-                    "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
 
-            System.out.println(annotationCount1);
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema() );
 
-            StatementResult result1 = session.run(
-                    "MATCH (a:Annotation) \n" +
-                    "WITH a LIMIT 1 \n" +
-                    "CALL bench.deleteAnnotation(a.date,a.comment,a.author,a.event_id)\n" +
-                    "RETURN 0" );
+            try ( Session session = client.session() )
+            {
+                long annotationCount1 = session.run( "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
 
-            // TODO counters seem to be wrong. seems like product bug. uncomment when fixed
-//            SummaryCounters summaryCounters1 = result1.consume().counters();
-//            assertThat( summaryCounters1.nodesDeleted(), equalTo( 1 ) );
-//            assertThat( summaryCounters1.relationshipsDeleted(), equalTo( 1 ) );
+                System.out.println( annotationCount1 );
 
-            long annotationCount2 = session.run(
-                    "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
+                StatementResult result1 = session.run(
+                        "MATCH (a:Annotation) \n" + "WITH a LIMIT 1 \n" + "CALL bench.deleteAnnotation(a.date,a.comment,a.author,a.event_id)\n" + "RETURN 0" );
 
-            assertThat( annotationCount1 - annotationCount2, equalTo( 1L ) );
+                // TODO counters seem to be wrong. seems like product bug. uncomment when fixed
+    //            SummaryCounters summaryCounters1 = result1.consume().counters();
+    //            assertThat( summaryCounters1.nodesDeleted(), equalTo( 1 ) );
+    //            assertThat( summaryCounters1.relationshipsDeleted(), equalTo( 1 ) );
 
-            StatementResult result2 = session.run(
-                    "MATCH (a:Annotation) \n" +
-                    "CALL bench.deleteAnnotation(a.date,a.comment,a.author,a.event_id)\n" +
-                    "RETURN 0" );
+                long annotationCount2 = session.run( "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
 
-            // TODO counters seem to be wrong. seems like product bug. uncomment when fixed
-//            SummaryCounters summaryCounters2 = result2.consume().counters();
-//            assertThat( summaryCounters2.nodesDeleted(), equalTo( annotationCount2 ) );
-//            assertThat( summaryCounters2.relationshipsDeleted(), equalTo( annotationCount2 ) );
+                assertThat( annotationCount1 - annotationCount2, equalTo( 1L ) );
 
-            long annotationCount3 = session.run(
-                    "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
+                StatementResult result2 =
+                        session.run( "MATCH (a:Annotation) \n" + "CALL bench.deleteAnnotation(a.date,a.comment,a.author,a.event_id)\n" + "RETURN 0" );
 
-            assertThat( annotationCount3, equalTo( 0L ) );
+                // TODO counters seem to be wrong. seems like product bug. uncomment when fixed
+    //            SummaryCounters summaryCounters2 = result2.consume().counters();
+    //            assertThat( summaryCounters2.nodesDeleted(), equalTo( annotationCount2 ) );
+    //            assertThat( summaryCounters2.relationshipsDeleted(), equalTo( annotationCount2 ) );
+
+                long annotationCount3 = session.run( "MATCH (a:Annotation) RETURN count(a) AS c" ).next().get( "c" ).asLong();
+
+                assertThat( annotationCount3, equalTo( 0L ) );
+            }
         }
     }
 

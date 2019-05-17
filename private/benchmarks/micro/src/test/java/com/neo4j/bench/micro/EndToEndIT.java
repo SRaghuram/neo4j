@@ -148,84 +148,96 @@ class EndToEndIT
         Path s3Path = temporaryFolder.directory( "s3" ).toPath();
         int s3Port = randomLocalPort();
         S3Mock api = new S3Mock.Builder().withPort( s3Port ).withFileBackend( s3Path.toString() ).build();
-        api.start();
-
-        // make sure we have a s3 bucket created
-        String endpointUrl = String.format( "http://localhost:%d", s3Port );
-        EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
-        AmazonS3 client = AmazonS3ClientBuilder.standard()
-                                               .withPathStyleAccessEnabled( true )
-                                               .withEndpointConfiguration( endpoint )
-                                               .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
-                                               .build();
-        client.createBucket( "benchmarking.neo4j.com" );
-
-        // prepare neo4j config file
-        Path neo4jConfig = temporaryFolder.file( "neo4j.config" ).toPath();
-        Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
-
-        File benchmarkConfig = createBenchmarkConfig();
-
-        File tarball = createNeo4jArchive();
-
-        ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
-                                                                    // neo4j_version
-                                                                    "3.3.0",
-                                                                    // neo4j_commit
-                                                                    "neo4j_commit",
-                                                                    // neo4j_branch
-                                                                    "neo4j_branch",
-                                                                    // neo4j_branch_owner
-                                                                    "neo4j_branch_owner",
-                                                                    // tool_branch
-                                                                    "tool_branch",
-                                                                    // tool_branch_owner
-                                                                    "tool_branch_owner",
-                                                                    // tool_commit
-                                                                    "tool_commit",
-                                                                    // results_store_uri
-                                                                    boltUri.toString(),
-                                                                    // results_store_user
-                                                                    "neo4j",
-                                                                    // results_store_password
-                                                                    "neo4j",
-                                                                    // benchmark_config
-                                                                    benchmarkConfig.toString(),
-                                                                    // teamcity_build_id
-                                                                    "0",
-                                                                    // parent_teamcity_build_id
-                                                                    "1",
-                                                                    // tarball
-                                                                    tarball.getAbsolutePath(),
-                                                                    // jvm_args
-                                                                    "",
-                                                                    // jmh_args
-                                                                    "",
-                                                                    // neo4j_config_path
-                                                                    neo4jConfig.toString(),
-                                                                    // jvm_path
-                                                                    Jvm.defaultJvmOrFail().launchJava(),
-                                                                    // with_jfr
-                                                                    Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
-                                                                    // with_async
-                                                                    Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
-                                                                    // triggered_by
-                                                                    "triggered_by",
-                                                                    endpointUrl ) )
-                .directory( workPath.toFile() )
-                .redirectOutput( Redirect.PIPE )
-                .redirectErrorStream( true );
-
-        Process process = processBuilder.start();
-        BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
-        String line;
-        while ( (line = reader.readLine()) != null )
+        AmazonS3 client = null;
+        try
         {
-            System.out.println( line );
+            api.start();
+
+            // make sure we have a s3 bucket created
+            String endpointUrl = String.format( "http://localhost:%d", s3Port );
+            EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
+            client = AmazonS3ClientBuilder.standard()
+                    .withPathStyleAccessEnabled( true )
+                    .withEndpointConfiguration( endpoint )
+                    .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
+                    .build();
+            client.createBucket( "benchmarking.neo4j.com" );
+
+            // prepare neo4j config file
+            Path neo4jConfig = temporaryFolder.file( "neo4j.config" ).toPath();
+            Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
+
+            File benchmarkConfig = createBenchmarkConfig();
+
+            File tarball = createNeo4jArchive();
+
+            ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
+                    // neo4j_version
+                    "3.3.0",
+                    // neo4j_commit
+                    "neo4j_commit",
+                    // neo4j_branch
+                    "neo4j_branch",
+                    // neo4j_branch_owner
+                    "neo4j_branch_owner",
+                    // tool_branch
+                    "tool_branch",
+                    // tool_branch_owner
+                    "tool_branch_owner",
+                    // tool_commit
+                    "tool_commit",
+                    // results_store_uri
+                    boltUri.toString(),
+                    // results_store_user
+                    "neo4j",
+                    // results_store_password
+                    "neo4j",
+                    // benchmark_config
+                    benchmarkConfig.toString(),
+                    // teamcity_build_id
+                    "0",
+                    // parent_teamcity_build_id
+                    "1",
+                    // tarball
+                    tarball.getAbsolutePath(),
+                    // jvm_args
+                    "",
+                    // jmh_args
+                    "",
+                    // neo4j_config_path
+                    neo4jConfig.toString(),
+                    // jvm_path
+                    Jvm.defaultJvmOrFail().launchJava(),
+                    // with_jfr
+                    Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
+                    // with_async
+                    Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
+                    // triggered_by
+                    "triggered_by",
+                    endpointUrl ) )
+                    .directory( workPath.toFile() )
+                    .redirectOutput( Redirect.PIPE )
+                    .redirectErrorStream( true );
+
+            Process process = processBuilder.start();
+            BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
+            String line;
+            while ( (line = reader.readLine()) != null )
+            {
+                System.out.println( line );
+            }
+            assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
+            assertStoreSchema();
+            assertRecordingFilesExist( s3Path, profilers );
         }
-        assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
-        assertStoreSchema();
-        assertRecordingFilesExist( s3Path, profilers );
+        finally
+        {
+            api.shutdown();
+            if ( client != null )
+            {
+                client.shutdown();
+            }
+        }
     }
 
     private File createBenchmarkConfig() throws IOException
