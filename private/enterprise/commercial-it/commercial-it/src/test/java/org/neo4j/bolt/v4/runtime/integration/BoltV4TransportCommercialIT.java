@@ -26,12 +26,11 @@ import org.neo4j.bolt.v3.messaging.request.RollbackMessage;
 import org.neo4j.bolt.v4.messaging.BeginMessage;
 import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.HostnamePort;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
@@ -331,9 +330,9 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager<?> databaseManager = server.getDatabaseManager();
-        databaseManager.createDatabase( new DatabaseId( "first" ) );
-        databaseManager.createDatabase( new DatabaseId( "second" ) );
+        DatabaseManagementService managementService = server.getManagementService();
+        managementService.createDatabase( "first" );
+        managementService.createDatabase( "second" );
 
         // create a node
         sessionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
@@ -349,9 +348,9 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager<?> databaseManager = server.getDatabaseManager();
-        databaseManager.createDatabase( new DatabaseId( "first" ) );
-        databaseManager.createDatabase( new DatabaseId( "second" ) );
+        DatabaseManagementService managementService = server.getManagementService();
+        managementService.createDatabase( "first" );
+        managementService.createDatabase( "second" );
 
         // create a node
         transactionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
