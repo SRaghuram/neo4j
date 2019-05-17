@@ -45,7 +45,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW ALL ROLES` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW ALL ROLES` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW ALL ROLES` against non-system database")
     }
   }
 
@@ -183,7 +183,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG CREATE ROLE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE ROLE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE ROLE` against non-system database")
     }
   }
 
@@ -263,7 +263,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toSet should be(defaultRoles ++ Set(bar))
   }
 
-  test("should create and drop role") {
+  test("should drop role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
@@ -324,7 +324,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG DROP ROLE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG DROP ROLE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP ROLE` against non-system database")
     }
   }
 }

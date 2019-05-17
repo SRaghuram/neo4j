@@ -33,7 +33,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW USERS` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW USERS` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW USERS` against non-system database")
     }
   }
 
@@ -83,6 +83,23 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("bar", "p4s5w*rd", AuthenticationResult.FAILURE)
     testUserLogin("bar", "password", AuthenticationResult.FAILURE)
     testUserLogin("bar", "p4s5W*rd", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail to create user with empty password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    try {
+      // WHEN
+      execute("CREATE USER foo SET PASSWORD ''")
+
+      fail("Expected error \"A password cannot be empty.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("A password cannot be empty.")
+    }
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should create user with password as parameter") {
@@ -158,7 +175,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG CREATE USER` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE USER` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE USER` against non-system database")
     }
   }
 
@@ -235,7 +252,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail on creating already user with illegal username") {
+  test("should fail on creating user with illegal username") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -334,7 +351,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG DROP USER` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG DROP USER` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP USER` against non-system database")
     }
   }
 
@@ -363,6 +380,36 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bAz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail on alter user with invalid password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD ''")
+
+      fail("Expected error \"A password cannot be empty.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("A password cannot be empty.")
+    }
+
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'bar'")
+
+      fail("Expected error \"Old password and new password cannot be the same.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("Old password and new password cannot be the same.")
+    }
+
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should alter user password as parameter") {
@@ -434,7 +481,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG ALTER USER` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG ALTER USER` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG ALTER USER` against non-system database")
     }
   }
 
@@ -450,10 +497,36 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
   }
 
-  test("should alter user status") {
+  test("should alter user status to suspended") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo SET STATUS SUSPENDED")
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should alter user status to active") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo SET STATUS ACTIVE")
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should suspend a suspended user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("ALTER USER foo SET STATUS SUSPENDED")
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
 
     // WHEN
     execute("ALTER USER foo SET STATUS SUSPENDED")
@@ -475,6 +548,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
   }
 
+  test("should alter user password as parameter and password mode") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD $password CHANGE NOT REQUIRED", Map("password" -> "baz"))
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+  }
+
   test("should alter user password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -486,6 +572,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should alter user password as parameter and status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should alter user password mode and status") {
@@ -519,6 +618,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     prepareUser("foo", "bar")
 
     // WHEN
+    execute("ALTER USER foo SET PASSWORD 'baz' SET PASSWORD CHANGE NOT REQUIRED SET STATUS ACTIVE")
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+  }
+
+  test("should alter user on all points as active with parameter password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
     execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE NOT REQUIRED SET STATUS ACTIVE", Map("password" -> "baz"))
 
     // THEN
@@ -526,13 +638,148 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
   }
 
-  test("should fail on altering a non-existing user") {
+  test("should fail on altering a non-existing user: string password") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'baz'")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: parameter password (and illegal username)") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER `neo:4j` SET PASSWORD $password", Map("password" -> "baz"))
+
+      fail("Expected error \"User 'neo:4j' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'neo:4j' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: string password and password mode") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: parameter password and password mode") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE REQUIRED", Map("password" -> "baz"))
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: string password and status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS ACTIVE")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: parameter password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     try {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: string password, password mode and status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED SET STATUS ACTIVE")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: password mode") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: password mode and status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS SUSPENDED")
+
+      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
+    }
+  }
+
+  test("should fail on altering a non-existing user: status") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    try {
+      // WHEN
+      execute("ALTER USER foo SET STATUS SUSPENDED")
 
       fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
     } catch {

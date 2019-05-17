@@ -66,7 +66,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
     }
   }
 
@@ -115,7 +115,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
     }
   }
 
@@ -139,7 +139,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG GRANT TRAVERSE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT TRAVERSE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT TRAVERSE` against non-system database")
     }
   }
 
@@ -934,7 +934,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
     }
 
     // GIVEN
@@ -950,7 +950,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
     }
   }
 

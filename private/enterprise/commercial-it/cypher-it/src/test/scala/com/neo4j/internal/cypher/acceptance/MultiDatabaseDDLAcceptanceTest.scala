@@ -68,7 +68,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW DATABASE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASE` against non-system database")
     }
   }
 
@@ -108,7 +108,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG SHOW DATABASES` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASES` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASES` against non-system database")
     }
   }
 
@@ -138,7 +138,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"The specified database 'foo' already exists\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("The specified database 'foo' already exists")
+      case e: Exception => e.getMessage should startWith("The specified database 'foo' already exists")
     }
   }
 
@@ -150,7 +150,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG CREATE DATABASE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE DATABASE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE DATABASE` against non-system database")
     }
   }
 
@@ -195,7 +195,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"\"Database 'foo' does not exist\"\"")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
   }
 
@@ -215,7 +215,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Database 'foo' does not exist.\"")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist.")
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist.")
     }
   }
 
@@ -232,7 +232,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG DROP DATABASE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG DROP DATABASE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP DATABASE` against non-system database")
     }
   }
 
@@ -257,7 +257,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN
@@ -337,7 +337,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG START DATABASE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG START DATABASE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG START DATABASE` against non-system database")
     }
   }
 
@@ -367,7 +367,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Database 'foo' does not exist")
+      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
     }
 
     // THEN
@@ -406,7 +406,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       fail("Expected error \"Trying to run `CATALOG STOP DATABASE` against non-system database.\" but succeeded.")
     } catch {
       // THEN
-      case e :Exception => e.getMessage should startWith("Trying to run `CATALOG STOP DATABASE` against non-system database")
+      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG STOP DATABASE` against non-system database")
     }
   }
 
