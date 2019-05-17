@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheFactory;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -588,15 +589,17 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<String> ssl_policy =
             prefixSetting( "causal_clustering.ssl_policy", STRING, NO_DEFAULT );
 
-    @Description( "Raft protocol implementation versions that this instance will allow in negotiation as a comma-separated list." +
-            " Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions" )
-    public static final Setting<List<Integer>> raft_implementations =
-            setting( "causal_clustering.protocol_implementations.raft", list( ",", INTEGER ), "" );
+    @Description( "Raft protocol implementation versions that this instance will allow in negotiation as a comma-separated list. " +
+                  "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
+                  "Example value: \"1.0, 1.3, 2.0, 2.1\"" )
+    public static final Setting<List<ApplicationProtocolVersion>> raft_implementations =
+            setting( "causal_clustering.protocol_implementations.raft", list( ",", ApplicationProtocolVersion::parse ), "" );
 
-    @Description( "Catchup protocol implementation versions that this instance will allow in negotiation as a comma-separated list." +
-            " Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions" )
-    public static final Setting<List<Integer>> catchup_implementations =
-            setting( "causal_clustering.protocol_implementations.catchup", list( ",", INTEGER ), "" );
+    @Description( "Catchup protocol implementation versions that this instance will allow in negotiation as a comma-separated list. " +
+                  "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
+                  "Example value: \"1.1, 1.2, 2.1, 2.2\"" )
+    public static final Setting<List<ApplicationProtocolVersion>> catchup_implementations =
+            setting( "causal_clustering.protocol_implementations.catchup", list( ",", ApplicationProtocolVersion::parse ), "" );
 
     @Description( "Network compression algorithms that this instance will allow in negotiation as a comma-separated list." +
             " Listed in descending order of preference for incoming connections. An empty list implies no compression." +

@@ -43,7 +43,7 @@ public class ClientMessageEncoder extends MessageToByteEncoder<ServerMessage>
         public void handle( ApplicationProtocolRequest applicationProtocolRequest )
         {
             out.writeInt( 1 );
-            encodeProtocolRequest( applicationProtocolRequest, ByteBuf::writeInt );
+            encodeProtocolRequest( applicationProtocolRequest, ( buf, version ) -> version.encode( buf ) );
         }
 
         @Override
@@ -58,7 +58,7 @@ public class ClientMessageEncoder extends MessageToByteEncoder<ServerMessage>
         {
             out.writeInt( 3 );
             StringMarshal.marshal( out, switchOverRequest.protocolName() );
-            out.writeInt( switchOverRequest.version() );
+            switchOverRequest.version().encode( out );
             out.writeInt( switchOverRequest.modifierProtocols().size() );
             switchOverRequest.modifierProtocols().forEach( pair ->
                     {

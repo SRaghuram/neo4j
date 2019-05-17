@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -13,10 +15,11 @@ import org.neo4j.internal.helpers.collection.Pair;
 public class SwitchOverRequest implements ServerMessage
 {
     private final String protocolName;
-    private final Integer version;
+    private final ApplicationProtocolVersion version;
     private final List<Pair<String,String>> modifierProtocols;
 
-    public SwitchOverRequest( String applicationProtocolName, int applicationProtocolVersion, List<Pair<String,String>> modifierProtocols )
+    public SwitchOverRequest( String applicationProtocolName, ApplicationProtocolVersion applicationProtocolVersion,
+            List<Pair<String,String>> modifierProtocols )
     {
         this.protocolName = applicationProtocolName;
         this.version = applicationProtocolVersion;
@@ -39,7 +42,7 @@ public class SwitchOverRequest implements ServerMessage
         return modifierProtocols;
     }
 
-    public int version()
+    public ApplicationProtocolVersion version()
     {
         return version;
     }

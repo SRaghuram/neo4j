@@ -5,69 +5,75 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import org.junit.Test;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
-
-import org.neo4j.internal.helpers.collection.Iterators;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertThat;
 
-public class SupportedProtocolsTest
+class SupportedProtocolsTest
 {
+    private static final ApplicationProtocolVersion V1 = new ApplicationProtocolVersion( 1, 0 );
+    private static final ApplicationProtocolVersion V2 = new ApplicationProtocolVersion( 2, 0 );
+    private static final ApplicationProtocolVersion V3 = new ApplicationProtocolVersion( 3, 0 );
+    private static final ApplicationProtocolVersion V4 = new ApplicationProtocolVersion( 4, 0 );
+    private static final ApplicationProtocolVersion V5 = new ApplicationProtocolVersion( 5, 0 );
+    private static final ApplicationProtocolVersion V6 = new ApplicationProtocolVersion( 6, 0 );
+
     @Test
-    public void shouldMutuallySupportIntersectionOfParameterVersionsSuperset()
+    void shouldMutuallySupportIntersectionOfParameterVersionsSuperset()
     {
         // given
-        ApplicationSupportedProtocols supportedProtocols = new ApplicationSupportedProtocols( RAFT, Arrays.asList( 1, 2 ) );
+        var supportedProtocols = new ApplicationSupportedProtocols( RAFT, List.of( V1, V2 ) );
 
         // when
-        Set<Integer> mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Iterators.asSet( 1, 2, 3 ) );
+        var mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Set.of( V1, V2, V3 ) );
 
         // then
-        assertThat( mutuallySupported, containsInAnyOrder( 1, 2 ) );
+        assertThat( mutuallySupported, containsInAnyOrder( V1, V2 ) );
     }
 
     @Test
-    public void shouldMutuallySupportIntersectionOfParameterVersionsSubset()
+    void shouldMutuallySupportIntersectionOfParameterVersionsSubset()
     {
         // given
-        ApplicationSupportedProtocols supportedProtocols = new ApplicationSupportedProtocols( RAFT, Arrays.asList( 4, 5, 6 ) );
+        var supportedProtocols = new ApplicationSupportedProtocols( RAFT, List.of( V4, V5, V6 ) );
 
         // when
-        Set<Integer> mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Iterators.asSet( 4, 5 ) );
+        var mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Set.of( V4, V5 ) );
 
         // then
-        assertThat( mutuallySupported, containsInAnyOrder( 4, 5 ) );
+        assertThat( mutuallySupported, containsInAnyOrder( V4, V5 ) );
     }
 
     @Test
-    public void shouldMutuallySupportParameterIfEmptyVersions()
+    void shouldMutuallySupportParameterIfEmptyVersions()
     {
         // given
-        ApplicationSupportedProtocols supportedProtocols = new ApplicationSupportedProtocols( RAFT, emptyList() );
+        var supportedProtocols = new ApplicationSupportedProtocols( RAFT, emptyList() );
 
         // when
-        Set<Integer> mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Iterators.asSet( 7, 8 ) );
+        var mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( Set.of( V5, V6 ) );
 
         // then
-        assertThat( mutuallySupported, containsInAnyOrder( 7, 8 ) );
+        assertThat( mutuallySupported, containsInAnyOrder( V5, V6 ) );
     }
 
     @Test
-    public void shouldMutuallySupportNothingIfParametersEmpty()
+    void shouldMutuallySupportNothingIfParametersEmpty()
     {
         // given
-        ApplicationSupportedProtocols supportedProtocols = new ApplicationSupportedProtocols( RAFT, Arrays.asList( 1, 2 ) );
+        var supportedProtocols = new ApplicationSupportedProtocols( RAFT, List.of( V1, V2 ) );
 
         // when
-        Set<Integer> mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( emptySet() );
+        var mutuallySupported = supportedProtocols.mutuallySupportedVersionsFor( emptySet() );
 
         // then
         assertThat( mutuallySupported, empty() );

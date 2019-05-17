@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory;
@@ -48,41 +49,8 @@ public class SupportedProtocolCreator
         return getApplicationSupportedProtocols( config.get( CausalClusteringSettings.raft_implementations ), ApplicationProtocolCategory.RAFT );
     }
 
-    public ApplicationSupportedProtocols getAllCatchupProtocols()
-    {
-        return new ApplicationSupportedProtocols( ApplicationProtocolCategory.CATCHUP, Collections.emptyList() );
-    }
-
-    public ApplicationSupportedProtocols getAllRaftProtocols()
-    {
-        return new ApplicationSupportedProtocols( ApplicationProtocolCategory.RAFT, Collections.emptyList() );
-    }
-
-    public ApplicationSupportedProtocols getMinimumCatchupProtocols( int minimumVersion )
-    {
-        return filterProtocols( minimumVersion, ApplicationProtocolCategory.CATCHUP );
-    }
-
-    public ApplicationSupportedProtocols getMinimumRaftProtocols( int minimumVersion )
-    {
-        return filterProtocols( minimumVersion, ApplicationProtocolCategory.RAFT );
-    }
-
-    private ApplicationSupportedProtocols filterProtocols( int minimumVersion, ApplicationProtocolCategory category )
-    {
-        List<Integer> protocolVersions = ApplicationProtocols.filterByVersion( category, version -> version >= minimumVersion )
-                .stream().map( Protocol::implementation ).collect( Collectors.toList() );
-
-        if ( protocolVersions.isEmpty() )
-        {
-            throw new IllegalStateException(
-                    format( "No known implementations of the %s protocol have a version >= %d", category.canonicalName(), minimumVersion ) );
-        }
-
-        return new ApplicationSupportedProtocols( category, protocolVersions );
-    }
-
-    private ApplicationSupportedProtocols getApplicationSupportedProtocols( List<Integer> configVersions, ApplicationProtocolCategory category )
+    private ApplicationSupportedProtocols getApplicationSupportedProtocols( List<ApplicationProtocolVersion> configVersions,
+            ApplicationProtocolCategory category )
     {
         if ( configVersions.isEmpty() )
         {
@@ -90,7 +58,8 @@ public class SupportedProtocolCreator
         }
         else
         {
-            List<Integer> knownVersions = protocolsForConfig( category, configVersions, version -> ApplicationProtocols.find( category, version ) );
+            List<ApplicationProtocolVersion> knownVersions =
+                    protocolsForConfig( category, configVersions, version -> ApplicationProtocols.find( category, version ) );
             if ( knownVersions.isEmpty() )
             {
                 throw new IllegalArgumentException( format( "None of configured %s implementations %s are known", category.canonicalName(), configVersions ) );
@@ -135,7 +104,7 @@ public class SupportedProtocolCreator
     private <IMPL extends Comparable<IMPL>, T extends Protocol<IMPL>> void logUnknownProtocol( Protocol.Category<T> category,
             Pair<IMPL,Optional<T>> protocolWithImplementation )
     {
-        if ( !protocolWithImplementation.other().isPresent() )
+        if ( protocolWithImplementation.other().isEmpty() )
         {
             log.warn( "Configured %s protocol implementation %s unknown. Ignoring.", category, protocolWithImplementation.first() );
         }

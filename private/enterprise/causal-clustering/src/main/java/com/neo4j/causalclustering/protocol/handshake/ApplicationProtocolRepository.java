@@ -5,9 +5,10 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 
-public class ApplicationProtocolRepository extends ProtocolRepository<Integer,Protocol.ApplicationProtocol>
+public class ApplicationProtocolRepository extends ProtocolRepository<ApplicationProtocolVersion,Protocol.ApplicationProtocol>
 {
     private final ApplicationSupportedProtocols supportedProtocol;
 

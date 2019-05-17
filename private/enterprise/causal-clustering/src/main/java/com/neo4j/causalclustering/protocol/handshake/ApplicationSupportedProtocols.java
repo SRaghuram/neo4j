@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 
 import java.util.List;
 
-public class ApplicationSupportedProtocols extends SupportedProtocols<Integer,Protocol.ApplicationProtocol>
+public class ApplicationSupportedProtocols extends SupportedProtocols<ApplicationProtocolVersion,Protocol.ApplicationProtocol>
 {
-    public ApplicationSupportedProtocols( Protocol.Category<Protocol.ApplicationProtocol> category, List<Integer> versions )
+    public ApplicationSupportedProtocols( Protocol.Category<Protocol.ApplicationProtocol> category, List<ApplicationProtocolVersion> versions )
     {
         super( category, versions );
     }

@@ -6,60 +6,51 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
-import org.hamcrest.Matchers;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
-
-import org.neo4j.internal.helpers.collection.Iterators;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-@RunWith( Parameterized.class )
-public class HandshakeServerEnsureMagicTest
+class HandshakeServerEnsureMagicTest
 {
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<ServerMessage> data()
-    {
-        return asList(
-                new ApplicationProtocolRequest( RAFT.canonicalName(), Iterators.asSet( 1, 2 ) ),
-                new ModifierProtocolRequest( Protocol.ModifierProtocolCategory.COMPRESSION.canonicalName(), Iterators.asSet( "3", "4" ) ),
-                new SwitchOverRequest( RAFT.canonicalName(), 2, emptyList() )
-        );
-    }
-
-    @Parameterized.Parameter
-    public ServerMessage message;
-
     private final ApplicationSupportedProtocols supportedApplicationProtocol =
             new ApplicationSupportedProtocols( RAFT, TestProtocols.TestApplicationProtocols.listVersionsOf( RAFT ) );
 
-    private Channel channel = mock( Channel.class );
-    private ApplicationProtocolRepository applicationProtocolRepository =
+    private final Channel channel = mock( Channel.class );
+    private final ApplicationProtocolRepository applicationProtocolRepository =
             new ApplicationProtocolRepository( TestProtocols.TestApplicationProtocols.values(), supportedApplicationProtocol );
-    private ModifierProtocolRepository modifierProtocolRepository =
+    private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( TestProtocols.TestModifierProtocols.values(), emptyList() );
 
-    private HandshakeServer server = new HandshakeServer(
+    private final HandshakeServer server = new HandshakeServer(
             applicationProtocolRepository,
             modifierProtocolRepository, channel );
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIfMagicHasNotBeenSent()
+    @ParameterizedTest
+    @MethodSource( "messages" )
+    void shouldThrowIfMagicHasNotBeenSent( ServerMessage message )
     {
-        message.dispatch( server );
+        assertThrows( IllegalStateException.class, () -> message.dispatch( server ) );
     }
 
-    @Test( expected = ServerHandshakeException.class )
-    public void shouldCompleteExceptionallyIfMagicHasNotBeenSent() throws Throwable
+    @ParameterizedTest
+    @MethodSource( "messages" )
+    void shouldCompleteExceptionallyIfMagicHasNotBeenSent( ServerMessage message )
     {
         // when
         try
@@ -72,30 +63,24 @@ public class HandshakeServerEnsureMagicTest
         }
 
         // then future is completed exceptionally
-        try
-        {
-            server.protocolStackFuture().getNow( null );
-        }
-        catch ( CompletionException completion )
-        {
-            throw completion.getCause();
-        }
+        var error = assertThrows( CompletionException.class, () -> server.protocolStackFuture().getNow( null ) );
+        assertThat( error.getCause(), instanceOf( ServerHandshakeException.class ) );
     }
 
-    @Test
-    public void shouldNotThrowIfMagicHasBeenSent()
+    @ParameterizedTest
+    @MethodSource( "messages" )
+    void shouldNotThrowIfMagicHasBeenSent( ServerMessage message )
     {
         // given
         InitialMagicMessage.instance().dispatch( server );
 
-        // when
-        message.dispatch( server );
-
-        // then pass
+        // when / then
+        assertDoesNotThrow( () -> message.dispatch( server ) );
     }
 
-    @Test
-    public void shouldNotCompleteExceptionallyIfMagicHasBeenSent()
+    @ParameterizedTest
+    @MethodSource( "messages" )
+    void shouldNotCompleteExceptionallyIfMagicHasBeenSent( ServerMessage message )
     {
         // given
         InitialMagicMessage.instance().dispatch( server );
@@ -110,7 +95,17 @@ public class HandshakeServerEnsureMagicTest
         }
         catch ( CompletionException ex )
         {
-            assertThat( ex.getMessage().toLowerCase(), Matchers.not( Matchers.containsString( "magic" ) ) );
+            assertThat( ex.getMessage(), not( containsStringIgnoringCase( "magic" ) ) );
         }
+    }
+
+    private static Collection<ServerMessage> messages()
+    {
+        return asList(
+                new ApplicationProtocolRequest( RAFT.canonicalName(),
+                        Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ) ) ),
+                new ModifierProtocolRequest( Protocol.ModifierProtocolCategory.COMPRESSION.canonicalName(), Set.of( "3", "4" ) ),
+                new SwitchOverRequest( RAFT.canonicalName(), new ApplicationProtocolVersion( 2, 0 ), emptyList() )
+        );
     }
 }

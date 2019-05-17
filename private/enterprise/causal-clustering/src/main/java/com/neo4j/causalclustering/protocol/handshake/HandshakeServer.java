@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 
 import java.util.Collections;
@@ -20,7 +21,7 @@ public class HandshakeServer implements ServerMessageHandler
     private final Channel channel;
     private final ApplicationProtocolRepository applicationProtocolRepository;
     private final ModifierProtocolRepository modifierProtocolRepository;
-    private final SupportedProtocols<Integer,Protocol.ApplicationProtocol> supportedApplicationProtocol;
+    private final SupportedProtocols<ApplicationProtocolVersion,Protocol.ApplicationProtocol> supportedApplicationProtocol;
     private final ProtocolStack.Builder protocolStackBuilder = ProtocolStack.builder();
     private final CompletableFuture<ProtocolStack> protocolStackFuture = new CompletableFuture<>();
     private boolean magicReceived;
@@ -133,15 +134,15 @@ public class HandshakeServer implements ServerMessageHandler
                 .flatMap( Optional::stream )
                 .collect( Collectors.toList() );
 
-        if ( !switchOverProtocol.isPresent() )
+        if ( switchOverProtocol.isEmpty() )
         {
             channel.writeAndFlush( SwitchOverResponse.FAILURE );
-            decline( String.format( "Cannot switch to protocol %s version %d", switchOverRequest.protocolName(), switchOverRequest.version() ) );
+            decline( String.format( "Cannot switch to protocol %s version %s", switchOverRequest.protocolName(), switchOverRequest.version() ) );
         }
         else if ( protocolStack.applicationProtocol() == null )
         {
             channel.writeAndFlush( SwitchOverResponse.FAILURE );
-            decline( String.format( "Attempted to switch to protocol %s version %d before negotiation complete",
+            decline( String.format( "Attempted to switch to protocol %s version %s before negotiation complete",
                     switchOverRequest.protocolName(), switchOverRequest.version() ) );
         }
         else if ( !switchOverProtocol.get().equals( protocolStack.applicationProtocol() ) )
@@ -174,7 +175,7 @@ public class HandshakeServer implements ServerMessageHandler
                 .orElse( Collections.emptySet() );
     }
 
-    private Set<Integer> supportedVersionsFor( ApplicationProtocolRequest request )
+    private Set<ApplicationProtocolVersion> supportedVersionsFor( ApplicationProtocolRequest request )
     {
         return supportedApplicationProtocol.mutuallySupportedVersionsFor( request.versions() );
     }

@@ -5,11 +5,13 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+
 import java.util.Set;
 
-public class ApplicationProtocolRequest extends BaseProtocolRequest<Integer>
+public class ApplicationProtocolRequest extends BaseProtocolRequest<ApplicationProtocolVersion>
 {
-    ApplicationProtocolRequest( String protocolName, Set<Integer> versions )
+    ApplicationProtocolRequest( String protocolName, Set<ApplicationProtocolVersion> versions )
     {
         super( protocolName, versions );
     }

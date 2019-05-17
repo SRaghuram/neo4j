@@ -22,10 +22,7 @@ import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COM
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 public class SupportedProtocolCreatorTest
 {
@@ -94,49 +91,6 @@ public class SupportedProtocolCreatorTest
         // when
         supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
         // then throw
-    }
-
-    @Test
-    public void shouldReturnAllRaftProtocols()
-    {
-        // when
-        ApplicationSupportedProtocols supportedRaftProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getAllRaftProtocols();
-
-        // then
-        assertEquals( supportedRaftProtocols.identifier(), Protocol.ApplicationProtocolCategory.RAFT );
-        assertTrue( supportedRaftProtocols.versions().isEmpty() );
-    }
-
-    @Test
-    public void shouldReturnAllCatchupProtocols()
-    {
-        // when
-        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getAllCatchupProtocols();
-
-        // then
-        assertEquals( supportedCatchupProtocols.identifier(), Protocol.ApplicationProtocolCategory.CATCHUP );
-        assertTrue( supportedCatchupProtocols.versions().isEmpty() );
-    }
-
-    @Test
-    public void shouldRespectMinimumVersionOfRaftProtocol()
-    {
-        // when
-        int minimumVersion = 2;
-        ApplicationSupportedProtocols supportedRaftProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumRaftProtocols( minimumVersion );
-
-        // then
-        assertThat( supportedRaftProtocols.versions(), hasItem( 2 ) );
-    }
-
-    @Test
-    public void shouldRespectMinimumVersionOfCatchupProtocol()
-    {
-        // when
-        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumCatchupProtocols( 3 );
-
-        // then
-        assertThat( supportedCatchupProtocols.versions(), contains( 3 ) );
     }
 
     @Test

@@ -5,36 +5,41 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import io.netty.buffer.ByteBuf;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
-import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith( Parameterized.class )
-public class ServerMessageEncodingTest
+class ServerMessageEncodingTest
 {
-    private final ServerMessage message;
     private final ClientMessageEncoder encoder = new ClientMessageEncoder();
     private final ServerMessageDecoder decoder = new ServerMessageDecoder();
 
+    @ParameterizedTest
+    @MethodSource( "responseMessages" )
+    void shouldCompleteEncodingRoundTrip( ServerMessage message )
+    {
+        //when
+        var output = encodeDecode( message );
+
+        //then
+        assertEquals( List.of( message ), output );
+    }
+
     private List<Object> encodeDecode( ServerMessage message )
     {
-        ByteBuf byteBuf = Unpooled.directBuffer();
-        List<Object> output = new ArrayList<>();
+        var byteBuf = Unpooled.buffer();
+        var output = new ArrayList<>();
 
         encoder.encode( null, message, byteBuf );
         decoder.decode( null, byteBuf, output );
@@ -42,32 +47,16 @@ public class ServerMessageEncodingTest
         return output;
     }
 
-    @Parameterized.Parameters( name = "ResponseMessage-{0}" )
-    public static Collection<ServerMessage> data()
+    private static Collection<ServerMessage> responseMessages()
     {
-        return asList(
-                new ApplicationProtocolRequest( "protocol", asSet( 3,7,13 ) ),
+        return List.of(
+                new ApplicationProtocolRequest( "protocol",
+                        Set.of( new ApplicationProtocolVersion( 3, 0 ), new ApplicationProtocolVersion( 7, 0 ), new ApplicationProtocolVersion( 13, 0 ) ) ),
                 new InitialMagicMessage( "Magic string" ),
-                new ModifierProtocolRequest( "modifierProtocol", asSet( "Foo", "Bar", "Baz" ) ),
-                new SwitchOverRequest( "protocol", 38, emptyList() ),
-                new SwitchOverRequest( "protocol", 38,
-                        asList( Pair.of( "mod1", "Foo" ), Pair.of( "mod2" , "Quux" ) ) )
-                );
-    }
-
-    public ServerMessageEncodingTest( ServerMessage message )
-    {
-        this.message = message;
-    }
-
-    @Test
-    public void shouldCompleteEncodingRoundTrip()
-    {
-        //when
-        List<Object> output = encodeDecode( message );
-
-        //then
-        assertThat( output, hasSize( 1 ) );
-        assertThat( output.get( 0 ), equalTo( message ) );
+                new ModifierProtocolRequest( "modifierProtocol", Set.of( "Foo", "Bar", "Baz" ) ),
+                new SwitchOverRequest( "protocol", new ApplicationProtocolVersion( 38, 0 ), emptyList() ),
+                new SwitchOverRequest( "protocol", new ApplicationProtocolVersion( 38, 0 ),
+                        List.of( Pair.of( "mod1", "Foo" ), Pair.of( "mod2", "Quux" ) ) )
+        );
     }
 }

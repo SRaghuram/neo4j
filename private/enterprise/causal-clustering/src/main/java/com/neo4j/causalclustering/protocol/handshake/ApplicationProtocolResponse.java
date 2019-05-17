@@ -5,11 +5,14 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-public class ApplicationProtocolResponse extends BaseProtocolResponse<Integer>
-{
-    public static final ApplicationProtocolResponse NO_PROTOCOL = new ApplicationProtocolResponse( StatusCode.FAILURE, "", 0 );
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 
-    ApplicationProtocolResponse( StatusCode statusCode, String protocolName, int version )
+public class ApplicationProtocolResponse extends BaseProtocolResponse<ApplicationProtocolVersion>
+{
+    public static final ApplicationProtocolResponse NO_PROTOCOL =
+            new ApplicationProtocolResponse( StatusCode.FAILURE, "", new ApplicationProtocolVersion( 0, 0 ) );
+
+    ApplicationProtocolResponse( StatusCode statusCode, String protocolName, ApplicationProtocolVersion version )
     {
         super( statusCode, protocolName, version );
     }

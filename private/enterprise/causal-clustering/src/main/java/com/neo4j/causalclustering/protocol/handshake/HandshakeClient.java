@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public class HandshakeClient implements ClientMessageHandler
                     channel.write( new ModifierProtocolRequest( protocolSelection.identifier(), protocolSelection.versions() ) );
                 } );
 
-        ProtocolSelection<Integer,Protocol.ApplicationProtocol> applicationProtocolSelection =
+        ProtocolSelection<ApplicationProtocolVersion,Protocol.ApplicationProtocol> applicationProtocolSelection =
                 applicationProtocolRepository.getAll( applicationProtocols.identifier(), applicationProtocols.versions() );
         channel.writeAndFlush( new ApplicationProtocolRequest( applicationProtocolSelection.identifier(), applicationProtocolSelection.versions() ) );
     }
@@ -104,12 +105,12 @@ public class HandshakeClient implements ClientMessageHandler
         Optional<Protocol.ApplicationProtocol> protocol =
                 applicationProtocolRepository.select( applicationProtocolResponse.protocolName(), applicationProtocolResponse.version() );
 
-        if ( !protocol.isPresent() )
+        if ( protocol.isEmpty() )
         {
-            ProtocolSelection<Integer,Protocol.ApplicationProtocol> knownApplicationProtocolVersions =
+            ProtocolSelection<ApplicationProtocolVersion,Protocol.ApplicationProtocol> knownApplicationProtocolVersions =
                     applicationProtocolRepository.getAll( supportedApplicationProtocol.identifier(), supportedApplicationProtocol.versions() );
             fail( String.format(
-                    "Mismatch of application protocols between client and server: Server protocol %s version %d: Client protocol %s versions %s",
+                    "Mismatch of application protocols between client and server: Server protocol %s version %s: Client protocol %s versions %s",
                     applicationProtocolResponse.protocolName(), applicationProtocolResponse.version(),
                     knownApplicationProtocolVersions.identifier(), knownApplicationProtocolVersions.versions() ) );
         }

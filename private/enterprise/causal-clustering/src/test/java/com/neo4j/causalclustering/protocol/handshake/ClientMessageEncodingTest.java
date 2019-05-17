@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
@@ -42,7 +43,7 @@ public class ClientMessageEncodingTest
     public static Collection<ClientMessage> data()
     {
         return Arrays.asList(
-                new ApplicationProtocolResponse( StatusCode.FAILURE, "protocol", 13 ),
+                new ApplicationProtocolResponse( StatusCode.FAILURE, "protocol", new ApplicationProtocolVersion( 13, 0 ) ),
                 new ModifierProtocolResponse( StatusCode.SUCCESS, "modifier", "7" ),
                 new SwitchOverResponse( StatusCode.FAILURE )
                 );

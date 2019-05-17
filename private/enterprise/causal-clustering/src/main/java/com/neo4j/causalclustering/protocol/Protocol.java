@@ -39,12 +39,12 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
                 .collect( Collectors.toList() );
     }
 
-    interface Category<T extends Protocol>
+    interface Category<T extends Protocol<?>>
     {
         String canonicalName();
     }
 
-    interface ApplicationProtocol extends Protocol<Integer>
+    interface ApplicationProtocol extends Protocol<ApplicationProtocolVersion>
     {
     }
 
@@ -63,15 +63,15 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
     enum ApplicationProtocols implements ApplicationProtocol
     {
         // support for raft V1 was removed in neo4j 4.0
-        RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
+        RAFT_2( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 2, 0 ) ),
 
         // support for catchup V1 and V2 was removed in neo4j 4.0
-        CATCHUP_3( ApplicationProtocolCategory.CATCHUP, 3 );
+        CATCHUP_3( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) );
 
-        private final Integer version;
+        private final ApplicationProtocolVersion version;
         private final ApplicationProtocolCategory identifier;
 
-        ApplicationProtocols( ApplicationProtocolCategory identifier, int version )
+        ApplicationProtocols( ApplicationProtocolCategory identifier, ApplicationProtocolVersion version )
         {
             this.identifier = identifier;
             this.version = version;
@@ -84,12 +84,12 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
         }
 
         @Override
-        public Integer implementation()
+        public ApplicationProtocolVersion implementation()
         {
             return version;
         }
 
-        public static Optional<ApplicationProtocol> find( ApplicationProtocolCategory category, Integer version )
+        public static Optional<ApplicationProtocol> find( ApplicationProtocolCategory category, ApplicationProtocolVersion version )
         {
             return Protocol.find( ApplicationProtocols.values(), category, version, Function.identity() );
         }
@@ -98,16 +98,6 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
         {
             return Protocol.filterCategory( ApplicationProtocols.values(), category, Predicates.alwaysTrue() );
         }
-
-        public static List<ApplicationProtocol> filterByVersion( ApplicationProtocolCategory category, Predicate<Integer> versionPredicate )
-        {
-            return Protocol.filterCategory( ApplicationProtocols.values(), category, versionPredicate );
-        }
-    }
-
-    interface CatchupProtocolFeatures
-    {
-        int SUPPORTS_MULTIPLE_DATABASES_FROM_VERSION = 2;
     }
 
     interface ModifierProtocol extends Protocol<String>

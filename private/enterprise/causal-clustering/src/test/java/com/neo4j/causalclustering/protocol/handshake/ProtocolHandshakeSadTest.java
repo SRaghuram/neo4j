@@ -5,102 +5,86 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.messaging.Channel;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static java.util.Arrays.asList;
+import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @see ProtocolHandshakeHappyTest happy path tests
  */
-@RunWith( Parameterized.class )
-public class ProtocolHandshakeSadTest
+class ProtocolHandshakeSadTest
 {
-    @Parameterized.Parameters
-    public static Collection<Pair<ApplicationProtocolRepository,ApplicationProtocolRepository>> data()
-    {
-
-         ApplicationSupportedProtocols supportsAllRaft = new ApplicationSupportedProtocols( RAFT, emptyList() );
-         ApplicationSupportedProtocols supportsAllCatchup = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
-         ApplicationSupportedProtocols supportsCatchup1 = new ApplicationSupportedProtocols( CATCHUP, singletonList( 1 ) );
-         ApplicationSupportedProtocols supportsCatchup2 = new ApplicationSupportedProtocols( CATCHUP, singletonList( 2 ) );
-
-         ApplicationProtocolRepository raftProtocolsRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsAllRaft );
-         ApplicationProtocolRepository catchupProtocolsRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsAllCatchup );
-         ApplicationProtocolRepository catchupV1ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup1 );
-         ApplicationProtocolRepository catchupV2ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup2 );
-
-        return asList(
-                Pair.of( catchupProtocolsRepository, raftProtocolsRepository ),
-                Pair.of( raftProtocolsRepository, catchupProtocolsRepository ),
-                Pair.of( catchupV1ProtocolRepository, catchupV2ProtocolRepository),
-                Pair.of( catchupV2ProtocolRepository, catchupV1ProtocolRepository ) );
-    }
-
-    @Parameterized.Parameter
-    public Pair<ApplicationProtocolRepository,ApplicationProtocolRepository> parameters;
-
-    private HandshakeClient handshakeClient = new HandshakeClient();
+    private final HandshakeClient handshakeClient = new HandshakeClient();
 
     private final Collection<ModifierSupportedProtocols> noModifiers = emptyList();
-    private final ModifierProtocolRepository
-            modifierProtocolRepository = new ModifierProtocolRepository( TestProtocols.TestModifierProtocols.values(), noModifiers );
+    private final ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), noModifiers );
 
-    @Test( expected = ClientHandshakeException.class )
-    public void shouldFailClientHandshakeOnMismatchedProtocol() throws Throwable
+    @ParameterizedTest
+    @MethodSource( "appProtocolRepositories" )
+    void shouldFailClientHandshakeOnMismatchedProtocol( Pair<ApplicationProtocolRepository,ApplicationProtocolRepository> parameters )
     {
         // given
-        HandshakeServer handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
+        var handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
                 new ProtocolHandshakeHappyTest.FakeServerChannel( handshakeClient ) );
-        Channel clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
+        var clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
 
         // when
         handshakeClient.initiate( clientChannel, parameters.other(), modifierProtocolRepository );
 
         // then
-        try
-        {
-            handshakeClient.protocol().getNow( null );
-        }
-        catch ( CompletionException ex )
-        {
-            throw ex.getCause();
-        }
+        var error = assertThrows( CompletionException.class, () -> handshakeClient.protocol().getNow( null ) );
+        assertThat( error.getCause(), instanceOf( ClientHandshakeException.class ) );
     }
 
-    @Test( expected = ServerHandshakeException.class )
-    public void shouldFailHandshakeForUnknownProtocolOnServer() throws Throwable
+    @ParameterizedTest
+    @MethodSource( "appProtocolRepositories" )
+    void shouldFailHandshakeForUnknownProtocolOnServer( Pair<ApplicationProtocolRepository,ApplicationProtocolRepository> parameters )
     {
         // given
-        HandshakeServer handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
+        var handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
                 new ProtocolHandshakeHappyTest.FakeServerChannel( handshakeClient ) );
-        Channel clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
+        var clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
 
         // when
         handshakeClient.initiate( clientChannel, parameters.other(), modifierProtocolRepository );
-        CompletableFuture<ProtocolStack> serverHandshakeFuture = handshakeServer.protocolStackFuture();
+        var serverHandshakeFuture = handshakeServer.protocolStackFuture();
 
         // then
-        try
-        {
-            serverHandshakeFuture.getNow( null );
-        }
-        catch ( CompletionException ex )
-        {
-            throw ex.getCause();
-        }
+        var error = assertThrows( CompletionException.class, () -> serverHandshakeFuture.getNow( null ) );
+        assertThat( error.getCause(), instanceOf( ServerHandshakeException.class ) );
+    }
+
+    private static Collection<Pair<ApplicationProtocolRepository,ApplicationProtocolRepository>> appProtocolRepositories()
+    {
+        var supportsAllRaft = new ApplicationSupportedProtocols( RAFT, emptyList() );
+        var supportsAllCatchup = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
+        var supportsCatchup1 = new ApplicationSupportedProtocols( CATCHUP, List.of( new ApplicationProtocolVersion( 1, 0 ) ) );
+        var supportsCatchup2 = new ApplicationSupportedProtocols( CATCHUP, List.of( new ApplicationProtocolVersion( 2, 0 ) ) );
+
+        var raftProtocolsRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsAllRaft );
+        var catchupProtocolsRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsAllCatchup );
+        var catchupV1ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup1 );
+        var catchupV2ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup2 );
+
+        return List.of(
+                Pair.of( catchupProtocolsRepository, raftProtocolsRepository ),
+                Pair.of( raftProtocolsRepository, catchupProtocolsRepository ),
+                Pair.of( catchupV1ProtocolRepository, catchupV2ProtocolRepository ),
+                Pair.of( catchupV2ProtocolRepository, catchupV1ProtocolRepository ) );
     }
 }

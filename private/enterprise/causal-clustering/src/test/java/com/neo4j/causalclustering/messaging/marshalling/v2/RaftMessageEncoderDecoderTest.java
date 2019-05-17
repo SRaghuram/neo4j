@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -62,7 +63,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class RaftMessageEncoderDecoderTest
 {
     private static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
-    private static final List<Integer> PROTOCOLS = ApplicationProtocols.withCategory( RAFT ).stream().map( Protocol::implementation ).collect( toList() );
+
+    private static final List<ApplicationProtocolVersion> PROTOCOLS = ApplicationProtocols.withCategory( RAFT )
+            .stream()
+            .map( Protocol::implementation )
+            .collect( toList() );
 
     private final EmbeddedChannel outbound = new EmbeddedChannel();
     private final EmbeddedChannel inbound = new EmbeddedChannel();

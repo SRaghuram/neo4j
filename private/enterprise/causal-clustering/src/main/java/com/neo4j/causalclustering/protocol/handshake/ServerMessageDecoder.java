@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -39,7 +40,8 @@ public class ServerMessageDecoder extends ByteToMessageDecoder
         }
         case 1:
         {
-            ApplicationProtocolRequest applicationProtocolRequest = decodeProtocolRequest( ApplicationProtocolRequest::new, in, ByteBuf::readInt );
+            ApplicationProtocolRequest applicationProtocolRequest =
+                    decodeProtocolRequest( ApplicationProtocolRequest::new, in, ApplicationProtocolVersion::decode );
             out.add( applicationProtocolRequest );
             return;
         }
@@ -50,7 +52,7 @@ public class ServerMessageDecoder extends ByteToMessageDecoder
         case 3:
         {
             String protocolName = StringMarshal.unmarshal( in );
-            int version = in.readInt();
+            ApplicationProtocolVersion version = ApplicationProtocolVersion.decode( in );
             int numberOfModifierProtocols = in.readInt();
             List<Pair<String,String>> modifierProtocols = Stream.generate( () -> Pair.of( StringMarshal.unmarshal( in ), StringMarshal.unmarshal( in ) ) )
                     .limit( numberOfModifierProtocols )

@@ -6,153 +6,161 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import co.unruly.matchers.OptionalMatchers;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
-import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static org.junit.Assert.assertThat;
-import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ApplicationProtocolRepositoryTest
+class ApplicationProtocolRepositoryTest
 {
-    private ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository(
+    private final ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository(
             TestApplicationProtocols.values(), new ApplicationSupportedProtocols( RAFT, TestApplicationProtocols.listVersionsOf( RAFT ) ) );
 
     @Test
-    public void shouldReturnEmptyIfUnknownVersion()
+    void shouldReturnEmptyIfUnknownVersion()
     {
+        // given
+        var versions = Set.of( new ApplicationProtocolVersion( -1, 0 ) );
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol =
-                applicationProtocolRepository.select( RAFT.canonicalName(), -1 );
+        var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.empty() );
     }
 
     @Test
-    public void shouldReturnEmptyIfUnknownName()
+    void shouldReturnEmptyIfUnknownName()
     {
+        // given
+        var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ) );
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol = applicationProtocolRepository.select( "not a real protocol", 1 );
+        var applicationProtocol = applicationProtocolRepository.select( "not a real protocol", versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.empty() );
     }
 
     @Test
-    public void shouldReturnEmptyIfNoVersions()
+    void shouldReturnEmptyIfNoVersions()
     {
+        // given
+        var versions = Set.<ApplicationProtocolVersion>of();
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol =
-                applicationProtocolRepository.select( RAFT.canonicalName(), emptySet() );
+        var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.empty() );
     }
 
     @Test
-    public void shouldReturnProtocolIfKnownNameAndVersion()
+    void shouldReturnProtocolIfKnownNameAndVersion()
     {
+        // given
+        var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ) );
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol =
-                applicationProtocolRepository.select( RAFT.canonicalName(), 1 );
+        var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.contains( TestApplicationProtocols.RAFT_1 ) );
     }
 
     @Test
-    public void shouldReturnKnownProtocolVersionWhenFirstGivenVersionNotKnown()
+    void shouldReturnKnownProtocolVersionWhenFirstGivenVersionNotKnown()
     {
+        // given
+        var versions = Set.of( new ApplicationProtocolVersion( -1, 0 ), new ApplicationProtocolVersion( 1, 0 ) );
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol =
-                applicationProtocolRepository.select( RAFT.canonicalName(), asSet( -1, 1 ) );
+        var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.contains( TestApplicationProtocols.RAFT_1 ) );
     }
 
     @Test
-    public void shouldReturnApplicationProtocolOfHighestVersionNumberRequestedAndSupported()
+    void shouldReturnApplicationProtocolOfHighestVersionNumberRequestedAndSupported()
     {
+        // given
+        var versions = Set.of( new ApplicationProtocolVersion( 389432, 0 ), new ApplicationProtocolVersion( 1, 0 ),
+                new ApplicationProtocolVersion( 3, 0 ), new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 71234, 0 ) );
+
         // when
-        Optional<Protocol.ApplicationProtocol> applicationProtocol =
-                applicationProtocolRepository.select( RAFT.canonicalName(), asSet( 389432, 1, 3, 2, 71234 ) );
+        var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
 
         // then
         assertThat( applicationProtocol, OptionalMatchers.contains( TestApplicationProtocols.RAFT_3 ) );
     }
 
     @Test
-    public void shouldIncludeAllProtocolsInSelectionIfEmptyVersionsProvided()
+    void shouldIncludeAllProtocolsInSelectionIfEmptyVersionsProvided()
     {
+        // given
+        var versions = Set.<ApplicationProtocolVersion>of();
+
         // when
-        ProtocolSelection<Integer,Protocol.ApplicationProtocol> protocolSelection =
-                applicationProtocolRepository.getAll( RAFT, emptyList() );
+        var protocolSelection = applicationProtocolRepository.getAll( RAFT, versions );
 
         // then
-        Integer[] expectedRaftVersions = TestApplicationProtocols.allVersionsOf( RAFT );
-        assertThat( protocolSelection.versions(), Matchers.containsInAnyOrder( expectedRaftVersions ) );
+        var expectedRaftVersions = TestApplicationProtocols.allVersionsOf( RAFT );
+        assertThat( protocolSelection.versions(), containsInAnyOrder( expectedRaftVersions ) );
     }
 
     @Test
-    public void shouldIncludeProtocolsInSelectionWithVersionsLimitedByThoseConfigured()
+    void shouldIncludeProtocolsInSelectionWithVersionsLimitedByThoseConfigured()
     {
         // given
-        Integer[] expectedRaftVersions = { 1 };
+        var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ) );
 
         // when
-        ProtocolSelection<Integer,Protocol.ApplicationProtocol> protocolSelection =
-                applicationProtocolRepository.getAll( RAFT, asList( expectedRaftVersions ) );
+        var protocolSelection = applicationProtocolRepository.getAll( RAFT, versions );
 
         // then
-        assertThat( protocolSelection.versions(), Matchers.containsInAnyOrder( expectedRaftVersions ) );
+        assertThat( protocolSelection.versions(), containsInAnyOrder( versions ) );
     }
 
     @Test
-    public void shouldIncludeProtocolsInSelectionWithVersionsLimitedByThoseExisting()
+    void shouldIncludeProtocolsInSelectionWithVersionsLimitedByThoseExisting()
     {
         // given
-        Integer[] expectedRaftVersions = TestApplicationProtocols.allVersionsOf( RAFT );
-        List<Integer> configuredRaftVersions =
-                Stream.concat( Stream.of( expectedRaftVersions ), Stream.of( Integer.MAX_VALUE ) ).collect( Collectors.toList() );
+        var expectedRaftVersions = TestApplicationProtocols.allVersionsOf( RAFT );
+        var configuredRaftVersions = Stream.concat( Stream.of( expectedRaftVersions ),
+                Stream.of( new ApplicationProtocolVersion( Integer.MAX_VALUE, 0 ) ) ).collect( toList() );
 
         // when
-        ProtocolSelection<Integer,Protocol.ApplicationProtocol> protocolSelection =
-                applicationProtocolRepository.getAll( RAFT, configuredRaftVersions );
+        var protocolSelection = applicationProtocolRepository.getAll( RAFT, configuredRaftVersions );
 
         // then
-        assertThat( protocolSelection.versions(), Matchers.containsInAnyOrder( expectedRaftVersions ) );
+        assertThat( protocolSelection.versions(), containsInAnyOrder( expectedRaftVersions ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldThrowIfNoIntersectionBetweenExistingAndConfiguredVersions()
+    @Test
+    void shouldThrowIfNoIntersectionBetweenExistingAndConfiguredVersions()
     {
         // given
-        List<Integer> configuredRaftVersions = Arrays.asList( Integer.MAX_VALUE );
+        var configuredRaftVersions = Set.of( new ApplicationProtocolVersion( Integer.MAX_VALUE, 0 ) );
 
-        // when
-        applicationProtocolRepository.getAll( RAFT, configuredRaftVersions );
-
-        // then throw
+        // when / then
+        assertThrows( IllegalArgumentException.class, () -> applicationProtocolRepository.getAll( RAFT, configuredRaftVersions ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldNotInstantiateIfDuplicateProtocolsSupplied()
+    @Test
+    void shouldNotInstantiateIfDuplicateProtocolsSupplied()
     {
         // given
-        Protocol.ApplicationProtocol protocol = new Protocol.ApplicationProtocol()
+        var protocol = new ApplicationProtocol()
         {
             @Override
             public String category()
@@ -161,16 +169,15 @@ public class ApplicationProtocolRepositoryTest
             }
 
             @Override
-            public Integer implementation()
+            public ApplicationProtocolVersion implementation()
             {
-                return 1;
+                return new ApplicationProtocolVersion( 1, 0 );
             }
         };
-        Protocol.ApplicationProtocol[] protocols = {protocol, protocol};
+        var protocols = new ApplicationProtocol[]{protocol, protocol};
 
-        // when
-        new ApplicationProtocolRepository( protocols, new ApplicationSupportedProtocols( RAFT, TestApplicationProtocols.listVersionsOf( RAFT ) ) );
-
-        // then throw
+        // when / then
+        assertThrows( IllegalArgumentException.class, () ->
+                new ApplicationProtocolRepository( protocols, new ApplicationSupportedProtocols( RAFT, TestApplicationProtocols.listVersionsOf( RAFT ) ) ) );
     }
 }

@@ -61,9 +61,8 @@ public abstract class ProtocolRepository<U extends Comparable<U>,T extends Proto
     public ProtocolSelection<U,T> getAll( Protocol.Category<T> category, Collection<U> versions )
     {
         Set<U> selectedVersions = protocolMap
-                .entrySet()
+                .keySet()
                 .stream()
-                .map( Map.Entry::getKey )
                 .filter( pair -> pair.first().equals( category.canonicalName() ) )
                 .map( Pair::other )
                 .filter( version -> versions.isEmpty() || versions.contains( version ) )

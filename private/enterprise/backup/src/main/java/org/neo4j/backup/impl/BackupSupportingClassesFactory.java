@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol.CatchupProtocolFeatures;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -110,7 +109,7 @@ public class BackupSupportingClassesFactory
     {
         Config config = onlineBackupContext.getConfig();
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
-        ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( supportedProtocolCreator );
+        ApplicationSupportedProtocols supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
 
         return CatchupClientBuilder.builder()
                 .catchupProtocols( supportedCatchupProtocols )
@@ -123,11 +122,6 @@ public class BackupSupportingClassesFactory
                 .clock( clock )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider ).build();
-    }
-
-    private static ApplicationSupportedProtocols getSupportedCatchupProtocols( SupportedProtocolCreator supportedProtocolCreator )
-    {
-        return supportedProtocolCreator.getMinimumCatchupProtocols( CatchupProtocolFeatures.SUPPORTS_MULTIPLE_DATABASES_FROM_VERSION );
     }
 
     private static BackupDelegator backupDelegator(

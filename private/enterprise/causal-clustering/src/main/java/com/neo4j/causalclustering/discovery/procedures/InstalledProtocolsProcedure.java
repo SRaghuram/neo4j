@@ -27,7 +27,6 @@ import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.values.AnyValue;
 
-import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedure
@@ -84,7 +83,7 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
                         stringValue( orientation ),
                         stringValue( socketAddress.toString() ),
                         stringValue( protocolStack.applicationProtocol().category() ),
-                        longValue( (long) protocolStack.applicationProtocol().implementation() ),
+                        stringValue( protocolStack.applicationProtocol().implementation().toString() ),
                         stringValue( modifierString( protocolStack ) )
                 };
     }

@@ -43,7 +43,7 @@ public class ServerMessageEncoder extends MessageToByteEncoder<ClientMessage>
         public void handle( ApplicationProtocolResponse applicationProtocolResponse )
         {
             out.writeInt( 0 );
-            encodeProtocolResponse( applicationProtocolResponse, ByteBuf::writeInt );
+            encodeProtocolResponse( applicationProtocolResponse, ( buf, version ) -> version.encode( buf ) );
         }
 
         @Override

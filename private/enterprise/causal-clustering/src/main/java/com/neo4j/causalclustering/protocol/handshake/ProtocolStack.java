@@ -61,10 +61,10 @@ public class ProtocolStack
     @Override
     public String toString()
     {
-        String desc = format( "%s version:%d", applicationProtocol.category(), applicationProtocol.implementation() );
+        String desc = format( "%s version:%s", applicationProtocol.category(), applicationProtocol.implementation() );
         List<String> modifierNames = modifierProtocols.stream().map( Protocol::implementation ).collect( toList() );
 
-        if ( modifierNames.size() > 0 )
+        if ( !modifierNames.isEmpty() )
         {
             desc = format( "%s (%s)", desc, join( ", ", modifierNames ) );
         }

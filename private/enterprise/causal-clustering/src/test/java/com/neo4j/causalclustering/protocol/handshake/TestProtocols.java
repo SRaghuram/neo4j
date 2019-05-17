@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
+import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
 
 import java.util.Arrays;
@@ -20,10 +21,10 @@ public interface TestProtocols
         return Stream.of( values )
                 .filter( protocol -> protocol.category().equals( category.canonicalName() ) )
                 .max( Comparator.comparing( T::implementation ) )
-                .get();
+                .orElseThrow();
     }
 
-    static <U extends Comparable<U>,T extends Protocol> U[] allVersionsOf( Protocol.Category<T> category, T[] values, IntFunction<U[]> constructor )
+    static <U extends Comparable<U>, T extends Protocol<U>> U[] allVersionsOf( Protocol.Category<T> category, T[] values, IntFunction<U[]> constructor )
     {
         return Stream.of( values )
                 .filter( protocol -> protocol.category().equals( category.canonicalName() ) )
@@ -33,19 +34,19 @@ public interface TestProtocols
 
     enum TestApplicationProtocols implements Protocol.ApplicationProtocol
     {
-        RAFT_1( ApplicationProtocolCategory.RAFT, 1 ),
-        RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
-        RAFT_3( ApplicationProtocolCategory.RAFT, 3 ),
-        RAFT_4( ApplicationProtocolCategory.RAFT, 4 ),
-        CATCHUP_1( ApplicationProtocolCategory.CATCHUP, 1 ),
-        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, 2 ),
-        CATCHUP_3( ApplicationProtocolCategory.CATCHUP, 3 ),
-        CATCHUP_4( ApplicationProtocolCategory.CATCHUP, 4 );
+        RAFT_1( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 1, 0 ) ),
+        RAFT_2( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 2, 0 ) ),
+        RAFT_3( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 3, 0 ) ),
+        RAFT_4( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 4, 0 ) ),
+        CATCHUP_1( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 1, 0 ) ),
+        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 2, 0 ) ),
+        CATCHUP_3( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) ),
+        CATCHUP_4( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 4, 0 ) );
 
-        private final Integer version;
-
+        private final ApplicationProtocolVersion version;
         private final ApplicationProtocolCategory identifier;
-        TestApplicationProtocols( ApplicationProtocolCategory identifier, int version )
+
+        TestApplicationProtocols( ApplicationProtocolCategory identifier, ApplicationProtocolVersion version )
         {
             this.identifier = identifier;
             this.version = version;
@@ -58,7 +59,7 @@ public interface TestProtocols
         }
 
         @Override
-        public Integer implementation()
+        public ApplicationProtocolVersion implementation()
         {
             return version;
         }
@@ -68,12 +69,12 @@ public interface TestProtocols
             return TestProtocols.latest( identifier, values() );
         }
 
-        public static Integer[] allVersionsOf( ApplicationProtocolCategory identifier )
+        public static ApplicationProtocolVersion[] allVersionsOf( ApplicationProtocolCategory identifier )
         {
-            return TestProtocols.allVersionsOf( identifier, TestApplicationProtocols.values(), Integer[]::new );
+            return TestProtocols.allVersionsOf( identifier, TestApplicationProtocols.values(), ApplicationProtocolVersion[]::new );
         }
 
-        public static List<Integer> listVersionsOf( ApplicationProtocolCategory identifier )
+        public static List<ApplicationProtocolVersion> listVersionsOf( ApplicationProtocolCategory identifier )
         {
             return Arrays.asList( allVersionsOf( identifier ) );
         }
