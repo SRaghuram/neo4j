@@ -394,7 +394,7 @@ public class BoltV4TransportCommercialIT
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
     }
 
-    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "compiled", "morsel debug=singleThreaded", "morsel" };
+    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "compiled" };
 
     private static MapValue paramWithRange( int from, int to )
     {
