@@ -15,7 +15,6 @@ import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -179,9 +178,22 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
-        public boolean allowsTraverseLabels( int... labels )
+        public boolean allowsTraverseLabels( long... labels )
         {
-            return allowsTraverseAllLabels || Arrays.stream( labels ).anyMatch( whitelistTraverseLabels::contains );
+            if ( allowsTraverseAllLabels )
+            {
+                return true;
+            }
+            for ( long labelAsLong : labels )
+            {
+                int label = (int) labelAsLong;
+                if ( whitelistTraverseLabels.contains( label ) )
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         @Override
