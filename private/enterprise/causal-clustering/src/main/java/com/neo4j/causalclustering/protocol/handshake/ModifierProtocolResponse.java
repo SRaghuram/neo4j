@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 public class ModifierProtocolResponse extends BaseProtocolResponse<String>
 {
+    static final int MESSAGE_CODE = 1;
 
     ModifierProtocolResponse( StatusCode statusCode, String protocolName, String implementation )
     {

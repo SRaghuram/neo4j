@@ -38,18 +38,18 @@ public class ServerMessageDecoder extends ByteToMessageDecoder
             out.add( new InitialMagicMessage( magic ) );
             return;
         }
-        case 1:
+        case ApplicationProtocolRequest.MESSAGE_CODE:
         {
             ApplicationProtocolRequest applicationProtocolRequest =
                     decodeProtocolRequest( ApplicationProtocolRequest::new, in, ApplicationProtocolVersion::decode );
             out.add( applicationProtocolRequest );
             return;
         }
-        case 2:
+        case ModifierProtocolRequest.MESSAGE_CODE:
             ModifierProtocolRequest modifierProtocolRequest = decodeProtocolRequest( ModifierProtocolRequest::new, in, StringMarshal::unmarshal );
             out.add( modifierProtocolRequest );
             return;
-        case 3:
+        case SwitchOverRequest.MESSAGE_CODE:
         {
             String protocolName = StringMarshal.unmarshal( in );
             ApplicationProtocolVersion version = ApplicationProtocolVersion.decode( in );

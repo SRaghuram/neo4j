@@ -9,8 +9,9 @@ import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 
 public class ApplicationProtocolResponse extends BaseProtocolResponse<ApplicationProtocolVersion>
 {
-    public static final ApplicationProtocolResponse NO_PROTOCOL =
-            new ApplicationProtocolResponse( StatusCode.FAILURE, "", new ApplicationProtocolVersion( 0, 0 ) );
+    static final int MESSAGE_CODE = 0;
+
+    static final ApplicationProtocolResponse NO_PROTOCOL = new ApplicationProtocolResponse( StatusCode.FAILURE, "", new ApplicationProtocolVersion( 0, 0 ) );
 
     ApplicationProtocolResponse( StatusCode statusCode, String protocolName, ApplicationProtocolVersion version )
     {

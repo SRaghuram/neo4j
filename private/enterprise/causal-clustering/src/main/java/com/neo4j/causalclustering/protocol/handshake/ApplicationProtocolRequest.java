@@ -11,6 +11,8 @@ import java.util.Set;
 
 public class ApplicationProtocolRequest extends BaseProtocolRequest<ApplicationProtocolVersion>
 {
+    static final int MESSAGE_CODE = 1;
+
     ApplicationProtocolRequest( String protocolName, Set<ApplicationProtocolVersion> versions )
     {
         super( protocolName, versions );

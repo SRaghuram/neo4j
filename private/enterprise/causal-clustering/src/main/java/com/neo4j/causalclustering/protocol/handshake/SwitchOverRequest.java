@@ -14,6 +14,8 @@ import org.neo4j.internal.helpers.collection.Pair;
 
 public class SwitchOverRequest implements ServerMessage
 {
+    static final int MESSAGE_CODE = 3;
+
     private final String protocolName;
     private final ApplicationProtocolVersion version;
     private final List<Pair<String,String>> modifierProtocols;

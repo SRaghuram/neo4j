@@ -42,21 +42,21 @@ public class ServerMessageEncoder extends MessageToByteEncoder<ClientMessage>
         @Override
         public void handle( ApplicationProtocolResponse applicationProtocolResponse )
         {
-            out.writeInt( 0 );
+            out.writeInt( ApplicationProtocolResponse.MESSAGE_CODE );
             encodeProtocolResponse( applicationProtocolResponse, ( buf, version ) -> version.encode( buf ) );
         }
 
         @Override
         public void handle( ModifierProtocolResponse modifierProtocolResponse )
         {
-            out.writeInt( 1 );
+            out.writeInt( ModifierProtocolResponse.MESSAGE_CODE );
             encodeProtocolResponse( modifierProtocolResponse, StringMarshal::marshal );
         }
 
         @Override
         public void handle( SwitchOverResponse switchOverResponse )
         {
-            out.writeInt( 2 );
+            out.writeInt( SwitchOverResponse.MESSAGE_CODE );
             out.writeInt( switchOverResponse.status().codeValue() );
         }
 

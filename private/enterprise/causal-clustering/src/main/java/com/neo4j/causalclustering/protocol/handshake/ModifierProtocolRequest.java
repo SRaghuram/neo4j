@@ -9,6 +9,8 @@ import java.util.Set;
 
 public class ModifierProtocolRequest extends BaseProtocolRequest<String>
 {
+    static final int MESSAGE_CODE = 2;
+
     ModifierProtocolRequest( String protocolName, Set<String> versions )
     {
         super( protocolName, versions );

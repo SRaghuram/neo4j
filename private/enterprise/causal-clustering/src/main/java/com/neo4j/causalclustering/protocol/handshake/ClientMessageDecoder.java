@@ -35,7 +35,7 @@ public class ClientMessageDecoder extends ByteToMessageDecoder
             out.add( new InitialMagicMessage( magic ) );
             return;
         }
-        case 0:
+        case ApplicationProtocolResponse.MESSAGE_CODE:
         {
             ApplicationProtocolResponse applicationProtocolResponse = decodeProtocolResponse( ApplicationProtocolResponse::new,
                     ApplicationProtocolVersion::decode, in );
@@ -43,14 +43,14 @@ public class ClientMessageDecoder extends ByteToMessageDecoder
             out.add( applicationProtocolResponse );
             return;
         }
-        case 1:
+        case ModifierProtocolResponse.MESSAGE_CODE:
         {
             ModifierProtocolResponse modifierProtocolResponse = decodeProtocolResponse( ModifierProtocolResponse::new, StringMarshal::unmarshal, in );
 
             out.add( modifierProtocolResponse );
             return;
         }
-        case 2:
+        case SwitchOverResponse.MESSAGE_CODE:
         {
             int statusCodeValue = in.readInt();
             Optional<StatusCode> statusCode = StatusCode.fromCodeValue( statusCodeValue );

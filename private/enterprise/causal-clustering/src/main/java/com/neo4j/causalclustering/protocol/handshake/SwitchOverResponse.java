@@ -9,7 +9,10 @@ import java.util.Objects;
 
 public class SwitchOverResponse implements ClientMessage
 {
+    static final int MESSAGE_CODE = 2;
+
     public static final SwitchOverResponse FAILURE = new SwitchOverResponse( StatusCode.FAILURE );
+
     private final StatusCode status;
 
     SwitchOverResponse( StatusCode status )
