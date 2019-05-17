@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.{AggregatingPlan, LogicalLeafPlan, LogicalPlan}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
   * Policy that determines what parts of an operator tree belong together.
@@ -45,6 +46,11 @@ object PipelineBreakingPolicy {
   def breakFor(logicalPlans: LogicalPlan*): PipelineBreakingPolicy =
     new PipelineBreakingPolicy {
       override def breakOn(lp: LogicalPlan): Boolean = logicalPlans.contains(lp)
+      override def onNestedPlanBreak(): Unit = ()
+    }
+  def breakForIds(ids: Id*): PipelineBreakingPolicy =
+    new PipelineBreakingPolicy {
+      override def breakOn(lp: LogicalPlan): Boolean = ids.contains(lp.id)
       override def onNestedPlanBreak(): Unit = ()
     }
 }

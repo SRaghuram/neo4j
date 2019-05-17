@@ -9,12 +9,14 @@ import org.neo4j.cypher.internal.logical.builder.{AbstractLogicalPlanBuilder, To
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Variable
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-/**
-  * Test help utility for hand-writing logical queries.
-  */
-class PhysicalPlanBuilder(breakingPolicy: PipelineBreakingPolicy)
-  extends AbstractLogicalPlanBuilder[PhysicalPlan, PhysicalPlanBuilder](new OnDemandTokenContext()) {
+import scala.collection.mutable.ArrayBuffer
+
+class ExecutionGraphDefinitionBuilder()
+  extends AbstractLogicalPlanBuilder[ExecutionGraphDefinition, ExecutionGraphDefinitionBuilder](new NotImplementedTokenContext()) {
+
+  private val plansToBreakOn = ArrayBuffer[Id]()
 
   private var semanticTable = new SemanticTable()
   private val tokenContext = tokenResolver.asInstanceOf[TokenContext]
@@ -23,17 +25,24 @@ class PhysicalPlanBuilder(breakingPolicy: PipelineBreakingPolicy)
     semanticTable = semanticTable.addNode(node)
   }
 
-  def build(readOnly: Boolean = true): PhysicalPlan = {
+  def withBreak(): this.type = {
+    plansToBreakOn += idOfLastPlan
+    this
+  }
+
+  def build(readOnly: Boolean = true): ExecutionGraphDefinition = {
     val logicalPlan = buildLogicalPlan()
-    PhysicalPlanner.plan(tokenContext,
+    val breakingPolicy = PipelineBreakingPolicy.breakForIds(plansToBreakOn: _*)
+    val physicalPlan = PhysicalPlanner.plan(tokenContext,
       logicalPlan,
       semanticTable,
       breakingPolicy,
       allocateArgumentSlots = true)
+    PipelineBuilder.build(breakingPolicy, physicalPlan)
   }
 }
 
-class OnDemandTokenContext extends TokenResolver with TokenContext {
+class NotImplementedTokenContext extends TokenResolver with TokenContext {
   override def getLabelName(id: Int): String = ???
 
   override def getOptLabelId(labelName: String): Option[Int] = ???
