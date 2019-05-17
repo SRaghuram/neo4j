@@ -32,7 +32,7 @@ import org.neo4j.values.virtual.MapValue
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "morsel"
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,

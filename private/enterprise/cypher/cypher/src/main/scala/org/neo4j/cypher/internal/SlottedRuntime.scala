@@ -33,7 +33,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   override val PRINT_FAILURE_STACK_TRACE = true
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
     try {
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printPlanInfo(query)

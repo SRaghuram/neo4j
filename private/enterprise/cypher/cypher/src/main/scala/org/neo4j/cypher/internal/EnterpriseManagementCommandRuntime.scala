@@ -43,7 +43,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
   override def name: String = "enterprise management-commands"
 
-  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext, username: String): ExecutionPlan = {
 
     def throwCantCompile(unknownPlan: LogicalPlan): Nothing = {
       throw new CantCompileQueryException(
@@ -57,16 +57,16 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // Set up test to confirm that you get the correct thing from community
     //  enterprise already have a test
     (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable)
-      .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
+      .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
   }
 
   private lazy val authManager = {
     resolver.resolveDependency(classOf[CommercialAuthManager])
   }
 
-  val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, Int]) => ExecutionPlan] = {
+  val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, Int], String) => ExecutionPlan] = {
     // SHOW USERS
-    case ShowUsers() => (_, _) =>
+    case ShowUsers() => (_, _, _) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
@@ -75,7 +75,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE USER foo WITH PASSWORD password
-    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _) =>
+    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _, _) =>
       // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
       val initialPassword = UTF8.encode(initialStringPassword)
       try{
@@ -112,7 +112,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       throw new IllegalStateException("Password not correctly supplied.")
 
     // DROP USER foo
-    case DropUser(userName) => (_, _) =>
+    case DropUser(userName) => (_, _, currentUser) =>
+      if (userName.equals(currentUser)) throw new InvalidArgumentsException(s"Deleting yourself (user '$userName') is not allowed.")
       UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
         """MATCH (user:User {name: $name}) DETACH DELETE user
           |RETURN user""".stripMargin,
@@ -124,7 +125,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // ALTER USER foo
-    case AlterUser(userName, initialStringPassword, None, requirePasswordChange, suspended) => (_, _) =>
+    case AlterUser(userName, initialStringPassword, None, requirePasswordChange, suspended) => (_, _, _) =>
       val params = Seq(
         initialStringPassword -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
@@ -155,7 +156,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
-    case ShowRoles(withUsers, showAll) => (_, _) =>
+    case ShowRoles(withUsers, showAll) => (_, _, _) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
                                                PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val query = if (showAll)
@@ -186,7 +187,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       }
 
     // CREATE ROLE foo AS COPY OF bar
-    case CreateRole(roleName, Some(from)) => (_, _) =>
+    case CreateRole(roleName, Some(from)) => (_, _, _) =>
       assertValidRoleName(roleName)
       val names: Array[AnyValue] = Array(Values.stringValue(from), Values.stringValue(roleName))
       UpdatingSystemCommandExecutionPlan("CopyRole", normalExecutionEngine,
@@ -200,7 +201,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE ROLE foo
-    case CreateRole(roleName, _) => (_, _) =>
+    case CreateRole(roleName, _) => (_, _, _) =>
       assertValidRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
         """CREATE (role:Role {name: $name})
@@ -211,7 +212,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // DROP ROLE foo
-    case DropRole(roleName) => (_, _) =>
+    case DropRole(roleName) => (_, _, _) =>
       assertNotPredefinedRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
@@ -223,7 +224,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // GRANT ROLE foo TO user
-    case GrantRolesToUsers(roleNames, userNames) => (_, _) =>
+    case GrantRolesToUsers(roleNames, userNames) => (_, _, _) =>
       val roles = Values.stringArray(roleNames: _*)
       val users = Values.stringArray(userNames: _*)
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
@@ -251,21 +252,21 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
-    case GrantTraverse(database, qualifier, roleName) => (_, _) =>
+    case GrantTraverse(database, qualifier, roleName) => (_, _, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
 
     case RevokeTraverse(database, qualifier, roleName) => (_, _) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
 
     // GRANT READ (prop) ON GRAPH foo NODES A (*) TO role
-    case GrantRead(resource, database, qualifier, roleName) => (_, _) =>
+    case GrantRead(resource, database, qualifier, roleName) => (_, _, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
     case RevokeRead(resource, database, qualifier, roleName) => (_, _) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(scope) => (_, _) =>
+    case ShowPrivileges(scope) => (_, _, _) =>
       val privilegeMatch =
         """
           |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
@@ -358,7 +359,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE DATABASE foo
-    case CreateDatabase(dbName) => (_, _) =>
+    case CreateDatabase(dbName) => (_, _, _) =>
       SystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         """CREATE (d:Database {name: $name})
           |SET d.status = $status
@@ -370,7 +371,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // DROP DATABASE foo
-    case DropDatabase(dbName) => (_, _) =>
+    case DropDatabase(dbName) => (_, _, _) =>
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
         """MATCH (d:Database {name: $name})
           |REMOVE d:Database

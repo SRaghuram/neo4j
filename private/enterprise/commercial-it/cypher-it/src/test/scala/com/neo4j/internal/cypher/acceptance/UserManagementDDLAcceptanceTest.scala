@@ -311,6 +311,28 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo")))
   }
 
+  // TODO currently succeeds in removing 'neo4j'
+  //  due to the current test setup not having a current user
+  ignore("should fail on dropping current user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    // TODO: Make sure that neo4j is the current user
+
+    try {
+      // WHEN
+      execute("DROP USER neo4j")
+
+      fail("Expected error \"Deleting yourself (user 'neo4j') is not allowed.\" but succeeded.")
+    } catch {
+      // THEN
+      case e: Exception => e.getMessage should be("Deleting yourself (user 'neo4j') is not allowed.")
+    }
+
+    // THEN
+    execute("SHOW USERS").toSet should be(neo4jUser)
+  }
+
   test("should fail on dropping non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
