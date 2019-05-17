@@ -5,21 +5,28 @@
  */
 package org.neo4j.cypher.internal
 
+import java.util
+
 import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager, Resource, ResourcePrivilege}
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.procs.{NoResultSystemCommandExecutionPlan, QueryHandler, SystemCommandExecutionPlan, UpdatingSystemCommandExecutionPlan}
+import org.neo4j.cypher.internal.procs._
+import org.neo4j.cypher.internal.result.InternalExecutionResult
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
+import org.neo4j.cypher.result.QueryResult
+import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.dbms.database.DatabaseNotFoundException
+import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.kernel.impl.query.QueryExecution
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
+import org.neo4j.values.storable.{StringValue, Value, Values}
 import org.neo4j.values.virtual.VirtualValues
 
 /**
@@ -187,21 +194,94 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _) =>
-      val (grantee: Value, mainMatch, userReturn) = scope match {
-        case ast.ShowRolePrivileges(name) => (Values.stringValue(name), "OPTIONAL MATCH (r:Role) WHERE r.name = $grantee WITH r", "")
-        case ast.ShowUserPrivileges(name) => (Values.stringValue(name), "OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $grantee WITH r, u", ", u.name AS user")
-        case ast.ShowAllPrivileges() => (Values.NO_VALUE, "OPTIONAL MATCH (r:Role) WITH r", "")
+      val privilegeMatch =
+        """
+          |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
+          |    (a)-[:APPLIES_TO]->(res:Resource),
+          |    (s)-[:FOR]->(d),
+          |    (s)-[:QUALIFIED]->(q)
+          |
+        """.stripMargin
+      val returnColumns =
+        """
+          |RETURN type(g) AS grant, a.action AS action, res.type AS resource, res.arg1 AS arg1,
+          |coalesce(d.name, '*') AS database, q.label AS label, r.name AS role
+        """.stripMargin
+
+      val (grantee: Value, query) = scope match {
+        case ast.ShowRolePrivileges(name) => (Values.stringValue(name),
+          s"""
+             |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
+             |$privilegeMatch
+             |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
+             |$returnColumns
+          """.stripMargin
+        )
+        case ast.ShowUserPrivileges(name) => (Values.stringValue(name),
+          s"""
+             |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
+             |$privilegeMatch
+             |WITH g, a, res, d, q, r, u ORDER BY d.name, u.name, r.name, q.label
+             |$returnColumns, u.name AS user
+          """.stripMargin
+        )
+        case ast.ShowAllPrivileges() => (Values.NO_VALUE,
+          s"""
+             |OPTIONAL MATCH (r:Role) WITH r
+             |$privilegeMatch
+             |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
+             |$returnColumns
+          """.stripMargin
+        )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine,
-        s"""$mainMatch
-           |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
-           |    (a)-[:APPLIES_TO]->(res:Resource),
-           |    (s)-[:FOR]->(d),
-           |    (s)-[:QUALIFIED]->(q)
-           |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
-           |RETURN type(g) AS grant, a.action AS action, res.type AS resource, coalesce(d.name, '*') AS database, collect(q.label) AS labels, r.name AS role$userReturn""".stripMargin,
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query,
         VirtualValues.map(Array("grantee"), Array(grantee)),
+        (q: QueryExecution) => new SystemCommandExecutionResult(q.asInstanceOf[InternalExecutionResult]) {
+          override def fieldNames(): Array[String] = {
+            val fields = inner.fieldNames()
+            fields.slice(0, 3) ++ fields.slice(4, fields.length)
+          }
+
+          lazy val innerIterator: ResourceIterator[util.Map[String, AnyRef]] = inner.javaIterator
+
+          override def asIterator: ResourceIterator[util.Map[String, AnyRef]] = new ResourceIterator[util.Map[String, AnyRef]] {
+            override def close(): Unit = innerIterator.close()
+
+            override def hasNext: Boolean = innerIterator.hasNext
+
+            override def next(): util.Map[String, AnyRef] = {
+              import scala.collection.JavaConverters._
+              val row = innerIterator.next()
+              val mapped = fieldNames().foldLeft(Map.empty[String, AnyRef]) { (a, k) =>
+                if (k == "resourceArg1") a
+                else if (k == "resource" && row.get(k) == "property") a + (k -> s"property(${row.get("resourceArg1")})")
+                else a + (k -> row.get(k))
+              }
+              mapped.asJava
+            }
+          }
+
+          override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
+            inner.accept(new QueryResultVisitor[EX]{
+              override def visit(row: QueryResult.Record): Boolean = {
+                val mappedRow = new QueryResult.Record(){
+                  override def fields(): Array[AnyValue] = {
+                    val fields = row.fields()
+                    if (fields(2).equals(Values.stringValue("property"))) {
+                      val property = fields(3).asInstanceOf[StringValue].stringValue()
+                      fields.slice(0, 2) ++ Array(Values.stringValue(s"property($property)")) ++ fields.slice(4, fields.length)
+                    } else {
+                      fields.slice(0, 3) ++ fields.slice(4, fields.length)
+                    }
+                  }
+                }
+                visitor.visit(mappedRow)
+              }
+            })
+          }
+
+        },
         e => throw new InvalidArgumentsException(s"The specified grantee '${grantee.asObject()}' does not exist.", e)
       )
 
@@ -214,7 +294,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online)),
-        e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.", e)
+        onError = e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.", e)
       )
 
     // DROP DATABASE foo

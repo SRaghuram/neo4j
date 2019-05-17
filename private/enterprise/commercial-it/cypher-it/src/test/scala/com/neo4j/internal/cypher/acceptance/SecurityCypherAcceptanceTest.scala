@@ -158,7 +158,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     ))
   }
 
-  test("should list privileges for all users") {
+  test("should show privileges for all users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -166,41 +166,37 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ALL PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
-    val grantSchema = Map("grant" -> "GRANTED", "resource" -> "schema", "database" -> "*", "labels" -> Seq("*"))
-    val grantToken = Map("grant" -> "GRANTED", "resource" -> "token", "database" -> "*", "labels" -> Seq("*"))
-    val grantSystem = Map("grant" -> "GRANTED", "resource" -> "system", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
-      grantGraph ++ Map("action" -> "find", "role" -> "reader"),
-      grantGraph ++ Map("action" -> "read", "role" -> "reader"),
+      grantGraph().role("reader").action("find").map,
+      grantGraph().role("reader").action("read").map,
 
-      grantGraph ++ Map("action" -> "find", "role" -> "editor"),
-      grantGraph ++ Map("action" -> "read", "role" -> "editor"),
-      grantGraph ++ Map("action" -> "write", "role" -> "editor"),
+      grantGraph().role("editor").action("find").map,
+      grantGraph().role("editor").action("read").map,
+      grantGraph().role("editor").action("write").map,
 
-      grantGraph ++ Map("action" -> "find", "role" -> "publisher"),
-      grantGraph ++ Map("action" -> "read", "role" -> "publisher"),
-      grantGraph ++ Map("action" -> "write", "role" -> "publisher"),
-      grantToken ++ Map("action" -> "write", "role" -> "publisher"),
+      grantGraph().role("publisher").action("find").map,
+      grantGraph().role("publisher").action("read").map,
+      grantGraph().role("publisher").action("write").map,
+      grantToken().role("publisher").action("write").map,
 
-      grantGraph ++ Map("action" -> "find", "role" -> "architect"),
-      grantGraph ++ Map("action" -> "read", "role" -> "architect"),
-      grantGraph ++ Map("action" -> "write", "role" -> "architect"),
-      grantToken ++ Map("action" -> "write", "role" -> "architect"),
-      grantSchema ++ Map("action" -> "write", "role" -> "architect"),
+      grantGraph().role("architect").action("find").map,
+      grantGraph().role("architect").action("read").map,
+      grantGraph().role("architect").action("write").map,
+      grantToken().role("architect").action("write").map,
+      grantSchema().role("architect").action("write").map,
 
-      grantGraph ++ Map("action" -> "find", "role" -> "admin"),
-      grantGraph ++ Map("action" -> "read", "role" -> "admin"),
-      grantGraph ++ Map("action" -> "write", "role" -> "admin"),
-      grantSystem ++ Map("action" -> "write", "role" -> "admin"),
-      grantToken ++ Map("action" -> "write", "role" -> "admin"),
-      grantSchema ++ Map("action" -> "write", "role" -> "admin"),
+      grantGraph().role("admin").action("find").map,
+      grantGraph().role("admin").action("read").map,
+      grantGraph().role("admin").action("write").map,
+      grantSystem().role("admin").action("write").map,
+      grantToken().role("admin").action("write").map,
+      grantSchema().role("admin").action("write").map,
     )
 
     result.toSet should be(expected)
   }
 
-  test("should list privileges for specific role") {
+  test("should show privileges for specific role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -208,15 +204,55 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     val result = execute("SHOW ROLE editor PRIVILEGES")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
     val expected = Set(
-      grantGraph ++ Map("action" -> "find", "role" -> "editor"),
-      grantGraph ++ Map("action" -> "read", "role" -> "editor"),
-      grantGraph ++ Map("action" -> "write", "role" -> "editor")
+      grantGraph().role("editor").action("find").map,
+      grantGraph().role("editor").action("read").map,
+      grantGraph().role("editor").action("write").map
     )
 
     result.toSet should be(expected)
   }
+
+  test("should show privileges for specific user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW USER neo4j PRIVILEGES")
+
+    // THEN
+    val expected = Set(
+      grantGraph().role("admin").user("neo4j").action("find").map,
+      grantGraph().role("admin").user("neo4j").action("read").map,
+      grantGraph().role("admin").user("neo4j").action("write").map,
+      grantSystem().role("admin").user("neo4j").action("write").map,
+      grantToken().role("admin").user("neo4j").action("write").map,
+      grantSchema().role("admin").user("neo4j").action("write").map
+    )
+
+    result.toSet should be(expected)
+  }
+
+  private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
+    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
+
+    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
+
+    def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
+
+    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
+
+    def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
+
+    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
+
+    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
+  }
+  private val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  private def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
+  private def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
+  private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
+  private def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -227,9 +263,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "find", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").map))
   }
 
   test("should grant traversal privilege to custom role for all databases but only a specific label") {
@@ -241,9 +275,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "*", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "find", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").label("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and a specific label") {
@@ -256,9 +288,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "find", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").database("foo").label("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and all labels") {
@@ -271,9 +301,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "find", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").database("foo").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and multiple labels") {
@@ -287,9 +315,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "graph", "database" -> "foo", "labels" -> Seq("A", "B"))
-    val expected = Set(grantGraph ++ Map("action" -> "find", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantGraph().action("find").role("custom").database("foo").label("A").map,
+      grantGraph().action("find").role("custom").database("foo").label("B").map
+    ))
   }
 
   ignore("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
@@ -325,9 +354,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "all_properties", "database" -> "*", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").resource("all_properties").map))
   }
 
   test("should grant read privilege to custom role for all databases but only a specific label") {
@@ -339,9 +366,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "all_properties", "database" -> "*", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").resource("all_properties").label("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and a specific label") {
@@ -354,9 +379,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "all_properties", "database" -> "foo", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and all labels") {
@@ -369,9 +392,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "all_properties", "database" -> "foo", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").database("foo").resource("all_properties").map))
   }
 
   test("should grant read privilege to custom role for a specific database and multiple labels") {
@@ -385,9 +406,10 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH foo NODES B (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "all_properties", "database" -> "foo", "labels" -> Seq("A", "B"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("A").map,
+      grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("B").map
+    ))
   }
 
   test("should fail grant read privilege with missing database") {
@@ -408,9 +430,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "property", "database" -> "*", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().role("custom").action("read").property("bar").map))
   }
 
   test("should grant read privilege for specific property to custom role for all databases but only a specific label") {
@@ -422,9 +442,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "property", "database" -> "*", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().role("custom").action("read").property("bar").label("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and a specific label") {
@@ -437,9 +455,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "property", "database" -> "foo", "labels" -> Seq("A"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and all labels") {
@@ -452,9 +468,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "property", "database" -> "foo", "labels" -> Seq("*"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().database("foo").role("custom").action("read").property("bar").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and multiple labels") {
@@ -468,9 +482,44 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH foo NODES B (*) TO custom")
 
     // THEN
-    val grantGraph = Map("grant" -> "GRANTED", "resource" -> "property", "database" -> "foo", "labels" -> Seq("A", "B"))
-    val expected = Set(grantGraph ++ Map("action" -> "read", "role" -> "custom"))
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
+      grantGraph().database("foo").role("custom").action("read").property("bar").label("B").map
+    ))
+  }
+
+  test("should grant read privilege for multiple properties to custom role for a specific database and specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT READ (baz) ON GRAPH foo NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
+      grantGraph().database("foo").role("custom").action("read").property("baz").label("A").map
+    ))
+  }
+
+  test("should grant read privilege for multiple properties to custom role for a specific database and multiple labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT READ (baz) ON GRAPH foo NODES B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
+      grantGraph().database("foo").role("custom").action("read").property("baz").label("B").map,
+    ))
   }
 
   test("should create role") {
