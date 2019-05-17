@@ -12,7 +12,7 @@ set -u
 if [ $# -lt 21 ] ; then
     echo "Expected at least 21 arguments, but got $#"
     echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id tarball jvm_args jmh_args neo4j_config_path jvm_path with_jfr with_async triggered_by"
-    exit -1
+    exit 1
 fi
 
 neo4j_version="${1}"
