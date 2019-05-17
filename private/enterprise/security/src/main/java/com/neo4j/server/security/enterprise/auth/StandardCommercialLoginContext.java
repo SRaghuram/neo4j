@@ -353,7 +353,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty.getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
+                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
                                 for ( String label : privilege.getSegment().getLabels() )
                                 {
                                     int labelId = resolveLabelId( label );
