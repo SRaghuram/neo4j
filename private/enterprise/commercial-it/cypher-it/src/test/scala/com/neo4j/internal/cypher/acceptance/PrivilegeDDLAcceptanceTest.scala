@@ -59,15 +59,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on listing privileges for users when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
   }
 
   test("should show privileges for specific role") {
@@ -108,15 +104,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on listing privileges for roles when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW PRIVILEGE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW PRIVILEGE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
   }
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
@@ -132,15 +124,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on granting traversal privilege to custom role when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-
-      fail("Expected error \"Trying to run `CATALOG GRANT TRAVERSE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT TRAVERSE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG GRANT TRAVERSE` against non-system database."
   }
 
   test("should grant traversal privilege to custom role for all databases but only a specific label") {
@@ -787,6 +775,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE fairy TO Bar")
     execute("GRANT ROLE fairy TO Zet")
     // TODO: execute("GRANT ROLE fairy TO Bar, Zet")
+    //  also test with non-existing role/user (whole list, part of list..)
 
     // THEN
     val result = execute("SHOW USERS")
@@ -873,18 +862,29 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should do nothing when granting non-existing role to user") {
+    // TODO should fail
     // GIVEN
+    val defaultRolesWithUsers = Set(
+      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
+      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
+    )
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 
   test("should do nothing when granting role to non-existing user") {
+    // TODO should fail
     // GIVEN
     val rolesWithUsers = Set(
       Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
@@ -907,6 +907,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should do nothing when granting non-existing role to non-existing user") {
+    // TODO should fail
     // GIVEN
     val defaultRolesWithUsers = Set(
       Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
@@ -927,15 +928,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on granting role to user when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
-
-      fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -943,15 +940,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE dragon")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
-
-      fail("Expected error \"Trying to run `CATALOG GRANT ROLE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG GRANT ROLE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
   }
 
   private val neo4jUser = user("neo4j", Seq("admin"))

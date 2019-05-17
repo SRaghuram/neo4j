@@ -10,6 +10,7 @@ import org.neo4j.cypher._
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
+import org.parboiled.errors.ParserRuntimeException
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val neo4jUser = user("neo4j", Seq("admin"))
@@ -26,15 +27,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on listing users when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW USERS")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW USERS` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW USERS` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW USERS` against non-system database."
   }
 
   test("should list all users") {
@@ -90,15 +87,12 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD ''")
-
-      fail("Expected error \"A password cannot be empty.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("A password cannot be empty.")
-    }
+    } should have message "A password cannot be empty."
+
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
@@ -121,15 +115,12 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    the[ParameterWrongTypeException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> 123))
-
-      fail("Expected error \"Only string values are accepted as password, got: Integer\" but succeeded.")
-    } catch {
       // THEN
-      case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: Integer")
-    }
+    } should have message "Only string values are accepted as password, got: Integer"
+
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
@@ -138,15 +129,12 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    the[ParameterNotFoundException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED")
-
-      fail("Expected error \"Expected parameter(s): password\" but succeeded.")
-    } catch {
       // THEN
-      case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
-    }
+    } should have message "Expected parameter(s): password"
+
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
@@ -155,28 +143,21 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    the[ParameterNotFoundException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> null))
-
-      fail("Expected error \"Expected parameter(s): password\" but succeeded.")
-    } catch {
       // THEN
-      case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
-    }
+    } should have message "Expected parameter(s): password"
+
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail on creating user when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
-
-      fail("Expected error \"Trying to run `CATALOG CREATE USER` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE USER` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG CREATE USER` against non-system database."
   }
 
   test("should create user with password change not required") {
@@ -238,15 +219,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE USER neo4j SET PASSWORD 'password'")
-
-      fail("Expected error \"The specified user 'neo4j' already exists.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("The specified user 'neo4j' already exists.")
-    }
+    } should have message "The specified user 'neo4j' already exists."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -257,29 +234,23 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    val exceptionIllegalCharacter = the[ParserRuntimeException] thrownBy {
       // WHEN
       execute("CREATE USER `neo:4j` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
-
-      fail("Expected error \"Username 'neo:4j' contains illegal characters.\" but succeeded.")
-    } catch {
-      // THEN
-      case e: Exception => e.getMessage.contains("Username 'neo:4j' contains illegal characters.")
     }
+    // THEN
+    exceptionIllegalCharacter.getMessage should include("Username 'neo:4j' contains illegal characters.")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    try {
+    val exceptionUnescaped = the[SyntaxException] thrownBy {
       // WHEN
       execute("CREATE USER `3neo4j` SET PASSWORD 'password'")
       execute("CREATE USER 4neo4j SET PASSWORD 'password'")
-
-      fail("Expected error \"Invalid input '4'\" for the unescaped username but succeeded.")
-    } catch {
-      // THEN
-      case e: Exception => e.getMessage.contains("Invalid input '4'")
     }
+    // THEN
+    exceptionUnescaped.getMessage should include("Invalid input '4'")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
@@ -319,15 +290,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     // TODO: Make sure that neo4j is the current user
 
-    try {
+    the[InvalidArgumentsException] thrownBy { // TODO update to correct Exception class
       // WHEN
       execute("DROP USER neo4j")
-
-      fail("Expected error \"Deleting yourself (user 'neo4j') is not allowed.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("Deleting yourself (user 'neo4j') is not allowed.")
-    }
+    } should have message "Deleting yourself (user 'neo4j') is not allowed."
 
     // THEN
     execute("SHOW USERS").toSet should be(neo4jUser)
@@ -338,43 +305,32 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP USER foo")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
-    try {
+    // and an invalid (non-existing) one
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP USER `:foo`")
-
-      fail("Expected error \"User ':foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("User ':foo' does not exist.")
-    }
+    } should have message "User ':foo' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
   test("should fail on dropping user when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("DROP USER foo")
-
-      fail("Expected error \"Trying to run `CATALOG DROP USER` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP USER` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG DROP USER` against non-system database."
   }
 
   test("should alter user password") {
@@ -409,27 +365,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD ''")
-
-      fail("Expected error \"A password cannot be empty.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("A password cannot be empty.")
-    }
+    } should have message "A password cannot be empty."
 
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
-
-      fail("Expected error \"Old password and new password cannot be the same.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("Old password and new password cannot be the same.")
-    }
+    } should have message "Old password and new password cannot be the same."
 
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -452,15 +400,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
-    try {
+    the[ParameterWrongTypeException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> Seq("baz", "boo")))
-
-      fail("Expected error \"Only string values are accepted as password, got: List\" but succeeded.")
-    } catch {
       // THEN
-      case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
-    }
+    } should have message "Only string values are accepted as password, got: List"
   }
 
   test("should fail on alter user password as string and parameter") {
@@ -468,15 +412,12 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
-    try {
+    val exception = the[SyntaxException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'imAString'+$password", Map("password" -> "imAParameter"))
-
-      fail("Expected error \"Invalid input '+': expected whitespace, SET, ';' or end of input\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage.contains("Invalid input '+': expected whitespace, SET, ';' or end of input")
     }
+    exception.getMessage should include("Invalid input '+': expected whitespace, SET, ';' or end of input")
   }
 
   test("should fail on altering user password as missing parameter") {
@@ -484,27 +425,19 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
-    try {
+    the[ParameterNotFoundException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password")
-
-      fail("Expected error \"Expected parameter(s): password\" but succeeded.")
-    } catch {
       // THEN
-      case e: ParameterNotFoundException => e.getMessage should be("Expected parameter(s): password")
-    }
+    } should have message "Expected parameter(s): password"
   }
 
   test("should fail on altering user when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
-
-      fail("Expected error \"Trying to run `CATALOG ALTER USER` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG ALTER USER` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG ALTER USER` against non-system database."
   }
 
   test("should alter user password mode") {
@@ -664,150 +597,110 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz'")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: parameter password (and illegal username)") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER `neo:4j` SET PASSWORD $password", Map("password" -> "baz"))
-
-      fail("Expected error \"User 'neo:4j' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'neo:4j' does not exist.")
-    }
+    } should have message "User 'neo:4j' does not exist."
   }
 
   test("should fail on altering a non-existing user: string password and password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: parameter password and password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE REQUIRED", Map("password" -> "baz"))
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: string password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS ACTIVE")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: parameter password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: string password, password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED SET STATUS ACTIVE")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS SUSPENDED")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a non-existing user: status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET STATUS SUSPENDED")
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   test("should fail on altering a dropped user") {
@@ -816,15 +709,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE USER foo SET PASSWORD 'password'")
     execute("DROP USER foo")
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
-
-      fail("Expected error \"User 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: InvalidArgumentsException => e.getMessage should be("User 'foo' does not exist.")
-    }
+    } should have message "User 'foo' does not exist."
   }
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {

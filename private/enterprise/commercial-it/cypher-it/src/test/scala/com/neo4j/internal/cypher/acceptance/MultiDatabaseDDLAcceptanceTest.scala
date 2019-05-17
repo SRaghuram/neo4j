@@ -6,13 +6,15 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.internal.DatabaseStatus
+import org.neo4j.dbms.database.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
+import org.parboiled.errors.ParserRuntimeException
 
 class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
@@ -58,18 +60,21 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     result.toList should be(List.empty)
+
+    // and an invalid (non-existing) one
+    // WHEN
+    val result2 = execute("SHOW DATABASE ``")
+
+    // THEN
+    result2.toList should be(List.empty)
   }
 
   test("should fail on listing a default database when not on system database") {
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW DATABASE neo4j")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW DATABASE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW DATABASE` against non-system database."
   }
 
   test("should list default databases") {
@@ -101,15 +106,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on listing default databases when not on system database") {
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW DATABASES")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW DATABASES` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW DATABASES` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW DATABASES` against non-system database."
   }
 
   test("should create database in systemdb") {
@@ -131,27 +132,30 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
-    try{
+    the [DatabaseExistsException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
-
-      fail("Expected error \"The specified database 'foo' already exists\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("The specified database 'foo' already exists")
+    } should have message "The specified database 'foo' already exists."
+  }
+
+  test("should fail on creating a database with invalid name") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    val exception = the [ParserRuntimeException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE ``")
     }
+    // THEN
+    exception.getMessage should include("The provided database name is empty.")
   }
 
   test("should fail on creating a database when not on system database") {
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
-
-      fail("Expected error \"Trying to run `CATALOG CREATE DATABASE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE DATABASE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG CREATE DATABASE` against non-system database."
   }
 
   test("should create and drop databases") {
@@ -188,15 +192,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail on dropping a non-existing database") {
     setup( defaultConfig )
 
-    try {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
-
-      fail("Expected error \"\"Database 'foo' does not exist\"\"")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
-    }
+    } should have message "Database 'foo' does not exist."
+
+    // and an invalid (non-existing) one
+    the [DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE ``")
+      // THEN
+    } should have message "Database '' does not exist."
   }
 
   test("should fail on dropping a dropped database") {
@@ -208,15 +215,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    try {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
-
-      fail("Expected error \"Database 'foo' does not exist.\"")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist.")
-    }
+    } should have message "Database 'foo' does not exist."
   }
 
   test("should fail on dropping a database when not on system database") {
@@ -225,15 +228,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
-
-      fail("Expected error \"Trying to run `CATALOG DROP DATABASE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP DATABASE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG DROP DATABASE` against non-system database."
   }
 
   test("should start database on create") {
@@ -250,19 +249,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail on starting a non-existing database") {
     setup( defaultConfig )
 
-    try {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
-
-      fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
-    }
+    } should have message "Database 'foo' does not exist."
 
-    // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty)
+    // and an invalid (non-existing) one
+    the [DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("START DATABASE ``")
+      // THEN
+    } should have message "Database '' does not exist."
   }
 
   test("should fail on starting a dropped database") {
@@ -273,15 +271,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    try {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
-
-      fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
-    }
+    } should have message "Database 'foo' does not exist."
 
     // THEN
     val result = execute("SHOW DATABASE foo")
@@ -330,15 +324,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
-
-      fail("Expected error \"Trying to run `CATALOG START DATABASE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG START DATABASE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG START DATABASE` against non-system database."
   }
 
   test("should stop database") {
@@ -360,19 +350,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail on stopping a non-existing database") {
     setup( defaultConfig )
 
-    try{
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
-
-      fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
-    }
+    } should have message "Database 'foo' does not exist."
 
-    // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List.empty)
+    // and an invalid (non-existing) one
+    the [DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE ``")
+      // THEN
+    } should have message "Database '' does not exist."
   }
 
   test("should fail on stopping a dropped database") {
@@ -383,15 +372,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    try {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
-
-      fail("Expected error \"Database 'foo' does not exist\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Database 'foo' does not exist")
-    }
+    } should have message "Database 'foo' does not exist."
 
     // THEN
     val result = execute("SHOW DATABASE foo")
@@ -399,15 +384,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on stopping a database when not on system database") {
-    try {
+    the [IllegalStateException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
-
-      fail("Expected error \"Trying to run `CATALOG STOP DATABASE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG STOP DATABASE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG STOP DATABASE` against non-system database."
   }
 
   test("should be able to stop a stopped database") {

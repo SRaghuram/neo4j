@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.dbms.api.DatabaseNotFoundException
+import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.impl.query.QueryExecution
@@ -367,7 +367,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online)),
-        onError = e => throw new InvalidArgumentsException(s"The specified database '$dbName' already exists.", e)
+        onError = e => throw new DatabaseExistsException(s"The specified database '$dbName' already exists.", e)
       )
 
     // DROP DATABASE foo

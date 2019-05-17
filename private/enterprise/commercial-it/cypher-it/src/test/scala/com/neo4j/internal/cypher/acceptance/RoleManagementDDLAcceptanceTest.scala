@@ -6,7 +6,9 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import org.parboiled.errors.ParserRuntimeException
 
 class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val defaultRoles = Set(
@@ -38,15 +40,11 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on listing roles when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW ROLES")
-
-      fail("Expected error \"Trying to run `CATALOG SHOW ALL ROLES` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG SHOW ALL ROLES` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG SHOW ALL ROLES` against non-system database."
   }
 
   test("should list populated default roles") {
@@ -149,75 +147,92 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     execute("CREATE ROLE foo")
 
-    // THEN
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
   test("should fail on creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
-
-      fail("Expected error \"The specified role 'foo' already exists.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("The specified role 'foo' already exists.")
-    }
+    } should have message "The specified role 'foo' already exists."
 
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+  }
+
+  test("should fail on creating role with invalid name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    val exception = the[ParserRuntimeException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE ``")
+      // THEN
+    }
+    exception.getMessage should include("The provided role name is empty.")
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
   test("should fail on creating role when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
-
-      fail("Expected error \"Trying to run `CATALOG CREATE ROLE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG CREATE ROLE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG CREATE ROLE` against non-system database."
   }
 
   test("should create role from existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
     // WHEN
     execute("CREATE ROLE bar AS COPY OF foo")
 
-    // THEN
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
   }
 
   test("should fail on creating from non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
-
-      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
-    }
+    } should have message "Cannot create role 'bar' from non-existent role 'foo'."
 
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set.empty)
+    // and an invalid (non-existing) one
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE bar AS COPY OF ``")
+      // THEN
+    } should have message "Cannot create role 'bar' from non-existent role ''."
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+  }
+
+  test("should fail on creating role with invalid name from role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+
+    val exception = the[ParserRuntimeException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE `` AS COPY OF foo")
+      // THEN
+    }
+    exception.getMessage should include("The provided role name is empty.")
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
   test("should fail on creating already existing role from other role") {
@@ -225,57 +240,42 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
     execute("CREATE ROLE bar")
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
-
-      fail("Expected error \"The specified role 'bar' already exists.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("The specified role 'bar' already exists.")
-    }
+    } should have message "The specified role 'bar' already exists."
 
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
   }
 
   test("should fail on creating existing role from non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
-
-      fail("Expected error \"Cannot create role 'bar' from non-existent role 'foo'.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("Cannot create role 'bar' from non-existent role 'foo'.")
-    }
+    } should have message "Cannot create role 'bar' from non-existent role 'foo'."
 
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
   }
 
   test("should drop role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
     // WHEN
     execute("DROP ROLE foo")
 
-    // THEN
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
   test("should fail on dropping default role") {
@@ -283,15 +283,11 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute(s"DROP ROLE ${PredefinedRoles.READER}")
-
-      fail("Expected error \"'%s' is a predefined role and can not be deleted or modified.\" but succeeded.".format(PredefinedRoles.READER))
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("'%s' is a predefined role and can not be deleted or modified.".format(PredefinedRoles.READER))
-    }
+    } should have message "'%s' is a predefined role and can not be deleted or modified.".format(PredefinedRoles.READER)
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
@@ -301,30 +297,27 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    try {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
-
-      fail("Expected error \"Role 'foo' does not exist.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should be("Role 'foo' does not exist.")
-    }
+    } should have message "Role 'foo' does not exist."
 
-    // THEN
-    val result2 = execute("SHOW ROLES")
-    result2.toSet should be(defaultRoles ++ Set.empty)
+    // and an invalid (non-existing) one
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DROP ROLE ``")
+      // THEN
+    } should have message "Role '' does not exist."
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
   test("should fail on dropping role when not on system database") {
-    try {
+    the[IllegalStateException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
-
-      fail("Expected error \"Trying to run `CATALOG DROP ROLE` against non-system database.\" but succeeded.")
-    } catch {
       // THEN
-      case e: Exception => e.getMessage should startWith("Trying to run `CATALOG DROP ROLE` against non-system database")
-    }
+    } should have message "Trying to run `CATALOG DROP ROLE` against non-system database."
   }
 }
