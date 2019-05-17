@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
 
 import java.util.Collection;
@@ -46,7 +47,7 @@ public interface ProtocolInstaller<O extends ProtocolInstaller.Orientation>
     /**
      * For testing
      */
-    Collection<Collection<Protocol.ModifierProtocol>> modifiers();
+    Collection<Collection<ModifierProtocol>> modifiers();
 
     interface Orientation
     {

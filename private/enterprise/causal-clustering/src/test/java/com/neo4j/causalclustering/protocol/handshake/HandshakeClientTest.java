@@ -6,9 +6,12 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -19,10 +22,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.ROT13;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.SNAPPY;
 import static java.util.Arrays.asList;

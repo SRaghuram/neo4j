@@ -6,9 +6,10 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -18,10 +19,7 @@ import java.util.concurrent.CompletionException;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.handshake.StatusCode.FAILURE;
 import static com.neo4j.causalclustering.protocol.handshake.StatusCode.SUCCESS;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols.RAFT_1;
@@ -29,6 +27,8 @@ import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestMo
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.LZO;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.ROT13;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.SNAPPY;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -16,12 +16,12 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class ModifierProtocolRepository extends ProtocolRepository<String,Protocol.ModifierProtocol>
+public class ModifierProtocolRepository extends ProtocolRepository<String,ModifierProtocol>
 {
     private final Collection<ModifierSupportedProtocols> supportedProtocols;
     private final Map<String,ModifierSupportedProtocols> supportedProtocolsLookup;
 
-    public ModifierProtocolRepository( Protocol.ModifierProtocol[] protocols, Collection<ModifierSupportedProtocols> supportedProtocols )
+    public ModifierProtocolRepository( ModifierProtocol[] protocols, Collection<ModifierSupportedProtocols> supportedProtocols )
     {
         super( protocols, getModifierProtocolComparator( supportedProtocols ), ModifierProtocolSelection::new );
         this.supportedProtocols = Collections.unmodifiableCollection( supportedProtocols );
@@ -29,7 +29,7 @@ public class ModifierProtocolRepository extends ProtocolRepository<String,Protoc
                 .collect( Collectors.toMap( supp -> supp.identifier().canonicalName(), Function.identity() ) );
     }
 
-    static Function<String,Comparator<Protocol.ModifierProtocol>> getModifierProtocolComparator(
+    static Function<String,Comparator<ModifierProtocol>> getModifierProtocolComparator(
             Collection<ModifierSupportedProtocols> supportedProtocols )
     {
         return getModifierProtocolComparator( versionMap( supportedProtocols ) );
@@ -41,10 +41,10 @@ public class ModifierProtocolRepository extends ProtocolRepository<String,Protoc
                 .collect( Collectors.toMap( supportedProtocol -> supportedProtocol.identifier().canonicalName(), SupportedProtocols::versions ) );
     }
 
-    private static Function<String,Comparator<Protocol.ModifierProtocol>> getModifierProtocolComparator( Map<String,List<String>> versionMap )
+    private static Function<String,Comparator<ModifierProtocol>> getModifierProtocolComparator( Map<String,List<String>> versionMap )
     {
         return protocolName -> {
-            Comparator<Protocol.ModifierProtocol> positionalComparator = Comparator.comparing( modifierProtocol ->
+            Comparator<ModifierProtocol> positionalComparator = Comparator.comparing( modifierProtocol ->
                     Optional.ofNullable( versionMap.get( protocolName ) )
                     .map( versions -> byPosition( modifierProtocol, versions ) )
                     .orElse( 0 ) );
@@ -54,7 +54,7 @@ public class ModifierProtocolRepository extends ProtocolRepository<String,Protoc
     }
 
     // Needed if supported modifiers has an empty version list
-    private static Comparator<Protocol.ModifierProtocol> fallBackToVersionNumbers( Comparator<Protocol.ModifierProtocol> positionalComparator )
+    private static Comparator<ModifierProtocol> fallBackToVersionNumbers( Comparator<ModifierProtocol> positionalComparator )
     {
         return positionalComparator.thenComparing( versionNumberComparator() );
     }
@@ -62,13 +62,13 @@ public class ModifierProtocolRepository extends ProtocolRepository<String,Protoc
     /**
      * @return Greatest is head of versions, least is not included in versions
      */
-    private static Integer byPosition( Protocol.ModifierProtocol modifierProtocol, List<String> versions )
+    private static Integer byPosition( ModifierProtocol modifierProtocol, List<String> versions )
     {
         int index = versions.indexOf( modifierProtocol.implementation() );
         return index == -1 ? Integer.MIN_VALUE : -index;
     }
 
-    public Optional<SupportedProtocols<String,Protocol.ModifierProtocol>> supportedProtocolFor( String protocolName )
+    public Optional<SupportedProtocols<String,ModifierProtocol>> supportedProtocolFor( String protocolName )
     {
         return Optional.ofNullable( supportedProtocolsLookup.get( protocolName ) );
     }

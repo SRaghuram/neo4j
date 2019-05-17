@@ -14,8 +14,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 
 import java.io.File;
 import java.util.OptionalLong;

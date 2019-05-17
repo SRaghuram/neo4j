@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
-import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 
 import java.io.File;
 import java.time.Duration;
@@ -118,7 +118,7 @@ class CatchupClient implements VersionedCatchupClients
 
         private OperationProgressMonitor<RESULT> performRequest( ApplicationProtocol protocol, CatchupChannel catchupChannel )
         {
-            if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
+            if ( protocol.equals( ApplicationProtocols.CATCHUP_3 ) )
             {
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );
                 return performRequest( client, v3Request, protocol, catchupChannel );

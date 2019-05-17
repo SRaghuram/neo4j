@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -16,8 +16,8 @@ import java.util.concurrent.CompletionException;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;

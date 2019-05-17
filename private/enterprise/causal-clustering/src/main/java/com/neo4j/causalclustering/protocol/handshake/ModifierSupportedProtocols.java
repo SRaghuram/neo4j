@@ -6,12 +6,13 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.List;
 
-public class ModifierSupportedProtocols extends SupportedProtocols<String,Protocol.ModifierProtocol>
+public class ModifierSupportedProtocols extends SupportedProtocols<String,ModifierProtocol>
 {
-    public ModifierSupportedProtocols( Protocol.Category<Protocol.ModifierProtocol> category, List<String> versions )
+    public ModifierSupportedProtocols( Protocol.Category<ModifierProtocol> category, List<String> versions )
     {
         super( category, versions );
     }

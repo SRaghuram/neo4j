@@ -12,15 +12,15 @@ import com.neo4j.causalclustering.net.ChildInitializer;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -30,8 +30,8 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 

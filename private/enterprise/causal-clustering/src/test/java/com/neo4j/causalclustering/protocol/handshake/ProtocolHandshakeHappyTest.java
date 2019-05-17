@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -18,13 +18,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols.RAFT_1;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.LZ4;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.LZO;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.SNAPPY;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;

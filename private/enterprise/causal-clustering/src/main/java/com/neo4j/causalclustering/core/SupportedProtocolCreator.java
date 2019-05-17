@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +26,6 @@ import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory;
 import static java.lang.String.format;
 
 public class SupportedProtocolCreator

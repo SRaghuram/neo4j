@@ -15,7 +15,7 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.Matchers.containsString;

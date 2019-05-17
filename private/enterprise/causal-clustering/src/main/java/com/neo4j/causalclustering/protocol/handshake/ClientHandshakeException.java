@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,8 +21,8 @@ public class ClientHandshakeException extends Exception
         super( message );
     }
 
-    public ClientHandshakeException( String message, @Nullable Protocol.ApplicationProtocol negotiatedApplicationProtocol,
-            List<Pair<String,Optional<Protocol.ModifierProtocol>>> negotiatedModifierProtocols )
+    public ClientHandshakeException( String message, @Nullable ApplicationProtocol negotiatedApplicationProtocol,
+            List<Pair<String,Optional<ModifierProtocol>>> negotiatedModifierProtocols )
     {
         super( message + " Negotiated application protocol: " + negotiatedApplicationProtocol +
                 " Negotiated modifier protocols: " + negotiatedModifierProtocols );

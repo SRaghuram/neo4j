@@ -36,8 +36,10 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotDecoder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotResponseHandler;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
 
 import java.util.Collection;
@@ -49,7 +51,7 @@ import org.neo4j.logging.LogProvider;
 
 public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
 {
-    private static final Protocol.ApplicationProtocols APPLICATION_PROTOCOL = Protocol.ApplicationProtocols.CATCHUP_3;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_3;
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,CatchupProtocolClientInstallerV3>
     {
@@ -119,13 +121,13 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
     }
 
     @Override
-    public Protocol.ApplicationProtocol applicationProtocol()
+    public ApplicationProtocol applicationProtocol()
     {
         return APPLICATION_PROTOCOL;
     }
 
     @Override
-    public Collection<Collection<Protocol.ModifierProtocol>> modifiers()
+    public Collection<Collection<ModifierProtocol>> modifiers()
     {
         return modifiers.stream()
                 .map( ModifierProtocolInstaller::protocols )

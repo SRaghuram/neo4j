@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,10 +50,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 abstract class CommercialCatchupTest
 {
     private static final DatabaseId DEFAULT_DB_ID = new DatabaseId( "db-one" );
-    private final Protocol.ApplicationProtocols applicationProtocols;
+    private final ApplicationProtocols applicationProtocols;
     private StubClusteredDatabaseManager databaseManager;
 
-    CommercialCatchupTest( Protocol.ApplicationProtocols applicationProtocol )
+    CommercialCatchupTest( ApplicationProtocols applicationProtocol )
     {
         applicationProtocols = applicationProtocol;
     }
@@ -173,7 +173,7 @@ abstract class CommercialCatchupTest
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
             MultiDatabaseCatchupServerHandler responseHandler ) throws Exception
     {
-        if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
+        if ( applicationProtocols == ApplicationProtocols.CATCHUP_3 )
         {
             new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
             new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );

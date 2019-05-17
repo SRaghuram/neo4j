@@ -15,14 +15,15 @@ import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
@@ -69,9 +70,9 @@ public class RaftServerFactory
         Config config = globalModule.getGlobalConfig();
 
         ApplicationProtocolRepository applicationProtocolRepository =
-                new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), supportedApplicationProtocol );
+                new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
         ModifierProtocolRepository modifierProtocolRepository =
-                new ModifierProtocolRepository( Protocol.ModifierProtocols.values(), supportedModifierProtocols );
+                new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
         RaftMessageNettyHandler nettyHandler = new RaftMessageNettyHandler( logProvider );
         RaftProtocolServerInstallerV2.Factory raftProtocolServerInstallerV2 =

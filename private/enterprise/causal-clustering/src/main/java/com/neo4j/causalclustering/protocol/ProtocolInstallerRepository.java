@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.ArrayList;
 import java.util.Collection;

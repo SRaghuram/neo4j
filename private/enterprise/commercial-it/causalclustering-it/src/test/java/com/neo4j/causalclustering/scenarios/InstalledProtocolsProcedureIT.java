@@ -34,10 +34,10 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;
 import static com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation.Client.OUTBOUND;
 import static com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation.Server.INBOUND;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItems;

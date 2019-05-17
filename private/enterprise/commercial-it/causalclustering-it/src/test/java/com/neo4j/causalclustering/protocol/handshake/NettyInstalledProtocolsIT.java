@@ -15,10 +15,11 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -52,9 +53,9 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_2;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.contains;
@@ -112,7 +113,7 @@ class NettyInstalledProtocolsIT
     private void startServerAndConnect( Parameters parameters )
     {
         ApplicationProtocolRepository applicationProtocolRepository =
-                new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), parameters.applicationSupportedProtocol );
+                new ApplicationProtocolRepository( ApplicationProtocols.values(), parameters.applicationSupportedProtocol );
         ModifierProtocolRepository modifierProtocolRepository =
                 new ModifierProtocolRepository( ModifierProtocols.values(), parameters.modifierSupportedProtocols );
 

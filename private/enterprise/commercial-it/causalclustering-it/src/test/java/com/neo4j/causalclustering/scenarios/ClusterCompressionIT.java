@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,10 +33,10 @@ import static org.neo4j.graphdb.Label.label;
 public class ClusterCompressionIT
 {
     @Parameterized.Parameter
-    public Protocol.ModifierProtocol modifierProtocol;
+    public ModifierProtocol modifierProtocol;
 
     @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Protocol.ModifierProtocol> params()
+    public static Collection<ModifierProtocol> params()
     {
         return Arrays.asList( ModifierProtocols.values() );
     }

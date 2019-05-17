@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.protocol;
 
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -20,18 +21,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_GZIP;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_LZ4;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_LZ4_HIGH_COMPRESSION;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_LZ4_HIGH_COMPRESSION_VALIDATING;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_LZ4_VALIDATING;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY_VALIDATING;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_GZIP;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_LZ4;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_LZ4_HIGH_COMPRESSION;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_LZ4_HIGH_COMPRESSION_VALIDATING;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_LZ4_VALIDATING;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY_VALIDATING;
 import static java.util.Arrays.asList;
 
 public interface ModifierProtocolInstaller<O extends Orientation>
 {
-    Collection<Protocol.ModifierProtocol> protocols();
+    Collection<ModifierProtocol> protocols();
 
     <BUILDER extends NettyPipelineBuilder<O,BUILDER>> void apply( NettyPipelineBuilder<O,BUILDER> nettyPipelineBuilder );
 
@@ -49,10 +50,10 @@ public interface ModifierProtocolInstaller<O extends Orientation>
     {
         private final String pipelineEncoderName;
         private final Supplier<MessageToByteEncoder<ByteBuf>> encoder;
-        private final Collection<Protocol.ModifierProtocol> modifierProtocols;
+        private final Collection<ModifierProtocol> modifierProtocols;
 
         protected BaseClientModifier( String pipelineEncoderName, Supplier<MessageToByteEncoder<ByteBuf>> encoder,
-                Protocol.ModifierProtocol... modifierProtocols )
+                ModifierProtocol... modifierProtocols )
         {
             this.pipelineEncoderName = pipelineEncoderName;
             this.encoder = encoder;
@@ -60,7 +61,7 @@ public interface ModifierProtocolInstaller<O extends Orientation>
         }
 
         @Override
-        public final Collection<Protocol.ModifierProtocol> protocols()
+        public final Collection<ModifierProtocol> protocols()
         {
             return modifierProtocols;
         }
@@ -77,9 +78,9 @@ public interface ModifierProtocolInstaller<O extends Orientation>
     {
         private final String pipelineDecoderName;
         private final Supplier<ByteToMessageDecoder> decoder;
-        private final Collection<Protocol.ModifierProtocol> modifierProtocols;
+        private final Collection<ModifierProtocol> modifierProtocols;
 
-        protected BaseServerModifier( String pipelineDecoderName, Supplier<ByteToMessageDecoder> decoder, Protocol.ModifierProtocol... modifierProtocols )
+        protected BaseServerModifier( String pipelineDecoderName, Supplier<ByteToMessageDecoder> decoder, ModifierProtocol... modifierProtocols )
         {
             this.pipelineDecoderName = pipelineDecoderName;
             this.decoder = decoder;
@@ -87,7 +88,7 @@ public interface ModifierProtocolInstaller<O extends Orientation>
         }
 
         @Override
-        public final Collection<Protocol.ModifierProtocol> protocols()
+        public final Collection<ModifierProtocol> protocols()
         {
             return modifierProtocols;
         }

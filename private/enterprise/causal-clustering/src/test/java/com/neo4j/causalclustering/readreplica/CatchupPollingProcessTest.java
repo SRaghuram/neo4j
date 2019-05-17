@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

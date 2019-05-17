@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -15,7 +15,7 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -104,7 +104,7 @@ class HandshakeServerEnsureMagicTest
         return asList(
                 new ApplicationProtocolRequest( RAFT.canonicalName(),
                         Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ) ) ),
-                new ModifierProtocolRequest( Protocol.ModifierProtocolCategory.COMPRESSION.canonicalName(), Set.of( "3", "4" ) ),
+                new ModifierProtocolRequest( ModifierProtocolCategory.COMPRESSION.canonicalName(), Set.of( "3", "4" ) ),
                 new SwitchOverRequest( RAFT.canonicalName(), new ApplicationProtocolVersion( 2, 0 ), emptyList() )
         );
     }

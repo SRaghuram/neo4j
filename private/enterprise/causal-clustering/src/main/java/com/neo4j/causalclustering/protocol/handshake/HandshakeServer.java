@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,7 +22,7 @@ public class HandshakeServer implements ServerMessageHandler
     private final Channel channel;
     private final ApplicationProtocolRepository applicationProtocolRepository;
     private final ModifierProtocolRepository modifierProtocolRepository;
-    private final SupportedProtocols<ApplicationProtocolVersion,Protocol.ApplicationProtocol> supportedApplicationProtocol;
+    private final SupportedProtocols<ApplicationProtocolVersion,ApplicationProtocol> supportedApplicationProtocol;
     private final ProtocolStack.Builder protocolStackBuilder = ProtocolStack.builder();
     private final CompletableFuture<ProtocolStack> protocolStackFuture = new CompletableFuture<>();
     private boolean magicReceived;
@@ -80,11 +81,11 @@ public class HandshakeServer implements ServerMessageHandler
         }
         else
         {
-            Optional<Protocol.ApplicationProtocol> selected = applicationProtocolRepository.select( request.protocolName(), supportedVersionsFor( request ) );
+            Optional<ApplicationProtocol> selected = applicationProtocolRepository.select( request.protocolName(), supportedVersionsFor( request ) );
 
             if ( selected.isPresent() )
             {
-                Protocol.ApplicationProtocol selectedProtocol = selected.get();
+                ApplicationProtocol selectedProtocol = selected.get();
                 protocolStackBuilder.application( selectedProtocol );
                 response = new ApplicationProtocolResponse( StatusCode.SUCCESS, selectedProtocol.category(), selectedProtocol.implementation() );
                 channel.writeAndFlush( response );
@@ -104,12 +105,12 @@ public class HandshakeServer implements ServerMessageHandler
         ensureMagic();
 
         ModifierProtocolResponse response;
-        Optional<Protocol.ModifierProtocol> selected =
+        Optional<ModifierProtocol> selected =
                 modifierProtocolRepository.select( modifierProtocolRequest.protocolName(), supportedVersionsFor( modifierProtocolRequest ) );
 
         if ( selected.isPresent() )
         {
-            Protocol.ModifierProtocol modifierProtocol = selected.get();
+            ModifierProtocol modifierProtocol = selected.get();
             protocolStackBuilder.modifier( modifierProtocol );
             response = new ModifierProtocolResponse( StatusCode.SUCCESS, modifierProtocol.category(), modifierProtocol.implementation() );
         }
@@ -126,9 +127,9 @@ public class HandshakeServer implements ServerMessageHandler
     {
         ensureMagic();
         ProtocolStack protocolStack = protocolStackBuilder.build();
-        Optional<Protocol.ApplicationProtocol> switchOverProtocol =
+        Optional<ApplicationProtocol> switchOverProtocol =
                 applicationProtocolRepository.select( switchOverRequest.protocolName(), switchOverRequest.version() );
-        List<Protocol.ModifierProtocol> switchOverModifiers = switchOverRequest.modifierProtocols()
+        List<ModifierProtocol> switchOverModifiers = switchOverRequest.modifierProtocols()
                 .stream()
                 .map( pair -> modifierProtocolRepository.select( pair.first(), pair.other() ) )
                 .flatMap( Optional::stream )

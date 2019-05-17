@@ -8,11 +8,12 @@ package com.neo4j.causalclustering.protocol;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -77,11 +78,11 @@ class ProtocolInstallerRepositoryTest
     void shouldReturnModifierProtocolsForClient()
     {
         // given
-        Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
+        ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
         ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
-        Collection<Collection<Protocol.ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
+        Collection<Collection<ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
 
         // then
         assertThat( actual, contains( contains( expected ) ) );
@@ -91,11 +92,11 @@ class ProtocolInstallerRepositoryTest
     void shouldReturnModifierProtocolsForServer()
     {
         // given
-        Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
+        ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
         ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
-        Collection<Collection<Protocol.ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
+        Collection<Collection<ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
 
         // then
         assertThat( actual, contains( contains( expected ) ) );
@@ -105,13 +106,13 @@ class ProtocolInstallerRepositoryTest
     void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForClient()
     {
         // given
-        Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
+        ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION;
 
         ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
-        Collection<Collection<Protocol.ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
+        Collection<Collection<ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
 
         // then
         assertThat( actual, contains( containsInAnyOrder( expected, alsoSupported ) )) ;
@@ -121,13 +122,13 @@ class ProtocolInstallerRepositoryTest
     void shouldReturnModifierProtocolsForProtocolWithSharedInstallerForServer()
     {
         // given
-        Protocol.ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
+        ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_VALIDATING;
 
         ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
 
         // when
-        Collection<Collection<Protocol.ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
+        Collection<Collection<ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
 
         // then
         assertThat( actual, contains( containsInAnyOrder( expected, alsoSupported ) )) ;
@@ -193,7 +194,7 @@ class ProtocolInstallerRepositoryTest
     {
         // given
         // setup used TestModifierProtocols, doesn't know about production protocols
-        Protocol.ModifierProtocol unknownProtocol = ModifierProtocols.COMPRESSION_SNAPPY;
+        ModifierProtocol unknownProtocol = ModifierProtocols.COMPRESSION_SNAPPY;
 
         // then
         assertThrows( IllegalStateException.class,

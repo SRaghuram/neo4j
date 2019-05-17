@@ -27,9 +27,11 @@ import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequestDecoder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotEncoder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
@@ -47,7 +49,7 @@ import static java.util.Collections.emptyList;
 
 public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orientation.Server>
 {
-    private static final Protocol.ApplicationProtocols APPLICATION_PROTOCOL = Protocol.ApplicationProtocols.CATCHUP_3;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_3;
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {
@@ -126,13 +128,13 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
     }
 
     @Override
-    public Protocol.ApplicationProtocol applicationProtocol()
+    public ApplicationProtocol applicationProtocol()
     {
         return APPLICATION_PROTOCOL;
     }
 
     @Override
-    public Collection<Collection<Protocol.ModifierProtocol>> modifiers()
+    public Collection<Collection<ModifierProtocol>> modifiers()
     {
         return modifiers.stream().map( ModifierProtocolInstaller::protocols ).collect( Collectors.toList() );
     }

@@ -6,7 +6,8 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheFactory;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -27,13 +28,6 @@ import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.Level;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.GZIP;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ4;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ4_HIGH_COMPRESSION;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ4_HIGH_COMPRESSION_VALIDATING;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ_VALIDATING;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.SNAPPY;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.SNAPPY_VALIDATING;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.Settings.ADVERTISED_SOCKET_ADDRESS;
 import static org.neo4j.configuration.Settings.BOOLEAN;
@@ -602,13 +596,12 @@ public class CausalClusteringSettings implements LoadableConfig
             setting( "causal_clustering.protocol_implementations.catchup", list( ",", ApplicationProtocolVersion::parse ), "" );
 
     @Description( "Network compression algorithms that this instance will allow in negotiation as a comma-separated list." +
-            " Listed in descending order of preference for incoming connections. An empty list implies no compression." +
-            " For outgoing connections this merely specifies the allowed set of algorithms and the preference of the " +
-            " remote peer will be used for making the decision." +
-            " Allowable values: [" + GZIP + "," + SNAPPY + "," + SNAPPY_VALIDATING + "," +
-            LZ4 + "," + LZ4_HIGH_COMPRESSION + "," + LZ_VALIDATING + "," + LZ4_HIGH_COMPRESSION_VALIDATING + "]" )
+                  " Listed in descending order of preference for incoming connections. An empty list implies no compression." +
+                  " For outgoing connections this merely specifies the allowed set of algorithms and the preference of the " +
+                  " remote peer will be used for making the decision." +
+                  " Allowable values: " + ModifierProtocols.ALLOWED_VALUES_STRING )
     public static final Setting<List<String>> compression_implementations =
-            setting( "causal_clustering.protocol_implementations.compression", STRING_LIST, "");
+            setting( "causal_clustering.protocol_implementations.compression", STRING_LIST, "" );
 
     @SuppressWarnings( "unused" ) // accessed by reflection
     @Migrator

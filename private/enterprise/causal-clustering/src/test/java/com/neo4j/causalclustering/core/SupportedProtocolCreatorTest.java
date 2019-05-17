@@ -7,9 +7,12 @@ package com.neo4j.causalclustering.core;
 
 import co.unruly.matchers.StreamMatchers;
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.SupportedProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import org.junit.Test;
 
 import java.util.List;
@@ -18,7 +21,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
@@ -39,7 +42,7 @@ public class SupportedProtocolCreatorTest
         ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.identifier(), equalTo( Protocol.ApplicationProtocolCategory.RAFT ) );
+        assertThat( supportedRaftProtocol.identifier(), equalTo( ApplicationProtocolCategory.RAFT ) );
     }
 
     @Test
@@ -118,8 +121,8 @@ public class SupportedProtocolCreatorTest
                 new SupportedProtocolCreator( config, log ).createSupportedModifierProtocols();
 
         // then
-        Stream<Protocol.Category<Protocol.ModifierProtocol>> identifiers = supportedModifierProtocols.stream().map( SupportedProtocols::identifier );
-        assertThat( identifiers, StreamMatchers.contains( Protocol.ModifierProtocolCategory.COMPRESSION ) );
+        Stream<Protocol.Category<ModifierProtocol>> identifiers = supportedModifierProtocols.stream().map( SupportedProtocols::identifier );
+        assertThat( identifiers, StreamMatchers.contains( ModifierProtocolCategory.COMPRESSION ) );
     }
 
     @Test

@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 
 import java.util.Set;
 
-public class ApplicationProtocolSelection extends ProtocolSelection<ApplicationProtocolVersion,Protocol.ApplicationProtocol>
+public class ApplicationProtocolSelection extends ProtocolSelection<ApplicationProtocolVersion,ApplicationProtocol>
 {
-    public ApplicationProtocolSelection( String identifier, Set<ApplicationProtocolVersion> versions )
+    ApplicationProtocolSelection( String identifier, Set<ApplicationProtocolVersion> versions )
     {
         super( identifier, versions );
     }

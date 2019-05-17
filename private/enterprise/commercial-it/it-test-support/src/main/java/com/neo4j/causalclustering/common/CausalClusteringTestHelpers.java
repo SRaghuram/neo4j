@@ -40,7 +40,7 @@ import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME
 import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;

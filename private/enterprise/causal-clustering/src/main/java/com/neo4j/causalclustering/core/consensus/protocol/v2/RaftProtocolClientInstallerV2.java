@@ -11,8 +11,10 @@ import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageC
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageEncoder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
@@ -25,7 +27,7 @@ import org.neo4j.logging.LogProvider;
 
 public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
 {
-    private static final Protocol.ApplicationProtocols APPLICATION_PROTOCOL = Protocol.ApplicationProtocols.RAFT_2;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_2;
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,RaftProtocolClientInstallerV2>
     {
@@ -65,13 +67,13 @@ public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Protocol
     }
 
     @Override
-    public Protocol.ApplicationProtocol applicationProtocol()
+    public ApplicationProtocol applicationProtocol()
     {
         return APPLICATION_PROTOCOL;
     }
 
     @Override
-    public Collection<Collection<Protocol.ModifierProtocol>> modifiers()
+    public Collection<Collection<ModifierProtocol>> modifiers()
     {
         return modifiers.stream().map( ModifierProtocolInstaller::protocols ).collect( Collectors.toList() );
     }

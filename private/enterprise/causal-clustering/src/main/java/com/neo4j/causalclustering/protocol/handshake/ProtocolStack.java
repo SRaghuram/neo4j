@@ -6,6 +6,8 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,21 +20,21 @@ import static java.util.stream.Collectors.toList;
 
 public class ProtocolStack
 {
-    private final Protocol.ApplicationProtocol applicationProtocol;
-    private final List<Protocol.ModifierProtocol> modifierProtocols;
+    private final ApplicationProtocol applicationProtocol;
+    private final List<ModifierProtocol> modifierProtocols;
 
-    public ProtocolStack( Protocol.ApplicationProtocol applicationProtocol, List<Protocol.ModifierProtocol> modifierProtocols )
+    public ProtocolStack( ApplicationProtocol applicationProtocol, List<ModifierProtocol> modifierProtocols )
     {
         this.applicationProtocol = applicationProtocol;
         this.modifierProtocols = Collections.unmodifiableList( modifierProtocols );
     }
 
-    public Protocol.ApplicationProtocol applicationProtocol()
+    public ApplicationProtocol applicationProtocol()
     {
         return applicationProtocol;
     }
 
-    public List<Protocol.ModifierProtocol> modifierProtocols()
+    public List<ModifierProtocol> modifierProtocols()
     {
         return modifierProtocols;
     }
@@ -79,20 +81,20 @@ public class ProtocolStack
 
     public static class Builder
     {
-        private Protocol.ApplicationProtocol applicationProtocol;
-        private final List<Protocol.ModifierProtocol> modifierProtocols = new ArrayList<>();
+        private ApplicationProtocol applicationProtocol;
+        private final List<ModifierProtocol> modifierProtocols = new ArrayList<>();
 
         private Builder()
         {
         }
 
-        public Builder modifier( Protocol.ModifierProtocol modifierProtocol )
+        public Builder modifier( ModifierProtocol modifierProtocol )
         {
             modifierProtocols.add( modifierProtocol );
             return this;
         }
 
-        public Builder application( Protocol.ApplicationProtocol applicationProtocol )
+        public Builder application( ApplicationProtocol applicationProtocol )
         {
             this.applicationProtocol = applicationProtocol;
             return this;

@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.Comparator;
 import java.util.function.Supplier;
@@ -93,7 +93,7 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
         return protocolStack
                 .modifierProtocols()
                 .stream()
-                .map( Protocol.ModifierProtocol::implementation )
+                .map( ModifierProtocol::implementation )
                 .collect( Collectors.joining( ",", "[", "]") );
     }
 }

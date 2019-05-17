@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
@@ -15,12 +16,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
-import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.LZ4;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.LZO;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.NAME_CLASH;
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.SNAPPY;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -40,7 +41,7 @@ public class ModifierProtocolRepositoryTest
         ModifierProtocolRepository modifierProtocolRepository =
                 new ModifierProtocolRepository( TestProtocols.TestModifierProtocols.values(), supportedProtocols );
         // when
-        Optional<Protocol.ModifierProtocol> modifierProtocol = modifierProtocolRepository.select(
+        Optional<ModifierProtocol> modifierProtocol = modifierProtocolRepository.select(
                 COMPRESSION.canonicalName(),
                 asSet( "bzip2", SNAPPY.implementation(), LZ4.implementation(), LZO.implementation(), "fast_lz" )
         );
@@ -58,7 +59,7 @@ public class ModifierProtocolRepositoryTest
         ModifierProtocolRepository modifierProtocolRepository =
                 new ModifierProtocolRepository( TestProtocols.TestModifierProtocols.values(), supportedProtocols );
         // when
-        Optional<Protocol.ModifierProtocol> modifierProtocol =
+        Optional<ModifierProtocol> modifierProtocol =
                 modifierProtocolRepository.select( COMPRESSION.canonicalName(), asSet( TestProtocols.TestModifierProtocols.allVersionsOf( COMPRESSION ) ) );
 
         // then
@@ -71,7 +72,7 @@ public class ModifierProtocolRepositoryTest
         List<ModifierSupportedProtocols> supportedProtocols = asList(
                 new ModifierSupportedProtocols( COMPRESSION, asList( LZO.implementation(), SNAPPY.implementation(), LZ4.implementation() ) ) );
 
-        Comparator<Protocol.ModifierProtocol> comparator =
+        Comparator<ModifierProtocol> comparator =
                 ModifierProtocolRepository.getModifierProtocolComparator( supportedProtocols )
                 .apply( COMPRESSION.canonicalName() );
 

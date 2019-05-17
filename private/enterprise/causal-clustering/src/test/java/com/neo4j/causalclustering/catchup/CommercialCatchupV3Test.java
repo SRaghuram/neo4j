@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -18,7 +18,7 @@ class CommercialCatchupV3Test extends CommercialCatchupTest
 {
     CommercialCatchupV3Test()
     {
-        super( Protocol.ApplicationProtocols.CATCHUP_3 );
+        super( ApplicationProtocols.CATCHUP_3 );
     }
 
     @ParameterizedTest

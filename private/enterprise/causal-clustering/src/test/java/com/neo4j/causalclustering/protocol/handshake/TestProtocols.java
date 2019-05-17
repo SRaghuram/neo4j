@@ -5,8 +5,12 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -32,7 +36,7 @@ public interface TestProtocols
                 .toArray( constructor );
     }
 
-    enum TestApplicationProtocols implements Protocol.ApplicationProtocol
+    enum TestApplicationProtocols implements ApplicationProtocol
     {
         RAFT_1( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 1, 0 ) ),
         RAFT_2( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 2, 0 ) ),
@@ -80,7 +84,7 @@ public interface TestProtocols
         }
     }
 
-    enum TestModifierProtocols implements Protocol.ModifierProtocol
+    enum TestModifierProtocols implements ModifierProtocol
     {
         SNAPPY( ModifierProtocolCategory.COMPRESSION, "TestSnappy" ),
         LZO( ModifierProtocolCategory.COMPRESSION, "TestLZO" ),

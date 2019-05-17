@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.ApplicationProtocolVersion;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,8 +26,8 @@ public class HandshakeClient implements ClientMessageHandler
     private ApplicationSupportedProtocols supportedApplicationProtocol;
     private ModifierProtocolRepository modifierProtocolRepository;
     private Collection<ModifierSupportedProtocols> supportedModifierProtocols;
-    private Protocol.ApplicationProtocol negotiatedApplicationProtocol;
-    private List<Pair<String,Optional<Protocol.ModifierProtocol>>> negotiatedModifierProtocols;
+    private ApplicationProtocol negotiatedApplicationProtocol;
+    private List<Pair<String,Optional<ModifierProtocol>>> negotiatedModifierProtocols;
     private ProtocolStack protocolStack;
     private boolean magicReceived;
 
@@ -61,12 +62,12 @@ public class HandshakeClient implements ClientMessageHandler
     {
         supportedModifierProtocols.forEach( modifierProtocol ->
                 {
-                    ProtocolSelection<String,Protocol.ModifierProtocol> protocolSelection =
+                    ProtocolSelection<String,ModifierProtocol> protocolSelection =
                             modifierProtocolRepository.getAll( modifierProtocol.identifier(), modifierProtocol.versions() );
                     channel.write( new ModifierProtocolRequest( protocolSelection.identifier(), protocolSelection.versions() ) );
                 } );
 
-        ProtocolSelection<ApplicationProtocolVersion,Protocol.ApplicationProtocol> applicationProtocolSelection =
+        ProtocolSelection<ApplicationProtocolVersion,ApplicationProtocol> applicationProtocolSelection =
                 applicationProtocolRepository.getAll( applicationProtocols.identifier(), applicationProtocols.versions() );
         channel.writeAndFlush( new ApplicationProtocolRequest( applicationProtocolSelection.identifier(), applicationProtocolSelection.versions() ) );
     }
@@ -102,12 +103,12 @@ public class HandshakeClient implements ClientMessageHandler
             return;
         }
 
-        Optional<Protocol.ApplicationProtocol> protocol =
+        Optional<ApplicationProtocol> protocol =
                 applicationProtocolRepository.select( applicationProtocolResponse.protocolName(), applicationProtocolResponse.version() );
 
         if ( protocol.isEmpty() )
         {
-            ProtocolSelection<ApplicationProtocolVersion,Protocol.ApplicationProtocol> knownApplicationProtocolVersions =
+            ProtocolSelection<ApplicationProtocolVersion,ApplicationProtocol> knownApplicationProtocolVersions =
                     applicationProtocolRepository.getAll( supportedApplicationProtocol.identifier(), supportedApplicationProtocol.versions() );
             fail( String.format(
                     "Mismatch of application protocols between client and server: Server protocol %s version %s: Client protocol %s versions %s",
@@ -128,7 +129,7 @@ public class HandshakeClient implements ClientMessageHandler
         ensureMagic();
         if ( modifierProtocolResponse.statusCode() == StatusCode.SUCCESS )
         {
-            Optional<Protocol.ModifierProtocol> selectedModifierProtocol =
+            Optional<ModifierProtocol> selectedModifierProtocol =
                     modifierProtocolRepository.select( modifierProtocolResponse.protocolName(), modifierProtocolResponse.version() );
             negotiatedModifierProtocols.add( Pair.of( modifierProtocolResponse.protocolName(), selectedModifierProtocol ) );
         }
@@ -144,7 +145,7 @@ public class HandshakeClient implements ClientMessageHandler
     {
         if ( negotiatedApplicationProtocol != null && negotiatedModifierProtocols.size() == supportedModifierProtocols.size() )
         {
-            List<Protocol.ModifierProtocol> agreedModifierProtocols = negotiatedModifierProtocols
+            List<ModifierProtocol> agreedModifierProtocols = negotiatedModifierProtocols
                     .stream()
                     .map( Pair::other )
                     .flatMap( Optional::stream )

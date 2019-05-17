@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 
 import java.util.Set;
 
-public class ModifierProtocolSelection extends ProtocolSelection<String,Protocol.ModifierProtocol>
+public class ModifierProtocolSelection extends ProtocolSelection<String,ModifierProtocol>
 {
     public ModifierProtocolSelection( String identifier, Set<String> versions )
     {

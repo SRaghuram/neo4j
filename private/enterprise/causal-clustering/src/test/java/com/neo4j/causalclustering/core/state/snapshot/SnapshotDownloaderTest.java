@@ -11,7 +11,8 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
-import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -25,7 +26,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,13 +39,13 @@ import static org.mockito.Mockito.when;
 public class SnapshotDownloaderTest
 {
     @Parameterized.Parameters( name = "{0}" )
-    public static Iterable<Protocol.ApplicationProtocol> data()
+    public static Iterable<ApplicationProtocol> data()
     {
-        return Protocol.ApplicationProtocols.withCategory( CATCHUP );
+        return ApplicationProtocols.withCategory( CATCHUP );
     }
 
     @Parameterized.Parameter
-    public Protocol.ApplicationProtocol protocol;
+    public ApplicationProtocol protocol;
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final AdvertisedSocketAddress remoteAddress = new AdvertisedSocketAddress( "localhost", 1234 );
