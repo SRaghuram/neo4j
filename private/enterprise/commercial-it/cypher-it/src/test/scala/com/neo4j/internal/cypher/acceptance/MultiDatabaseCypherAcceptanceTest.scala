@@ -9,6 +9,7 @@ import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.server.security.enterprise.systemgraph._
+import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.DatabaseStatus
@@ -24,10 +25,11 @@ import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExe
 class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
+  private val defaultConfig = Config.defaults()
 
   test("should list default database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // WHEN
     val result = execute("SHOW DATABASE neo4j")
@@ -36,9 +38,28 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
   }
 
+  test("should list custom default database") {
+    // GIVEN
+    val config = Config.defaults()
+    config.augment(default_database, "foo")
+    setup(config)
+
+    // WHEN
+    val result = execute("SHOW DATABASE foo")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+
+    // WHEN
+    val result2 = execute("SHOW DATABASE neo4j")
+
+    // THEN
+    result2.toList should be(empty)
+  }
+
   test("should list default databases") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // WHEN
     val result = execute("SHOW DATABASES")
@@ -49,8 +70,23 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
+  test("should list custom default and system databases") {
+    // GIVEN
+    val config = Config.defaults()
+    config.augment(default_database, "foo")
+    setup(config)
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
   test("should create database in systemdb") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -63,7 +99,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should fail on creating already existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -82,7 +118,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should create and drop databases") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -114,7 +150,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should fail on dropping non-existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     try {
       // WHEN
@@ -128,7 +164,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should fail on dropping dropped database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -148,7 +184,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should start database on create") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -161,7 +197,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should not be able to start non-existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     try {
       // WHEN
@@ -179,7 +215,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should not be able to start a dropped database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -202,7 +238,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should be able to start a started database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -218,7 +254,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should re-start database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -237,7 +273,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should stop database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -255,7 +291,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should not be able to stop non-existing database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     try{
       // WHEN
@@ -273,7 +309,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should not be able to stop a dropped database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -296,7 +332,7 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
   }
 
   test("should be able to stop a stopped database") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup( defaultConfig )
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -312,18 +348,18 @@ class MultiDatabaseCypherAcceptanceTest extends ExecutionEngineFunSuite with Com
     result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
   }
 
-  protected override def initTest(): Unit = {
-    super.initTest()
+  protected def setup(config: Config): Unit = {
     val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], Config.defaults())
+    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], config)
     val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
     val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
     systemGraphInitializer.initializeSystemGraph()
     systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
   }
 
   private def databaseManager() = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])

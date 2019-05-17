@@ -35,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPasswordWithSameLengthAs;
@@ -261,6 +263,35 @@ class BasicSystemGraphRealmIT
         // Then
         assertThat( newPassword, equalTo( clearedPasswordWithSameLengthAs( "jake" ) ) );
         assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    @Test
+    void shouldHandleSwitchOfDefaultDatabase() throws Throwable
+    {
+        BasicImportOptionsBuilder importOptions = new BasicImportOptionsBuilder().migrateUsers( "alice" );
+        BasicSystemGraphRealm realm = TestBasicSystemGraphRealm.testRealm( importOptions, dbManager, defaultConfig );
+
+        assertAuthenticationSucceeds( realm, "alice" );
+
+        realm.stop();
+
+        // Set a new database foo to default db in config
+        defaultConfig.augment( default_database, "foo" );
+
+        realm.start();
+
+        // Alice should still be able to authenticate
+        assertAuthenticationSucceeds( realm, "alice" );
+
+        realm.stop();
+
+        // Switch back default db to 'neo4j'
+        defaultConfig.augment( default_database, DEFAULT_DATABASE_NAME );
+
+        realm.start();
+
+        // Alice should still be able to authenticate
+        assertAuthenticationSucceeds( realm, "alice" );
     }
 
     static void simulateSetInitialPasswordCommand( TestDirectory testDirectory ) throws IncorrectUsage, CommandFailed
