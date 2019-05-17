@@ -26,6 +26,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import javax.ws.rs.core.HttpHeaders;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -88,8 +89,9 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         }
         this.server = builder.build();
         this.server.start();
-        authManager = this.server.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
-        connectorPortRegister = server.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
+        DependencyResolver dependencyResolver = this.server.getDatabaseService().getSystemDatabase().getDependencyResolver();
+        authManager = dependencyResolver.resolveDependency( CommercialAuthManager.class );
+        connectorPortRegister = dependencyResolver.resolveDependency( ConnectorPortRegister.class );
     }
 
     @Override

@@ -10,19 +10,19 @@ import org.junit.Test;
 import org.neo4j.test.server.HTTP;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
 public class CypherQueriesIT extends CommercialVersionIT
 {
-
     @Test
     public void runningInCompiledRuntime()
     {
         // Given
-        String uri = functionalTestHelper.dataUri() + "transaction/commit";
+        String uri = functionalTestHelper.txCommitUri();
         String payload = "{ 'statements': [ { 'statement': 'CYPHER runtime=compiled MATCH (n) RETURN n' } ] }";
 
         // When
-        HTTP.Response res = HTTP.POST(uri, payload.replaceAll("'", "\""));
+        HTTP.Response res = HTTP.POST( uri, quotedJson( payload ) );
 
         // Then
         assertEquals( 200, res.status() );

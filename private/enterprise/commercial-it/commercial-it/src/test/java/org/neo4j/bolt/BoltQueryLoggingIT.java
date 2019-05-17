@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.server;
+package org.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
@@ -22,6 +22,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
 
 import static java.lang.Character.digit;

@@ -62,7 +62,7 @@ class ServerMetricsIT
             server.start();
 
             String endpoint = "http://localhost:" + server.baseUri().getPort() +
-                              ServerSettings.rest_api_path.getDefaultValue() + "/transaction/commit";
+                              ServerSettings.rest_api_path.getDefaultValue() + "/data/transaction/commit";
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder( URI.create( endpoint ) )

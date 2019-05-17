@@ -12,6 +12,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -19,11 +20,11 @@ import org.neo4j.graphdb.Transaction;
 @Path( "myExtension" )
 public class MyEnterpriseUnmanagedExtension
 {
-    private final GraphDatabaseService db;
+    private final DatabaseManagementService dbms;
 
-    public MyEnterpriseUnmanagedExtension( @Context GraphDatabaseService db )
+    public MyEnterpriseUnmanagedExtension( @Context DatabaseManagementService dbms )
     {
-        this.db = db;
+        this.dbms = dbms;
     }
 
     @GET
@@ -37,6 +38,7 @@ public class MyEnterpriseUnmanagedExtension
     @Path( "createConstraint" )
     public Response createProperty()
     {
+        GraphDatabaseService db = dbms.database( "neo4j" );
         try ( Transaction tx = db.beginTx() )
         {
             try ( Result result = db.execute( "CREATE CONSTRAINT ON (user:User) ASSERT exists(user.name)" ) )

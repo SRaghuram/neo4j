@@ -94,7 +94,7 @@ public class CommercialNeoServer extends CommunityNeoServer
     {
         // ConnectorPortRegister isn't available until runtime, so defer loading until then
         Supplier<DiscoverableURIs> discoverableURIs  = () -> EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs(
-                        getConfig(), getDependencyResolver().resolveDependency( ConnectorPortRegister.class ) );
+                        getConfig(), getSystemDatabaseDependencyResolver().resolveDependency( ConnectorPortRegister.class ) );
         return new DBMSModule( webServer, getConfig(), discoverableURIs );
     }
 
