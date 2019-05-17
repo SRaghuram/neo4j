@@ -6,104 +6,97 @@
 package com.neo4j.causalclustering.core;
 
 import co.unruly.matchers.StreamMatchers;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
-import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.SupportedProtocols;
-import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
-import org.junit.Test;
-
-import java.util.List;
-import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class SupportedProtocolCreatorTest
+class SupportedProtocolCreatorTest
 {
-
-    private NullLogProvider log = NullLogProvider.getInstance();
+    private final NullLogProvider log = NullLogProvider.getInstance();
 
     @Test
-    public void shouldReturnRaftProtocol()
+    void shouldReturnRaftProtocol()
     {
         // given
-        Config config = Config.defaults();
+        var config = Config.defaults();
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.identifier(), equalTo( ApplicationProtocolCategory.RAFT ) );
     }
 
     @Test
-    public void shouldReturnEmptyVersionSupportedRaftProtocolIfNoVersionsConfigured()
+    void shouldReturnEmptyVersionSupportedRaftProtocolIfNoVersionsConfigured()
     {
         // given
-        Config config = Config.defaults();
+        var config = Config.defaults();
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.versions(), empty() );
     }
 
     @Test
-    public void shouldFilterUnknownRaftImplementations()
+    void shouldFilterUnknownRaftImplementations()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "1, 2, 3" );
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "1.0, 2.0, 3.0" );
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( 2 ) );
+        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ) ) );
     }
 
     @Test
-    public void shouldReturnConfiguredRaftProtocolVersions()
+    void shouldReturnConfiguredRaftProtocolVersions()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "2" );
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "2.0" );
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( 2 ) );
-    }
-
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldThrowIfVersionsSpecifiedButAllUnknown()
-    {
-        // given
-        Config config = Config.defaults( CausalClusteringSettings.raft_implementations, String.valueOf( Integer.MAX_VALUE ) );
-        SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, log );
-
-        // when
-        supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
-        // then throw
+        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ) ) );
     }
 
     @Test
-    public void shouldNotReturnModifiersIfNoVersionsSpecified()
+    void shouldThrowIfVersionsSpecifiedButAllUnknown()
     {
         // given
-        Config config = Config.defaults();
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "99999.99999" );
+        var supportedProtocolCreator = new SupportedProtocolCreator( config, log );
+
+        // when / then
+        assertThrows( IllegalArgumentException.class, supportedProtocolCreator::getSupportedRaftProtocolsFromConfiguration );
+    }
+
+    @Test
+    void shouldNotReturnModifiersIfNoVersionsSpecified()
+    {
+        // given
+        var config = Config.defaults();
 
         // when
-        List<ModifierSupportedProtocols> supportedModifierProtocols =
+        var supportedModifierProtocols =
                 new SupportedProtocolCreator( config, log ).createSupportedModifierProtocols();
 
         // then
@@ -111,47 +104,47 @@ public class SupportedProtocolCreatorTest
     }
 
     @Test
-    public void shouldReturnACompressionModifierIfCompressionVersionsSpecified()
+    void shouldReturnACompressionModifierIfCompressionVersionsSpecified()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
 
         // when
-        List<ModifierSupportedProtocols> supportedModifierProtocols =
+        var supportedModifierProtocols =
                 new SupportedProtocolCreator( config, log ).createSupportedModifierProtocols();
 
         // then
-        Stream<Protocol.Category<ModifierProtocol>> identifiers = supportedModifierProtocols.stream().map( SupportedProtocols::identifier );
+        var identifiers = supportedModifierProtocols.stream().map( SupportedProtocols::identifier );
         assertThat( identifiers, StreamMatchers.contains( ModifierProtocolCategory.COMPRESSION ) );
     }
 
     @Test
-    public void shouldReturnCompressionWithVersionsSpecified()
+    void shouldReturnCompressionWithVersionsSpecified()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
 
         // when
-        List<ModifierSupportedProtocols> supportedModifierProtocols =
+        var supportedModifierProtocols =
                 new SupportedProtocolCreator( config, log ).createSupportedModifierProtocols();
 
         // then
-        List<String> versions = supportedModifierProtocols.get( 0 ).versions();
+        var versions = supportedModifierProtocols.get( 0 ).versions();
         assertThat( versions, contains( COMPRESSION_SNAPPY.implementation() ) );
     }
 
     @Test
-    public void shouldReturnCompressionWithVersionsSpecifiedCaseInsensitive()
+    void shouldReturnCompressionWithVersionsSpecifiedCaseInsensitive()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation().toLowerCase() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation().toLowerCase() );
 
         // when
-        List<ModifierSupportedProtocols> supportedModifierProtocols =
+        var supportedModifierProtocols =
                 new SupportedProtocolCreator( config, log ).createSupportedModifierProtocols();
 
         // then
-        List<String> versions = supportedModifierProtocols.get( 0 ).versions();
+        var versions = supportedModifierProtocols.get( 0 ).versions();
         assertThat( versions, contains( COMPRESSION_SNAPPY.implementation() ) );
     }
 }

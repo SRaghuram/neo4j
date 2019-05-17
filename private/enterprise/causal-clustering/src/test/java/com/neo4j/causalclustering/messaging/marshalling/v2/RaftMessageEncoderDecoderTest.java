@@ -121,7 +121,7 @@ class RaftMessageEncoderDecoderTest
 
     @ParameterizedTest( name = "Raft v{1} with message {0}" )
     @MethodSource( "data" )
-    void shouldEncodeDecodeRaftMessage( RaftMessage raftMessage, int raftProtocol ) throws Exception
+    void shouldEncodeDecodeRaftMessage( RaftMessage raftMessage, ApplicationProtocolVersion raftProtocol ) throws Exception
     {
         setupChannels( raftProtocol );
 
@@ -143,9 +143,9 @@ class RaftMessageEncoderDecoderTest
         ReferenceCountUtil.release( handler.msg );
     }
 
-    private void setupChannels( int raftProtocol ) throws Exception
+    private void setupChannels( ApplicationProtocolVersion raftProtocol ) throws Exception
     {
-        if ( raftProtocol == 2 )
+        if ( ApplicationProtocols.RAFT_2.implementation().equals( raftProtocol ) )
         {
             new RaftProtocolClientInstallerV2( new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ), Collections.emptyList(),
                     FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );

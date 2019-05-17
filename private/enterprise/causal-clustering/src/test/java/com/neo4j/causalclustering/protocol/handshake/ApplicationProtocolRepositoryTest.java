@@ -18,6 +18,7 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ApplicationProtocolRepositoryTest
@@ -29,7 +30,7 @@ class ApplicationProtocolRepositoryTest
     void shouldReturnEmptyIfUnknownVersion()
     {
         // given
-        var versions = Set.of( new ApplicationProtocolVersion( -1, 0 ) );
+        var versions = Set.of( new ApplicationProtocolVersion( 42, 0 ) );
 
         // when
         var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
@@ -81,7 +82,7 @@ class ApplicationProtocolRepositoryTest
     void shouldReturnKnownProtocolVersionWhenFirstGivenVersionNotKnown()
     {
         // given
-        var versions = Set.of( new ApplicationProtocolVersion( -1, 0 ), new ApplicationProtocolVersion( 1, 0 ) );
+        var versions = Set.of( new ApplicationProtocolVersion( 42, 0 ), new ApplicationProtocolVersion( 1, 0 ) );
 
         // when
         var applicationProtocol = applicationProtocolRepository.select( RAFT.canonicalName(), versions );
@@ -128,7 +129,7 @@ class ApplicationProtocolRepositoryTest
         var protocolSelection = applicationProtocolRepository.getAll( RAFT, versions );
 
         // then
-        assertThat( protocolSelection.versions(), containsInAnyOrder( versions ) );
+        assertEquals( versions, protocolSelection.versions() );
     }
 
     @Test

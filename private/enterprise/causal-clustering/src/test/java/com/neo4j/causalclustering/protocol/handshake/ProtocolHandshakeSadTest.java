@@ -8,13 +8,13 @@ package com.neo4j.causalclustering.protocol.handshake;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletionException;
-
-import org.neo4j.internal.helpers.collection.Pair;
+import java.util.stream.Stream;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
@@ -35,16 +35,16 @@ class ProtocolHandshakeSadTest
     private final ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), noModifiers );
 
     @ParameterizedTest
-    @MethodSource( "appProtocolRepositories" )
-    void shouldFailClientHandshakeOnMismatchedProtocol( Pair<ApplicationProtocolRepository,ApplicationProtocolRepository> parameters )
+    @MethodSource( "incompatibleRepositories" )
+    void shouldFailClientHandshakeOnMismatchedProtocol( ApplicationProtocolRepository repository1, ApplicationProtocolRepository repository2 )
     {
         // given
-        var handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
+        var handshakeServer = new HandshakeServer( repository1, modifierProtocolRepository,
                 new ProtocolHandshakeHappyTest.FakeServerChannel( handshakeClient ) );
         var clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
 
         // when
-        handshakeClient.initiate( clientChannel, parameters.other(), modifierProtocolRepository );
+        handshakeClient.initiate( clientChannel, repository2, modifierProtocolRepository );
 
         // then
         var error = assertThrows( CompletionException.class, () -> handshakeClient.protocol().getNow( null ) );
@@ -52,16 +52,16 @@ class ProtocolHandshakeSadTest
     }
 
     @ParameterizedTest
-    @MethodSource( "appProtocolRepositories" )
-    void shouldFailHandshakeForUnknownProtocolOnServer( Pair<ApplicationProtocolRepository,ApplicationProtocolRepository> parameters )
+    @MethodSource( "incompatibleRepositories" )
+    void shouldFailHandshakeForUnknownProtocolOnServer( ApplicationProtocolRepository repository1, ApplicationProtocolRepository repository2 )
     {
         // given
-        var handshakeServer = new HandshakeServer( parameters.first(), modifierProtocolRepository,
+        var handshakeServer = new HandshakeServer( repository1, modifierProtocolRepository,
                 new ProtocolHandshakeHappyTest.FakeServerChannel( handshakeClient ) );
         var clientChannel = new ProtocolHandshakeHappyTest.FakeClientChannel( handshakeServer );
 
         // when
-        handshakeClient.initiate( clientChannel, parameters.other(), modifierProtocolRepository );
+        handshakeClient.initiate( clientChannel, repository2, modifierProtocolRepository );
         var serverHandshakeFuture = handshakeServer.protocolStackFuture();
 
         // then
@@ -69,7 +69,7 @@ class ProtocolHandshakeSadTest
         assertThat( error.getCause(), instanceOf( ServerHandshakeException.class ) );
     }
 
-    private static Collection<Pair<ApplicationProtocolRepository,ApplicationProtocolRepository>> appProtocolRepositories()
+    private static Stream<Arguments> incompatibleRepositories()
     {
         var supportsAllRaft = new ApplicationSupportedProtocols( RAFT, emptyList() );
         var supportsAllCatchup = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
@@ -81,10 +81,10 @@ class ProtocolHandshakeSadTest
         var catchupV1ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup1 );
         var catchupV2ProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), supportsCatchup2 );
 
-        return List.of(
-                Pair.of( catchupProtocolsRepository, raftProtocolsRepository ),
-                Pair.of( raftProtocolsRepository, catchupProtocolsRepository ),
-                Pair.of( catchupV1ProtocolRepository, catchupV2ProtocolRepository ),
-                Pair.of( catchupV2ProtocolRepository, catchupV1ProtocolRepository ) );
+        return Stream.of(
+                Arguments.of( catchupProtocolsRepository, raftProtocolsRepository ),
+                Arguments.of( raftProtocolsRepository, catchupProtocolsRepository ),
+                Arguments.of( catchupV1ProtocolRepository, catchupV2ProtocolRepository ),
+                Arguments.of( catchupV2ProtocolRepository, catchupV1ProtocolRepository ) );
     }
 }

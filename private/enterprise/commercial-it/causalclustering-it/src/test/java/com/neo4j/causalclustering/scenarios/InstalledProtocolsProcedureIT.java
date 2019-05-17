@@ -31,7 +31,6 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.values.AnyValue;
-import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
 
 import static com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation.Client.OUTBOUND;
@@ -81,7 +80,7 @@ public class InstalledProtocolsProcedureIT
         ProtocolInfo[] expectedProtocolInfos = cluster.coreMembers()
                 .stream()
                 .filter( member -> !member.equals( leader ) )
-                .map( member -> new ProtocolInfo( OUTBOUND, localhost( member.raftListenAddress() ), RAFT.canonicalName(), 2, modifiers ) )
+                .map( member -> new ProtocolInfo( OUTBOUND, localhost( member.raftListenAddress() ), RAFT.canonicalName(), "2.0", modifiers ) )
                 .toArray( ProtocolInfo[]::new );
 
         assertEventually( "should see outbound installed protocols on core " + leader.serverId(),
@@ -117,7 +116,7 @@ public class InstalledProtocolsProcedureIT
                 String orientation = ((TextValue) row[0]).stringValue();
                 String address = localhost( ((TextValue) row[1]).stringValue() );
                 String protocol = ((TextValue) row[2]).stringValue();
-                long version = ((LongValue) row[3]).longValue();
+                String version = ((TextValue) row[3]).stringValue();
                 String modifiers = ((TextValue) row[4]).stringValue();
                 if ( orientation.equals( wantedOrientation ) )
                 {
@@ -138,10 +137,10 @@ public class InstalledProtocolsProcedureIT
         private final String orientation;
         private final String address;
         private final String protocol;
-        private final long version;
+        private final String version;
         private final String modifiers;
 
-        private ProtocolInfo( String orientation, String address, String protocol, long version, String modifiers )
+        private ProtocolInfo( String orientation, String address, String protocol, String version, String modifiers )
         {
             this.orientation = orientation;
             this.address = address;
@@ -162,14 +161,16 @@ public class InstalledProtocolsProcedureIT
                 return false;
             }
             ProtocolInfo that = (ProtocolInfo) o;
-            return version == that.version && Objects.equals( orientation, that.orientation ) && Objects.equals( address, that.address ) &&
-                    Objects.equals( protocol, that.protocol ) && Objects.equals( modifiers, that.modifiers );
+            return Objects.equals( orientation, that.orientation ) &&
+                   Objects.equals( address, that.address ) &&
+                   Objects.equals( protocol, that.protocol ) &&
+                   Objects.equals( version, that.version ) &&
+                   Objects.equals( modifiers, that.modifiers );
         }
 
         @Override
         public int hashCode()
         {
-
             return Objects.hash( orientation, address, protocol, version, modifiers );
         }
 

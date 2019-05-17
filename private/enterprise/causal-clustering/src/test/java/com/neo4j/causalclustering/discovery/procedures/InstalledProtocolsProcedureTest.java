@@ -8,8 +8,9 @@ package com.neo4j.causalclustering.discovery.procedures;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
@@ -18,32 +19,30 @@ import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.values.AnyValue;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.neo4j.values.storable.Values.longValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedureTest
 {
-    private Pair<SocketAddress,ProtocolStack> outbound1 =
+    private final Pair<SocketAddress,ProtocolStack> outbound1 =
             Pair.of( new SocketAddress( "host1", 1 ),
-                    new ProtocolStack( TestApplicationProtocols.RAFT_1, asList( TestModifierProtocols.SNAPPY ) ) );
-    private Pair<SocketAddress,ProtocolStack> outbound2 =
+                    new ProtocolStack( TestApplicationProtocols.RAFT_1, List.of( TestModifierProtocols.SNAPPY ) ) );
+    private final Pair<SocketAddress,ProtocolStack> outbound2 =
             Pair.of( new SocketAddress( "host2", 2 ),
-                    new ProtocolStack( TestApplicationProtocols.RAFT_2, asList( TestModifierProtocols.SNAPPY, TestModifierProtocols.ROT13 ) ) );
+                    new ProtocolStack( TestApplicationProtocols.RAFT_2, List.of( TestModifierProtocols.SNAPPY, TestModifierProtocols.ROT13 ) ) );
 
-    private Pair<SocketAddress,ProtocolStack> inbound1 =
+    private final Pair<SocketAddress,ProtocolStack> inbound1 =
             Pair.of( new SocketAddress( "host3", 3 ),
-                    new ProtocolStack( TestApplicationProtocols.RAFT_3, asList( TestModifierProtocols.SNAPPY ) ) );
-    private Pair<SocketAddress,ProtocolStack> inbound2 =
+                    new ProtocolStack( TestApplicationProtocols.RAFT_3, List.of( TestModifierProtocols.SNAPPY ) ) );
+    private final Pair<SocketAddress,ProtocolStack> inbound2 =
             Pair.of( new SocketAddress( "host4", 4 ),
                     new ProtocolStack( TestApplicationProtocols.RAFT_4, emptyList() ) );
 
     @Test
-    public void shouldHaveEmptyOutputIfNoInstalledProtocols() throws Throwable
+    void shouldHaveEmptyOutputIfNoInstalledProtocols() throws Throwable
     {
         // given
         InstalledProtocolsProcedure installedProtocolsProcedure =
@@ -57,7 +56,7 @@ public class InstalledProtocolsProcedureTest
     }
 
     @Test
-    public void shouldListOutboundProtocols() throws Throwable
+    void shouldListOutboundProtocols() throws Throwable
     {
         // given
         InstalledProtocolsProcedure installedProtocolsProcedure =
@@ -69,15 +68,15 @@ public class InstalledProtocolsProcedureTest
         // then
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host1:1" ), stringValue( "raft" ),
-                        longValue( 1L ), stringValue( "[TestSnappy]" ) ) );
+                        stringValue( "1.0" ), stringValue( "[TestSnappy]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host2:2" ), stringValue( "raft" ),
-                        longValue( 2L ), stringValue( "[TestSnappy,ROT13]" ) ) );
+                        stringValue( "2.0" ), stringValue( "[TestSnappy,ROT13]" ) ) );
         assertFalse( result.hasNext() );
     }
 
     @Test
-    public void shouldListInboundProtocols() throws Throwable
+    void shouldListInboundProtocols() throws Throwable
     {
         // given
         InstalledProtocolsProcedure installedProtocolsProcedure =
@@ -89,15 +88,15 @@ public class InstalledProtocolsProcedureTest
         // then
         assertThat( result.next(),
                 arrayContaining( stringValue( "inbound" ), stringValue( "host3:3" ), stringValue( "raft" ),
-                        longValue( 3L ), stringValue( "[TestSnappy]" ) ) );
+                        stringValue( "3.0" ), stringValue( "[TestSnappy]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "inbound" ), stringValue( "host4:4" ), stringValue( "raft" ),
-                        longValue( 4L ), stringValue( "[]" ) ) );
+                        stringValue( "4.0" ), stringValue( "[]" ) ) );
         assertFalse( result.hasNext() );
     }
 
     @Test
-    public void shouldListInboundAndOutboundProtocols() throws Throwable
+    void shouldListInboundAndOutboundProtocols() throws Throwable
     {
         // given
         InstalledProtocolsProcedure installedProtocolsProcedure =
@@ -109,16 +108,16 @@ public class InstalledProtocolsProcedureTest
         // then
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host1:1" ), stringValue( "raft" ),
-                        longValue( 1L ), stringValue( "[TestSnappy]" ) ) );
+                        stringValue( "1.0" ), stringValue( "[TestSnappy]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host2:2" ), stringValue( "raft" ),
-                        longValue( 2L ), stringValue( "[TestSnappy,ROT13]" ) ) );
+                        stringValue( "2.0" ), stringValue( "[TestSnappy,ROT13]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "inbound" ), stringValue( "host3:3" ), stringValue( "raft" ),
-                        longValue( 3L ), stringValue( "[TestSnappy]" ) ) );
+                        stringValue( "3.0" ), stringValue( "[TestSnappy]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "inbound" ), stringValue( "host4:4" ), stringValue( "raft" ),
-                        longValue( 4L ), stringValue( "[]" ) ) );
+                        stringValue( "4.0" ), stringValue( "[]" ) ) );
         assertFalse( result.hasNext() );
     }
 }
