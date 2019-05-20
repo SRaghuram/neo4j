@@ -60,7 +60,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         /* We store the Future<ProtocolStack> in a Netty channel attr to give us access to it at a higher level. For example,
         we need to know which protocol has been agreed upon when deciding which version of a catchup request to execute (see CatchupClient). */
         channel.attr( PROTOCOL_STACK ).set( handshakeClient.protocol() );
-        channel.closeFuture().addListener( ignored -> handshakeClient.protocol().completeExceptionally( new ClosedChannelException().fillInStackTrace() ) );
+        channel.closeFuture().addListener( ignored -> handshakeClient.protocol().completeExceptionally( new ClosedChannelException() ) );
 
         try
         {

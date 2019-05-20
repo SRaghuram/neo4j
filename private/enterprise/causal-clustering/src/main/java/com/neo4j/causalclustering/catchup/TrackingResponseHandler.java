@@ -150,7 +150,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     @Override
     public void onClose()
     {
-        requestOutcomeSignal.completeExceptionally( new ClosedChannelException().fillInStackTrace() );
+        requestOutcomeSignal.completeExceptionally( new ClosedChannelException() );
     }
 
     OptionalLong millisSinceLastResponse()
