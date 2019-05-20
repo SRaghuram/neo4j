@@ -105,8 +105,12 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def cancel(): Unit = {
-    cancelled = true
-    tracer.stopQuery()
+    try {
+      cancelled = true
+      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+    } finally {
+      tracer.stopQuery()
+    }
   }
 
   override def await(): Boolean = {
@@ -217,6 +221,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   override def cancel(): Unit = {
     try {
       cancelled.set(true)
+      subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
     } finally {
       completeQuery()
     }

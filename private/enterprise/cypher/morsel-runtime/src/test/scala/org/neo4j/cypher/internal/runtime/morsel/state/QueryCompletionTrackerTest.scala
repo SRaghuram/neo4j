@@ -7,32 +7,31 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
-import org.mockito.verification.VerificationMode
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics, QueryTransactionalContext}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
-class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(never()) {
+class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(subscriber,
                                                                                          queryContext,
                                                                                          tracer)
 }
 
-class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(times(1)) {
+class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(true) {
   override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(subscriber,
                                                                                            queryContext,
                                                                                            tracer)
 }
 
-abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends CypherFunSuite {
+abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends CypherFunSuite {
 
-  var subscriber: QuerySubscriber = _
-  var queryContext: QueryContext = _
-  var tracer: QueryExecutionTracer = _
-  var transaction: Transaction = _
-  val stats = QueryStatistics()
+  protected var subscriber: QuerySubscriber = _
+  protected var queryContext: QueryContext = _
+  protected var tracer: QueryExecutionTracer = _
+  protected var transaction: Transaction = _
+  protected val stats = QueryStatistics()
 
   def newTracker(): QueryCompletionTracker
 
@@ -59,7 +58,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     verify(subscriber).onResultCompleted(stats)
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).thawLocks()
+    verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
     x.isCompleted shouldBe true
   }
@@ -72,10 +71,10 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     x.cancel()
 
     // then
-//    verify(subscriber).onResultCompleted(stats)
+    verify(subscriber).onResultCompleted(stats)
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).thawLocks()
+    verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
     x.isCompleted shouldBe true
   }
@@ -109,7 +108,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     verify(subscriber).onError(exception)
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).thawLocks()
+    verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.isCompleted shouldBe true
     intercept[IllegalArgumentException] {
       x.await()
