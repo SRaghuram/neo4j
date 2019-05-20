@@ -11,11 +11,12 @@ import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, Phy
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.execution.QueryExecutor
+import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.operators.CompiledQueryResultRecord
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics, createParameterArray}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -42,12 +43,12 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
         new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
-        //MorselExpressionConverters(physicalPlan),
+        MorselExpressionConverters,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     } else {
       new ExpressionConverters(
-        //MorselExpressionConverters(physicalPlan),
+        MorselExpressionConverters,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     }
