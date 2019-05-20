@@ -25,6 +25,7 @@ import static com.neo4j.bench.client.ClientUtil.prettyPrint;
 import static com.neo4j.bench.client.model.BenchmarkMetrics.extractBenchmarkMetricsList;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.neo4j.driver.v1.AccessMode.WRITE;
 
 public class SubmitTestRun implements Query<SubmitTestRunResult>
 {
@@ -49,7 +50,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     @Override
     public SubmitTestRunResult execute( Driver driver )
     {
-        try ( Session session = driver.session() )
+        try ( Session session = driver.session( WRITE ) )
         {
             Map<String,Object> params = params();
             StatementResult statementResult = session.run( SUBMIT_TEST_RUN, params );

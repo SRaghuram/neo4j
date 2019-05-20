@@ -20,6 +20,7 @@ import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
 
 import static java.lang.String.format;
+import static org.neo4j.driver.v1.AccessMode.READ;
 
 public class StoreClient implements AutoCloseable
 {
@@ -103,7 +104,7 @@ public class StoreClient implements AutoCloseable
     {
         if ( driver != null )
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( READ ) )
             {
                 return !session.run( "RETURN 1" ).hasNext();
             }
@@ -147,7 +148,7 @@ public class StoreClient implements AutoCloseable
 
     private int versionNodeCount()
     {
-        try ( Session session = driver.session() )
+        try ( Session session = driver.session( READ ) )
         {
             return session.run( "MATCH (ss:StoreSchema) RETURN count(ss) AS c" ).single().get( "c" ).asInt();
         }
