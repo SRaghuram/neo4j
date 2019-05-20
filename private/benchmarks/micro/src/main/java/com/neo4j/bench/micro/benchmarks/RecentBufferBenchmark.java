@@ -60,10 +60,10 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
         switch ( RecentBufferBenchmark_impl )
         {
         case "concurrentLinkedQueue":
-            buffer = new ConcurrentLinkedQueueRecentBuffer<>( 13 );
+            buffer = new ConcurrentLinkedQueueRecentBuffer<>( 8192 );
             break;
         case "ringBuffer":
-            buffer = new RingRecentBuffer<>( 13 );
+            buffer = new RingRecentBuffer<>( 8192 );
             break;
         default:
             throw new IllegalStateException( "Unknown thingy" );
