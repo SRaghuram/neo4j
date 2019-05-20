@@ -2,22 +2,22 @@
 # shellcheck disable=SC2154,SC1117
 if [ -z "$JFR_FLAMEGRAPH" ] ; then
     echo "JFR_FLAMEGRAPH is not set"
-    exit -1
+    exit 1
 elif [ ! -d "$JFR_FLAMEGRAPH" ] ; then
     echo "JFR_FLAMEGRAPH is not a directory: ${JFR_FLAMEGRAPH}"
-    exit -1
+    exit 1
 elif [ -z "${FLAMEGRAPH_DIR}" ] ; then
     echo "FLAMEGRAPH_DIR is not set"
-    exit -1
+    exit 1
 elif [ ! -d "${FLAMEGRAPH_DIR}" ] ; then
     echo "FLAMEGRAPH_DIR is not a directory: ${FLAMEGRAPH_DIR}"
-    exit -1
+    exit 1
 elif [ -z "$ASYNC_PROFILER_DIR" ] ; then
     echo "ASYNC_PROFILER_DIR is not set"
-    exit -1
+    exit 1
 elif [ ! -d "$ASYNC_PROFILER_DIR" ] ; then
     echo "ASYNC_PROFILER_DIR is not a directory: ${ASYNC_PROFILER_DIR}"
-    exit -1
+    exit 1
 fi
 
 function generateJfrFlameGraphs {

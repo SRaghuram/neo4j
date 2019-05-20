@@ -3,7 +3,7 @@
 if [ $# -lt 2 ] ; then
     echo "Expected at least 2 arguments, but got $#"
     echo "usage: ./upgrade-all-stores.sh new_neo4j_version old_neo4j_version"
-    exit -1
+    exit 1
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then

@@ -155,7 +155,7 @@ rm -f ${benchmark_profile}
 if ! touch ${benchmark_profile}
 then
   echo "Cannot edit profile.d without root permission"
-  exit -1
+  exit 1
 fi
 
 {
@@ -187,7 +187,7 @@ rm -f ${benchmark_sysctl}
 if ! touch ${benchmark_sysctl}
 then
   echo "Cannot edit sysctl files without root permission"
-  exit -1
+  exit 1
 fi
 echo "kernel.perf_event_paranoid=1" >> ${benchmark_sysctl}
 echo "kernel.kptr_restrict=0" >> ${benchmark_sysctl}
