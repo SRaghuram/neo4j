@@ -22,6 +22,7 @@
         <jackson.version>2.9.7</jackson.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
+        <neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -44,7 +45,7 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -109,7 +110,7 @@
         <dependency>
             <groupId>org.neo4j.test</groupId>
             <artifactId>neo4j-harness-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
