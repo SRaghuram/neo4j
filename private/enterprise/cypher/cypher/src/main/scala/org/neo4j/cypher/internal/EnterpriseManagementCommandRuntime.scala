@@ -5,9 +5,12 @@
  */
 package org.neo4j.cypher.internal
 
+import java.lang.String.format
 import java.util
+import java.util.regex.Pattern
 
-import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager, Resource, ResourcePrivilege}
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
+import com.neo4j.server.security.enterprise.auth._
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
@@ -23,10 +26,12 @@ import org.neo4j.dbms.database.DatabaseNotFoundException
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.impl.query.QueryExecution
+import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import org.neo4j.server.security.systemgraph.SystemGraphCredential
 import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{StringValue, Value, Values}
+import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
 
 /**
@@ -34,6 +39,7 @@ import org.neo4j.values.virtual.VirtualValues
   */
 case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
   val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine)
+  val secureHasher = new SecureHasher()
 
   override def name: String = "enterprise management-commands"
 
@@ -54,8 +60,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
   }
 
-  private lazy val userManager: EnterpriseUserManager = {
-    resolver.resolveDependency(classOf[CommercialAuthAndUserManager]).getUserManager
+  private lazy val authManager = {
+    resolver.resolveDependency(classOf[CommercialAuthManager])
   }
 
   val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, Int]) => ExecutionPlan] = {
@@ -70,10 +76,32 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE USER foo WITH PASSWORD password
     case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _) =>
-      userManager.newUser(userName, UTF8.encode(initialStringPassword), requirePasswordChange)
-      // Default value is not suspended, so only set suspended if needed
-      if (suspended) userManager.setUserStatus(userName, suspended)
-      NoResultSystemCommandExecutionPlan()
+      // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
+      val initialPassword = UTF8.encode(initialStringPassword)
+      try{
+        assertValidUsername(userName)
+        validatePassword(initialPassword)
+
+        // NOTE: If username already exists we will violate a constraint
+        UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
+          """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
+            |RETURN count(*)""".stripMargin,
+          VirtualValues.map(
+            Array("name", "credentials", "passwordChangeRequired", "suspended"),
+            Array(
+              Values.stringValue(userName),
+              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
+              Values.booleanValue(requirePasswordChange),
+              Values.booleanValue(suspended))),
+          QueryHandler
+            .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create user '$userName'."))
+            .handleError(e => throw new InvalidArgumentsException(s"The specified user '$userName' already exists."))
+            .handleResult(_ => clearCacheForUser(userName))
+        )
+      } finally {
+        // Clear password
+        if (initialPassword != null) util.Arrays.fill(initialPassword, 0.toByte)
+      }
 
     // CREATE USER foo WITH PASSWORD $password
     case CreateUser(_, _, Some(_), _, _) =>
@@ -85,27 +113,42 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // DROP USER foo
     case DropUser(userName) => (_, _) =>
-      userManager.deleteUser(userName)
-      NoResultSystemCommandExecutionPlan()
+      UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
+        """MATCH (user:User {name: $name}) DETACH DELETE user
+          |RETURN user""".stripMargin,
+        VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
+        QueryHandler
+          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
+          .handleResult(_ => clearCacheForUser(userName))
+      )
 
     // ALTER USER foo
     case AlterUser(userName, initialStringPassword, None, requirePasswordChange, suspended) => (_, _) =>
-      if (suspended.isDefined)
-        userManager.setUserStatus(userName, suspended.get)
-
-      val newPassword: String = initialStringPassword.orNull
-      if (requirePasswordChange.isDefined && newPassword != null)
-        // change both password and requirePasswordChange
-        userManager.setUserPassword(userName, UTF8.encode(newPassword), requirePasswordChange.get)
-      else if (requirePasswordChange.isDefined)
-        // change only mode
-        userManager.setUserRequirePasswordChange(userName, requirePasswordChange.get)
-      else if (newPassword != null) {
-        // change only password
-        val changePassword = userManager.getUser(userName).passwordChangeRequired()
-        userManager.setUserPassword(userName, UTF8.encode(newPassword), changePassword)
+      val params = Seq(
+        initialStringPassword -> "credentials",
+        requirePasswordChange -> "passwordChangeRequired",
+        suspended -> "suspended"
+      ).flatMap { param =>
+        param._1 match {
+          case None => Seq.empty
+          case Some(value:Boolean) => Seq((param._2, Values.booleanValue(value)))
+          case Some(value:String) => Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(UTF8.encode(value), secureHasher).serialize())))
+          case _ => throw new IllegalArgumentException("GAH!")
+        }
       }
-      NoResultSystemCommandExecutionPlan()
+      val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name})", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
+        val key = param._1
+        (acc._1 + s" SET user.$key = $$$key", acc._2 :+ key, acc._3 :+ param._2)
+      }
+      UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
+        s"$query RETURN count(*)",
+        VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
+        QueryHandler
+          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
+          .handleResult(_ => clearCacheForUser(userName))
+      )
 
     // ALTER USER foo
     case AlterUser(_, _, Some(_), _, _) =>
@@ -144,6 +187,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE ROLE foo AS COPY OF bar
     case CreateRole(roleName, Some(from)) => (_, _) =>
+      assertValidRoleName(roleName)
       val names: Array[AnyValue] = Array(Values.stringValue(from), Values.stringValue(roleName))
       UpdatingSystemCommandExecutionPlan("CopyRole", normalExecutionEngine,
         """MATCH (old:Role {name: $old})
@@ -152,24 +196,31 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         VirtualValues.map(Array("old", "new"), names),
         QueryHandler
           .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot create role '$roleName' from non-existent role '$from'."))
-          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e))
       )
 
     // CREATE ROLE foo
     case CreateRole(roleName, _) => (_, _) =>
+      assertValidRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        """CREATE (new:Role {name: $new})
-          |RETURN count(*)""".stripMargin,
-        VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
+        """CREATE (role:Role {name: $name})
+          |RETURN role""".stripMargin,
+        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create role '$roleName'."))
-          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e))
       )
 
     // DROP ROLE foo
     case DropRole(roleName) => (_, _) =>
-      userManager.deleteRole(roleName)
-      NoResultSystemCommandExecutionPlan()
+      assertNotPredefinedRoleName(roleName)
+      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
+        """MATCH (role:Role {name: $name}) DETACH DELETE role
+          |RETURN role""".stripMargin,
+        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        QueryHandler
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
+      )
 
     // GRANT ROLE foo TO user
     case GrantRolesToUsers(roleNames, userNames) => (_, _) =>
@@ -310,7 +361,39 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
   }
 
-  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String): UpdatingSystemCommandExecutionPlan = {
+  protected def clearCacheForUser(username: String): Unit = {
+    // TODO: Get handle on BasicSystemGraphRealm to clear the cache
+    //See: BasicSystemGraphRealm.clearCacheForUser(username)
+    authManager.clearAuthCache()
+
+    // Ultimately this should go to the trigger handling done in the reconciler
+  }
+
+  // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
+  private val usernamePattern = Pattern.compile("^[\\x21-\\x2B\\x2D-\\x39\\x3B-\\x7E]+$")
+
+  def assertValidUsername(username: String): Unit = {
+    if (username == null || username.isEmpty) throw new InvalidArgumentsException("The provided username is empty.")
+    if (!usernamePattern.matcher(username).matches) throw new InvalidArgumentsException("Username '" + username + "' contains illegal characters. Use ascii characters that are not ',', ':' or whitespaces.")
+  }
+
+  private def validatePassword(password: Array[Byte]): Unit = {
+    if (password == null || password.length == 0) throw new InvalidArgumentsException("A password cannot be empty.")
+  }
+
+  private val roleNamePattern = Pattern.compile("^[a-zA-Z0-9_]+$")
+
+  private def assertValidRoleName(name: String): Unit = {
+    if (name == null || name.isEmpty) throw new InvalidArgumentsException("The provided role name is empty.")
+    if (!roleNamePattern.matcher(name).matches) throw new InvalidArgumentsException("Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers.")
+  }
+
+  private def assertNotPredefinedRoleName(roleName: String): Unit = {
+    // TODO: Find a way to not depend on enterprise security module
+    if (roleName != null && PredefinedRolesBuilder.roles.keySet.contains(roleName)) throw new InvalidArgumentsException(format("'%s' is a predefined role and can not be deleted or modified.", roleName))
+  }
+
+  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
     val (property: Value, resourceType: Value, resourceMerge: String) = resource match {

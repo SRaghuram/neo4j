@@ -5,33 +5,25 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.time.Duration
-import java.util
 import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext
-import com.neo4j.server.security.enterprise.auth.{CommercialAuthAndUserManager, EnterpriseUserManager}
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings
-import com.neo4j.server.security.enterprise.systemgraph._
-import org.mockito.Mockito.when
-import org.neo4j.collection.Dependencies
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager, DatabaseNotFoundException}
 import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.config.Setting
+import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.Transaction
-import org.neo4j.internal.kernel.api.security.{AuthSubject, AuthenticationResult}
+import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
-import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.{BasicPasswordPolicy, CommunitySecurityModule, SecureHasher, SecurityTestUtils}
+import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
-import org.neo4j.server.security.systemgraph.{BasicSystemGraphRealm, ContextSwitchingSystemGraphQueryExecutor}
 
-import scala.collection.JavaConverters._
+import scala.collection.Map
 
 class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   private val defaultRoles = Set(
@@ -51,8 +43,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
   private val neo4jUser = user("neo4j", Seq("admin"))
-
-  private var systemGraphRealm: SystemGraphRealm = _
 
   test("should list all default roles") {
     // GIVEN
@@ -321,7 +311,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     ))
   }
 
-  ignore("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
+  test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -329,19 +319,24 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT ROLE custom TO joe")
 
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n)")
-    //a[CypherException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN count(n)", row => {
-        println(row.get("count(n)"))
-      }) should be(0)
-    //}
+    graph.execute("CREATE (n:A {name:'a'})")
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {})
+    }
 
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {
+      row.get("n.name") should be(null)
+    }) should be(1)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN count(n)", row => {
-      row.get("count(n)") should be(1)
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {
+      row.get("n.name") should be("a")
     }) should be(1)
   }
 
@@ -1101,8 +1096,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   }
 
   private def executeOnDefault(username: String, password: String, query: String, resultHandler: Result.ResultRow => Unit = row => {}): Int = {
-    val login = systemGraphRealm.login(SecurityTestUtils.authToken(username, password))
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val tx = graph.beginTransaction(Transaction.Type.explicit, login)
     try {
       var count = 0
@@ -1119,18 +1114,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     }
   }
 
+  private def authManager = graph.getDependencyResolver.resolveDependency(classOf[CommercialAuthManager])
+  private def databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
+
   private def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
-    val login = systemGraphRealm.login(SecurityTestUtils.authToken(username, password))
+    val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val result = login.subject().getAuthenticationResult
-    if (expected == AuthenticationResult.FAILURE && result != AuthenticationResult.FAILURE) {
-      // This is a hack to get around the fact that login() does not fail for suspended users
-      // TODO: Remove once initTest builds a full normal database stack
-      val user = systemGraphRealm.getUser(username)
-      user.hasFlag(BasicSystemGraphRealm.IS_SUSPENDED) should equal(true)
-    }
-    else {
-      result should be(expected)
-    }
+    result should be(expected)
   }
 
   private def prepareUser(username: String, password: String): Unit = {
@@ -1140,84 +1130,17 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  protected override def initTest(): Unit = {
-    super.initTest()
-    // TODO: Rather build a full normal database stack (and stop using systemGraph* variables)
-
-    val systemGraphInnerQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager(), threadToStatementContextBridge())
-    val secureHasher: SecureHasher = new SecureHasher
-    val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(systemGraphInnerQueryExecutor, secureHasher)
-    val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer =
-      new SystemGraphInitializer(systemGraphInnerQueryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], Config.defaults())
-    val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
-    val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
-    systemGraphInitializer.initializeSystemGraph()
-    systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
-
-    // need to setup/mock security a bit so we can have a userManager
-    val config = mock[Config]
-    when(config.get(SecuritySettings.property_level_authorization_enabled)).thenReturn(false)
-    when(config.get(SecuritySettings.auth_cache_ttl)).thenReturn(Duration.ZERO)
-    when(config.get(SecuritySettings.auth_cache_max_capacity)).thenReturn(10)
-    when(config.get(SecuritySettings.auth_cache_use_ttl)).thenReturn(true)
-    when(config.get(SecuritySettings.security_log_successful_authentication)).thenReturn(false)
-    when(config.get(GraphDatabaseSettings.auth_max_failed_attempts)).thenReturn(3) //!
-    when(config.get(GraphDatabaseSettings.auth_lock_time)).thenReturn(Duration.ofSeconds(5))
-    when(config.get(SecuritySettings.auth_providers)).thenReturn(List(SecuritySettings.NATIVE_REALM_NAME).asJava)
-
-    systemGraphRealm = new SystemGraphRealm( // this is also a UserManager even if the Name does not indicate that
-      systemGraphOperations,
-      systemGraphInitializer,
-      false,
-      secureHasher,
-      new BasicPasswordPolicy(),
-      CommunitySecurityModule.createAuthenticationStrategy(config),
-      false,
-      false
-    )
-  }
-
-  private def databaseManager() = {
-    dependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-  }
+  override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.auth_enabled -> "true")
 
   private def threadToStatementContextBridge() = {
-    dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-  }
-
-  private def dependencyResolver = {
-    graph.getDependencyResolver
+    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
 
   private def selectDatabase(name: String): Unit = {
-    val manager = databaseManager()
-    val maybeCtx: Optional[DatabaseContext] = manager.getDatabaseContext(new DatabaseId(name))
+    val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(new DatabaseId(name))
     val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)
     eengine = ExecutionEngineHelper.createEngine(graph)
-
-    dependencyResolver.asInstanceOf[Dependencies].satisfyDependency(SimpleUserManagerSupplier(systemGraphRealm)) // needed to do that here on the outer engine
-
   }
-}
-
-case class SimpleUserManagerSupplier(userManager: EnterpriseUserManager) extends CommercialAuthAndUserManager {
-  override def getUserManager(authSubject: AuthSubject, isUserManager: Boolean): EnterpriseUserManager = getUserManager
-
-  override def getUserManager: EnterpriseUserManager = userManager
-
-  override def clearAuthCache(): Unit = ???
-
-  override def login(authToken: util.Map[String, AnyRef]): CommercialLoginContext = ???
-
-  override def init(): Unit = ???
-
-  override def start(): Unit = ???
-
-  override def stop(): Unit = ???
-
-  override def shutdown(): Unit = ???
 }
