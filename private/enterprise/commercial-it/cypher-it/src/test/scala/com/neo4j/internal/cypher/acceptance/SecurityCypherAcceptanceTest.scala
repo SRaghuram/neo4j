@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.util.Optional
+import java.util.Collection
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
@@ -321,13 +322,28 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {})
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
 
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", (row, _) => {
+      row.get("labels(n)").asInstanceOf[Collection[String]] should contain("A")
+    }) should be(1)
+  }
+
+  test("should read properties when granted read privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
 
@@ -335,9 +351,102 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", row => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
+  }
+
+  test("read privilege should not imply traverse privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+  }
+
+  test("should see properties and nodes depending on privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role2")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT ROLE role1 TO joe")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role1 FROM joe")
+    execute("GRANT ROLE role2 TO joe")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role2 FROM joe")
+    execute("GRANT ROLE role3 TO joe")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
+  private def setupMultilabelData = {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {foo:1, bar:2})")
+    execute("CREATE (n:B {foo:3, bar:4})")
+    execute("CREATE (n:A:B {foo:5, bar:6})")
+    execute("CREATE (n {foo:7, bar:8})")
   }
 
   test("should grant read privilege to custom role for all databases and all labels") {
@@ -677,6 +786,45 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // THEN
     val result2 = execute("SHOW ROLES")
     result2.toSet should be(defaultRoles ++ Set.empty)
+  }
+
+  test("should grant role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom TO user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "user"))
+  }
+
+  ignore("should fail grant non existent role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    val exception = intercept[Exception](execute("GRANT ROLE custom TO user"))
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should revoke role from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
   test("should list default user") {
@@ -1095,7 +1243,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
-  private def executeOnDefault(username: String, password: String, query: String, resultHandler: Result.ResultRow => Unit = row => {}): Int = {
+  private def executeOnDefault(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val tx = graph.beginTransaction(Transaction.Type.explicit, login)
@@ -1103,7 +1251,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       var count = 0
       val result: Result = new RichGraphDatabaseQueryService(graph).execute(query)
       result.accept(row => {
-        resultHandler(row)
+        resultHandler(row, count)
         count = count + 1
         true
       })

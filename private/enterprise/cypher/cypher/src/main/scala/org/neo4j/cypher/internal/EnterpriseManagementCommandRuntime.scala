@@ -226,13 +226,28 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case GrantRolesToUsers(roleNames, userNames) => (_, _) =>
       val roles = Values.stringArray(roleNames: _*)
       val users = Values.stringArray(userNames: _*)
-      SystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
         """UNWIND $roles AS role
           |UNWIND $users AS user
           |MATCH (r:Role {name: role}), (u:User {name: user})
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN user, collect(role) AS roles""".stripMargin,
-        VirtualValues.map(Array("roles","users"), Array(roles, users))
+        VirtualValues.map(Array("roles","users"), Array(roles, users)),
+        QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
+      )
+
+    // REVOKE ROLE foo FROM user
+    case RevokeRolesFromUsers(roleNames, userNames) => (_, _) =>
+      val roles = Values.stringArray(roleNames: _*)
+      val users = Values.stringArray(userNames: _*)
+      UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
+        """UNWIND $roles AS role
+          |UNWIND $users AS user
+          |MATCH (u:User {name: user})-[a:HAS_ROLE]->(r:Role {name: role})
+          |DELETE a
+          |RETURN user, collect(role) AS roles""".stripMargin,
+        VirtualValues.map(Array("roles","users"), Array(roles, users)),
+        QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
       )
 
     // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
