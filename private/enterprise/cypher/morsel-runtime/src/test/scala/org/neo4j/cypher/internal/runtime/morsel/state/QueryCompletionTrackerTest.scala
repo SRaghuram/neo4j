@@ -71,7 +71,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.cancel()
 
     // then
-    verify(subscriber).onResultCompleted(stats)
+    verify(subscriber, never()).onResultCompleted(any())
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
