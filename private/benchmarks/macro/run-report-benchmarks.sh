@@ -2,6 +2,7 @@
 
 set -e
 set -u
+set -x
 
 if [ $# -lt 32 ] ; then
     echo "Expected at least 32 arguments, but got $#"
@@ -43,7 +44,7 @@ triggered_by="${30}"
 error_policy="${31}"
 deployment="${32}"
 
-# here we are checking for optional AWS endpoint URL, 
+# here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
 if [[ $# -eq 33 ]]; then
@@ -62,8 +63,9 @@ profiler_recording_output_dir="${macro_benchmark_dir}"/"${uuid}"
 mkdir "${profiler_recording_output_dir}"
 
 # path to on-out-of-memory script
-out_of_memory_script=$(realpath "$0")/on-out-of-memory.sh
-out_of_memory_base_dir=$(realpath "$0/out-of-memory")
+basedir=$(dirname "$(realpath "$0")")
+out_of_memory_script="$basedir/on-out-of-memory.sh"
+out_of_memory_base_dir="$basedir/out-of-memory"
 # path to benchmark process out of memory output directory
 out_of_memory_dir="$out_of_memory_base_dir/benchmark"
 # path to forked process out of memory output directory
