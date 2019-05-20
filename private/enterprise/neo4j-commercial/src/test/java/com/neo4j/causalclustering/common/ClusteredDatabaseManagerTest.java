@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( LifeExtension.class )
@@ -159,9 +160,12 @@ class ClusteredDatabaseManagerTest
 
     private static ClusteredDatabaseManager newDatabaseManager( AvailabilityGuard availabilityGuard )
     {
-        return new ClusteredMultiDatabaseManager( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Log.class ),
+        Config config = Config.defaults();
+        GlobalModule globalModule = mock( GlobalModule.class );
+        when( globalModule.getGlobalConfig() ).thenReturn( config );
+        return new ClusteredMultiDatabaseManager( globalModule, mock( AbstractEditionModule.class ), mock( Log.class ),
                 StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
-                mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), Config.defaults(),
+                mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), config,
                 mock( DatabaseHealth.class ), availabilityGuard );
     }
 }

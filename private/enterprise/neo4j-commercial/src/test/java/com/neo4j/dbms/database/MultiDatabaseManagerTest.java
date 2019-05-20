@@ -21,7 +21,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class MultiDatabaseManagerTest
 {
-    private static String CUSTOM_DATABASE_NAME = "custom";
+    private static final String CUSTOM_DATABASE_NAME = "custom";
 
     private MultiDatabaseManager<DatabaseContext> databaseManager;
     private DatabaseContext sys;

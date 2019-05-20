@@ -5,8 +5,10 @@
  */
 package com.neo4j.dbms.database;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -18,9 +20,11 @@ import static org.mockito.Mockito.when;
 
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
+    private static final GlobalModule globalModule = buildGlobalModuleMock();
+
     StubMultiDatabaseManager()
     {
-        super( null, null, NullLog.getInstance() );
+        super( globalModule, null, NullLog.getInstance() );
     }
 
     @Override
@@ -35,5 +39,12 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     protected DatabaseContext createDatabaseContext( Database database, GraphDatabaseFacade facade )
     {
         return spy( new StandaloneDatabaseContext( database, facade ) );
+    }
+
+    private static GlobalModule buildGlobalModuleMock()
+    {
+        GlobalModule globalModule = mock( GlobalModule.class );
+        when( globalModule.getGlobalConfig() ).thenReturn( Config.defaults() );
+        return globalModule;
     }
 }

@@ -5,8 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
-
 import java.util.Optional;
 
 import org.neo4j.dbms.database.AbstractDatabaseManager;
@@ -20,6 +18,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.maxNumberOfDatabases;
 import static java.lang.String.format;
 
 public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
@@ -30,7 +29,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
     {
         super( globalModule, edition, log );
-        maximumNumerOfDatabases = globalModule.getGlobalConfig().get( CommercialEditionSettings.maxNumberOfDatabases );
+        maximumNumerOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
     }
 
     public DB createStoppedDatabase( DatabaseId databaseId ) throws DatabaseExistsException
