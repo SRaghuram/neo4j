@@ -10,6 +10,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
 import com.amazonaws.services.batch.model.DescribeJobsRequest;
+import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.google.common.collect.Streams;
@@ -79,7 +80,7 @@ public class AWSBatchJobScheduler implements JobScheduler
         List<JobStatus> jobsStatuses = awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIds ) )
             .getJobs()
             .stream()
-            .map(JobStatus::from)
+            .map(AWSBatchJobScheduler::jobStatus)
             .collect( Collectors.toList() );
         LOG.info( "current jobs statuses:\n{}", jobsStatuses.stream().map(Object::toString).collect( joining( "\n" ) ) );
         return jobsStatuses;
@@ -112,6 +113,11 @@ public class AWSBatchJobScheduler implements JobScheduler
     private static String getJobName( String workload )
     {
         return String.format( "macro-%s", workload );
+    }
+
+    private static JobStatus jobStatus( JobDetail jobDetail )
+    {
+        return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus() );
     }
 
     private class WorkloadAndDb

@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.infra;
 
-import com.amazonaws.services.batch.model.JobDetail;
-
 import java.util.Objects;
 
 public class JobStatus
@@ -14,12 +12,7 @@ public class JobStatus
     private final String jobId;
     private final String status;
 
-    public static JobStatus from( JobDetail jobDetail )
-    {
-        return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus() );
-    }
-
-    private JobStatus( String jobId, String status )
+    public JobStatus( String jobId, String status )
     {
         super();
         this.jobId = jobId;
