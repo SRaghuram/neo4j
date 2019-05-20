@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.{Aggr
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, GroupingAggTable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{AggregationPipe, ExecutionContextFactory, Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{LongArray, Values}
 
 import scala.collection.JavaConverters._
@@ -27,7 +28,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
                                        aggregations: Map[Int, AggregationExpression],
                                        state: QueryState) extends AggregationTable {
 
-  protected val resultMap = new util.LinkedHashMap[LongArray, Array[AggregationFunction]]()
+  protected var resultMap: util.LinkedHashMap[LongArray, Array[AggregationFunction]] = _
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
     (a.toArray, b.toArray)
@@ -63,13 +64,26 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
   }
 
   override def clear(): Unit = {
-    resultMap.clear()
+    resultMap = new java.util.LinkedHashMap[LongArray, Array[AggregationFunction]]()
   }
 
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = computeGroupingKey(row)
-    val functions = resultMap.computeIfAbsent(groupingValue, _ => aggregationExpressions.map(_.createAggregationFunction))
+    val functions = resultMap.computeIfAbsent(groupingValue, _ => {
+      val functions = new Array[AggregationFunction](aggregationExpressions.length)
+      var i = 0
+      while (i < aggregationExpressions.length) {
+        functions(i) = aggregationExpressions(i).createAggregationFunction
+        i += 1
+      }
+      functions
+    })
     functions.foreach(func => func(row, state))
+    var i = 0
+    while (i < functions.length) {
+      functions(i)(row, state)
+      i += 1
+    }
   }
 
   override def result(): Iterator[ExecutionContext] = {

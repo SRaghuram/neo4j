@@ -24,25 +24,43 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
                               aggregations: Map[Int, AggregationExpression],
                               state: QueryState) extends AggregationTable {
 
-  private val resultMap: mutable.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]] = mutable.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]]()
+  private var resultMap: java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
     (a.toArray, b.toArray)
   }
 
   override def clear(): Unit = {
-    resultMap.clear()
+    resultMap = new java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]]()
   }
 
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
-    val functions = resultMap.getOrElseUpdate(groupingValue, aggregationExpressions.map(_.createAggregationFunction))
-    functions.foreach(func => func(row, state))
+    val functions = resultMap.computeIfAbsent(groupingValue, _ => {
+      val functions = new Array[AggregationFunction](aggregationExpressions.length)
+      var i = 0
+      while (i < aggregationExpressions.length) {
+        functions(i) = aggregationExpressions(i).createAggregationFunction
+        i += 1
+      }
+      functions
+    })
+    var i = 0
+    while (i < functions.length) {
+      functions(i)(row, state)
+      i += 1
+    }
   }
 
   override def result(): Iterator[ExecutionContext] = {
-    resultMap.toIterator.map {
-      case (unorderedGroupingValue, aggregateFunctions) =>
+    val innerIterator = resultMap.entrySet().iterator()
+    new Iterator[ExecutionContext] {
+      override def hasNext: Boolean = innerIterator.hasNext
+
+      override def next(): ExecutionContext = {
+        val entry = innerIterator.next()
+        val unorderedGroupingValue = entry.getKey
+        val aggregateFunctions = entry.getValue
         val row = SlottedExecutionContext(slots)
         groupingColumns.project(row, unorderedGroupingValue)
         var i = 0
@@ -51,6 +69,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
           i += 1
         }
         row
+      }
     }
   }
 }
