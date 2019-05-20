@@ -9,11 +9,15 @@ import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.TestDatabaseManager;
 
+import java.util.Collection;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
@@ -63,7 +67,8 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManagementService managementService,
             QueryExecutor executor, Config config ) throws Throwable
     {
-        unregisterListeners( managementService, config );
+        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
+        Collection<TransactionEventListener<?>> systemEventListener = unregisterListeners( graph);
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
         SystemGraphInitializer systemGraphInitializer =
@@ -75,7 +80,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
         realm.initialize();
         realm.start();
 
-        registerListeners();
+        registerListeners( graph, systemEventListener );
 
         return realm;
     }

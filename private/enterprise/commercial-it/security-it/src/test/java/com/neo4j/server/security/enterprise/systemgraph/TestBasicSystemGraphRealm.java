@@ -39,8 +39,6 @@ import static org.mockito.Mockito.mock;
 
 class TestBasicSystemGraphRealm
 {
-    private static GlobalTransactionEventListeners transactionEventListeners;
-    private static Collection<TransactionEventListener<?>> systemListeners;
     private static final TestThreadToStatementContextBridge threadToStatementContextBridge = new TestThreadToStatementContextBridge();
 
     static final SecureHasher secureHasher = new SecureHasher();
@@ -74,7 +72,8 @@ class TestBasicSystemGraphRealm
             QueryExecutor executor,
             Config config ) throws Throwable
     {
-        unregisterListeners( managementService, config );
+        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
+        Collection<TransactionEventListener<?>> systemListeners = unregisterListeners( graph );
 
         BasicSystemGraphOperations systemGraphOperations = new BasicSystemGraphOperations( executor, secureHasher );
         BasicSystemGraphInitializer systemGraphInitializer =
@@ -99,25 +98,28 @@ class TestBasicSystemGraphRealm
         );
         realm.start();
 
-        registerListeners();
+        registerListeners( graph, systemListeners );
 
         return realm;
     }
 
-    static void unregisterListeners( DatabaseManagementService managementService, Config config )
+    static Collection<TransactionEventListener<?>> unregisterListeners( GraphDatabaseCypherService graph )
     {
-        GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
-        transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
-        systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        GlobalTransactionEventListeners transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
+        Collection<TransactionEventListener<?>> systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
         for ( TransactionEventListener<?> listener : systemListeners )
         {
             transactionEventListeners.unregisterTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
         }
+
+        return systemListeners;
     }
 
-    static void registerListeners()
+    static void registerListeners( GraphDatabaseCypherService graph, Collection<TransactionEventListener<?>> systemListeners )
     {
+        GlobalTransactionEventListeners transactionEventListeners = graph.getDependencyResolver().resolveDependency( GlobalTransactionEventListeners.class );
+
         for ( TransactionEventListener<?> listener : systemListeners )
         {
             transactionEventListeners.registerTransactionEventListener( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, listener );
