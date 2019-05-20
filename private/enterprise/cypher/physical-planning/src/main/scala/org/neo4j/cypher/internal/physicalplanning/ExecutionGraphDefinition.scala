@@ -36,8 +36,7 @@ case class PipelineDefinition(id: PipelineId,
                               inputBuffer: BufferDefinition,
                               outputDefinition: OutputDefinition,
                               middlePlans: IndexedSeq[LogicalPlan],
-                              serial: Boolean,
-                              checkHasDemand: Boolean)
+                              serial: Boolean)
 
 /**
   * Maps to one ArgumentStateMap.

@@ -163,8 +163,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       null,
       pipelineBuilder.pipeline.outputDefinition,
       pipelineBuilder.pipeline.middlePlans,
-      serial = false,
-      checkHasDemand = false)
+      serial = false)
     fuser.compilePipeline(pipeline)
   }
 

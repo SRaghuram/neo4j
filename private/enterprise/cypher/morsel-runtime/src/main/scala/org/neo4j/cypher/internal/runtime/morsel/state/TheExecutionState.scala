@@ -178,11 +178,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
     val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
-    if (pipeline.checkHasDemand) {
-      hasWork && queryState.flowControl.hasDemand
-    } else {
-      hasWork
-    }
+    hasWork && queryState.flowControl.hasDemand
   }
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,

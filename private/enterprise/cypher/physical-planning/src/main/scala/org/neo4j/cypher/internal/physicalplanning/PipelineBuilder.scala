@@ -34,8 +34,7 @@ object PipelineBuilder {
       mapBuffer(pipeline.inputBuffer),
       pipeline.outputDefinition,
       pipeline.middlePlans,
-      pipeline.serial,
-      pipeline.checkHasDemand)
+      pipeline.serial)
   }
 
   private def mapBuffer(bufferDefinition: BufferDefinitionBuild): BufferDefinition = {
