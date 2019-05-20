@@ -24,7 +24,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.helper.Workload;
 import org.neo4j.internal.helpers.SocketAddress;
-import org.neo4j.kernel.diagnostics.utils.DumpUtils;
+import org.neo4j.internal.utils.DumpUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
