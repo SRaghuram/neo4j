@@ -16,17 +16,14 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-batch</artifactId>
-			<version>${amazon-sdk.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-s3</artifactId>
-			<version>${amazon-sdk.version}</version>
-		</dependency>
+			</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>27.1-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>io.airlift</groupId>
