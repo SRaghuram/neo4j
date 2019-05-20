@@ -19,6 +19,7 @@
         <guava.version>27.1-jre</guava.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
+        <neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -41,7 +42,7 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-commercial</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -98,7 +99,7 @@
         <dependency>
             <groupId>com.neo4j.test</groupId>
             <artifactId>neo4j-harness-commercial</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
