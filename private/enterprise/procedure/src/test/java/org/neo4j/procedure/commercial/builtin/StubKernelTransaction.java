@@ -124,12 +124,12 @@ class StubKernelTransaction implements KernelTransaction
     }
 
     @Override
-    public void forbidLockInteractions()
+    public void freezeLocks()
     {
     }
 
     @Override
-    public void allowLockInteractions()
+    public void thawLocks()
     {
     }
 

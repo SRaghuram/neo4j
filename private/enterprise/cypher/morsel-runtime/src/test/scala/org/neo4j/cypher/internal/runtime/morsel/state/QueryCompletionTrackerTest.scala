@@ -59,7 +59,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     verify(subscriber).onResultCompleted(stats)
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).allowLockInteractions()
+    verify(transaction, lockTimes).thawLocks()
     x.await() shouldBe false
     x.isCompleted shouldBe true
   }
@@ -75,7 +75,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
 //    verify(subscriber).onResultCompleted(stats)
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).allowLockInteractions()
+    verify(transaction, lockTimes).thawLocks()
     x.await() shouldBe false
     x.isCompleted shouldBe true
   }
@@ -92,7 +92,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     verify(subscriber, never()).onResultCompleted(stats)
     verify(subscriber, never()).onError(any())
     verify(tracer, never()).stopQuery()
-    verify(transaction, never()).allowLockInteractions()
+    verify(transaction, never()).thawLocks()
     x.await() shouldBe true
     x.isCompleted shouldBe false
   }
@@ -109,7 +109,7 @@ abstract class QueryCompletionTrackerTest(lockTimes: VerificationMode) extends C
     verify(subscriber).onError(exception)
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer).stopQuery()
-    verify(transaction, lockTimes).allowLockInteractions()
+    verify(transaction, lockTimes).thawLocks()
     x.isCompleted shouldBe true
     intercept[IllegalArgumentException] {
       x.await()

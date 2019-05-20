@@ -174,7 +174,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def completeQuery(): Unit = {
     tracer.stopQuery()
     completed = true
-    queryContext.transactionalContext.transaction.allowLockInteractions()
+    queryContext.transactionalContext.transaction.thawLocks()
     releaseLatch()
   }
 
