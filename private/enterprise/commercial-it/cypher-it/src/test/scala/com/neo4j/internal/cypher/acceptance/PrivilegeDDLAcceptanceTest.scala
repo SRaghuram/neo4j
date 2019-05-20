@@ -20,6 +20,46 @@ import scala.collection.Map
 
 class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
+  // SHOW PRIVILEGES
+
+  test("should show privileges for users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW PRIVILEGES")
+
+    // THEN
+    val expected = Set(
+      grantGraph().role("reader").action("find").map,
+      grantGraph().role("reader").action("read").map,
+
+      grantGraph().role("editor").action("find").map,
+      grantGraph().role("editor").action("read").map,
+      grantGraph().role("editor").action("write").map,
+
+      grantGraph().role("publisher").action("find").map,
+      grantGraph().role("publisher").action("read").map,
+      grantGraph().role("publisher").action("write").map,
+      grantToken().role("publisher").action("write").map,
+
+      grantGraph().role("architect").action("find").map,
+      grantGraph().role("architect").action("read").map,
+      grantGraph().role("architect").action("write").map,
+      grantToken().role("architect").action("write").map,
+      grantSchema().role("architect").action("write").map,
+
+      grantGraph().role("admin").action("find").map,
+      grantGraph().role("admin").action("read").map,
+      grantGraph().role("admin").action("write").map,
+      grantSystem().role("admin").action("write").map,
+      grantToken().role("admin").action("write").map,
+      grantSchema().role("admin").action("write").map,
+    )
+
+    result.toSet should be(expected)
+  }
+
   test("should show all privileges") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -58,7 +98,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(expected)
   }
 
-  test("should fail on listing privileges for users when not on system database") {
+  test("should fail when showing privileges for all users when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
@@ -83,6 +123,32 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(expected)
   }
 
+  test("should give nothing when showing privileges for non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val resultFoo = execute("SHOW ROLE foo PRIVILEGES")
+
+    // THEN
+    resultFoo.toSet should be(Set.empty)
+
+    // and an invalid (non-existing) one
+    // WHEN
+    val resultEmpty = execute("SHOW ROLE `` PRIVILEGES")
+
+    // THEN
+    resultEmpty.toSet should be(Set.empty)
+  }
+
+  test("should fail when showing privileges for roles when not on system database") {
+    the[IllegalStateException] thrownBy {
+      // WHEN
+      execute("SHOW ROLE editor PRIVILEGES")
+      // THEN
+    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
+  }
+
   test("should show privileges for specific user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -103,13 +169,33 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(expected)
   }
 
-  test("should fail on listing privileges for roles when not on system database") {
+  test("should give nothing when showing privileges for non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val resultFoo = execute("SHOW USER foo PRIVILEGES")
+
+    // THEN
+    resultFoo.toSet should be(Set.empty)
+
+    // and an invalid (non-existing) one
+    // WHEN
+    val resultEmpty = execute("SHOW USER `` PRIVILEGES")
+
+    // THEN
+    resultEmpty.toSet should be(Set.empty)
+  }
+
+  test("should fail when showing privileges for users when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
-      execute("SHOW ROLE editor PRIVILEGES")
+      execute("SHOW USER neo4j PRIVILEGES")
       // THEN
     } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
   }
+
+  // GRANT TRAVERSAL
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -123,7 +209,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
   }
 
-  test("should fail on granting traversal privilege to custom role when not on system database") {
+  test("should fail when granting traversal privilege to custom role when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
@@ -384,6 +470,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE (n {foo:7, bar:8})")
   }
 
+  // GRANT READ
+
   test("should grant read privilege to custom role for all databases and all labels") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -451,7 +539,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  test("should fail grant read privilege with missing database") {
+  test("should fail when granting read privilege with missing database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -756,6 +844,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "The privilege or the role 'role' does not exist."
   }
 
+  // GRANT ROLE TO USER
+
   test("should grant roles and list users with roles") {
     // GIVEN
     // User  : Roles
@@ -858,6 +948,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
 
+    // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
   }
 
@@ -879,6 +970,15 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
 
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    // and an invalid (non-existing) one
+    // WHEN
+    execute("GRANT ROLE `` TO Bar")
+
+    // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
@@ -902,6 +1002,15 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
 
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    // and an invalid (non-existing) one
+    // WHEN
+    execute("GRANT ROLE dragon TO ``")
+
+    // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
   }
@@ -925,9 +1034,16 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    // and an invalid (non-existing) ones
+    // WHEN
+    execute("GRANT ROLE `` TO ``")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 
-  test("should fail on granting role to user when not on system database") {
+  test("should fail when granting role to user when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
@@ -947,10 +1063,31 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
   }
 
+  // helper variable, methods and class
+
   private val neo4jUser = user("neo4j", Seq("admin"))
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
+  }
+
+  private def executeOnDefault(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    val login = authManager.login(SecurityTestUtils.authToken(username, password))
+    val tx = graph.beginTransaction(Transaction.Type.explicit, login)
+    try {
+      var count = 0
+      val result: Result = new RichGraphDatabaseQueryService(graph).execute(query)
+      result.accept(row => {
+        resultHandler(row, count)
+        count = count + 1
+        true
+      })
+      tx.success()
+      count
+    } finally {
+      tx.close()
+    }
   }
 
   private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
@@ -976,22 +1113,4 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
   private def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
 
-  private def executeOnDefault(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    val login = authManager.login(SecurityTestUtils.authToken(username, password))
-    val tx = graph.beginTransaction(Transaction.Type.explicit, login)
-    try {
-      var count = 0
-      val result: Result = new RichGraphDatabaseQueryService(graph).execute(query)
-      result.accept(row => {
-        resultHandler(row, count)
-        count = count + 1
-        true
-      })
-      tx.success()
-      count
-    } finally {
-      tx.close()
-    }
-  }
 }

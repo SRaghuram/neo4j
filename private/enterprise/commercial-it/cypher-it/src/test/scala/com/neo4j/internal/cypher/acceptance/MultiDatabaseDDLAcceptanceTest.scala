@@ -21,7 +21,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults()
 
-  test("should list default database") {
+  // SHOW DATABASE
+
+  test("should show default database") {
     // GIVEN
     setup( defaultConfig )
 
@@ -51,7 +53,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(empty)
   }
 
-  test("should give nothing when listing a non-existing database") {
+  test("should give nothing when showing a non-existing database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -69,7 +71,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(List.empty)
   }
 
-  test("should fail on listing a default database when not on system database") {
+  test("should fail when showing a default database when not on system database") {
     the [IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW DATABASE neo4j")
@@ -77,7 +79,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG SHOW DATABASE` against non-system database."
   }
 
-  test("should list default databases") {
+  test("should show default databases") {
     // GIVEN
     setup( defaultConfig )
 
@@ -105,13 +107,15 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on listing default databases when not on system database") {
+  test("should fail when showing default databases when not on system database") {
     the [IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW DATABASES")
       // THEN
     } should have message "Trying to run `CATALOG SHOW DATABASES` against non-system database."
   }
+
+  // CREATE DATABASE
 
   test("should create database in systemdb") {
     setup( defaultConfig )
@@ -124,7 +128,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on creating an already existing database") {
+  test("should fail when creating an already existing database") {
     setup( defaultConfig )
 
     // GIVEN
@@ -139,7 +143,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "The specified database 'foo' already exists."
   }
 
-  test("should fail on creating a database with invalid name") {
+  test("should fail when creating a database with invalid name") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     val exception = the [ParserRuntimeException] thrownBy {
@@ -150,13 +154,15 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     exception.getMessage should include("The provided database name is empty.")
   }
 
-  test("should fail on creating a database when not on system database") {
+  test("should fail when creating a database when not on system database") {
     the [IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
     } should have message "Trying to run `CATALOG CREATE DATABASE` against non-system database."
   }
+
+  // DROP DATABASE
 
   test("should create and drop databases") {
     setup( defaultConfig )
@@ -189,7 +195,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     databaseNames should not contain allOf("bar", "baz")
   }
 
-  test("should fail on dropping a non-existing database") {
+  test("should fail when dropping a non-existing database") {
     setup( defaultConfig )
 
     the [DatabaseNotFoundException] thrownBy {
@@ -206,7 +212,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database '' does not exist."
   }
 
-  test("should fail on dropping a dropped database") {
+  test("should fail when dropping a dropped database") {
     setup( defaultConfig )
 
     // GIVEN
@@ -222,7 +228,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database 'foo' does not exist."
   }
 
-  test("should fail on dropping a database when not on system database") {
+  test("should fail when dropping a database when not on system database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
@@ -235,6 +241,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG DROP DATABASE` against non-system database."
   }
 
+  // START DATABASE
+
   test("should start database on create") {
     setup( defaultConfig )
 
@@ -246,7 +254,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on starting a non-existing database") {
+  test("should fail when starting a non-existing database") {
     setup( defaultConfig )
 
     the [DatabaseNotFoundException] thrownBy {
@@ -263,7 +271,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database '' does not exist."
   }
 
-  test("should fail on starting a dropped database") {
+  test("should fail when starting a dropped database") {
     setup( defaultConfig )
 
     // GIVEN
@@ -317,7 +325,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on starting a database when not on system database") {
+  test("should fail when starting a database when not on system database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
@@ -330,6 +338,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message "Trying to run `CATALOG START DATABASE` against non-system database."
   }
+
+  // STOP DATABASE
 
   test("should stop database") {
     setup( defaultConfig )
@@ -347,7 +357,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
   }
 
-  test("should fail on stopping a non-existing database") {
+  test("should fail when stopping a non-existing database") {
     setup( defaultConfig )
 
     the [DatabaseNotFoundException] thrownBy {
@@ -364,7 +374,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database '' does not exist."
   }
 
-  test("should fail on stopping a dropped database") {
+  test("should fail when stopping a dropped database") {
     setup( defaultConfig )
 
     // GIVEN
@@ -383,7 +393,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List.empty)
   }
 
-  test("should fail on stopping a database when not on system database") {
+  test("should fail when stopping a database when not on system database") {
     the [IllegalStateException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")

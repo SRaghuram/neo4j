@@ -28,7 +28,9 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
 
-  test("should list all default roles") {
+  // SHOW ROLES
+
+  test("should show all default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -39,7 +41,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRoles)
   }
 
-  test("should fail on listing roles when not on system database") {
+  test("should fail when showing roles when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW ROLES")
@@ -47,7 +49,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG SHOW ALL ROLES` against non-system database."
   }
 
-  test("should list populated default roles") {
+  test("should show populated default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -58,7 +60,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true)))
   }
 
-  test("should create and list roles") {
+  test("should create and show roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -70,7 +72,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRoles ++ Set(foo))
   }
 
-  test("should list populated roles") {
+  test("should show populated roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
@@ -86,7 +88,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true), foo))
   }
 
-  test("should list default roles with users") {
+  test("should show default roles with users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -97,7 +99,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRolesWithUsers)
   }
 
-  test("should list all default roles with users") {
+  test("should show all default roles with users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -108,7 +110,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRolesWithUsers)
   }
 
-  test("should list populated roles with users") {
+  test("should show populated roles with users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
@@ -120,7 +122,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")))
   }
 
-  test("should list populated roles with several users") {
+  test("should show populated roles with several users") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
@@ -140,6 +142,8 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  // CREATE ROLE
+
   test("should create role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -150,7 +154,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
-  test("should fail on creating already existing role") {
+  test("should fail when creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
@@ -165,7 +169,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
-  test("should fail on creating role with invalid name") {
+  test("should fail when creating role with invalid name") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -179,7 +183,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
-  test("should fail on creating role when not on system database") {
+  test("should fail when creating role when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
@@ -199,7 +203,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
   }
 
-  test("should fail on creating from non-existing role") {
+  test("should fail when creating from non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -219,7 +223,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
-  test("should fail on creating role with invalid name from role") {
+  test("should fail when creating role with invalid name from role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
@@ -235,7 +239,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
-  test("should fail on creating already existing role from other role") {
+  test("should fail when creating already existing role from other role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
@@ -251,7 +255,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
   }
 
-  test("should fail on creating existing role from non-existing role") {
+  test("should fail when creating existing role from non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
@@ -266,6 +270,8 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
   }
 
+  // DROP ROLE
+
   test("should drop role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -278,7 +284,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
-  test("should fail on dropping default role") {
+  test("should fail when dropping default role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW ROLES").toSet should be(defaultRoles)
@@ -293,7 +299,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
-  test("should fail on dropping non-existing role") {
+  test("should fail when dropping non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -313,7 +319,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
-  test("should fail on dropping role when not on system database") {
+  test("should fail when dropping role when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")

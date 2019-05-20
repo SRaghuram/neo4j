@@ -15,7 +15,9 @@ import org.parboiled.errors.ParserRuntimeException
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val neo4jUser = user("neo4j", Seq("admin"))
 
-  test("should list default user") {
+  // SHOW USERS
+
+  test("should show default user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -26,7 +28,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(neo4jUser))
   }
 
-  test("should fail on listing users when not on system database") {
+  test("should fail when showing users when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("SHOW USERS")
@@ -34,7 +36,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG SHOW USERS` against non-system database."
   }
 
-  test("should list all users") {
+  test("should show all users") {
     // GIVEN
     // User  : Roles
     // neo4j : admin
@@ -52,6 +54,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
   }
+
+  // CREATE USER
 
   test("should create user with password as string") {
     // GIVEN
@@ -82,7 +86,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("bar", "p4s5W*rd", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should fail to create user with empty password") {
+  test("should fail when creating user with empty password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -110,7 +114,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should fail to create user with numeric password as parameter") {
+  test("should fail when creating user with numeric password as parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -124,7 +128,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail to create user with password as missing parameter") {
+  test("should fail when creating user with password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -138,7 +142,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail to create user with password as null parameter") {
+  test("should fail when creating user with password as null parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -152,7 +156,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail on creating user when not on system database") {
+  test("should fail when creating user when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
@@ -214,7 +218,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true))
   }
 
-  test("should fail on creating already existing user") {
+  test("should fail when creating already existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -229,7 +233,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail on creating user with illegal username") {
+  test("should fail when creating user with illegal username") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -255,6 +259,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
   }
+
+  // DROP USER
 
   test("should drop user") {
     // GIVEN
@@ -284,7 +290,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // TODO currently succeeds in removing 'neo4j'
   //  due to the current test setup not having a current user
-  ignore("should fail on dropping current user") {
+  ignore("should fail when dropping current user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -300,7 +306,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(neo4jUser)
   }
 
-  test("should fail on dropping non-existing user") {
+  test("should fail when dropping non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
@@ -325,13 +331,15 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
-  test("should fail on dropping user when not on system database") {
+  test("should fail when dropping user when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("DROP USER foo")
       // THEN
     } should have message "Trying to run `CATALOG DROP USER` against non-system database."
   }
+
+  // ALTER USER
 
   test("should alter user password") {
     // GIVEN
@@ -360,7 +368,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
   }
 
-  test("should fail on alter user with invalid password") {
+  test("should fail when alter user with invalid password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -395,7 +403,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
-  test("should fail on alter user password as list parameter") {
+  test("should fail when alter user password as list parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -407,7 +415,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Only string values are accepted as password, got: List"
   }
 
-  test("should fail on alter user password as string and parameter") {
+  test("should fail when alter user password as string and parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -420,7 +428,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     exception.getMessage should include("Invalid input '+': expected whitespace, SET, ';' or end of input")
   }
 
-  test("should fail on altering user password as missing parameter") {
+  test("should fail when altering user password as missing parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -432,7 +440,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Expected parameter(s): password"
   }
 
-  test("should fail on altering user when not on system database") {
+  test("should fail when altering user when not on system database") {
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
@@ -593,7 +601,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
   }
 
-  test("should fail on altering a non-existing user: string password") {
+  test("should fail when altering a non-existing user: string password") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -604,7 +612,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: parameter password (and illegal username)") {
+  test("should fail when altering a non-existing user: parameter password (and illegal username)") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -615,7 +623,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'neo:4j' does not exist."
   }
 
-  test("should fail on altering a non-existing user: string password and password mode") {
+  test("should fail when altering a non-existing user: string password and password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -626,7 +634,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: parameter password and password mode") {
+  test("should fail when altering a non-existing user: parameter password and password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -637,7 +645,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: string password and status") {
+  test("should fail when altering a non-existing user: string password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -648,7 +656,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: parameter password and status") {
+  test("should fail when altering a non-existing user: parameter password and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -659,7 +667,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: string password, password mode and status") {
+  test("should fail when altering a non-existing user: string password, password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -670,7 +678,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: password mode") {
+  test("should fail when altering a non-existing user: password mode") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -681,7 +689,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: password mode and status") {
+  test("should fail when altering a non-existing user: password mode and status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -692,7 +700,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a non-existing user: status") {
+  test("should fail when altering a non-existing user: status") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -703,7 +711,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  test("should fail on altering a dropped user") {
+  test("should fail when altering a dropped user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'password'")
@@ -715,6 +723,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message "User 'foo' does not exist."
   }
+
+  // helper methods
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
