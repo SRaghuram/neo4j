@@ -9,7 +9,8 @@ URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
 PreReq: dialog
-Requires: java-1.8.0-headless, cypher-shell
+Requires: java-1.8.0-headless, cypher-shell < 1.2
+Conflicts: cypher-shell >= 1.2
 
 BuildArch: noarch
 
