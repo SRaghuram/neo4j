@@ -12,7 +12,7 @@ set -u
 if [ $# -lt 34 ] ; then
     echo "Expected at least 34 arguments, but got $#"
     echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner neo4j_api neo4j_planner neo4j_runtime neo4j_config neo4j_benchmark_config neo4j_tarball teamcity_build_id teamcity_parent_build_id ldbc_tooling_commit tool-branch tool-branch-owner results_store_uri results_store_user results_store_pass ldbc_read_params ldbc_write_params ldbc_config ldbc_read_threads ldbc_warmup_count ldbc_run_count ldbc_repetition_count ldbc_results_dir ldbc_working_dir ldbc_source_db ldbc_db_reuse_policy ldbc_jvm_args jvm_path with_jfr with_async triggered_by"
-    exit -1
+    exit 1
 fi
 
 neo4j_version="${1}"

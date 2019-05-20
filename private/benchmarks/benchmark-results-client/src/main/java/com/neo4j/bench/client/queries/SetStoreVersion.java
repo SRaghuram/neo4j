@@ -11,6 +11,7 @@ import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Session;
 
 import static java.util.Collections.singletonMap;
+import static org.neo4j.driver.v1.AccessMode.WRITE;
 
 public class SetStoreVersion implements Query<Void>
 {
@@ -24,7 +25,7 @@ public class SetStoreVersion implements Query<Void>
     @Override
     public Void execute( Driver driver )
     {
-        try ( Session session = driver.session() )
+        try ( Session session = driver.session( WRITE ) )
         {
             session.run( "MERGE (ss:StoreSchema) SET ss.version={version}", singletonMap( "version", version ) );
         }

@@ -8,9 +8,8 @@ License: ${LICENSE}
 URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
-#PreReq: dialog
-Requires: cypher-shell, jre-headless = 1:1.8.0
-
+Requires: java-1.8.0-headless, cypher-shell < 1.2
+Conflicts: cypher-shell >= 1.2
 BuildArch: noarch
 
 %define neo4jhome %{_localstatedir}/lib/neo4j

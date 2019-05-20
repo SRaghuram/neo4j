@@ -6,8 +6,8 @@
 package com.neo4j.bench.client.queries;
 
 import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.util.Resources;
 
 import java.util.HashMap;
@@ -22,6 +22,7 @@ import org.neo4j.driver.v1.Value;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.driver.v1.AccessMode.READ;
 
 public class GetBenchmarks implements Query<List<Benchmark>>
 {
@@ -41,7 +42,7 @@ public class GetBenchmarks implements Query<List<Benchmark>>
     @Override
     public List<Benchmark> execute( Driver driver )
     {
-        try ( Session session = driver.session() )
+        try ( Session session = driver.session( READ ) )
         {
             Map<String,Object> params = new HashMap<>();
             params.put( "group", group.name() );
