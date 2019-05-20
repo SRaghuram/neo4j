@@ -7,13 +7,30 @@ package com.neo4j.bench.infra;
 
 import java.util.List;
 
+/**
+ * Job scheduler, which can schedule benchmarks runs.
+ *
+ */
 public interface JobScheduler
 {
 
+    /**
+     * Schedules a benchmarking runs.
+     * @param workloads
+     * @param dbs
+     * @param args
+     * @return list of scheduled job IDs.
+     */
     List<String> schedule(
             String workloads,
             String dbs,
             BenchmarkArgs args );
 
+    /**
+     * Fetches statues of scheduled jobs.
+     *
+     * @param jobIds
+     * @return job statuses
+     */
     List<JobStatus> jobsStatuses( List<String> jobIds );
 }

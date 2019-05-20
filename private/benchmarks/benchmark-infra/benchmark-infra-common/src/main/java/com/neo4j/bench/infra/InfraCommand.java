@@ -11,15 +11,28 @@ import io.airlift.airline.OptionType;
 public abstract class InfraCommand implements Runnable
 {
 
-    @Option( type = OptionType.GLOBAL, name = "--workspacePath", arity = 1, required = true )
+    @Option( type = OptionType.GLOBAL,
+             name = "--workspacePath",
+             arity = 1,
+             required = true )
     protected String workspacePath;
 
-    @Option( type = OptionType.GLOBAL, name = "--awsKey", arity = 1, required = false )
+    @Option( type = OptionType.GLOBAL,
+             name = "--awsKey",
+             arity = 1,
+             required = false )
     protected String awsKey;
 
-    @Option( type = OptionType.GLOBAL, name = "--awsSecret", arity = 1, required = false )
+    @Option( type = OptionType.GLOBAL,
+             name = "--awsSecret",
+             arity = 1,
+             required = false )
     protected String awsSecret;
 
-    @Option( type = OptionType.GLOBAL, name = "--awsRegion", arity = 1, required = false )
+    @Option( type = OptionType.GLOBAL,
+             name = "--awsRegion",
+             arity = 1,
+             required = false )
     protected String awsRegion = "eu-north-1";
+
 }

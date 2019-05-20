@@ -76,10 +76,11 @@ class AWSS3ArtifactStorageTest
         Files.createDirectories( directory.resolve( "artifact1" ) );
         Files.createFile( directory.resolve( "artifact1/artifact1.jar" ) );
 
-        Workspace workspace = Workspace.create(
-                directory,
-                Paths.get( "artifact0.jar" ),
-                Paths.get( "artifact1/artifact1.jar" ) );
+        Workspace workspace = Workspace.create( directory )
+                .withArtifacts(
+                    Paths.get( "artifact0.jar" ),
+                    Paths.get( "artifact1/artifact1.jar" )
+                 ).build();
 
         String buildID = "buildID";
         AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );

@@ -15,12 +15,12 @@ Default AMI used by AWS Batch has limitations on available storage space (10G).
 Which is not enough for benchmarking workloads. In order to overcome this limitation we
 have to build our own AMI.
 
-There is a requirement that this AMI should be build from
-[ECS optimizated AMI](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html)
+There is a requirement that this AMI should be built from
+[ECS optimized AMI](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html)
 
 We are going to use [Packer](https://www.packer.io/) from HashCorp to simplify this process.
 
-In order build new AMI image, you should invoke following command:
+In order to build a new AMI image, you should invoke the following command:
 
 	packer build src/main/ami/benchmark-run-batch-worker/template.json
 

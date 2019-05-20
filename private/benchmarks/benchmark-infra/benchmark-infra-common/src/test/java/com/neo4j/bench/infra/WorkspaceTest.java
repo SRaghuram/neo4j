@@ -27,16 +27,15 @@ class WorkspaceTest
         Files.createDirectories( workspaceBaseDir.resolve( "macro/target" ) );
         Files.createFile( workspaceBaseDir.resolve( "macro/target/macro.jar" ) );
         Files.createFile( workspaceBaseDir.resolve( "macro/run-report-benchmark.sh" ) );
-        Workspace workspace = Workspace.create(
-                workspaceBaseDir,
-                Paths.get( "benchmark-infra-scheduler.jar" ),
-                Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
-                Paths.get( "macro/target/macro.jar" ),
-                Paths.get( "macro/run-report-benchmark.sh" )
-        );
+        Workspace workspace = Workspace.create( workspaceBaseDir )
+                .withArtifacts(
+                    Paths.get( "benchmark-infra-scheduler.jar" ),
+                    Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
+                    Paths.get( "macro/target/macro.jar" ),
+                    Paths.get( "macro/run-report-benchmark.sh" )
+                ).build();
 
         assertNotNull( workspace );
-
     }
 
     @Test
@@ -47,13 +46,13 @@ class WorkspaceTest
         // when, workspace is empty
         assertThrows( IllegalStateException.class, () ->
         {
-            Workspace.create(
-                    workspaceBaseDir,
-                    Paths.get( "benchmark-infra-scheduler.jar" ),
-                    Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
-                    Paths.get( "macro/target/macro.jar" ),
-                    Paths.get( "macro/run-report-benchmark.sh" ) );
+            Workspace.create( workspaceBaseDir )
+                     .withArtifacts(
+                        Paths.get( "benchmark-infra-scheduler.jar" ),
+                        Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
+                        Paths.get( "macro/target/macro.jar" ),
+                        Paths.get( "macro/run-report-benchmark.sh" )
+                     ).build();
         });
-
     }
 }

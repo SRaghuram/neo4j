@@ -23,9 +23,7 @@ import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
@@ -63,13 +61,15 @@ public class ScheduleMacro extends InfraCommand
         try
         {
             BenchmarkArgs benchmarkArgs = new BenchmarkArgs( parameters, URI.create( workerArtifactUri ) );
-            Workspace workspace = Workspace.create(
-                    Paths.get( workspacePath ).toAbsolutePath(),
-                    // required artifacts
-                    Paths.get( "benchmark-infra-scheduler.jar" ),
-                    Paths.get( format( "neo4j-%s-%s-unix.tar.gz", benchmarkArgs.getDbEdition().toLowerCase(), benchmarkArgs.getNeo4jVersion() ) ),
-                    Paths.get( "macro/target/macro.jar" ),
-                    Paths.get( "macro/run-report-benchmarks.sh" ) );
+            Workspace workspace = Workspace
+                        .create( Paths.get( workspacePath ).toAbsolutePath() )
+                        .withArtifacts(
+                            // required artifacts
+                            Paths.get( "benchmark-infra-scheduler.jar" ),
+                            Paths.get( format( "neo4j-%s-%s-unix.tar.gz", benchmarkArgs.getDbEdition().toLowerCase(), benchmarkArgs.getNeo4jVersion() ) ),
+                            Paths.get( "macro/target/macro.jar" ),
+                            Paths.get( "macro/run-report-benchmarks.sh" )
+                         ).build();
 
             String buildID = benchmarkArgs.getTeamcityBuild();
 

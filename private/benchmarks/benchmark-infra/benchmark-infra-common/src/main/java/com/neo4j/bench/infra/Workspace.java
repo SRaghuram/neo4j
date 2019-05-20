@@ -21,57 +21,96 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
 /**
  * Describes structure of benchmarking workspace,
- * in terms of files and directories
+ * which contains build artifacts.
+ * Workspace has a base dir and set of build artifacts
+ * (like benchmarks jar or run scripts).
  *
  */
 public class Workspace
 {
 
-    private static final Logger LOG = LoggerFactory.getLogger( Workspace.class );
-
-    public static Workspace create( Path baseDir, Path... requiredArtifacts )
+    public static class Builder
     {
 
-        List<Path> allArtifacts = Arrays.stream( requiredArtifacts )
-                .map( artifact -> baseDir.resolve( artifact ) )
-                .map( Path::toAbsolutePath )
-                .collect( Collectors.toList() );
+        private final Path baseDir;
+        private final List<Path> artifacts = new ArrayList<>();
 
-        List<Path> invalidArtifacts = allArtifacts.stream()
-                .filter( artifact -> !Files.isRegularFile( artifact ) )
-                .collect( Collectors.toList() );
-
-        if ( !invalidArtifacts.isEmpty() )
+        private Builder( Path baseDir )
         {
-            String missingArtifacts = invalidArtifacts.stream().map( Path::toString ).collect( Collectors.joining( "," ) );
-            throw new IllegalStateException( String.format( "missing artifacts: %s\n", missingArtifacts ) );
+            this.baseDir = baseDir;
         }
 
-        return new Workspace( baseDir, allArtifacts );
+        public Builder withArtifacts( Path... artifacts )
+        {
+            Objects.requireNonNull( artifacts, "build artifacts cannot be null" );
+            this.artifacts.addAll( Arrays.asList( artifacts ) );
+            return this;
+        }
+
+        public Workspace build()
+        {
+            List<Path> allArtifacts = artifacts.stream()
+                    .map( artifact -> baseDir.resolve( artifact ) )
+                    .map( Path::toAbsolutePath )
+                    .collect( Collectors.toList() );
+
+            List<Path> invalidArtifacts = allArtifacts.stream()
+                    .filter( artifact -> !Files.isRegularFile( artifact ) )
+                    .collect( Collectors.toList() );
+
+            if ( !invalidArtifacts.isEmpty() )
+            {
+                String missingArtifacts = invalidArtifacts.stream().map( Path::toString ).collect( Collectors.joining( "," ) );
+                throw new IllegalStateException( String.format( "missing artifacts: %s\n", missingArtifacts ) );
+            }
+
+            return new Workspace( baseDir, allArtifacts );
+        }
+    }
+
+    private static final Logger LOG = LoggerFactory.getLogger( Workspace.class );
+
+    public static Builder create( Path baseDir )
+    {
+        Objects.requireNonNull( baseDir, "workspace base path cannot be null" );
+        return new Builder( baseDir );
     }
 
     private final Path baseDir;
     private final List<Path> allArtifacts;
 
-    Workspace( Path baseDir, List<Path> allArtifacts )
+    private Workspace( Path baseDir, List<Path> allArtifacts )
     {
         this.baseDir = baseDir;
         this.allArtifacts = allArtifacts;
     }
 
+    /**
+     * Workspace's base dir.
+     * All artifacts are relative to base dir.
+     *
+     * @return
+     */
     public Path baseDir()
     {
         return baseDir;
     }
 
+    /**
+     * All build artifacts in this workspace (like benchmark jars and run scripts)
+     *
+     * @return
+     */
     public List<Path> allArtifacts()
     {
         return allArtifacts;

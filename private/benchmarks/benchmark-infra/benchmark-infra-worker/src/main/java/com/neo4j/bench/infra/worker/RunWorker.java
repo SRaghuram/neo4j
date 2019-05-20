@@ -68,13 +68,15 @@ public class RunWorker extends InfraCommand
             artifactStorage.downloadBuildArtifacts( workspaceDir, buildID );
             Files.setPosixFilePermissions( runDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
-            Workspace workspace = Workspace.create(
-                    workspaceDir.toAbsolutePath(),
-                    // required artifacts
-                    Paths.get( "benchmark-infra-scheduler.jar" ),
-                    Paths.get( format( "neo4j-%s-%s-unix.tar.gz", benchmarkArgs.getDbEdition().toLowerCase(), benchmarkArgs.getNeo4jVersion() ) ),
-                    Paths.get( "macro/target/macro.jar" ),
-                    Paths.get( "macro/run-report-benchmarks.sh" ) );
+            Workspace workspace = Workspace
+                        .create( workspaceDir.toAbsolutePath() )
+                        .withArtifacts(
+                            // required artifacts
+                            Paths.get( "benchmark-infra-scheduler.jar" ),
+                            Paths.get( format( "neo4j-%s-%s-unix.tar.gz", benchmarkArgs.getDbEdition().toLowerCase(), benchmarkArgs.getNeo4jVersion() ) ),
+                            Paths.get( "macro/target/macro.jar" ),
+                            Paths.get( "macro/run-report-benchmarks.sh" )
+                        ).build();
 
             // extract neo4j config
             Path neo4jConfig = runDir.resolve( "neo4j.conf" );
