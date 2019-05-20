@@ -43,6 +43,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
+import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -53,7 +54,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -575,7 +575,7 @@ public class StoreUpgradeIT
                                          .resolveDependency( ThreadToStatementContextBridge.class )
                                          .getKernelTransactionBoundToThisThread( true, db.databaseId() ).acquireStatement() )
             {
-                long countsTxId = ((CountsTracker) db.getDependencyResolver().resolveDependency( CountsAccessor.class )).txId();
+                long countsTxId = ((GBPTreeCountsStore) db.getDependencyResolver().resolveDependency( CountsAccessor.class )).txId();
                 assertEquals( lastCommittedTxId, countsTxId );
                 assertThat( lastCommittedTxId, is( store.lastTxId ) );
             }

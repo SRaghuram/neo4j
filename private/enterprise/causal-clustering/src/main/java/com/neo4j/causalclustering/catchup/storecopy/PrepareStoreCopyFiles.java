@@ -77,8 +77,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStoreB().equals( storeFileMetadata.file() ) ||
-                databaseLayout.countStoreA().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.file() );
     }
 
     private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata ) throws IOException

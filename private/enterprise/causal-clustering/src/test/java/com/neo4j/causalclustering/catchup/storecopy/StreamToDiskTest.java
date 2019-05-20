@@ -41,11 +41,8 @@ public class StreamToDiskTest
         // WHEN
         for ( StoreType type : StoreType.values() )
         {
-            File[] files = directory.databaseLayout().file( type.getDatabaseFile() ).toArray( File[]::new );
-            for ( File file : files )
-            {
-                writeAndVerify( writerProvider, file );
-            }
+            File file = directory.databaseLayout().file( type.getDatabaseFile() );
+            writeAndVerify( writerProvider, file );
         }
         writeAndVerify( writerProvider, directory.databaseLayout().labelScanStore() );
     }

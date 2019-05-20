@@ -339,8 +339,7 @@ class CatchupServerIT
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStoreA().equals( storeFileMetadata.file() ) ||
-                databaseLayout.countStoreB().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.file() );
     }
 
     private static void addData( GraphDatabaseAPI graphDb )

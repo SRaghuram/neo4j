@@ -560,10 +560,9 @@ class BackupIT
 
         for ( File storeFile : backupDatabaseLayout.storeFiles() )
         {
-            if ( backupDatabaseLayout.countStoreA().equals( storeFile ) || backupDatabaseLayout.countStoreB().equals( storeFile ) )
+            if ( backupDatabaseLayout.countStore().equals( storeFile ) )
             {
-                assertThat( backupStoreFiles, hasItemInArray(
-                        either( equalTo( backupDatabaseLayout.countStoreA() ) ).or( equalTo( backupDatabaseLayout.countStoreB() ) ) ) );
+                assertThat( backupStoreFiles, hasItemInArray( equalTo( backupDatabaseLayout.countStore() ) ) );
             }
             else
             {
