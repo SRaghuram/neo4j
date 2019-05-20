@@ -1379,7 +1379,7 @@ public class DataGenerator
 
     public static void waitForSchemaIndexes( GraphDatabaseService db, Label label )
     {
-        try
+        try ( Transaction ignore = db.beginTx() )
         {
             for ( IndexDefinition index : db.schema().getIndexes( label ) )
             {
