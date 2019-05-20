@@ -15,14 +15,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @RunWith( Parameterized.class )
 public class ServerMessageEncodingTest

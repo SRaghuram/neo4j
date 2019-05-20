@@ -18,7 +18,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.helpers.collection.Iterators.set;
+import static org.neo4j.internal.helpers.collection.Iterators.set;
 import static org.neo4j.io.fs.FileUtils.path;
 
 @ExtendWith( TestDirectoryExtension.class )

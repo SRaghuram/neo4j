@@ -22,9 +22,9 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.SocketAddress;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static java.util.Collections.unmodifiableCollection;
 

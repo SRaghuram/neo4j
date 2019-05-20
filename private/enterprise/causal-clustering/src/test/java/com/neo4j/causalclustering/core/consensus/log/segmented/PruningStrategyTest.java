@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.internal.helpers.collection.Visitor;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;

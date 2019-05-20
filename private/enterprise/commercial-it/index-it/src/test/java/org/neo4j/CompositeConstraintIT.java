@@ -29,7 +29,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
+import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CompositeConstraintIT

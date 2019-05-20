@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.Args;
+import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
@@ -27,7 +27,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_reader_pool_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class ReplayRaftLog

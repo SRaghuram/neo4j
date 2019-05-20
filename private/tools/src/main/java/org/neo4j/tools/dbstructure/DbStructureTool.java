@@ -13,7 +13,7 @@ import java.io.PrintWriter;
 
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureArgumentFormatter;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor;
 import org.neo4j.kernel.impl.util.dbstructure.GraphDbStructureGuide;

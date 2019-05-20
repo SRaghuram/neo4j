@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import java.util.Collection;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public interface HostnameResolver
 {

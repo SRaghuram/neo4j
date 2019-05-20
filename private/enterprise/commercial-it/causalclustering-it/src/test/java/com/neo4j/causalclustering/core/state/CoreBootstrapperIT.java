@@ -67,7 +67,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension

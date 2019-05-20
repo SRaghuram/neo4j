@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.test.extension.Inject;

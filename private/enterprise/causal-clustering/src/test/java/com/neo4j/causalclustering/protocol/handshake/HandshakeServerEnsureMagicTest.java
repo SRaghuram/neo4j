@@ -15,7 +15,7 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.concurrent.CompletionException;
 
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static java.util.Arrays.asList;

@@ -25,7 +25,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.Node;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.Level;

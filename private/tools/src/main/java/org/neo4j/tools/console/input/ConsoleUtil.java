@@ -19,7 +19,7 @@ import java.util.StringTokenizer;
 import org.neo4j.io.NullOutputStream;
 import org.neo4j.kernel.impl.util.Listener;
 
-import static org.neo4j.helpers.ArrayUtil.join;
+import static org.neo4j.internal.helpers.ArrayUtil.join;
 
 public class ConsoleUtil
 {

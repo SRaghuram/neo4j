@@ -12,10 +12,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class AnyGroupFilterTest
 {

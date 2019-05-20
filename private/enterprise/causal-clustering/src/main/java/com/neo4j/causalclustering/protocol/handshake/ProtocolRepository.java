@@ -18,7 +18,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 public abstract class ProtocolRepository<U extends Comparable<U>,T extends Protocol<U>>
 {

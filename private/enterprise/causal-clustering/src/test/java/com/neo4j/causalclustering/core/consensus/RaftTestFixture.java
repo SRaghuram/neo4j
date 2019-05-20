@@ -35,7 +35,7 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static java.lang.String.format;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftTestFixture
 {

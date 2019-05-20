@@ -29,7 +29,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.neo4j.helpers.ArrayUtil;
+import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.neo4j.helpers.ArrayUtil.lastOf;
+import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
 
 public class BatchingMessageHandlerTest
 {

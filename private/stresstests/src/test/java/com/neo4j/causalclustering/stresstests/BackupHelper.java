@@ -24,14 +24,14 @@ import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
-import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class BackupHelper
 {

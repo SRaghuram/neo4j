@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import org.junit.Test;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;

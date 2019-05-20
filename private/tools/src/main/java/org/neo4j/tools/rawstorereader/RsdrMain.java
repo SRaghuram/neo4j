@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cursor.IOCursor;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;

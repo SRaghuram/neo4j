@@ -47,7 +47,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.helpers.collection.Iterables.single;
+import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 class CatchupProcessManagerTest
 {

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.actor.Address;
+import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -17,12 +18,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 class JoinMessageFactoryTest
 {

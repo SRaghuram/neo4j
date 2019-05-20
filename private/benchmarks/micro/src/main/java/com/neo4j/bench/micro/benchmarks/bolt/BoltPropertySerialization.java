@@ -47,8 +47,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
-
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( TimeUnit.MICROSECONDS )

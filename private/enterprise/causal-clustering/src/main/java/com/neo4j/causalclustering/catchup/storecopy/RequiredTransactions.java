@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import static org.neo4j.helpers.collection.LongRange.assertIsRange;
+import static org.neo4j.internal.helpers.collection.LongRange.assertIsRange;
 
 class RequiredTransactions
 {

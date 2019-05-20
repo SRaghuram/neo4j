@@ -20,7 +20,7 @@ import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.VerboseTimeout;
 
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class ClusterConfig
 {

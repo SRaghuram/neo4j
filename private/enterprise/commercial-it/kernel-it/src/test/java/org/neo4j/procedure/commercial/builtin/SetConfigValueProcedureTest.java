@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 

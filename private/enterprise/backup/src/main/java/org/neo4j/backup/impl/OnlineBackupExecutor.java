@@ -12,7 +12,7 @@ import java.nio.file.Path;
 
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;

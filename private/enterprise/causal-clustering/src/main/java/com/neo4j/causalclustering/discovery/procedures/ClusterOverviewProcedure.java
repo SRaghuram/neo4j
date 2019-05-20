@@ -34,7 +34,7 @@ import org.neo4j.values.virtual.MapValueBuilder;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static org.neo4j.helpers.collection.Iterators.asRawIterator;
+import static org.neo4j.internal.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.virtual.VirtualValues.fromList;

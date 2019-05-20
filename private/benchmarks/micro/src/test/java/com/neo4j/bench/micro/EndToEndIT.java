@@ -55,7 +55,7 @@ import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;

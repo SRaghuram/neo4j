@@ -31,7 +31,7 @@ import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 

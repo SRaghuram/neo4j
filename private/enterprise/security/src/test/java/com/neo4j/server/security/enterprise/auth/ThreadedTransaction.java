@@ -11,7 +11,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.test.DoubleLatch;

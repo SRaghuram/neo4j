@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Optional;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public interface LeaderService

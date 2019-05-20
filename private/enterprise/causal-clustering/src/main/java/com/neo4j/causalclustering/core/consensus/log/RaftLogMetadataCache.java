@@ -9,7 +9,7 @@ package com.neo4j.causalclustering.core.consensus.log;
 import java.util.Objects;
 import java.util.function.LongPredicate;
 
-import org.neo4j.helpers.collection.LruCache;
+import org.neo4j.internal.helpers.collection.LruCache;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 
 public class RaftLogMetadataCache

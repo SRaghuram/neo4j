@@ -34,7 +34,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
 class CsvOutputTest

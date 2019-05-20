@@ -8,7 +8,7 @@ package com.neo4j.kernel.impl.pagecache.monitor;
 import org.neo4j.logging.Log;
 
 import static java.lang.System.currentTimeMillis;
-import static org.neo4j.helpers.Format.duration;
+import static org.neo4j.internal.helpers.Format.duration;
 
 public class PageCacheWarmerLoggingMonitor extends PageCacheWarmerMonitorAdapter
 {

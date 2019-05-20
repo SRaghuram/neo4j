@@ -46,7 +46,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 

@@ -16,7 +16,7 @@ import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;

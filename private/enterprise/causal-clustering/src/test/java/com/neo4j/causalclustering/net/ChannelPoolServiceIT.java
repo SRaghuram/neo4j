@@ -34,9 +34,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.SocketAddress;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.scheduler.Group;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;

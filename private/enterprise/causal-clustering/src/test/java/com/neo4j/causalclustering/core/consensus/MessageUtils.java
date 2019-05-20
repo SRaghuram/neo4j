@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 
-import org.neo4j.helpers.collection.FilteringIterable;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.FilteringIterable;
+import org.neo4j.internal.helpers.collection.Iterables;
 
 import static java.lang.String.format;
 

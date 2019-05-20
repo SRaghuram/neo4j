@@ -31,7 +31,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -43,9 +43,9 @@ import org.neo4j.monitoring.Monitors;
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
-import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.AdvertisedSocketAddress.advertisedAddress;
+import static org.neo4j.internal.helpers.ListenSocketAddress.listenAddress;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class CoreClusterMember implements ClusterMember
 {

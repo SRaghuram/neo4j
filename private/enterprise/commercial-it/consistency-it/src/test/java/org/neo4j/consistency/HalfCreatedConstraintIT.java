@@ -37,7 +37,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.helpers.progress.ProgressMonitorFactory.NONE;
+import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class HalfCreatedConstraintIT

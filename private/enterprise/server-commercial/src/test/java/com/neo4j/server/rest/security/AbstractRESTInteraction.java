@@ -31,7 +31,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;

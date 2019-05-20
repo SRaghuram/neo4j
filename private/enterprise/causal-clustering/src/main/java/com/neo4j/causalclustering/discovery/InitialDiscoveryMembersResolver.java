@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
 {

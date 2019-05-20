@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Set;
 
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static java.util.Collections.emptyList;

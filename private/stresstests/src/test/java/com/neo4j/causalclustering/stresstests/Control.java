@@ -17,7 +17,7 @@ import org.neo4j.util.concurrent.Futures;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.neo4j.function.Suppliers.untilTimeExpired;
-import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
+import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
 
 public class Control
 {

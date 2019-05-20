@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import org.neo4j.helpers.SocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 
 public interface ServerHandshakeFinishedEvent
 {

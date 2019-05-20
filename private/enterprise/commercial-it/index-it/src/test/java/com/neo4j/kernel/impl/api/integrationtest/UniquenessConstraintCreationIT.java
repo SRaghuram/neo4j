@@ -15,8 +15,8 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.helpers.ArrayUtil;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.internal.helpers.ArrayUtil;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Transaction;
@@ -54,8 +54,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.helpers.collection.Iterators.asSet;
-import static org.neo4j.helpers.collection.Iterators.single;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 public class UniquenessConstraintCreationIT
         extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>

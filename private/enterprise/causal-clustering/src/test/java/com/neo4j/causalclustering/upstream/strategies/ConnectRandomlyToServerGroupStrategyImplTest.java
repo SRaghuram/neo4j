@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static co.unruly.matchers.OptionalMatchers.contains;

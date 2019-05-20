@@ -26,7 +26,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
@@ -53,10 +53,10 @@ import static org.neo4j.graphdb.schema.ConstraintType.NODE_KEY;
 import static org.neo4j.graphdb.schema.ConstraintType.NODE_PROPERTY_EXISTENCE;
 import static org.neo4j.graphdb.schema.ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE;
 import static org.neo4j.graphdb.schema.ConstraintType.UNIQUENESS;
-import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
-import static org.neo4j.helpers.collection.Iterables.asSet;
-import static org.neo4j.helpers.collection.Iterators.single;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
+import static org.neo4j.internal.helpers.collection.Iterables.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.PortUtils.getConnectorAddress;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )

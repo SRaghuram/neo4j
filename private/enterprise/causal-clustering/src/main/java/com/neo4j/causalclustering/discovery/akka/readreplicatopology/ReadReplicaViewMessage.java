@@ -16,8 +16,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.neo4j.helpers.collection.CollectorsUtil;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.CollectorsUtil;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.stream.Collectors.toSet;

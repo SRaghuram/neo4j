@@ -21,8 +21,8 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.SocketAddressParser;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.SocketAddressParser;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 

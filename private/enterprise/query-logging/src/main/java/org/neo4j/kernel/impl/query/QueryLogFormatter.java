@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.Strings;
+import org.neo4j.internal.helpers.Strings;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.utils.PrettyPrinter;

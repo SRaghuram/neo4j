@@ -7,7 +7,7 @@ package org.neo4j.procedure.commercial.builtin;
 
 import java.time.ZoneId;
 
-import org.neo4j.helpers.SocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 
 public class ListConnectionResult

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 public class ClientHandshakeException extends Exception
 {

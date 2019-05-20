@@ -21,7 +21,7 @@ import java.util.Objects;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 

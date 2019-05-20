@@ -19,11 +19,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.unmodifiableMap;
-import static org.neo4j.helpers.collection.CollectorsUtil.entriesToMap;
+import static org.neo4j.internal.helpers.collection.CollectorsUtil.entriesToMap;
 
 final class SharedDiscoveryService
 {

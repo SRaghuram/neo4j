@@ -11,7 +11,7 @@ import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.configuration.Migrator;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 
 import static org.neo4j.configuration.Settings.BOOLEAN;
 import static org.neo4j.configuration.Settings.NO_DEFAULT;

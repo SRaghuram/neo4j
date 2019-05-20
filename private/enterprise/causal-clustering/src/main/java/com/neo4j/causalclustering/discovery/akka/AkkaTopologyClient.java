@@ -26,7 +26,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;

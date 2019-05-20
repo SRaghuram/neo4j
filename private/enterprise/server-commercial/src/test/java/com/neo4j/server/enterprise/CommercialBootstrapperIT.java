@@ -33,8 +33,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.configuration.ssl.LegacySslPolicyConfig.certificates_directory;
-import static org.neo4j.helpers.collection.MapUtil.store;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.store;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 

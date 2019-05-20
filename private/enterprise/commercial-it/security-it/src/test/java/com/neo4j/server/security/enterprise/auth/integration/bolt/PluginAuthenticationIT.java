@@ -28,7 +28,7 @@ import org.neo4j.graphdb.config.Setting;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
 {

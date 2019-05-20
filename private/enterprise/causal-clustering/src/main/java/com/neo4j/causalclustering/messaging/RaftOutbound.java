@@ -17,7 +17,7 @@ import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.time.Clocks;

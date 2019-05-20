@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public interface RemoteMembersResolver
 {

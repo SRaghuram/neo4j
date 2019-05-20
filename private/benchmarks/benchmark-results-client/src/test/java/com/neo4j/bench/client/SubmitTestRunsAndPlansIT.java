@@ -60,7 +60,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -73,7 +73,6 @@ import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.REPORT_T
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
 import static com.neo4j.bench.client.queries.VerifyStoreSchema.patternCountInStore;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
-
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

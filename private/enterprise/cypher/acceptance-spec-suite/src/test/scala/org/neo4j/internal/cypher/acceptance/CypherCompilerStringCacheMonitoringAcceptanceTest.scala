@@ -12,7 +12,7 @@ import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.{ExecutionEngine, StringCacheMonitor}
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.helpers.collection.Pair
+import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.values.virtual.VirtualValues
 

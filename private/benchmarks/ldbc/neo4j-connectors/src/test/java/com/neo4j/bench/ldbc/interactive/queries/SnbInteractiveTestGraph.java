@@ -10,7 +10,7 @@ import com.neo4j.bench.ldbc.QueryGraphMaker;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 
 import static com.neo4j.bench.ldbc.Domain.Forum;
 import static com.neo4j.bench.ldbc.Domain.HasMember;

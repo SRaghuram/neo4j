@@ -18,8 +18,8 @@ import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
 import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.Converters;
 

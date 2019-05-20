@@ -28,7 +28,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptySet;
-import static org.neo4j.helpers.collection.Iterables.first;
+import static org.neo4j.internal.helpers.collection.Iterables.first;
 
 /**
  * This class drives raft membership changes by glueing together various components:

@@ -36,9 +36,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;

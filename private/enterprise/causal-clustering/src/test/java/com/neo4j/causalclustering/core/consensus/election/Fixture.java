@@ -30,7 +30,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.helpers.collection.Iterables.asSet;
+import static org.neo4j.internal.helpers.collection.Iterables.asSet;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class Fixture

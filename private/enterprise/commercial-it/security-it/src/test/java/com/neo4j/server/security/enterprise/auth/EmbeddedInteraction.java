@@ -20,7 +20,7 @@ import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;

@@ -43,7 +43,7 @@ import static com.neo4j.server.security.enterprise.configuration.SecuritySetting
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.function.Predicates.await;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;

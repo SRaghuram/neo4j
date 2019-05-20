@@ -25,7 +25,7 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.helpers.collection.Iterables.count;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
 class TokensRecoveryIT

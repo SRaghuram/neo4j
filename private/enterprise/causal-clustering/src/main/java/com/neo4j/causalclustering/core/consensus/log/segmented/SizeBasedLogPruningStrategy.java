@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.internal.helpers.collection.Visitor;
 
 class SizeBasedLogPruningStrategy implements CoreLogPruningStrategy, Visitor<SegmentFile,RuntimeException>
 {

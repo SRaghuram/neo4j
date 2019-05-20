@@ -18,7 +18,7 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 

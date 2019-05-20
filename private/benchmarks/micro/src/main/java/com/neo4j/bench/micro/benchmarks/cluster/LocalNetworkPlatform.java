@@ -22,10 +22,10 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;

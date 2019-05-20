@@ -19,7 +19,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;

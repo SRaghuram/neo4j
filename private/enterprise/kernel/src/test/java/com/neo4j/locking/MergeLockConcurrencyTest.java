@@ -27,7 +27,7 @@ import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
-import static org.neo4j.helpers.collection.Iterators.single;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.test.ConfigBuilder.configure;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.await;
 

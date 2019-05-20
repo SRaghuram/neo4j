@@ -18,7 +18,7 @@ import org.neo4j.bolt.v1.runtime.BoltStateMachineV1;
 import org.neo4j.bolt.v1.runtime.integration.SessionExtension;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.virtual.MapValue;

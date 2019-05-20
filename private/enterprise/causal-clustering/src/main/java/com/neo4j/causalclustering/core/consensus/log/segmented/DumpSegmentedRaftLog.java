@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.neo4j.cursor.IOCursor;
-import org.neo4j.helpers.Args;
+import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;

@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;

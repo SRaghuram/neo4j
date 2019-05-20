@@ -25,7 +25,7 @@ import org.neo4j.helper.IsConnectionException;
 import org.neo4j.helper.IsConnectionResetByPeer;
 import org.neo4j.helper.IsStoreCopyFailure;
 import org.neo4j.helper.Workload;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;

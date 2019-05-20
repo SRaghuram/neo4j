@@ -15,7 +15,7 @@ import java.util.Map;
 import org.neo4j.bolt.security.auth.AuthenticationException;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
 
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertException;
 

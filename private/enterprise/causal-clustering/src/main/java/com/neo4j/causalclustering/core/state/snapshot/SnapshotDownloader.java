@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

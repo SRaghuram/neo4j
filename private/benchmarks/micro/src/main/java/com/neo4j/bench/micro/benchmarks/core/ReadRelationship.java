@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 
 import static com.neo4j.bench.micro.data.RelationshipDefinition.from;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;

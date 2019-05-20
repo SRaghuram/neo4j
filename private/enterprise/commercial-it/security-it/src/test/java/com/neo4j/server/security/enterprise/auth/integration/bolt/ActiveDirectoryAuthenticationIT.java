@@ -29,13 +29,13 @@ import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgFailure;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 /*
  * Only run these tests when the appropriate ActiveDirectory server is in fact live.

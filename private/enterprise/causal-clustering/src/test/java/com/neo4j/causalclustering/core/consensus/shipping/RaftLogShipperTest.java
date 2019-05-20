@@ -28,7 +28,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

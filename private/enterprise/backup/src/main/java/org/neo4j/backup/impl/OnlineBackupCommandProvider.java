@@ -14,7 +14,7 @@ import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;

@@ -40,7 +40,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
@@ -86,7 +86,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
-import static org.neo4j.helpers.collection.Iterables.count;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 import static org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator.LEGACY_TX_LOGS_LOCATION_SETTING;
 

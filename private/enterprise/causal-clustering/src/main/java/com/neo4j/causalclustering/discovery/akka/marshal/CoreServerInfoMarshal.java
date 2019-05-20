@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import java.io.IOException;
 import java.util.Set;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;

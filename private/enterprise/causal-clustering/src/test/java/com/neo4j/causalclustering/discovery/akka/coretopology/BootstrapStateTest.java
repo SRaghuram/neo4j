@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.helpers.collection.Iterables.first;
-import static org.neo4j.helpers.collection.Iterables.last;
+import static org.neo4j.internal.helpers.collection.Iterables.first;
+import static org.neo4j.internal.helpers.collection.Iterables.last;
 
 class BootstrapStateTest
 {

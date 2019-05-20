@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.compression_implementations;

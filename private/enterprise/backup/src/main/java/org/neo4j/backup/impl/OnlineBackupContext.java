@@ -14,8 +14,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class OnlineBackupContext

@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.business_intelligence.queries;
 
-import com.neo4j.bench.ldbc.QueryGraphMaker;
 import com.neo4j.bench.ldbc.Domain.Forum;
 import com.neo4j.bench.ldbc.Domain.Message;
 import com.neo4j.bench.ldbc.Domain.Nodes;
@@ -14,11 +13,12 @@ import com.neo4j.bench.ldbc.Domain.Place;
 import com.neo4j.bench.ldbc.Domain.Rels;
 import com.neo4j.bench.ldbc.Domain.Tag;
 import com.neo4j.bench.ldbc.Domain.TagClass;
+import com.neo4j.bench.ldbc.QueryGraphMaker;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 
 public class SnbBiTestGraph
 {

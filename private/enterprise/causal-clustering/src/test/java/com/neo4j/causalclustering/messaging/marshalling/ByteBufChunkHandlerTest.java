@@ -16,7 +16,7 @@ import org.junit.Test;
 
 import java.util.Iterator;
 
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Iterators;
 
 public class ByteBufChunkHandlerTest
 {

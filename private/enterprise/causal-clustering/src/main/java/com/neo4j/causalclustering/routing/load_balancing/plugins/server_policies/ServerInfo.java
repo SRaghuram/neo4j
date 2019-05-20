@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Objects;
 import java.util.Set;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 /**
  * Hold the server information that is interesting for load balancing purposes.

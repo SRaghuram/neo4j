@@ -23,7 +23,7 @@ import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestMo
 import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols.SNAPPY;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 /**
  * @see ApplicationProtocolRepositoryTest for tests on base class

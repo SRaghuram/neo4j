@@ -10,7 +10,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.StringCacheMonitor
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.helpers.collection.Pair
+import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.monitoring.Monitors
 
 /**

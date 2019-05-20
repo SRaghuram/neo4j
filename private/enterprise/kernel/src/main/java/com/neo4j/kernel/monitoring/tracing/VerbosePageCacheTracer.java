@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.helpers.TimeUtil;
+import org.neo4j.internal.helpers.TimeUtil;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.PageSwapper;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;

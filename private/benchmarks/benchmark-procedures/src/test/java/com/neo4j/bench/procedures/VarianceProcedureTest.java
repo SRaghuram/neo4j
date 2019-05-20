@@ -32,7 +32,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;

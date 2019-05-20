@@ -5,6 +5,14 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -16,18 +24,9 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import java.util.stream.IntStream;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 
 import static com.neo4j.bench.micro.Main.run;
 

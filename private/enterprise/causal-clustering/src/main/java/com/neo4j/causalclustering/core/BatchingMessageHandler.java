@@ -31,7 +31,7 @@ import org.neo4j.logging.LogProvider;
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
 import static java.lang.Long.max;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.helpers.ArrayUtil.lastOf;
+import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
 
 /**
  * This class gets Raft messages as input and queues them up for processing. Some messages are

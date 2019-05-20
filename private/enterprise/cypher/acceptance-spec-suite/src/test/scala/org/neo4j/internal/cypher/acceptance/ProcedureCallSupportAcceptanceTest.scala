@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.collection.RawIterator
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.helpers.collection.MapUtil.map
+import org.neo4j.internal.helpers.collection.MapUtil.map
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes}
 import org.neo4j.kernel.api.ResourceTracker

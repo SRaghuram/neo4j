@@ -28,7 +28,7 @@ import java.util.Set;
 import org.neo4j.logging.NullLogProvider;
 
 import static java.util.Collections.emptySet;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftStateBuilder
 {

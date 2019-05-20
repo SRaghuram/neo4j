@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProviderFactory;
 import org.neo4j.test.extension.Inject;

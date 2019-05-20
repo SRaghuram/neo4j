@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import java.util.Collection;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static java.util.Collections.singleton;
 

@@ -10,13 +10,13 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.neo4j.helpers.collection.Iterables.empty;
+import static org.neo4j.internal.helpers.collection.Iterables.empty;
 
 public class UpstreamDatabaseStrategySelector
 {

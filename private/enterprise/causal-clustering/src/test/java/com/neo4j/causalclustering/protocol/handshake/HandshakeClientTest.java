@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
-import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
 import org.junit.Test;
@@ -19,7 +18,7 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory;

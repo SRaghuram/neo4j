@@ -27,7 +27,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
@@ -39,7 +39,7 @@ import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 
 public class SystemGraphInitializer extends BasicSystemGraphInitializer

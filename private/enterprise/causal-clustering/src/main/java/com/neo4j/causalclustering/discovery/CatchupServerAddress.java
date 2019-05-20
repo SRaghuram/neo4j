@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public interface CatchupServerAddress
 {

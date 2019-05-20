@@ -9,10 +9,10 @@ import java.io.PrintStream;
 import java.util.function.Supplier;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.helpers.Args;
-import org.neo4j.helpers.ArrayUtil;
-import org.neo4j.helpers.progress.ProgressListener;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.Args;
+import org.neo4j.internal.helpers.ArrayUtil;
+import org.neo4j.internal.helpers.progress.ProgressListener;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;

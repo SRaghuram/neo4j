@@ -8,8 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.graphdb._
-import org.neo4j.helpers.collection.Iterators.single
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.helpers.collection.Iterators.single
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer

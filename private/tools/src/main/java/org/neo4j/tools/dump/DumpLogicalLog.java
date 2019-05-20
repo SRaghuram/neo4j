@@ -14,7 +14,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import org.neo4j.helpers.Args;
+import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.Command.NodeCommand;
 import org.neo4j.internal.recordstorage.Command.PropertyCommand;
@@ -36,7 +36,7 @@ import org.neo4j.tools.dump.InconsistentRecords.Type;
 import org.neo4j.tools.dump.TransactionLogAnalyzer.Monitor;
 
 import static java.util.TimeZone.getTimeZone;
-import static org.neo4j.helpers.Format.DEFAULT_TIME_ZONE;
+import static org.neo4j.internal.helpers.Format.DEFAULT_TIME_ZONE;
 
 /**
  * Tool to represent logical logs in readable format for further analysis.

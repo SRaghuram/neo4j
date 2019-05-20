@@ -31,7 +31,7 @@ import org.neo4j.token.TokenRegistry;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.bytesToCommands;
 import static java.lang.String.format;
-import static org.neo4j.helpers.collection.Iterables.single;
+import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedTokenRequest>
 {

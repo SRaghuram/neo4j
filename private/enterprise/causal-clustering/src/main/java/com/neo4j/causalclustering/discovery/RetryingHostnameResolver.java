@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public abstract class RetryingHostnameResolver implements HostnameResolver
 {

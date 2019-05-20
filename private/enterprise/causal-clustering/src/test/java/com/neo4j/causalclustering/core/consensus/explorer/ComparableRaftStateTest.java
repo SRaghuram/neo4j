@@ -13,7 +13,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class ComparableRaftStateTest
 {

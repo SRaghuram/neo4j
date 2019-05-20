@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
@@ -41,7 +41,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 /**
  * @see HandshakeServerEnsureMagicTest

@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.common.ClusterMember;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 

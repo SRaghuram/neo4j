@@ -14,10 +14,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.causalclustering.stresstests.ClusterStressTesting.stressTest;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static com.neo4j.causalclustering.stresstests.ClusterStressTesting.stressTest;
-import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
+import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
 
 public class ClusterStressScenarioSmoke
 {

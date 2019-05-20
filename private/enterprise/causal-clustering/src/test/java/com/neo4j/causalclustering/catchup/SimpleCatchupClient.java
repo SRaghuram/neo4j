@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StreamToDiskProvider;
 
 import java.io.File;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;

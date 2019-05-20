@@ -45,7 +45,7 @@ import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
-import static org.neo4j.helpers.Strings.escape;
+import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
 public class MultiRealmAuthManager implements CommercialAuthAndUserManager

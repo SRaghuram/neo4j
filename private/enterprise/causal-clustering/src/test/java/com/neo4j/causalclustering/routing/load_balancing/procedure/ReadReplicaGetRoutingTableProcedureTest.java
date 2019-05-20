@@ -10,7 +10,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedureTest;
 

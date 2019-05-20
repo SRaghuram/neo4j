@@ -18,7 +18,7 @@ import java.util.TreeMap;
 import java.util.function.LongConsumer;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.logging.Log;
 
 import static java.util.Collections.emptySortedMap;

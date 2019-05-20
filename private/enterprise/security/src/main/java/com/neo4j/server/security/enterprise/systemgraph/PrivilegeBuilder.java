@@ -17,7 +17,7 @@ import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.NodeValue;
 
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 class PrivilegeBuilder
 {

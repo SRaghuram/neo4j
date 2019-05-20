@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import javax.naming.NamingException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 

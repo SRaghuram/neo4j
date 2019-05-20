@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.tx;
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.collection.LongRange;
+import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;

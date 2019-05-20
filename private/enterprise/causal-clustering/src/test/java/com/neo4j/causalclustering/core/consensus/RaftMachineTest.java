@@ -39,8 +39,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.helpers.collection.Iterables.last;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterables.last;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftMachineTest
 {

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import java.time.Duration;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 

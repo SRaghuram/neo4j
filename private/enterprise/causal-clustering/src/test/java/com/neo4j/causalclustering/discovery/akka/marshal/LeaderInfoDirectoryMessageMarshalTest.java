@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import org.neo4j.helpers.collection.CollectorsUtil;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.CollectorsUtil;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<LeaderInfoDirectoryMessage>

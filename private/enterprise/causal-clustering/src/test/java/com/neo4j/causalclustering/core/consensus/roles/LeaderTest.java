@@ -52,9 +52,9 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.helpers.collection.Iterables.count;
-import static org.neo4j.helpers.collection.Iterables.single;
-import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
+import static org.neo4j.internal.helpers.collection.Iterables.single;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @RunWith( MockitoJUnitRunner.class )
 public class LeaderTest

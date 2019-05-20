@@ -22,7 +22,7 @@ import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.read_replica.SpecificReplicaStrategy.upstreamFactory;
@@ -31,7 +31,7 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.helpers.collection.Iterables.count;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class ReadReplicaToReadReplicaCatchupIT

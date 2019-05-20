@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
-import org.neo4j.helpers.collection.Iterators
+import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.immutable.SortedSet

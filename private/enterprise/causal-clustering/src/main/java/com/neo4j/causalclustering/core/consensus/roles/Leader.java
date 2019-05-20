@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.neo4j.helpers.collection.FilteringIterable;
+import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.logging.Log;
 
 import static java.lang.Math.max;

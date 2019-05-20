@@ -43,7 +43,7 @@ import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
 import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_ID;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 
 class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTestBase

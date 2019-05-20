@@ -20,7 +20,7 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_type;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;

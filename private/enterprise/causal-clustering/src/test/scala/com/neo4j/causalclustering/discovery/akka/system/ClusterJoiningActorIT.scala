@@ -18,7 +18,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
-import org.neo4j.helpers.AdvertisedSocketAddress
+import org.neo4j.internal.helpers.AdvertisedSocketAddress
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._

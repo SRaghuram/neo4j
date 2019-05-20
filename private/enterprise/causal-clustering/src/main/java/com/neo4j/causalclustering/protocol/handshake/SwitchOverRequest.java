@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.protocol.handshake;
 import java.util.List;
 import java.util.Objects;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 public class SwitchOverRequest implements ServerMessage
 {

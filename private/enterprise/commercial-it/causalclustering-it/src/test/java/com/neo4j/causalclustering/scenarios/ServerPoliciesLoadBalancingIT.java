@@ -36,8 +36,8 @@ import java.util.stream.Collectors;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -55,8 +55,8 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.neo4j.helpers.collection.Iterators.asSet;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 @ExtendWith( TestDirectoryExtension.class )
 class ServerPoliciesLoadBalancingIT

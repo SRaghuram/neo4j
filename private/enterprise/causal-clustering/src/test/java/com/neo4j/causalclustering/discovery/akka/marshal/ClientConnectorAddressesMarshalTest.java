@@ -11,7 +11,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;

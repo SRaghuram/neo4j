@@ -40,9 +40,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService

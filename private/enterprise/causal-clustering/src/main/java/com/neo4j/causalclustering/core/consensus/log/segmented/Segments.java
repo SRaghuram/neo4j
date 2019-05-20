@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.function.Function;
 
-import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

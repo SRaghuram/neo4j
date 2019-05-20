@@ -58,9 +58,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.function.Predicates.await;
-import static org.neo4j.helpers.Exceptions.rootCause;
-import static org.neo4j.helpers.NamedThreadFactory.daemon;
-import static org.neo4j.helpers.collection.Iterators.single;
+import static org.neo4j.internal.helpers.Exceptions.rootCause;
+import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class SessionResetIT

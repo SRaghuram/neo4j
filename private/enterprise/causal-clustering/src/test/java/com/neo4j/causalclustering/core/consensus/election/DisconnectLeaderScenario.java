@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.helpers.collection.FilteringIterable;
+import org.neo4j.internal.helpers.collection.FilteringIterable;
 
 import static java.util.stream.Collectors.toList;
 

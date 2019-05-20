@@ -15,11 +15,11 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.progress.ProgressListener;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.internal.helpers.progress.ProgressListener;
+import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;

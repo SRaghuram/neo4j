@@ -20,8 +20,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.helpers.SocketAddressParser.socketAddress;
+import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 
 class BaseRoutingProcedureIT

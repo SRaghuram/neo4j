@@ -36,7 +36,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.graphdb.schema.ConstraintType.NODE_KEY;
 import static org.neo4j.graphdb.schema.ConstraintType.UNIQUENESS;
-import static org.neo4j.helpers.collection.Iterables.single;
+import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public class ClusterIndexProcedureIT
 {

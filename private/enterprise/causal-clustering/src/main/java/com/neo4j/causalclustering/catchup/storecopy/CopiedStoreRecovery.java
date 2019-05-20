@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;

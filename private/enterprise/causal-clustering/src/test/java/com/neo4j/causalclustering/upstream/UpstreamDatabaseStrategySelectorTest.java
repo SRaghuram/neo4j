@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-import static org.neo4j.helpers.collection.Iterables.iterable;
+import static org.neo4j.internal.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {

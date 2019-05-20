@@ -12,7 +12,7 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 
 import static org.neo4j.configuration.Settings.BOOLEAN;
 import static org.neo4j.configuration.Settings.BYTES;

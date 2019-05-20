@@ -33,7 +33,7 @@ import org.neo4j.server.security.auth.SecureHasher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.configuration.IdTypeConfiguration;
 import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;

@@ -30,7 +30,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.HostnamePort;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
@@ -51,7 +51,7 @@ import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventual
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newMessageEncoder;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newNeo4jPack;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;

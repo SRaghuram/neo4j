@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.QueryExecutionEvent
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
 import org.neo4j.graphdb.Direction
-import org.neo4j.helpers.collection.MapUtil
+import org.neo4j.internal.helpers.collection.MapUtil
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{Read, TokenRead, _}
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor

@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.helpers.collection.Iterators.asList;
+import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension

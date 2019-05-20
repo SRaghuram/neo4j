@@ -22,7 +22,7 @@ import org.neo4j.graphdb.index.IndexPopulationProgress;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.helpers.Args;
+import org.neo4j.internal.helpers.Args;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 

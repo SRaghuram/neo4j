@@ -7,7 +7,7 @@ package org.neo4j.tools.console.input;
 
 import java.io.PrintStream;
 
-import org.neo4j.helpers.Args;
+import org.neo4j.internal.helpers.Args;
 
 public abstract class ArgsCommand implements Command
 {

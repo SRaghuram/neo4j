@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;

@@ -22,8 +22,8 @@ import org.neo4j.configuration.Migrator;
 import org.neo4j.configuration.ReplacedBy;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.Level;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.GZIP;

@@ -19,7 +19,7 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.UUID;
 
-import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.helpers.collection.Pair;
 
 import static org.neo4j.graphdb.Label.label;
 

@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 

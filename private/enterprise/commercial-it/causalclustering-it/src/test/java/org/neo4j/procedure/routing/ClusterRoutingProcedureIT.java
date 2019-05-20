@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
@@ -33,7 +33,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.helpers.SocketAddressParser.socketAddress;
+import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
 
 @ClusterExtension
 class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT

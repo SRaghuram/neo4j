@@ -33,7 +33,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.virtual.NodeValue;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
-import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
