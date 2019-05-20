@@ -14,6 +14,7 @@ import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.id.IdType;
 
+import static org.neo4j.configuration.Settings.LONG;
 import static org.neo4j.configuration.Settings.STRING;
 import static org.neo4j.configuration.Settings.list;
 import static org.neo4j.configuration.Settings.optionsIgnoreCase;
@@ -33,6 +34,9 @@ public class CommercialEditionSettings implements LoadableConfig
     public static final Setting<List<IdType>> idTypesToReuse = setting(
             "dbms.ids.reuse.types.override", list( ",", optionsIgnoreCase( IdType.NODE, IdType.RELATIONSHIP ) ),
             String.join( ",", IdType.RELATIONSHIP.name(), IdType.NODE.name() ) );
+
+    @Description( "The maximum number of databases." )
+    public static final Setting<Long> maxNumberOfDatabases = setting( "dbms.databases.max", LONG, "100" );
 
     @Internal
     public static final Setting<String> security_module = setting( "unsupported.dbms.security.module", STRING, COMMERCIAL_SECURITY_MODULE_ID );

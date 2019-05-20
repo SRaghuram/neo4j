@@ -17,6 +17,7 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -26,8 +27,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.maxNumberOfDatabases;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.helpers.Exceptions.rootCause;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
@@ -57,6 +61,7 @@ class MultiDatabaseManagerIT
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
+                .setConfig( maxNumberOfDatabases, "5" )
                 .build();
         database = managementService.database( CUSTOM_DATABASE_ID.name() );
         databaseManager = getDatabaseManager();
@@ -66,6 +71,46 @@ class MultiDatabaseManagerIT
     void tearDown()
     {
         managementService.shutdown();
+    }
+
+    @Test
+    void restrictDatabaseCreation()
+    {
+        for ( int i = 0; i < 3; i++ )
+        {
+            managementService.createDatabase( "database" + i );
+        }
+        TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
+        assertThat( rootCause( exception ).getMessage(),
+                containsString( "Reached maximum number of active databases. Fail to create new database `any`." ) );
+    }
+
+    @Test
+    void allowCreationOfDatabaseAfterDrop()
+    {
+        for ( int i = 0; i < 3; i++ )
+        {
+            managementService.createDatabase( "database" + i );
+        }
+        TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
+        managementService.dropDatabase( "database0" );
+
+        assertDoesNotThrow( () -> managementService.createDatabase( "any" ) );
+    }
+
+    @Test
+    void restrictDatabaseCreationWhenDatabasesAreStopped()
+    {
+        for ( int i = 0; i < 3; i++ )
+        {
+            managementService.createDatabase( "database" + i );
+        }
+
+        for ( int i = 0; i < 3; i++ )
+        {
+            managementService.shutdownDatabase( "database" + i );
+        }
+        assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
     }
 
     @Test

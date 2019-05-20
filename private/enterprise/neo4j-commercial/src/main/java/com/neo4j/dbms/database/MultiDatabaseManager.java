@@ -5,11 +5,14 @@
  */
 package com.neo4j.dbms.database;
 
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+
 import java.util.Optional;
 
 import org.neo4j.dbms.database.AbstractDatabaseManager;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -22,10 +25,12 @@ import static java.lang.String.format;
 public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
 {
     protected volatile boolean started;
+    private final long maximumNumerOfDatabases;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
     {
         super( globalModule, edition, log );
+        maximumNumerOfDatabases = globalModule.getGlobalConfig().get( CommercialEditionSettings.maxNumberOfDatabases );
     }
 
     public DB createStoppedDatabase( DatabaseId databaseId ) throws DatabaseExistsException
@@ -46,6 +51,11 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             if ( currentContext != null )
             {
                 throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
+            }
+            if ( databaseMap.size() >= maximumNumerOfDatabases )
+            {
+                throw new DatabaseManagementException(
+                        format( "Reached maximum number of active databases. Fail to create new database `%s`.", databaseId.name() ) );
             }
             DB databaseContext = createNewDatabaseContext( databaseId );
             if ( autostart && started )
