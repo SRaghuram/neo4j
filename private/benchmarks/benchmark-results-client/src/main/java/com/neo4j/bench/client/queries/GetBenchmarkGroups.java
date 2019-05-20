@@ -19,6 +19,7 @@ import org.neo4j.driver.v1.StatementResult;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.driver.v1.AccessMode.READ;
 
 public class GetBenchmarkGroups implements Query<List<BenchmarkGroup>>
 {
@@ -34,7 +35,7 @@ public class GetBenchmarkGroups implements Query<List<BenchmarkGroup>>
     @Override
     public List<BenchmarkGroup> execute( Driver driver )
     {
-        try ( Session session = driver.session() )
+        try ( Session session = driver.session( READ ) )
         {
             Map<String,Object> params = new HashMap<>();
             params.put( "neo4j_series", neo4jSeries );
