@@ -9,7 +9,7 @@ class AdaptableLayoutFixed extends AdaptableLayout
 {
     AdaptableLayoutFixed( int keySize, int valueSize )
     {
-        super( keySize, valueSize );
+        super( true, keySize, valueSize );
     }
 
     @Override
@@ -25,15 +25,8 @@ class AdaptableLayoutFixed extends AdaptableLayout
     }
 
     @Override
-    public boolean fixedSize()
-    {
-        return true;
-    }
-
-    @Override
     public void minimalSplitter( AdaptableKey left, AdaptableKey right, AdaptableKey into )
     {
         copyKey( right, into );
     }
 }
-

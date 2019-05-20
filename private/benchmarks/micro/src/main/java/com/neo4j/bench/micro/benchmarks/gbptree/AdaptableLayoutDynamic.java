@@ -9,7 +9,7 @@ class AdaptableLayoutDynamic extends AdaptableLayout
 {
     AdaptableLayoutDynamic( int keySize, int valueSize )
     {
-        super( keySize, valueSize );
+        super( false, keySize, valueSize );
     }
 
     @Override
@@ -22,12 +22,6 @@ class AdaptableLayoutDynamic extends AdaptableLayout
     public int keySize( AdaptableKey adaptableKey )
     {
         return adaptableKey.totalSize;
-    }
-
-    @Override
-    public boolean fixedSize()
-    {
-        return false;
     }
 
     @Override

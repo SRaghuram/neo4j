@@ -13,8 +13,9 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     final int keySize;
     private final int valueSize;
 
-    AdaptableLayout( int keySize, int valueSize )
+    AdaptableLayout( boolean fixedSize, int keySize, int valueSize )
     {
+        super( fixedSize, 10000 * keySize + valueSize, 0, 0 );
         if ( keySize < AdaptableKey.DATA_SIZE )
         {
             throw new IllegalArgumentException( "Key size need to be at least " + AdaptableKey.DATA_SIZE + ", was " + keySize );
@@ -141,23 +142,5 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     public int compare( AdaptableKey o1, AdaptableKey o2 )
     {
         return Long.compare( o1.value, o2.value );
-    }
-
-    @Override
-    public long identifier()
-    {
-        return 10000 * keySize + valueSize;
-    }
-
-    @Override
-    public int majorVersion()
-    {
-        return 0;
-    }
-
-    @Override
-    public int minorVersion()
-    {
-        return 0;
     }
 }
