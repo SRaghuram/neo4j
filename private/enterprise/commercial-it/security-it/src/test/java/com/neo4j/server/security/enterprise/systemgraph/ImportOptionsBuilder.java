@@ -16,6 +16,7 @@ import java.util.List;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
+import org.neo4j.cypher.security.BasicImportOptionsBuilder;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
 
@@ -32,6 +33,7 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
 
     public ImportOptionsBuilder()
     {
+        super();
         shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
         shouldResetSystemGraphAuthBeforeImport = false;
     }
@@ -72,12 +74,12 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
         return this;
     }
 
-    ImportOptionsBuilder migrateUser( String userName, String password, boolean pwdChangeRequired )
+    protected ImportOptionsBuilder migrateUser( String userName, String password, boolean pwdChangeRequired )
     {
         return (ImportOptionsBuilder) super.migrateUser( userName, password, pwdChangeRequired );
     }
 
-    ImportOptionsBuilder migrateUsers( String... migrateUsers )
+    protected ImportOptionsBuilder migrateUsers( String... migrateUsers )
     {
         return (ImportOptionsBuilder) super.migrateUsers( migrateUsers );
     }
@@ -88,7 +90,7 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
         return this;
     }
 
-    ImportOptionsBuilder initialUser( String password, boolean pwdChangeRequired )
+    protected ImportOptionsBuilder initialUser( String password, boolean pwdChangeRequired )
     {
         return (ImportOptionsBuilder) super.initialUser( password, pwdChangeRequired );
     }

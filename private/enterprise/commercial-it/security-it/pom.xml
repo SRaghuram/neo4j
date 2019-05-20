@@ -63,6 +63,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.neo4j.community</groupId>
+            <artifactId>cypher-it</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
             <scope>test</scope>

@@ -32,10 +32,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.security.enterprise.systemgraph.BasicSystemGraphRealmIT.SIMULATED_INITIAL_PASSWORD;
-import static com.neo4j.server.security.enterprise.systemgraph.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
-import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.assertAuthenticationSucceeds;
-import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.testAuthenticationToken;
+import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.SIMULATED_INITIAL_PASSWORD;
+import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
+import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.assertAuthenticationSucceeds;
+import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.testAuthenticationToken;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
