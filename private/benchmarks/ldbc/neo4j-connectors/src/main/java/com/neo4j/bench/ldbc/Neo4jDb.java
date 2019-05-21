@@ -41,10 +41,10 @@ import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;

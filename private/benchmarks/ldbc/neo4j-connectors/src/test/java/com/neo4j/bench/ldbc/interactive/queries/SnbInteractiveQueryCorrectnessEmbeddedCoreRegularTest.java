@@ -97,7 +97,7 @@ import com.neo4j.bench.ldbc.interactive.embedded_core.Update8EmbeddedCore_0_1_2;
 import java.io.File;
 import java.util.List;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

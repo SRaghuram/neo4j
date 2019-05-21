@@ -17,8 +17,8 @@ import org.neo4j.adversaries.ClassGuardedAdversary;
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseManagementService;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static org.hamcrest.CoreMatchers.containsString;

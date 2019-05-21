@@ -5,8 +5,8 @@
  */
 package org.neo4j.multidatabase.stresstest.commands;
 
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class DropManagerCommand extends DatabaseManagerCommand

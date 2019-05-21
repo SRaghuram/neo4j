@@ -99,7 +99,7 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 import java.io.File;
 import java.util.List;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

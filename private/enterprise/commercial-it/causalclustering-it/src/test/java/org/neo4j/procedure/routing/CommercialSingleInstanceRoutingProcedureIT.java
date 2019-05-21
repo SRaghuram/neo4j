@@ -9,7 +9,7 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
 
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 
 class CommercialSingleInstanceRoutingProcedureIT extends CommunitySingleInstanceRoutingProcedureIT
 {

@@ -19,7 +19,7 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.test.ports.PortAuthority;
 

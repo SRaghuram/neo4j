@@ -7,11 +7,11 @@ package com.neo4j.dbms.database;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.AbstractDatabaseManager;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseExistsException;
-import org.neo4j.dbms.database.DatabaseManagementException;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;

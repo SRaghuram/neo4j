@@ -80,7 +80,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.GraphDatabaseService;

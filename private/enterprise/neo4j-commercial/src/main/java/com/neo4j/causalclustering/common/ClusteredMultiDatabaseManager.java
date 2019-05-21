@@ -13,8 +13,8 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManagementException;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.internal.helpers.Exceptions;

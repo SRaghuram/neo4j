@@ -17,9 +17,9 @@ import java.io.File;
 import java.nio.file.WatchKey;
 import java.util.concurrent.CountDownLatch;
 
+import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseExistsException;
-import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;

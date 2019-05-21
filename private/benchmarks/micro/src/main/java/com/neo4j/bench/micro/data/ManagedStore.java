@@ -16,9 +16,9 @@ import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceB
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;

@@ -7,7 +7,7 @@ package com.neo4j.test.rule;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 

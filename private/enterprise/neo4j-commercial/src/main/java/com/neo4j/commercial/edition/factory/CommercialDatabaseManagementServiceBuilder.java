@@ -11,7 +11,7 @@ import java.io.File;
 import java.util.function.Function;
 
 import org.neo4j.common.Edition;
-import org.neo4j.graphdb.factory.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;

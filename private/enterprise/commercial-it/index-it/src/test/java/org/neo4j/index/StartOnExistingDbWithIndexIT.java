@@ -13,7 +13,7 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;

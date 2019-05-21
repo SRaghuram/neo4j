@@ -10,7 +10,7 @@ import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceB
 
 import java.nio.file.Path;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 
 public class TestSupport
 {

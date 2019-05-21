@@ -5,7 +5,7 @@
  */
 package org.neo4j.multidatabase.stresstest.commands;
 
-import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
 

@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Settings;
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;

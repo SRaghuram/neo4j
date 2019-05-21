@@ -18,7 +18,7 @@ import java.io.File;
 import java.util.Objects;
 import java.util.function.BiPredicate;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;

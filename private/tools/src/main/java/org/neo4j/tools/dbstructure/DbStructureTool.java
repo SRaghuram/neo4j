@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureArgumentFormatter;

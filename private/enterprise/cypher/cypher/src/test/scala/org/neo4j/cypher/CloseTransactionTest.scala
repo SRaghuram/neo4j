@@ -13,7 +13,7 @@ import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.dbms.database.DatabaseManagementService
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.{GraphDatabaseService, Result}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException

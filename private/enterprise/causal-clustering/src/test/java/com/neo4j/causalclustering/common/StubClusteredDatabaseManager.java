@@ -16,9 +16,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.availability.DatabaseAvailability;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;

@@ -25,7 +25,7 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.Logger;
 import org.neo4j.driver.v1.Logging;

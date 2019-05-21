@@ -31,14 +31,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.neo4j.dbms.database.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.util.ClassLoaderHelper.loadClass;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
-
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;

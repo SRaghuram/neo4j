@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncodin
 import java.util.Collection;
 import java.util.function.Consumer;
 
-import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;

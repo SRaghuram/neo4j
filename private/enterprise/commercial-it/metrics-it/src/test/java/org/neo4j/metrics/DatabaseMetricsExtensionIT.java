@@ -15,9 +15,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
-import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;

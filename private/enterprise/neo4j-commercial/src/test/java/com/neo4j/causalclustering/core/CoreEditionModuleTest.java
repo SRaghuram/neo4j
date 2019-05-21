@@ -13,7 +13,7 @@ import org.mockito.InOrder;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseId;
