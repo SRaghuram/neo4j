@@ -362,7 +362,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index for LockingUniqueIndexSeek when matching") {
     graph.createNodeKeyConstraint("User", "name", "surname")
-    createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    var n = createLabeledNode(Map("name" -> "Joei", "surname" -> "Soap"), "User")
+    for (i <- 0 until 10) {
+      val x = createLabeledNode(Map("name" -> s"Joe$i", "surname" -> "Soap"), "User")
+      relate(n, x, "Knows")
+      n = x
+    }
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     val n2 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
     val r = relate(n2, n1, "Knows")

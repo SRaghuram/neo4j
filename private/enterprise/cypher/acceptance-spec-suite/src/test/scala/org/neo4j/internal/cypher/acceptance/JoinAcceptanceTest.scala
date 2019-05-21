@@ -39,7 +39,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should handle node left outer hash join") {
     val a = createLabeledNode(Map[String, Any]("name" -> "a"), "A")
     createLabeledNode(Map[String, Any]("name" -> "a2"), "A")
-    for(i <- 0 until 10) {
+    for(i <- 0 until 100) {
       val b = createLabeledNode(Map[String, Any]("name" -> s"${i}b"), "B")
       if(i != 0) relate(a, b)
     }
@@ -75,7 +75,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should handle node left outer hash join with different types for the node variable") {
     val a = createLabeledNode(Map[String, Any]("name" -> "a"), "A")
     createLabeledNode(Map[String, Any]("name" -> "a2"), "A")
-    for(i <- 0 until 50) { // This number is sensitive in that it has to exceed the cardinality estimation of the UNWIND
+    for(i <- 0 until 200) { // This number is sensitive in that it has to exceed the cardinality estimation of the UNWIND
       val b = createLabeledNode(Map[String, Any]("name" -> s"${i}b"), "B")
       if(i != 0) relate(a, b)
     }

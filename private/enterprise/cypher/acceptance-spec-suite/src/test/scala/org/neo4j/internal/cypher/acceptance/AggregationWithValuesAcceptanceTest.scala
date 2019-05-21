@@ -347,6 +347,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val m2 = createLabeledNode(Map("prop1" -> 3, "prop2" -> 3), "Label")
     val m3 = createLabeledNode(Map("prop1" -> 4, "prop2" -> 2), "Label")
     val m4 = createLabeledNode(Map("prop1" -> 5, "prop2" -> 1), "Label")
+    (0 until 20).foreach(i => createLabeledNode("Label"))
     relate(n, m1)
     relate(n, m2)
     relate(n, m3)

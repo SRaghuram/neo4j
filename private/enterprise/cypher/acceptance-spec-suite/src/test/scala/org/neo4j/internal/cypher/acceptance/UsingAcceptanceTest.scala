@@ -707,7 +707,6 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))
-        planDescription should includeSomewhere.nTimes(1, aPlan("CartesianProduct"))
         planDescription.toString should not include "AllNodesScan"
       }))
   }

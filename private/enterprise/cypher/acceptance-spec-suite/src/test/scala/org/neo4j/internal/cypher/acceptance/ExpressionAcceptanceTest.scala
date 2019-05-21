@@ -76,8 +76,8 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should equal(
       List(Map("actor" ->
         Map("name" -> "Actor 1", "movies" -> Seq(
-          Map("title" -> "Movie 2"),
-          Map("title" -> "Movie 1"))))))
+          Map("title" -> "Movie 1"),
+          Map("title" -> "Movie 2"))))))
   }
 
   test("prepending item to a list should behave correctly in all runtimes") {

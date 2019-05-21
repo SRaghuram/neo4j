@@ -1343,10 +1343,10 @@ class EagerizationAcceptanceTest
   }
 
   test("should be eager if merging node with properties after matching all nodes") {
-    createLabeledNode("Two")
-    createLabeledNode("Two")
+    createLabeledNode(Map("prop" -> 239), "Two") // these properties are added coax the planner into getting
+    createLabeledNode(Map("prop" -> 239), "Two") // the AllNodeScan on the rhs (meaning it's an unstable iterator
     createNode()
-    val query = "MATCH (a:Two), (b) MERGE (q {p: 1}) RETURN count(*) AS c"
+    val query = "MATCH (a:Two), (b) WHERE a.prop = 239 MERGE (q {p: 1}) RETURN count(*) AS c"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
@@ -2214,9 +2214,9 @@ class EagerizationAcceptanceTest
   }
 
   test("should not be eager if removing label from left-most node") {
-    createLabeledNode("Lol")
+    createLabeledNode(Map("plannerSugar" -> 2), "Lol") // coaxing the planner
     createNode()
-    val query = "MATCH (m:Lol), (n) REMOVE n:Lol RETURN count(*)"
+    val query = "MATCH (m:Lol), (n) WHERE m.plannerSugar = 2 REMOVE n:Lol RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))

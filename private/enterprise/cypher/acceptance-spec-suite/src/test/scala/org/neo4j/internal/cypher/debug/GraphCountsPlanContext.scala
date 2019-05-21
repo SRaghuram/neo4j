@@ -37,7 +37,7 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
   }
 
   override val statistics: InstrumentedGraphStatistics = InstrumentedGraphStatistics(
-    new StatisticsCompletingGraphStatistics(Stats(row.data.nodes, row.data.relationships)),
+    new MinimumGraphStatistics(Stats(row.data.nodes, row.data.relationships)),
     new MutableGraphStatisticsSnapshot())
 
   override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {

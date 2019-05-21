@@ -25,8 +25,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
   private var missCounter: MissCounter = _
 
   override def databaseConfig(): Map[Setting[_], String] =
-    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10",
-      GraphDatabaseSettings.cypher_plan_with_minimum_cardinality_estimates -> "true")
+    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10")
 
   override protected def initTest() {
     super.initTest()
@@ -125,6 +124,25 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
 
     val result = execute(s"EXPLAIN $query")
     result.executionPlanDescription() should not(includeSomewhere.aPlan("CartesianProduct"))
+  }
+
+  test("should plan UNWIND query with NodeById on minimum graph") {
+    val query =
+      """
+        |EXPLAIN
+        |UNWIND {rows} as row
+        |MATCH (startNode) WHERE ID(startNode) = row.startNodeId
+        |MATCH (endNode) WHERE ID(endNode) = row.endNodeId
+        |CREATE (startNode)-[rel:R]->(endNode) SET rel += row.props
+        |RETURN rel
+      """.stripMargin
+
+    // given
+    val planForPopulatedGraph = execute(query).executionPlanDescription()
+
+    // then
+    planForPopulatedGraph should includeSomewhere.aPlan("NodeByIdSeek")
+    planForPopulatedGraph should not(includeSomewhere.aPlan("AllNodesScan"))
   }
 
   private def testPlanNodeIndexSeek(query: String, indexedLabels: List[String], assertNumberOfIndexSeeks: Int): Unit = {

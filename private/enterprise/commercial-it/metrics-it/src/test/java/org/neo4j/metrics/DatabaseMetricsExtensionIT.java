@@ -126,7 +126,7 @@ class DatabaseMetricsExtensionIT
         }
 
         //add some data, should make plan stale
-        addNodes( 10 );
+        addNodes( 100 );
 
         // WHEN
         for ( int i = 0; i < 10; i++ )

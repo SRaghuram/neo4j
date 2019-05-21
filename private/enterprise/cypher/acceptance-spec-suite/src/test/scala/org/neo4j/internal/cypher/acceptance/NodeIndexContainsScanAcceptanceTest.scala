@@ -45,7 +45,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       (1 to 100).foreach { _ =>
         createLabeledNode("Location")
       }
-      (1 to 300).map { i =>
+      (1 to 1000).map { i =>
         createLabeledNode(Map("name" -> i.toString), "Location")
       }
     }

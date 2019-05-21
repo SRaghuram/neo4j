@@ -8,15 +8,13 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults._
 import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
-import org.neo4j.cypher.internal.plandescription.{Argument, InternalPlanDescription}
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException, TxCounts}
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
-
-import scala.reflect.ClassTag
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 

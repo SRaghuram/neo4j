@@ -315,22 +315,20 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("should consider cardinality input when planning pattern expression in where clause") {
     // given
     val node = createLabeledNode("A")
-    createLabeledNode("A")
-    createLabeledNode("A")
+    (0 until 13).map(_ => createLabeledNode("A"))
     relate(node, createNode(), "HAS")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:A) WHERE (n)-[:HAS]->() RETURN n")
 
     val argumentPLan = result.executionPlanDescription().cd("NodeByLabelScan")
     val estimatedRows = argumentPLan.arguments.collect { case n: EstimatedRows => n }.head
-    estimatedRows should equal(EstimatedRows(3.0))
+    estimatedRows should equal(EstimatedRows(14.0))
   }
 
   test("should consider cardinality input when planning in return") {
     // given
     val node = createLabeledNode("A")
-    createLabeledNode("A")
-    createLabeledNode("A")
+    (0 until 18).map(_ => createLabeledNode("A"))
     val endNode = createNode()
     relate(node, endNode, "HAS")
 
@@ -340,7 +338,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
         planDescription.cd("Argument").arguments should equal(List(EstimatedRows(1)))
         planDescription.find("Expand(All)") shouldNot be(empty)
         val expandArgs = planDescription.cd("Expand(All)").arguments.toSet
-        expandArgs should contain(EstimatedRows(0.25))
+        expandArgs should contain(EstimatedRows(0.05))
         expandArgs collect {
           case ExpandExpression("n", _, Seq("HAS"), _, SemanticDirection.OUTGOING, 1, Some(1)) => true
         } should not be empty
