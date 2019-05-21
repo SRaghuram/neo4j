@@ -47,17 +47,40 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   // EXPRESSIONS
   // ==========================================================================
 
+  def _nullLit: Gen[Null] =
+    Gen.const(Null.NULL)
+
   def _stringLit: Gen[StringLiteral] =
     _string.flatMap(StringLiteral(_)(?))
 
   def _booleanLit: Gen[BooleanLiteral] =
     Gen.oneOf(True()(?), False()(?))
 
-  def _signedIntLit: Gen[SignedIntegerLiteral] =
-    Gen.posNum[Int].map(_.toString).map(SignedDecimalIntegerLiteral(_)(?))
+  def _unsignedIntString(prefix: String, radix: Int): Gen[String] = for {
+    num <- Gen.posNum[Int]
+    str = Integer.toString(num, radix)
+  } yield List(prefix, str).mkString
 
-  def _unsignedIntLit: Gen[UnsignedIntegerLiteral] =
-    Gen.posNum[Int].map(_.toString).map(UnsignedDecimalIntegerLiteral(_)(?))
+  def _signedIntString(prefix: String, radix: Int): Gen[String] = for {
+    str <- _unsignedIntString(prefix, radix)
+    neg <- _boolean
+    sig = if (neg) "-" else ""
+  } yield List(sig, prefix, str).mkString
+
+  def _unsignedIntLit: Gen[UnsignedDecimalIntegerLiteral] =
+    _unsignedIntString("", 10).map(UnsignedDecimalIntegerLiteral(_)(?))
+
+  def _signedIntLit: Gen[SignedDecimalIntegerLiteral] =
+    _signedIntString("", 10).map(SignedDecimalIntegerLiteral(_)(?))
+
+  def _signedHexIntLit: Gen[SignedHexIntegerLiteral] =
+    _signedIntString("0x", 16).map(SignedHexIntegerLiteral(_)(?))
+
+  def _signedOctIntLit: Gen[SignedOctalIntegerLiteral] =
+    _signedIntString("0", 8).map(SignedOctalIntegerLiteral(_)(?))
+
+  def _doubleLit: Gen[DecimalDoubleLiteral] =
+    Arbitrary.arbDouble.arbitrary.map(_.toString).map(DecimalDoubleLiteral(_)(?))
 
   def _variable: Gen[Variable] = for {
     name <- _identifier
@@ -117,9 +140,13 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
+        Gen.lzy(_nullLit),
         Gen.lzy(_stringLit),
         Gen.lzy(_booleanLit),
         Gen.lzy(_signedIntLit),
+        Gen.lzy(_signedHexIntLit),
+        Gen.lzy(_signedOctIntLit),
+        Gen.lzy(_doubleLit),
         Gen.lzy(_variable)
       ),
       1 -> Gen.oneOf(
