@@ -168,7 +168,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                                     Parameters parameters,
                                                     List<String> jvmArgs )
     {
-        List<String> combinedJvmArgs = new ArrayList<>();
+        List<String> combinedJvmArgs = new ArrayList<>( jvmArgs );
         externalProfilers.stream()
                          .map( profiler -> profiler.jvmArgs( jvm.version(),
                                                              forkDirectory,
