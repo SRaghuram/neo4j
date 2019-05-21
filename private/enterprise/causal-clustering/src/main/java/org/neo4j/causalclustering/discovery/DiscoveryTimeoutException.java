@@ -7,6 +7,11 @@ package org.neo4j.causalclustering.discovery;
 
 public class DiscoveryTimeoutException extends Exception
 {
+    public DiscoveryTimeoutException()
+    {
+        super();
+    }
+
     public DiscoveryTimeoutException( Throwable cause )
     {
         super( cause );

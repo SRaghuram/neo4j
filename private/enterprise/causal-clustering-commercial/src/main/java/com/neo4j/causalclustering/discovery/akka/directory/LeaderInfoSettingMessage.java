@@ -30,4 +30,10 @@ public class LeaderInfoSettingMessage
     {
         return databaseName;
     }
+
+    @Override
+    public String toString()
+    {
+        return "LeaderInfoSettingMessage{" + "leaderInfo=" + leaderInfo + ", databaseName='" + databaseName + '\'' + '}';
+    }
 }

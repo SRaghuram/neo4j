@@ -64,6 +64,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
         builder.match( ClusterIdSetRequest.class,       this::setClusterId )
                 .match( Replicator.UpdateSuccess.class, this::handleUpdateSuccess )
                 .match( Replicator.GetSuccess.class,    this::validateClusterIdUpdate )
+                .match( Replicator.UpdateTimeout.class, this::handleUpdateTimeout )
                 .match( Replicator.UpdateFailure.class, this::handleUpdateFailure );
     }
 
@@ -76,7 +77,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
 
     private void setClusterId( ClusterIdSetRequest message )
     {
-        log.debug( "Setting ClusterId: %s", message );
+        log.info( "Telling Replicator to set ClusterId to %s", message );
         modifyReplicatedData( key, map ->
         {
             if ( map.contains( message.database() ) )
@@ -123,6 +124,14 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                 } );
     }
 
+    private void handleUpdateTimeout( Replicator.UpdateTimeout<?> updateTimeout )
+    {
+        updateTimeout.getRequest()
+                .filter( m -> m instanceof ClusterIdSetRequest )
+                .map( m -> (ClusterIdSetRequest) m )
+                .ifPresent( m ->  m.replyTo().tell( PublishClusterIdOutcome.TIMEOUT, getSelf() ) );
+    }
+
     private void handleUpdateFailure( Replicator.UpdateFailure<?> updateFailure )
     {
         updateFailure.getRequest()
@@ -130,8 +139,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                 .map( m -> (ClusterIdSetRequest) m )
                 .ifPresent( m ->
                 {
-                    String message = String.format( "Failed to set ClusterId: %s", m );
-                    log.warn( message );
+                    String message = String.format( "Failed to set ClusterId with request %s. Failure was %s", m, updateFailure.toString() );
                     m.replyTo().tell( new Failure( new IllegalArgumentException( message ) ), getSelf() );
                 } );
     }
@@ -139,6 +147,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     public enum PublishClusterIdOutcome
     {
         SUCCESS,
-        FAILURE
+        FAILURE,
+        TIMEOUT
     }
 }

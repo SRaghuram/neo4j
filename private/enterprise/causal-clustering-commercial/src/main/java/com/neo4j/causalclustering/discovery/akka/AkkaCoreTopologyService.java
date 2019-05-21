@@ -163,6 +163,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             ActorRef actor = coreTopologyActorRef.get();
             Duration timeout = config.get( CausalClusteringSettings.cluster_id_publish_timeout );
             ClusterIdSetRequest clusterIdSetRequest = new ClusterIdSetRequest( clusterId, dbName, timeout );
+            log.info( "Attempting to set ClusterId with request %s", clusterIdSetRequest );
             CompletionStage<Object> idSet = Patterns.ask( actor, clusterIdSetRequest, timeout );
             CompletableFuture<PublishClusterIdOutcome> idSetJob = idSet.thenApply( response ->
             {
@@ -180,12 +181,19 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             {
                 PublishClusterIdOutcome outcome = idSetJob.join();
 
+                if ( outcome == PublishClusterIdOutcome.TIMEOUT )
+                {
+                    log.warn( "Attempt to set clusterId timed out" );
+                    throw new DiscoveryTimeoutException();
+                }
+
                 return outcome == PublishClusterIdOutcome.SUCCESS;
             }
             catch ( CompletionException e )
             {
                 if ( e.getCause() instanceof AskTimeoutException )
                 {
+                    log.warn( "Attempt to set clusterId timed out" );
                     throw new DiscoveryTimeoutException( e );
                 }
                 log.error( e.getCause().getMessage() );
@@ -209,7 +217,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         if ( !SafeLifecycle.State.RUN.equals( state() ) )
         {
-            log.info( "Not restarting because not running. State is %s", state() );
+            log.warn( "Not attempting to restart discovery system because it is not currently running. Its state is %s", state() );
             return;
         }
 

@@ -76,7 +76,7 @@ public class CausalClusteringSettings implements LoadableConfig
     @Internal
     @Description( "Configures the time taken attempting to publish a cluster id to the discovery service before potentially retrying. " +
             "Only applies to Akka discovery." )
-    public static final Setting<Duration> cluster_id_publish_timeout = setting( "causal_clustering.cluster_id_publish_timeout", DURATION, "15s" );
+    public static final Setting<Duration> cluster_id_publish_timeout = setting( "causal_clustering.cluster_id_publish_timeout", DURATION, "20s" );
 
     @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
             "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
