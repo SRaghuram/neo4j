@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.helpers.Exceptions.rootCause;
+import static org.neo4j.internal.helpers.Exceptions.rootCause;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
