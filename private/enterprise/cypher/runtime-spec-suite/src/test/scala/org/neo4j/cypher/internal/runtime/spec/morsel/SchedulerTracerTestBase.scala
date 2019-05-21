@@ -31,7 +31,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath.toString
   ), runtime) {
 
-  override def afterShutdown(): Unit = {
+  override def afterTest(): Unit = {
     Files.delete(tempCSVPath)
   }
 
@@ -54,7 +54,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     val expectedRowCount = 2000
     runtimeResult should beColumns("n1", "n3").withRows(rowCount(expectedRowCount))
 
-    Thread.sleep(1000) // allow tracer output daemon to finish
+    shutdownDatabase() // force tracer output daemon to finish, flush and close
 
     val (header, dataRows) = parseTrace(tempCSVPath.toAbsolutePath)
     header should be (Array("id_1.0",
