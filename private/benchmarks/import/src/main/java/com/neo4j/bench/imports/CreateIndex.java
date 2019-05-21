@@ -18,9 +18,9 @@ import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.IndexPopulationProgress;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.graphdb.schema.IndexPopulationProgress;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.internal.helpers.Args;
 
