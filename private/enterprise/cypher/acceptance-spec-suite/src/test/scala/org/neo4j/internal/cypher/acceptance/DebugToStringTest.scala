@@ -67,28 +67,64 @@ class DebugToStringTest extends ExecutionEngineFunSuite {
   test("cost reporting") {
     val stringResult = graph.execute("CYPHER debug=dumpCosts MATCH (a:A) RETURN *").resultAsString()
 
-        stringResult should beLikeString("""+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-                                    || # | planId | planText                                                            | planCost                                                          | cost   | est cardinality | winner |
-                                    |+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-                                    || 1 | 0      | ""                                                                  | ""                                                                | 10.0   | 1.0             | "WON"  |
-                                    || 1 | <null> | "NodeByLabelScan(a, LabelName(A), Set()) {}"                        | "NodeByLabelScan costs Cost(10.0) cardinality Cardinality(1.0)"   | <null> | <null>          | <null> |
-                                    || 1 | 2      | ""                                                                  | ""                                                                | 13.0   | 1.0             | "LOST" |
-                                    || 1 | <null> | "Selection(Ands(Set(HasLabels(Variable(a),List(LabelName(A)))))) {" | "Selection costs Cost(13.0) cardinality Cardinality(1.0)"         | <null> | <null>          | <null> |
-                                    || 1 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(1.0)"    | <null> | <null>          | <null> |
-                                    || 1 | 0      | ""                                                                  | ""                                                                | 0.0    | 1.0             | "LOST" |
-                                    || 1 | <null> | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                      | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                    | <null> | <null>          | <null> |
-                                    || 0 | 2      | ""                                                                  | ""                                                                | 13.0   | 1.0             | "WON"  |
-                                    || 0 | <null> | "Selection(Ands(Set(HasLabels(Variable(a),List(LabelName(A)))))) {" | "Selection costs Cost(13.0) cardinality Cardinality(1.0)"         | <null> | <null>          | <null> |
-                                    || 0 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(1.0)"    | <null> | <null>          | <null> |
-                                    || 0 | 4      | ""                                                                  | ""                                                                | 27.5   | 1.0             | "LOST" |
-                                    || 0 | <null> | "NodeHashJoin(Set(a)) {"                                            | "NodeHashJoin costs Cost(27.5) cardinality Cardinality(1.0)"      | <null> | <null>          | <null> |
-                                    || 0 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(1.0)"    | <null> | <null>          | <null> |
-                                    || 0 | <null> | "  RHS -> NodeByLabelScan(a, LabelName(A), Set()) {}"               | "  NodeByLabelScan costs Cost(10.0) cardinality Cardinality(1.0)" | <null> | <null>          | <null> |
-                                    || 0 | 0      | ""                                                                  | ""                                                                | 0.0    | 1.0             | "LOST" |
-                                    || 0 | <null> | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                      | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                    | <null> | <null>          | <null> |
-                                    |+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-                                    |16 rows
-                                    |""".stripMargin)
+        stringResult should beLikeString(
+          """+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+            || # | planId | planText                                                            | planCost                                                           | cost   | est cardinality | winner |
+            |+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+            || 1 | 0      | ""                                                                  | ""                                                                 | 10.0   | 10.0            | "WON"  |
+            || 1 | <null> | "NodeByLabelScan(a, LabelName(A), Set()) {}"                        | "NodeByLabelScan costs Cost(10.0) cardinality Cardinality(10.0)"   | <null> | <null>          | <null> |
+            || 1 | 2      | ""                                                                  | ""                                                                 | 22.0   | 10.0            | "LOST" |
+            || 1 | <null> | "Selection(Ands(Set(HasLabels(Variable(a),List(LabelName(A)))))) {" | "Selection costs Cost(22.0) cardinality Cardinality(10.0)"         | <null> | <null>          | <null> |
+            || 1 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"    | <null> | <null>          | <null> |
+            || 1 | <null> | "}"                                                                 | ""                                                                 | <null> | <null>          | <null> |
+            || 1 | 0      | ""                                                                  | ""                                                                 | 0.0    | 1.0             | "LOST" |
+            || 1 | <null> | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                      | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                     | <null> | <null>          | <null> |
+            || 0 | 2      | ""                                                                  | ""                                                                 | 22.0   | 10.0            | "WON"  |
+            || 0 | <null> | "Selection(Ands(Set(HasLabels(Variable(a),List(LabelName(A)))))) {" | "Selection costs Cost(22.0) cardinality Cardinality(10.0)"         | <null> | <null>          | <null> |
+            || 0 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"    | <null> | <null>          | <null> |
+            || 0 | <null> | "}"                                                                 | ""                                                                 | <null> | <null>          | <null> |
+            || 0 | 4      | ""                                                                  | ""                                                                 | 77.0   | 10.0            | "LOST" |
+            || 0 | <null> | "NodeHashJoin(Set(a)) {"                                            | "NodeHashJoin costs Cost(77.0) cardinality Cardinality(10.0)"      | <null> | <null>          | <null> |
+            || 0 | <null> | "  LHS -> AllNodesScan(a, Set()) {}"                                | "  AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"    | <null> | <null>          | <null> |
+            || 0 | <null> | "  RHS -> NodeByLabelScan(a, LabelName(A), Set()) {}"               | "  NodeByLabelScan costs Cost(10.0) cardinality Cardinality(10.0)" | <null> | <null>          | <null> |
+            || 0 | <null> | "}"                                                                 | ""                                                                 | <null> | <null>          | <null> |
+            || 0 | 0      | ""                                                                  | ""                                                                 | 0.0    | 1.0             | "LOST" |
+            || 0 | <null> | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                      | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                     | <null> | <null>          | <null> |
+            |+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+            |19 rows
+            |""".stripMargin)
+  }
+
+  test("cost of non-trivial cartesians") {
+    val stringResult = graph.execute("CYPHER debug=dumpCosts MATCH (a), (b) WHERE a.p = 1 AND b.p = 2 RETURN *").resultAsString()
+
+    stringResult should beLikeString(
+      """+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        || # | planId | planText                                                                                                                         | planCost                                                                        | cost   | est cardinality    | winner |
+        |+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        || 0 | 4      | ""                                                                                                                               | ""                                                                              | 44.0   | 1.0000000000000002 | "WON"  |
+        || 0 | <null> | "CartesianProduct() {"                                                                                                           | "CartesianProduct costs Cost(44.0) cardinality Cardinality(1.0000000000000002)" | <null> | <null>             | <null> |
+        || 0 | <null> | "  LHS -> Selection(Ands(Set(In(Property(Variable(a),PropertyKeyName(p)),ListLiteral(List(Parameter(  AUTOINT0,Integer))))))) {" | "  Selection costs Cost(22.0) cardinality Cardinality(1.0)"                     | <null> | <null>             | <null> |
+        || 0 | <null> | "    LHS -> AllNodesScan(a, Set()) {}"                                                                                           | "    AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"               | <null> | <null>             | <null> |
+        || 0 | <null> | "  }"                                                                                                                            | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | <null> | "  RHS -> Selection(Ands(Set(In(Property(Variable(b),PropertyKeyName(p)),ListLiteral(List(Parameter(  AUTOINT1,Integer))))))) {" | "  Selection costs Cost(22.0) cardinality Cardinality(1.0)"                     | <null> | <null>             | <null> |
+        || 0 | <null> | "    LHS -> AllNodesScan(b, Set()) {}"                                                                                           | "    AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"               | <null> | <null>             | <null> |
+        || 0 | <null> | "  }"                                                                                                                            | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | <null> | "}"                                                                                                                              | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | 5      | ""                                                                                                                               | ""                                                                              | 44.0   | 1.0000000000000002 | "LOST" |
+        || 0 | <null> | "CartesianProduct() {"                                                                                                           | "CartesianProduct costs Cost(44.0) cardinality Cardinality(1.0000000000000002)" | <null> | <null>             | <null> |
+        || 0 | <null> | "  LHS -> Selection(Ands(Set(In(Property(Variable(b),PropertyKeyName(p)),ListLiteral(List(Parameter(  AUTOINT1,Integer))))))) {" | "  Selection costs Cost(22.0) cardinality Cardinality(1.0)"                     | <null> | <null>             | <null> |
+        || 0 | <null> | "    LHS -> AllNodesScan(b, Set()) {}"                                                                                           | "    AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"               | <null> | <null>             | <null> |
+        || 0 | <null> | "  }"                                                                                                                            | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | <null> | "  RHS -> Selection(Ands(Set(In(Property(Variable(a),PropertyKeyName(p)),ListLiteral(List(Parameter(  AUTOINT0,Integer))))))) {" | "  Selection costs Cost(22.0) cardinality Cardinality(1.0)"                     | <null> | <null>             | <null> |
+        || 0 | <null> | "    LHS -> AllNodesScan(a, Set()) {}"                                                                                           | "    AllNodesScan costs Cost(12.0) cardinality Cardinality(10.0)"               | <null> | <null>             | <null> |
+        || 0 | <null> | "  }"                                                                                                                            | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | <null> | "}"                                                                                                                              | ""                                                                              | <null> | <null>             | <null> |
+        || 0 | 0      | ""                                                                                                                               | ""                                                                              | 0.0    | 1.0                | "LOST" |
+        || 0 | <null> | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                                                                                   | "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"                                  | <null> | <null>             | <null> |
+        |+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        |20 rows
+        |""".stripMargin)
   }
 
   private def queryWithOutputOf(s: String) = s"CYPHER debug=tostring debug=$s MATCH (a)-[:T]->(b) RETURN *"
