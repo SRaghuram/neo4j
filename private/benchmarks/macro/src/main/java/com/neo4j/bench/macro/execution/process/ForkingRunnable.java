@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable> extends RunnableFork<LAUNCHER,CONNECTION>
@@ -71,6 +72,9 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                       resources );
         // retrieves same external profiler _instances_ that were already used -- because external profilers are allowed to be stateful
         List<ExternalProfiler> externalProfilers = externalProfilers();
+
+        System.out.println( format( "Original JVM args are %s", jvmArgs ) );
+
         List<String> clientInvokeArgs = externalProfilers.stream()
                                                          .map( profiler -> profiler.invokeArgs( forkDirectory,
                                                                                                 query.benchmarkGroup(),
@@ -80,6 +84,8 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                          .distinct()
                                                          .collect( toList() );
 
+        System.out.println( format( "Client JVM invoke args are %s", clientInvokeArgs ) );
+
         List<String> clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
                                                                               jvm,
                                                                               forkDirectory,
@@ -87,11 +93,15 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                                               clientParameters,
                                                                               jvmArgs );
 
+        System.out.println( format( "Client JVM args are %s", clientJvmArgs ) );
+
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
                                                                           jvm,
                                                                           clientJvmArgs,
                                                                           commandArgs,
                                                                           Main.class );
+
+        System.out.println( format( "Client JVM args are %s", jvmProcessArgs ) );
 
         externalProfilers.forEach( profiler -> profiler.beforeProcess( forkDirectory,
                                                                        query.benchmarkGroup(),
