@@ -226,7 +226,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         val keys = groupingExpressions.keys.toArray
 
-        val groupingColumnsIncoming = keys.collect {
+        val longSlotGroupingValues = keys.collect {
           case key if slots(key).isLongSlot => groupingExpressions(key) match {
             case NodeFromSlot(offset, _) => offset
             case NullCheckVariable(offset, _:NodeFromSlot) => offset
@@ -235,7 +235,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
           }
         }
 
-        val groupingColumnsOutgoing: Array[Int] = keys.collect {
+        val longSlotGroupingKeys: Array[Int] = keys.collect {
           case x if slots(x).isLongSlot => slots(x).offset
         }
 
@@ -243,13 +243,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val tableFactory =
           if (groupingExpressions.isEmpty) {
             SlottedNonGroupingAggTable.Factory(slots, aggregation)
-          } else if (groupingColumnsIncoming.length == groupingExpressions.size &&
-          groupingColumnsIncoming.length == groupingColumnsOutgoing.length) {
-          // If we are able to use primitive for all incoming and outgoing grouping columns, we can use the more effective
-          // Primitive table that leverages that the fact that grouping can be done a single array of longs
-            SlottedPrimitiveGroupingAggTable.Factory(slots, groupingColumnsIncoming, groupingColumnsOutgoing, aggregation)
-        } else {
-          SlottedGroupingAggTable.Factory(slots, expressionConverters.toGroupingExpression(id, groupingExpressions, Seq.empty), aggregation)
+          } else if (longSlotGroupingValues.length == groupingExpressions.size &&
+            longSlotGroupingValues.length == longSlotGroupingKeys.length) {
+            // If we are able to use primitive for all incoming and outgoing grouping columns, we can use the more effective
+            // Primitive table that leverages that the fact that grouping can be done a single array of longs
+            SlottedPrimitiveGroupingAggTable.Factory(slots, longSlotGroupingValues, longSlotGroupingKeys, aggregation)
+          } else {
+            SlottedGroupingAggTable.Factory(slots, expressionConverters.toGroupingExpression(id, groupingExpressions, Seq.empty), aggregation)
         }
         EagerAggregationPipe(source, tableFactory)(id)
 
