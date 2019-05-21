@@ -6,7 +6,6 @@
 package cypher.features
 
 import java.util
-import java.util.Collections
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
@@ -19,16 +18,7 @@ class MorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
-    if (runOnlySafeScenarios) {
-      Collections.emptyList()
-    } else {
-      createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
-    }
-  }
-
-  private def runOnlySafeScenarios: Boolean = {
-    val runExperimental = System.getenv().containsKey("RUN_EXPERIMENTAL")
-    !runExperimental
+    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
   }
 
   @Disabled
