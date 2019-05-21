@@ -11,7 +11,6 @@ import com.neo4j.fabric.{AstHelp, Test}
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.util.ASTNode
-import org.scalacheck.Shrink
 import org.scalatest.Assertion
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
@@ -19,22 +18,9 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
 
   val gen = AstGenerator()
 
+  import gen.Shrinker.shrinkQuery
+
   val pr = Prettifier(ExpressionStringifier(alwaysParens = true))
-
-  implicit val shrink = Shrink[Query] { q =>
-    q.part match {
-      case sq: SingleQuery if sq.clauses.size > 1 =>
-        sq.clauses.indices.toStream.map(i =>
-          q.copy(
-            part = sq.copy(
-              clauses = Seq(sq.clauses(i))
-            )(sq.position)
-          )(q.position)
-        )
-
-      case _ => Stream.empty
-    }
-  }
 
   def pretty(c: Clause): String =
     pr.asString(Query(None, SingleQuery(Seq(c))(?))(?))
@@ -141,10 +127,12 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
     show("RETURN x > (y = z)")
   }
 
+  implicit val propCfg: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
 
   "gen" in {
     forAll(gen._query) { q =>
       roundTripCheck(q)
+      println("## success")
     }
   }
 

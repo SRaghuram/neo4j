@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOM
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.symbols.AnyType
 import org.scalacheck._
+import org.scalacheck.util.Buildable
 
 case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
@@ -20,6 +21,12 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _string: Gen[String] =
     if (debug) Gen.alphaLowerChar.map(_.toString)
     else Gen.listOf(Gen.asciiChar).map(_.mkString)
+
+  def _smallListOf[T](gen: Gen[T]): Gen[List[T]] =
+    Gen.choose(0, 3).flatMap(Gen.listOfN(_, gen))
+
+  def _smallNonemptyListOf[T](gen: Gen[T]): Gen[List[T]] =
+    Gen.choose(1, 3).flatMap(Gen.listOfN(_, gen))
 
   // IDENTIFIERS
   // ==========================================================================
@@ -95,23 +102,13 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     )
   } yield res
 
-  def _predicateNary: Gen[Expression] = for {
-    s <- Gen.choose(3, 5)
-    l <- Gen.listOfN(s, _expression)
-    res <- Gen.oneOf(
-      Ands(l.toSet)(?),
-      Ors(l.toSet)(?),
-
-    )
-  } yield res
-
   def _mapItem: Gen[(PropertyKeyName, Expression)] = for {
     key <- _propertyKeyName
     value <- _expression
   } yield (key, value)
 
   def _map: Gen[MapExpression] = for {
-    items <- Gen.listOf(_mapItem)
+    items <- _smallListOf(_mapItem)
   } yield MapExpression(items)(?)
 
   def _parameter: Gen[Parameter] =
@@ -138,7 +135,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
   def _nodePattern: Gen[NodePattern] = for {
     variable <- Gen.option(_variable)
-    labels <- Gen.listOf(_labelName)
+    labels <- _smallListOf(_labelName)
     properties <- Gen.option(Gen.oneOf(_map, _parameter))
     baseNode <- Gen.option(_variable)
   } yield NodePattern(variable, labels, properties, baseNode)(?)
@@ -153,7 +150,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
   def _relationshipPattern: Gen[RelationshipPattern] = for {
     variable <- Gen.option(_variable)
-    types <- Gen.listOf(_relTypeName)
+    types <- _smallListOf(_relTypeName)
     length <- Gen.option(Gen.option(_range))
     properties <- Gen.option(Gen.oneOf(_map, _parameter))
     direction <- _semanticDirection
@@ -192,7 +189,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     )
 
   def _pattern: Gen[Pattern] = for {
-    parts <- Gen.nonEmptyListOf(_patternPart)
+    parts <- _smallNonemptyListOf(_patternPart)
   } yield Pattern(parts)(?)
 
   // HINTS
@@ -201,12 +198,12 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _usingIndexHint: Gen[UsingIndexHint] = for {
     variable <- _variable
     label <- _labelName
-    properties <- Gen.nonEmptyListOf(_propertyKeyName)
+    properties <- _smallNonemptyListOf(_propertyKeyName)
     spec <- Gen.oneOf(SeekOnly, SeekOrScan)
   } yield UsingIndexHint(variable, label, properties, spec)(?)
 
   def _usingJoinHint: Gen[UsingJoinHint] = for {
-    variables <- Gen.nonEmptyListOf(_variable)
+    variables <- _smallNonemptyListOf(_variable)
   } yield UsingJoinHint(variables)(?)
 
   def _usingScanHint: Gen[UsingScanHint] = for {
@@ -238,7 +235,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   } yield item
 
   def _orderBy: Gen[OrderBy] = for {
-    items <- Gen.nonEmptyListOf(_sortItem)
+    items <- _smallNonemptyListOf(_sortItem)
   } yield OrderBy(items)(?)
 
   def _skip: Gen[Skip] =
@@ -251,11 +248,11 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     _expression.map(Where(_)(?))
 
   def _returnItems1: Gen[ReturnItems] = for {
-    retItems <- Gen.nonEmptyListOf(_returnItem)
+    retItems <- _smallNonemptyListOf(_returnItem)
   } yield ReturnItems(includeExisting = false, retItems)(?)
 
   def _returnItems2: Gen[ReturnItems] = for {
-    retItems <- Gen.listOf(_returnItem)
+    retItems <- _smallListOf(_returnItem)
   } yield ReturnItems(includeExisting = true, retItems)(?)
 
   def _returnItems: Gen[ReturnItems] =
@@ -264,7 +261,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _with: Gen[With] = for {
     distinct <- _boolean
     inclExisting <- _boolean
-    retItems <- Gen.nonEmptyListOf(_returnItem)
+    retItems <- _smallNonemptyListOf(_returnItem)
     orderBy <- Gen.option(_orderBy)
     skip <- Gen.option(_skip)
     limit <- Gen.option(_limit)
@@ -274,7 +271,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _return: Gen[Return] = for {
     distinct <- _boolean
     inclExisting <- _boolean
-    retItems <- Gen.nonEmptyListOf(_returnItem)
+    retItems <- _smallNonemptyListOf(_returnItem)
     orderBy <- Gen.option(_orderBy)
     skip <- Gen.option(_skip)
     limit <- Gen.option(_limit)
@@ -283,7 +280,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _match: Gen[Match] = for {
     optional <- _boolean
     pattern <- _pattern
-    hints <- Gen.listOf(_hint)
+    hints <- _smallListOf(_hint)
     where <- Gen.option(_where)
   } yield Match(optional, pattern, hints, where)(?)
 
@@ -304,7 +301,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   )
 
   def _query: Gen[Query] = for {
-    s <- Gen.choose(1, 10)
+    s <- Gen.choose(1, 1)
     clauses <- Gen.listOfN(s, _clause)
   } yield Query(None, SingleQuery(clauses)(?))(?)
 
@@ -313,39 +310,42 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
     import com.neo4j.fabric.utils.Monoid._
     import com.neo4j.fabric.utils.Rewritten._
-    import com.neo4j.fabric.utils.TreeFoldM._
-
-    import scala.util.{Random, Success, Try}
+    import scala.util.Random
 
     implicit val IntAddMonoid: Monoid[Int] = Monoid.create(0)(_ + _)
 
-    def shrinkOnce(q: Query): Try[Option[Query]] = {
-      val splitPoints = q.treeFoldM {
-        case _: List[_] => Descend(1)
+    def shrinkOnce(q: Query): Option[Query] = {
+      var splitPoints = 0
+      q.rewritten.bottomUp {
+        case l: List[_] if l.size > 1    =>
+          splitPoints += 1
+          l
+        case o: Option[_] if o.isDefined =>
+          splitPoints += 1
+          o
       }
       if (splitPoints == 0) {
-        Success(None)
+        None
       } else {
         var point = Random.nextInt(splitPoints)
-        Try(Some(
-          q.rewritten.bottomUp {
-            case l: List[_] if point > 0 =>
-              point = point - 1
-              l
+        def onPoint[T, R >: T](i: T)(f: => R): R = if (point == 0) {
+          point -= 1
+          f
+        } else {
+          point -= 1
+          i
+        }
 
-            case l: List[_] if point == 0 =>
-              point = point - 1
-              println(s"-- dropping @ $l")
-              Nil
-          }))
+        Some(
+          q.rewritten.bottomUp {
+            case l: List[_] if l.size > 1    => onPoint(l)(List(l.head))
+            case o: Option[_] if o.isDefined => onPoint(o)(Option.empty)
+          })
       }
     }
 
     implicit val shrinkQuery: Shrink[Query] = Shrink[Query] { q =>
-      Stream.continually(shrinkOnce(q))
-        .collect {
-          case Success(opt) => opt
-        }
+      Stream.iterate(shrinkOnce(q))(i => i.flatMap(shrinkOnce))
         .takeWhile(_.isDefined)
         .map(_.get)
     }
