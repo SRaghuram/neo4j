@@ -19,6 +19,14 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
   def foreach(f: T => Unit): Unit
 }
 
+object Buffer {
+
+  /**
+    * This is not a hard limit, buffers can temporarily reach sizes bigger than this limit.
+    */
+  val MAX_SIZE_HINT = 10
+}
+
 /**
   * Place where you put things of type `T`.
   */
@@ -28,6 +36,13 @@ trait Sink[-T <: AnyRef] {
     * Put an element in this sink
     */
   def put(t: T): Unit
+
+  /**
+    * Checks if there is room in the sink
+    * @return `true` if there is room in the sink, otherwise `false`
+    */
+  def canPut: Boolean
+
 }
 
 /**

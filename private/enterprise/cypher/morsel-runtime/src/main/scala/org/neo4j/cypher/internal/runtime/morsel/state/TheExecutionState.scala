@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.morsel.execution.{AlarmSink, MorselExecutionContext, QueryResources, QueryState, WorkerWaker}
+import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, Buffers, Sink}
@@ -165,6 +165,13 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       // Otherwise they will all race to get this continuation while
       // this Thread can just as well continue on its own.
       workerWaker.wakeOne()
+    }
+  }
+
+  override def canPut(pipeline: ExecutablePipeline): Boolean = {
+    pipeline.outputOperator.outputBuffer match {
+      case None => true
+      case Some(bufferId) => buffers.sink(pipeline.id, bufferId).canPut
     }
   }
 

@@ -17,6 +17,8 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
     data.append(t)
   }
 
+  override def canPut: Boolean = data.size < Buffer.MAX_SIZE_HINT
+
   override def hasData: Boolean = data.nonEmpty
 
   override def take(): T = {

@@ -5,19 +5,29 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
   * Implementation of a concurrent [[Buffer]] of elements of type `T`.
   */
 class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
   private val data = new java.util.concurrent.ConcurrentLinkedQueue[T]()
+  private val size = new AtomicInteger(0)
 
   override def hasData: Boolean = !data.isEmpty
 
   override def put(t: T): Unit = {
+    size.incrementAndGet()
     data.add(t)
   }
+
+  override def canPut: Boolean = size.get() < Buffer.MAX_SIZE_HINT
   override def take(): T = {
-    data.poll()
+    val taken = data.poll()
+    if (taken != null) {
+      size.decrementAndGet()
+    }
+    taken
   }
 
   override def foreach(f: T => Unit): Unit = {

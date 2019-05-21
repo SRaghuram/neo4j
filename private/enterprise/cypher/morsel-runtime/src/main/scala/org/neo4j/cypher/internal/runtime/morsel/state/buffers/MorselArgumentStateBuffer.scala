@@ -45,6 +45,8 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     }
   }
 
+  override def canPut: Boolean = true
+
   override def hasData: Boolean = argumentStateMap.hasCompleted
 
   override def take(): ACC = {

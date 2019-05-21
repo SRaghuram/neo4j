@@ -39,6 +39,8 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     }
   }
 
+  override def canPut: Boolean = inner.canPut
+
   /**
     * This is essentially the same as [[put]], except that no argument counts are incremented.
     * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that

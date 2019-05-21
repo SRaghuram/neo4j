@@ -24,4 +24,6 @@ class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker) extends Sink[T
     inner.put(t)
     waker.wakeOne()
   }
+
+  override def canPut: Boolean = inner.canPut
 }

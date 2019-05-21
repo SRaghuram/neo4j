@@ -140,6 +140,14 @@ trait ExecutionState extends ArgumentStateMapCreator {
                                inputMorsel: MorselExecutionContext,
                                accumulator: MorselAccumulator[_]): Boolean
 
+
+  /**
+    * Checks if there is room in buffers to accept morsels
+    * @param pipeline the current pipeline
+    * @return `true` if there is room otherwise `false`
+    */
+  def canPut(pipeline: ExecutablePipeline): Boolean
+
   /**
     * Continue executing pipeline `p`.
     *

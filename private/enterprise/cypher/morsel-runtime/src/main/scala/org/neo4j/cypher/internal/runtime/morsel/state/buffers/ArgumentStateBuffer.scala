@@ -24,6 +24,8 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
     morsel.resetToFirstRow()
     inner.put(morsel)
   }
+
+  override def canPut: Boolean = inner.canPut
   override def hasData: Boolean = inner.hasData
   override def take(): MorselExecutionContext = inner.take()
   override def foreach(f: MorselExecutionContext => Unit): Unit = inner.foreach(f)

@@ -66,4 +66,6 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
       }
     }
   }
+
+  override def canPut: Boolean = delegates.forall(_.canPut)
 }

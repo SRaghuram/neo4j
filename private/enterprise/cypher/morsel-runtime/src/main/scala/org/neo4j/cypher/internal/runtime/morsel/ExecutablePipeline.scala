@@ -7,13 +7,13 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorState, _}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
@@ -106,6 +106,9 @@ class PipelineState(val pipeline: ExecutablePipeline,
   private def innerNextTask(context: QueryContext,
                             state: QueryState,
                             resources: QueryResources): PipelineTask = {
+    if (!executionState.canPut(pipeline)) {
+      return null
+    }
     val task = executionState.takeContinuation(pipeline)
     if (task != null) {
       return task

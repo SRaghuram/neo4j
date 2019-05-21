@@ -147,6 +147,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
       }
     }
 
+    override def canPut: Boolean = true
+
     override def initiate(argumentRowId: Long): Unit = {
       lhsArgumentStateMap.initiate(argumentRowId)
     }
@@ -178,6 +180,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
         i += 1
       }
     }
+
+    override def canPut: Boolean = true
 
     override def initiate(argumentRowId: Long): Unit = {
       rhsArgumentStateMap.initiate(argumentRowId)
