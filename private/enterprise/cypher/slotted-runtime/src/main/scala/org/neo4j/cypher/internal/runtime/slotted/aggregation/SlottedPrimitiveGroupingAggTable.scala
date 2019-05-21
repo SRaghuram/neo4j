@@ -78,7 +78,6 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
       }
       functions
     })
-    functions.foreach(func => func(row, state))
     var i = 0
     while (i < functions.length) {
       functions(i)(row, state)

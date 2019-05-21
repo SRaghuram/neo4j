@@ -35,7 +35,7 @@ class SlottedOrderedGroupingAggTable(slots: SlotConfiguration,
     if (currentGroupKey == null) {
       currentGroupKey = orderedGroupingColumns.computeGroupingKey(first, state)
     }
-    currentGroupKey == orderedGroupingColumns.computeGroupingKey(current, state)
+    current.eq(first) ||currentGroupKey == orderedGroupingColumns.computeGroupingKey(current, state)
   }
 
   override def result(): Iterator[ExecutionContext] = {
