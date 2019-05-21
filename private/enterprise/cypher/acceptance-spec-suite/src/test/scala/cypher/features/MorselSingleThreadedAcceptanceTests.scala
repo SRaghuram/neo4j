@@ -12,23 +12,19 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
-class CostMorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
+class MorselSingleThreadedAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
-  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
+  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
 
   @TestFactory
   def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
-    if (runOnlySafeScenarios) {
+    if (Configs.runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
       createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
     }
-  }
-
-  private def runOnlySafeScenarios: Boolean = {
-    val runExperimental = System.getenv().containsKey("RUN_EXPERIMENTAL")
-    !runExperimental
   }
 
   @Disabled

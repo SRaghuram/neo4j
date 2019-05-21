@@ -4,26 +4,31 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package cypher.features
-
 import java.util
+import java.util.Collections
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
-class CostSlottedAcceptanceTests extends EnterpriseBaseAcceptanceTest {
+class MorselAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
 
   @TestFactory
-  def runCostSlotted(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+  def runCostMorsel(): util.Collection[DynamicTest] = {
+    if (Configs.runOnlySafeScenarios) {
+      Collections.emptyList()
+    } else {
+      createTests(scenarios, CostMorselTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    }
   }
 
   @Disabled
-  def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+  def generateBlacklistCostMorsel(): Unit = {
+    printComputedBlacklist(scenarios, CostMorselTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

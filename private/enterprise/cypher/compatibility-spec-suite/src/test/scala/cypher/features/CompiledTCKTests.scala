@@ -12,9 +12,9 @@ import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
-class CostCompiledAcceptanceTests extends EnterpriseBaseAcceptanceTest {
+class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
-  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
+  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {
