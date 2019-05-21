@@ -21,9 +21,11 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.SplittableRandom;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -31,6 +33,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
@@ -44,6 +47,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 
 public class DatabaseRecovery extends AbstractCoreBenchmark
 {
@@ -106,10 +110,15 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     }
 
     @Setup( Level.Iteration )
-    public void truncateCheckpointFromLogs() throws IOException
+    public void truncateCheckpointFromLogs() throws Exception
     {
+        DatabaseLayout databaseLayout = ((GraphDatabaseAPI) managedStore.db()).databaseLayout();
         ManagedStore.getManagementService().shutdown();
-        removeLastCheckpointRecordFromLastLogFile();
+        removeLastCheckpointsRecordFromLastLogFile( databaseLayout );
+        if ( !isRecoveryRequired( databaseLayout, Config.defaults() ) )
+        {
+            throw new IllegalStateException( "Store should require recovery." );
+        }
     }
 
     @Benchmark
@@ -131,39 +140,36 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         return false;
     }
 
-    private void removeLastCheckpointRecordFromLastLogFile() throws IOException
+    private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout ) throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        File graphDb = managedStore.store().graphDbDirectory().toFile();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( graphDb, fileSystem ).build();
-        LogPosition checkpointPosition = null;
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
 
         LogFile logFile = logFiles.getLogFile();
         VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader();
-        ReadableLogChannel reader =
-                logFile.getReader( LogPosition.start( logFiles.getHighestLogVersion() ) );
+        ReadableLogChannel reader = logFile.getReader( LogPosition.start( logFiles.getHighestLogVersion() ) );
         LogEntry logEntry;
-        int checkPointCount = 0;
+        Deque<CheckPoint> checkPoints = new ArrayDeque<>();
         do
         {
             logEntry = entryReader.readLogEntry( reader );
             if ( logEntry instanceof CheckPoint )
             {
-                checkpointPosition = ((CheckPoint) logEntry).getLogPosition();
-                checkPointCount++;
+                checkPoints.add( (CheckPoint) logEntry );
             }
         }
         while ( logEntry != null );
-        if ( checkPointCount != 3 )
+        File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
+        while ( !checkPoints.isEmpty() )
         {
-            throw new RuntimeException( "Expected 3 checkpoint but found " + checkPointCount );
-        }
-        if ( checkpointPosition != null )
-        {
-            File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
+            CheckPoint checkPoint = checkPoints.pollLast();
             try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
             {
-                storeChannel.truncate( checkpointPosition.getByteOffset() );
+                storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );
+            }
+            if ( isRecoveryRequired( fileSystem, databaseLayout, Config.defaults() ) )
+            {
+                return;
             }
         }
     }
