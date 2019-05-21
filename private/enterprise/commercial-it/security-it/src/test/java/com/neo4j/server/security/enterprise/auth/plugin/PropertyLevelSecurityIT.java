@@ -500,6 +500,35 @@ class PropertyLevelSecurityIT
         } );
     }
 
+    @Test
+    void shouldBehaveLikeDataIsMissingForRelationshipPropertiesPart2()
+    {
+        execute( neo, "CREATE (n {name: 'Andersson'}) CREATE (m { name: 'Betasson'}) CREATE (n)-[:Neighbour]->(m)", Collections.emptyMap() ).close();
+
+        //In this case we only read the relationship properties
+        String query = "MATCH (n)-[r]->(m) RETURN properties(r) AS props";
+
+        execute( neo, query, Collections.emptyMap(), r ->
+        {
+            assertThat( r.hasNext(), equalTo( true ) );
+            assertThat( r.next().get( "props" ), equalTo( Collections.emptyMap() ) );
+        } );
+
+        execute( neo, "MATCH (n {name: 'Andersson'})-[r]->({name: 'Betasson'}) SET r.secret = 'lovers' ", Collections.emptyMap() ).close();
+
+        execute( smith, query, Collections.emptyMap(), r ->
+        {
+            assertThat( r.hasNext(), equalTo( true ) );
+            assertThat( r.next().get( "props" ), equalTo( Collections.emptyMap() ) );
+        } );
+
+        execute( neo, query, Collections.emptyMap(), r ->
+        {
+            assertThat( r.hasNext(), equalTo( true ) );
+            assertThat( r.next().get( "props" ), equalTo( Collections.singletonMap( "secret", "lovers" ) ) );
+        } );
+    }
+
     // PROCS
 
     @Test
