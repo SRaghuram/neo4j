@@ -205,13 +205,13 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsReadProperty( Supplier<LabelSet> labelSupplier, int propertyKey )
         {
-            LabelSet labelSet = labelSupplier.get();
 
             if ( allowsReadPropertyAllLabels( propertyKey ) )
             {
                 return true;
             }
 
+            LabelSet labelSet = labelSupplier.get();
             for ( long labelAsLong : labelSet.all() )
             {
                 int label = (int) labelAsLong;
