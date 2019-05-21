@@ -19,7 +19,7 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
 
   val gen = AstGenerator()
 
-  val pr = Prettifier(ExpressionStringifier())
+  val pr = Prettifier(ExpressionStringifier(alwaysParens = true))
 
   implicit val shrink = Shrink[Query] { q =>
     q.part match {
@@ -131,6 +131,8 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
     println("stmt: " + statement)
     val pretty = pr.asString(statement)
     println("pret: " + pretty)
+    val statement2 = Pipeline.parseOnly.process(pretty).statement()
+    println("stmt: " + statement2)
   }
 
   "ands" in {
@@ -143,7 +145,6 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
   "gen" in {
     forAll(gen._query) { q =>
       roundTripCheck(q)
-      println("successful")
     }
   }
 
