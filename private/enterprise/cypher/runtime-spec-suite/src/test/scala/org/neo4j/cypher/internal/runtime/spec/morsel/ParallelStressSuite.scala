@@ -44,7 +44,9 @@ abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeConte
     }
   }
 
-  // TODO This is to investigate flaky tests
+  /**
+    * This can be used to investigate flaky tests.
+    */
   def stringify(thread: Thread, elements: Array[StackTraceElement]): Unit = {
     val builder = new StringBuilder("\"" + thread.getName + "\"" + (if (thread.isDaemon) {
       " daemon"
@@ -122,7 +124,7 @@ trait RHSOfApplyLeafStressSuite {
     */
   def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD
 
-  ignore("should work on RHS of apply with parallelism") {
+  test("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -170,7 +172,7 @@ trait RHSOfApplyOneChildStressSuite {
     */
   def rhsOfApplyOperator(variable: String): RHSOfApplyOneChildTD
 
-  ignore("should work on RHS of apply with parallelism") {
+  test("should work on RHS of apply with parallelism") {
     // given
     init()
 
@@ -226,7 +228,7 @@ trait OnTopOfParallelInputStressTest {
     */
   def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD
 
-  ignore("should work on top of input with parallelism") {
+  test("should work on top of input with parallelism") {
     // given
     init()
 
