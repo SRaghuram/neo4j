@@ -63,12 +63,19 @@ class ApplicationProtocolVersionTest
     void shouldEncodeAndDecode()
     {
         var buffer = Unpooled.buffer();
-        var originalVersion = new ApplicationProtocolVersion( 13, 45 );
+        try
+        {
+            var originalVersion = new ApplicationProtocolVersion( 13, 45 );
 
-        originalVersion.encode( buffer );
-        var decodedVersion = ApplicationProtocolVersion.decode( buffer );
+            originalVersion.encode( buffer );
+            var decodedVersion = ApplicationProtocolVersion.decode( buffer );
 
-        assertEquals( originalVersion, decodedVersion );
+            assertEquals( originalVersion, decodedVersion );
+        }
+        finally
+        {
+            buffer.release();
+        }
     }
 
     @Test
