@@ -203,9 +203,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 aPlan("NodeIndexScan").containingArgument(":User(name,surname)")
 
             plan should includeSomewhere.aPlan("CartesianProduct")
-              .withLHS(scanPlan)
-              .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)"))
+              .withChildren(
+                scanPlan,
+                aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                  .containingArgument(":User(name,surname)"))
           }))
 
         result.toComparableResult.toSet should equal(resultSet)
@@ -240,9 +241,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 aPlan(s"NodeUniqueIndexSeek$seekString").containingArgument(":User(name,surname)")
 
             plan should includeSomewhere.aPlan("CartesianProduct")
-              .withLHS(lhs)
-              .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)"))
+              .withChildren(lhs,
+                            aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                              .containingArgument(":User(name,surname)"))
           }))
 
         result.toComparableResult.toSet should equal(resultSet)
@@ -374,13 +375,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("CartesianProduct")
-          .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-            .containingArgument(":User(name,surname)")
-            .withExactVariables("n")
-          )
-          .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-            .containingArgument(":User(name,surname)")
-            .withExactVariables("s")
+          .withChildren(
+            aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+              .containingArgument(":User(name,surname)")
+              .withExactVariables("n"),
+            aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+              .containingArgument(":User(name,surname)")
+              .withExactVariables("s")
           )
       }))
 

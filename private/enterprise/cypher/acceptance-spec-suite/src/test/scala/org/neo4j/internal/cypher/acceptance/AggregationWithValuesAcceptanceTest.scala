@@ -295,8 +295,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
-        .withLHS(aPlan("NodeIndexScan").withExactVariables("m", s"cached[m.prop2]"))
-        .withRHS(aPlan("NodeByLabelScan").withExactVariables("n"))
+        .withChildren(
+          aPlan("NodeIndexScan").withExactVariables("m", s"cached[m.prop2]"),
+          aPlan("NodeByLabelScan").withExactVariables("n"))
 
     //count = 10 because of two calls to createSomeNodes
     result.toList should equal(List(Map("count" -> 10)))
@@ -312,8 +313,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
-        .withLHS(aPlan("NodeByLabelScan").withExactVariables("m"))
-        .withRHS(aPlan("NodeByLabelScan").withExactVariables("n"))
+        .withChildren(
+          aPlan("NodeByLabelScan").withExactVariables("m"),
+          aPlan("NodeByLabelScan").withExactVariables("n"))
 
     //count = 20 because of two calls to createSomeNodes and cartesian product
     result.toList should equal(List(Map("min" -> 40, "count" -> 20)))
@@ -330,8 +332,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
-        .withLHS(aPlan("NodeByLabelScan").withExactVariables("m"))
-        .withRHS(aPlan("NodeByLabelScan").withExactVariables("n"))
+        .withChildren(
+          aPlan("NodeByLabelScan").withExactVariables("m"),
+          aPlan("NodeByLabelScan").withExactVariables("n"))
 
     //count = 20 because of two calls to createSomeNodes and cartesian product
     result.toList should equal(List(Map("min" -> 40, "count" -> 20)))
