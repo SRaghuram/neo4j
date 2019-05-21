@@ -319,6 +319,25 @@
                     </execution>
                 </executions>
             </plugin>
+			<!-- assembly benchmarks into single directory -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName>assembly</finalName>
+							<descriptors>
+								<descriptor>${basedir}/src/main/assembly/micro-benchmarks-assembly.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
         </plugins>
     </build>
 </project>
