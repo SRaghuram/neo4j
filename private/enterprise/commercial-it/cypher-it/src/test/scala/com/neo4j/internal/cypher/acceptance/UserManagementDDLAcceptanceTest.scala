@@ -29,7 +29,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing users when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW USERS")
       // THEN
@@ -157,7 +157,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating user when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
       // THEN
@@ -332,7 +332,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping user when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP USER foo")
       // THEN
@@ -441,7 +441,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when altering user when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN

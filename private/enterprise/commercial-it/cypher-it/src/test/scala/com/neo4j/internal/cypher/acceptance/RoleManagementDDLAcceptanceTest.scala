@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.parboiled.errors.ParserRuntimeException
@@ -42,7 +43,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing roles when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW ROLES")
       // THEN
@@ -184,7 +185,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating role when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
@@ -320,7 +321,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping role when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
       // THEN

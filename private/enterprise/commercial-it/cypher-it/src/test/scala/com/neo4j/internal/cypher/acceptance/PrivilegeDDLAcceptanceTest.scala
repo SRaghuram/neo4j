@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import java.util.Collection
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -99,7 +100,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for all users when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
       // THEN
@@ -142,7 +143,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for roles when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
       // THEN
@@ -188,7 +189,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for users when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW USER neo4j PRIVILEGES")
       // THEN
@@ -210,7 +211,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when granting traversal privilege to custom role when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
       // THEN
@@ -967,16 +968,20 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
+//    } should have message "Role 'dragon' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) one
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE `` TO Bar")
+//    } should have message "Role '' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
@@ -999,16 +1004,20 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
+//    } should have message "User 'Bar' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and an invalid (non-existing) one
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE dragon TO ``")
+//    } should have message "User '' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -1029,22 +1038,26 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
+//    } should have message "Role 'dragon' does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) ones
+//    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE `` TO ``")
+//    } should have message "Role '' does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 
   test("should fail when granting role to user when not on system database") {
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -1056,7 +1069,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE dragon")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the[IllegalStateException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN

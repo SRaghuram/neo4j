@@ -6,8 +6,9 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.dbms.database.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
@@ -72,7 +73,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing a default database when not on system database") {
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW DATABASE neo4j")
       // THEN
@@ -108,7 +109,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing default databases when not on system database") {
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW DATABASES")
       // THEN
@@ -155,7 +156,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating a database when not on system database") {
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
@@ -234,7 +235,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
@@ -332,7 +333,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -394,7 +395,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when stopping a database when not on system database") {
-    the [IllegalStateException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
