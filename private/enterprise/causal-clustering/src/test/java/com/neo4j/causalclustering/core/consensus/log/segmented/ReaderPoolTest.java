@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 

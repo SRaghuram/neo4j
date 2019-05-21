@@ -16,7 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.logging.NullLogProvider;

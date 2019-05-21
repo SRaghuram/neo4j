@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
