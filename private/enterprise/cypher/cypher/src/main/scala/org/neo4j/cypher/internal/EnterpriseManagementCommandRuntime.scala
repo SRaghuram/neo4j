@@ -78,14 +78,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _, _) =>
       // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
       val initialPassword = UTF8.encode(initialStringPassword)
-      try{
+      try {
         assertValidUsername(userName)
         validatePassword(initialPassword)
 
         // NOTE: If username already exists we will violate a constraint
         UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
           """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
-            |RETURN count(*)""".stripMargin,
+            |RETURN u.name""".stripMargin,
           VirtualValues.map(
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
@@ -95,7 +95,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
               Values.booleanValue(suspended))),
           QueryHandler
             .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create user '$userName'."))
-            .handleError(e => throw new InvalidArgumentsException(s"The specified user '$userName' already exists."))
+            .handleError(e => throw new InvalidArgumentsException(s"The specified user '$userName' already exists.", e))
             .handleResult(_ => clearCacheForUser(userName))
         )
       } finally {
@@ -133,22 +133,29 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       ).flatMap { param =>
         param._1 match {
           case None => Seq.empty
-          case Some(value:Boolean) => Seq((param._2, Values.booleanValue(value)))
-          case Some(value:String) => Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(UTF8.encode(value), secureHasher).serialize())))
-          case _ => throw new IllegalArgumentException("GAH!")
+          case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
+          case Some(value: String) =>
+            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(UTF8.encode(value)), secureHasher).serialize())))
+          case Some(p) => throw new IllegalArgumentException(s"Invalid option type for ALTER USER, expected string or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
-      val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name})", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
+      val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
         val key = param._1
         (acc._1 + s" SET user.$key = $$$key", acc._2 :+ key, acc._3 :+ param._2)
       }
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
-        s"$query RETURN count(*)",
+        s"$query RETURN oldCredentials",
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
           .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
           .handleError(e => throw new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
-          .handleResult(_ => clearCacheForUser(userName))
+          .handleResult(row => {
+            initialStringPassword.foreach(password => {
+              val oldCredentials = SystemGraphCredential.deserialize(row.get("oldCredentials").asInstanceOf[String], secureHasher)
+              if (oldCredentials.matchesPassword(UTF8.encode(password))) throw new InvalidArgumentsException("Old password and new password cannot be the same.")
+            })
+            clearCacheForUser(userName)
+          })
       )
 
     // ALTER USER foo
@@ -158,24 +165,24 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _, _) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                                               PredefinedRoles.EDITOR, PredefinedRoles.READER)
+        PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val query = if (showAll)
-                        """MATCH (r:Role)
-                          |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r)
-                          |RETURN DISTINCT r.name as role,
-                          |CASE
-                          | WHEN r.name IN $predefined THEN true
-                          | ELSE false
-                          |END as is_built_in
-                        """.stripMargin
-                      else
-                        """MATCH (r:Role)<-[:HAS_ROLE]-(u:User)
-                          |RETURN DISTINCT r.name as role,
-                          |CASE
-                          | WHEN r.name IN $predefined THEN true
-                          | ELSE false
-                          |END as is_built_in
-                        """.stripMargin
+        """MATCH (r:Role)
+          |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r)
+          |RETURN DISTINCT r.name as role,
+          |CASE
+          | WHEN r.name IN $predefined THEN true
+          | ELSE false
+          |END as is_built_in
+        """.stripMargin
+      else
+        """MATCH (r:Role)<-[:HAS_ROLE]-(u:User)
+          |RETURN DISTINCT r.name as role,
+          |CASE
+          | WHEN r.name IN $predefined THEN true
+          | ELSE false
+          |END as is_built_in
+        """.stripMargin
       if (withUsers) {
         SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query + ", u.name as member",
           VirtualValues.map(Array("predefined"), Array(predefinedRoles))
@@ -233,12 +240,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |MATCH (r:Role {name: role}), (u:User {name: user})
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN user, collect(role) AS roles""".stripMargin,
-        VirtualValues.map(Array("roles","users"), Array(roles, users)),
+        VirtualValues.map(Array("roles", "users"), Array(roles, users)),
         QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
       )
 
     // REVOKE ROLE foo FROM user
-    case RevokeRolesFromUsers(roleNames, userNames) => (_, _) =>
+    case RevokeRolesFromUsers(roleNames, userNames) => (_, _, _) =>
       val roles = Values.stringArray(roleNames: _*)
       val users = Values.stringArray(userNames: _*)
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
@@ -247,7 +254,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |MATCH (u:User {name: user})-[a:HAS_ROLE]->(r:Role {name: role})
           |DELETE a
           |RETURN user, collect(role) AS roles""".stripMargin,
-        VirtualValues.map(Array("roles","users"), Array(roles, users)),
+        VirtualValues.map(Array("roles", "users"), Array(roles, users)),
         QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
       )
 
@@ -255,14 +262,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case GrantTraverse(database, qualifier, roleName) => (_, _, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
 
-    case RevokeTraverse(database, qualifier, roleName) => (_, _) =>
+    case RevokeTraverse(database, qualifier, roleName) => (_, _, _) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
 
     // GRANT READ (prop) ON GRAPH foo NODES A (*) TO role
     case GrantRead(resource, database, qualifier, roleName) => (_, _, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
-    case RevokeRead(resource, database, qualifier, roleName) => (_, _) =>
+    case RevokeRead(resource, database, qualifier, roleName) => (_, _, _) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
@@ -336,9 +343,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           }
 
           override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
-            inner.accept(new QueryResultVisitor[EX]{
+            inner.accept(new QueryResultVisitor[EX] {
               override def visit(row: QueryResult.Record): Boolean = {
-                val mappedRow = new QueryResult.Record(){
+                val mappedRow = new QueryResult.Record() {
                   override def fields(): Array[AnyValue] = {
                     val fields = row.fields()
                     if (fields(2).equals(Values.stringValue("property"))) {
@@ -399,8 +406,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     if (!usernamePattern.matcher(username).matches) throw new InvalidArgumentsException("Username '" + username + "' contains illegal characters. Use ascii characters that are not ',', ':' or whitespaces.")
   }
 
-  private def validatePassword(password: Array[Byte]): Unit = {
+  private def validatePassword(password: Array[Byte]): Array[Byte] = {
     if (password == null || password.length == 0) throw new InvalidArgumentsException("A password cannot be empty.")
+    password
   }
 
   private val roleNamePattern = Pattern.compile("^[a-zA-Z0-9_]+$")
