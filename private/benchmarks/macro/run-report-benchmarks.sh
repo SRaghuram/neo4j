@@ -8,6 +8,7 @@
 
 set -e
 set -u
+set -x
 
 if [ $# -lt 31 ] ; then
     echo "Expected at least 31 arguments, but got $#"
@@ -49,7 +50,7 @@ triggered_by="${30}"
 error_policy="${31}"
 deployment="${32}"
 
-# here we are checking for optional AWS endpoint URL, 
+# here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
 if [[ $# -eq 33 ]]; then
@@ -66,6 +67,15 @@ jar_path="${macro_benchmark_dir}/target/macro.jar"
 uuid=$(uuidgen)
 profiler_recording_output_dir="${macro_benchmark_dir}"/"${uuid}"
 mkdir "${profiler_recording_output_dir}"
+
+# path to on-out-of-memory script
+basedir=$(dirname "$(realpath "$0")")
+out_of_memory_script="$basedir/on-out-of-memory.sh"
+out_of_memory_base_dir="$basedir/out-of-memory"
+# path to benchmark process out of memory output directory
+out_of_memory_dir="$out_of_memory_base_dir/benchmark"
+# path to forked process out of memory output directory
+out_of_memory_fork_dir="$out_of_memory_base_dir/fork"
 
 echo "JSON file containing definition of workload                    : ${workload}"
 echo "Store directory                                                : ${db}"
@@ -104,7 +114,9 @@ echo "Neo4j Directory                                                : ${deploym
 
 function runExport {
     #shellcheck disable=SC2068
-    ${jvm} -jar "${jar_path}" run-workload  \
+    ${jvm}  -XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
+            -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
+            -jar "${jar_path}" run-workload  \
             --workload "${workload}" \
             --db "${db}" \
             --warmup-count "${warmup_count}" \
@@ -127,7 +139,7 @@ function runExport {
             --teamcity-build "${teamcity_build}" \
             --parent-teamcity-build "${parent_teamcity_build}" \
             --execution-mode "${execution_mode}" \
-            --jvm-args "${jvm_args}" \
+            --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${jvm_args}" \
             --planner "${planner}" \
             --runtime "${runtime}" \
             --profiler-recordings-dir "${profiler_recording_output_dir}" \

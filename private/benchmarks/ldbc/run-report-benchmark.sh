@@ -58,7 +58,8 @@ if [[ -z "$JAVA_HOME" ]]; then
 fi
 
 # path to on-out-of-memory script
-out_of_memory_script=$(realpath "$0")/on-out-of-memory.sh
+basedir=$(dirname "$(realpath $"0")")
+out_of_memory_script="$basedir/on-out-of-memory.sh"
 out_of_memory_base_dir=$(realpath "${ldbc_results_dir}/out-of-memory")
 # path to benchmark process out of memory output directory
 out_of_memory_dir="$out_of_memory_base_dir/benchmark"
