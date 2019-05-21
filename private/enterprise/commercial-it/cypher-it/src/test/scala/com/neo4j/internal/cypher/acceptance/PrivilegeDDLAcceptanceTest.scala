@@ -954,7 +954,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should do nothing when granting non-existing role to user") {
-    // TODO should fail
+    // TODO this test should fail
+    //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
     val defaultRolesWithUsers = Set(
       Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
@@ -989,7 +990,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should do nothing when granting role to non-existing user") {
-    // TODO should fail
+    // TODO this test should fail
+    //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
     val rolesWithUsers = Set(
       Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
@@ -1025,7 +1027,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should do nothing when granting non-existing role to non-existing user") {
-    // TODO should fail
+    // TODO this test should fail
+    //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
     val defaultRolesWithUsers = Set(
       Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
