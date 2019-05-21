@@ -86,20 +86,29 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     name <- _identifier
   } yield Variable(name)(?)
 
+  def _predicateComparisonPar(l: Expression, r: Expression): Gen[Expression] = Gen.oneOf(
+    GreaterThanOrEqual(l, r)(?),
+    GreaterThan(l, r)(?),
+    LessThanOrEqual(l, r)(?),
+    LessThan(l, r)(?),
+    Equals(l, r)(?),
+    Equivalent(l, r)(?),
+    NotEquals(l, r)(?),
+    InvalidNotEquals(l, r)(?)
+  )
+
   def _predicateComparison: Gen[Expression] = for {
     l <- _expression
     r <- _expression
-    res <- Gen.oneOf(
-      GreaterThanOrEqual(l, r)(?),
-      GreaterThan(l, r)(?),
-      LessThanOrEqual(l, r)(?),
-      LessThan(l, r)(?),
-      Equals(l, r)(?),
-      Equivalent(l, r)(?),
-      NotEquals(l, r)(?),
-      InvalidNotEquals(l, r)(?),
-    )
+    res <- _predicateComparisonPar(l, r)
   } yield res
+
+  def _predicateComparisonChain: Gen[Expression] = for {
+    exprs <- Gen.listOfN(4, _expression)
+    pairs = exprs.sliding(2)
+    gens = pairs.map(p => _predicateComparisonPar(p.head, p.last)).toList
+    chain <- Gen.sequence(gens)(Buildable.buildableCanBuildFrom)
+  } yield Ands(chain.toSet)(?)
 
   def _predicateUnary: Gen[Expression] = for {
     r <- _expression
@@ -152,8 +161,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       1 -> Gen.oneOf(
         Gen.lzy(_predicateComparison),
         Gen.lzy(_predicateUnary),
-        Gen.lzy(_predicateBinary)
-        //        Gen.lzy(_predicateNary)
+        Gen.lzy(_predicateBinary),
+        Gen.lzy(_predicateComparisonChain)
       )
     )
 
