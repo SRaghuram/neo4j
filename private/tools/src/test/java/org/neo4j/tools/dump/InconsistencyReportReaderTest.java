@@ -17,15 +17,18 @@ import org.neo4j.consistency.store.synthetic.IndexEntry;
 import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.kernel.api.labelscan.NodeLabelRange;
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.storageengine.api.schema.IndexDescriptorFactory;
+import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.tools.dump.InconsistentRecords.Type;
 
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.internal.kernel.api.schema.SchemaUtil.idTokenNameLookup;
 import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.forLabel;
 
 public class InconsistencyReportReaderTest
@@ -53,7 +56,8 @@ public class InconsistencyReportReaderTest
                 "Some error", "something" );
         logger.error( RecordType.PROPERTY, new PropertyRecord( propertyId ),
                 "Some error", "something" );
-        logger.error( RecordType.INDEX, new IndexEntry( indexNodeId ), "Some index error", "Something wrong with index" );
+        logger.error( RecordType.INDEX, new IndexEntry( someIndexDescriptor(), idTokenNameLookup, indexNodeId ), "Some index error",
+                "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
                       IndexDescriptorFactory.forSchema( forLabel( 1, 2 ),
                                               new IndexProviderDescriptor( "key", "version" ) ).withId( indexId ).toString() );
@@ -95,5 +99,10 @@ public class InconsistencyReportReaderTest
         // Then
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 1337 ) );
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 4242 ) );
+    }
+
+    private StoreIndexDescriptor someIndexDescriptor()
+    {
+        return IndexDescriptorFactory.forSchema( SchemaDescriptorFactory.forLabel( 1, 1 ) ).withId( 1L );
     }
 }

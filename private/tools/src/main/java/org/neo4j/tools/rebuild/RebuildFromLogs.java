@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
@@ -231,6 +232,7 @@ class RebuildFromLogs
         private final LabelScanStore labelScanStore;
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
+        private final TokenHolders tokenHolders;
 
         ConsistencyChecker( File dbDirectory, PageCache pageCache )
         {
@@ -238,13 +240,14 @@ class RebuildFromLogs
             DependencyResolver resolver = graphdb.getDependencyResolver();
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
+            this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
         }
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
             StoreAccess nativeStores = new StoreAccess( graphdb.getDependencyResolver()
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes );
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders );
             FullCheck fullCheck = new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
