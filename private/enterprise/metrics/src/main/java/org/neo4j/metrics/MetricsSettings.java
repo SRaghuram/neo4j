@@ -146,6 +146,6 @@ public class MetricsSettings implements LoadableConfig
             setting( "metrics.prometheus.endpoint", HOSTNAME_PORT, "localhost:2004" );
 
     @Description( "Set to `true` to enable the JMX metrics endpoint" )
-    public static final Setting<Boolean> jmxEnabled = setting( "metrics.jmx.enabled", BOOLEAN, FALSE );
+    public static final Setting<Boolean> jmxEnabled = setting( "metrics.jmx.enabled", BOOLEAN, TRUE );
 
 }
