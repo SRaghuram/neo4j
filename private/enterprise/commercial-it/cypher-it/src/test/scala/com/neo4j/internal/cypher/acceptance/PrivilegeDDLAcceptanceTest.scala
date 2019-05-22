@@ -1026,6 +1026,27 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
+  test("should fail when revoking role from user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE dragon FROM Bar")
+      // THEN
+    } should have message "Trying to run `CATALOG REVOKE ROLE` against non-system database."
+
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    execute("GRANT ROLE dragon TO Bar")
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE dragon FROM Bar")
+      // THEN
+    } should have message "Trying to run `CATALOG REVOKE ROLE` against non-system database."
+  }
+
   // helper variable, methods and class
 
   private val neo4jUser = user("neo4j", Seq("admin"))
