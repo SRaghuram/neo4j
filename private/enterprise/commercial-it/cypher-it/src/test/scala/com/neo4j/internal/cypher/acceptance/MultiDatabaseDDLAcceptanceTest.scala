@@ -6,16 +6,19 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.dbms.database.{DatabaseExistsException, DatabaseNotFoundException}
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
 import org.parboiled.errors.ParserRuntimeException
+
+import scala.collection.Map
 
 class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
@@ -432,4 +435,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
   }
+
+  // Use the default value instead of the new value in DDLAcceptanceTestBase
+  override def databaseConfig(): Map[Setting[_], String] = Map()
 }

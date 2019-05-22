@@ -16,10 +16,19 @@ import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
 
 abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
+  val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
+    Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+    Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
+  )
+
   def authManager: CommercialAuthManager = graph.getDependencyResolver.resolveDependency(classOf[CommercialAuthManager])
   def databaseManager: DatabaseManager[DatabaseContext] = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
 

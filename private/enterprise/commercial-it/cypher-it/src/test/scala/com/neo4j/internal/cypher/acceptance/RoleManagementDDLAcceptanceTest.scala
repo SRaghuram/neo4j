@@ -19,13 +19,6 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true),
     Map("role" -> PredefinedRoles.READER, "is_built_in" -> true)
   )
-  private val defaultRolesWithUsers = Set(
-    Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-    Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-  )
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
 

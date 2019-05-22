@@ -15,7 +15,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
 
@@ -847,6 +846,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // GRANT ROLE TO USER
 
+  test("should grant role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom TO user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "user"))
+  }
+
   test("should grant roles and list users with roles") {
     // GIVEN
     // User  : Roles
@@ -878,66 +890,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     )
   }
 
-  test("should grant role to user") {
-    val defaultRolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-    )
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-
-    // WHEN
-    execute("GRANT ROLE custom TO user")
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "user"))
-  }
-
-  ignore("should fail grant non existent role to user") {
-    val defaultRolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-    )
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER user SET PASSWORD 'neo'")
-
-    // WHEN
-    val exception = intercept[Exception](execute("GRANT ROLE custom TO user"))
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
-  }
-
-  test("should revoke role from user") {
-    val defaultRolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-    )
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO user")
-
-    // WHEN
-    execute("REVOKE ROLE custom FROM user")
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
-  }
-
   test("should be able to grant already granted role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -957,13 +909,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // TODO this test should fail
     //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
-    val defaultRolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-    )
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
@@ -993,14 +938,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // TODO this test should fail
     //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
-    val rolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> "dragon", "is_built_in" -> false, "member" -> null)
-    )
+    val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "is_built_in" -> false, "member" -> null))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE dragon")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -1030,13 +968,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // TODO this test should fail
     //   There are two parts and they are surrounded by out-commented error checking
     // GIVEN
-    val defaultRolesWithUsers = Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-      Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-      Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
-    )
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
@@ -1077,6 +1008,22 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("GRANT ROLE dragon TO Bar")
       // THEN
     } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
+  }
+
+  // REVOKE ROLE FROM USER
+
+  test("should revoke role from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
   // helper variable, methods and class
