@@ -10,8 +10,9 @@ import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
-import org.neo4j.dbms.database.{DatabaseExistsException, DatabaseNotFoundException}
+import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
@@ -434,6 +435,10 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     systemGraphInitializer.initializeSystemGraph()
     systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+  }
+
+  private def threadToStatementContextBridge(): ThreadToStatementContextBridge = {
+    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
 
   // Use the default value instead of the new value in DDLAcceptanceTestBase

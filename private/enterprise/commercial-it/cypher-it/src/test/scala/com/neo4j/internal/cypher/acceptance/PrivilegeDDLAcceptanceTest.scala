@@ -209,6 +209,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
   }
 
+  test("should fail granting traversal privilege for all databases and all labels to non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      // THEN
+    } should have message "Role 'custom' does not exist."
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
+  }
+
   test("should fail when granting traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -217,7 +232,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG GRANT TRAVERSE` against non-system database."
   }
 
-  test("should grant traversal privilege to custom role for all databases but only a specific label") {
+  test("should grant traversal privilege to custom role for all databases but only a specific label (that does not need to exist)") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -274,7 +289,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
+  test("should fail when granting traversal privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    the [DatabaseNotFoundException] thrownBy {
+      execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
+    } should have message "Database 'foo' does not exist."
+  }
+
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
+    //TODO: This should be an integration test
+
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -296,6 +322,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should read properties when granted read privilege to custom role for all databases and all labels") {
+    //TODO: This should be an integration test
+
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -319,6 +347,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("read privilege should not imply traverse privilege") {
+    //TODO: This should be an integration test
+
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -336,6 +366,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should see properties and nodes depending on privileges for role") {
+    //TODO: This should be an integration test
+
     // GIVEN
     setupMultilabelData
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -462,14 +494,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(2)
   }
 
-  private def setupMultilabelData = {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {foo:1, bar:2})")
-    execute("CREATE (n:B {foo:3, bar:4})")
-    execute("CREATE (n:A:B {foo:5, bar:6})")
-    execute("CREATE (n {foo:7, bar:8})")
-  }
-
   // GRANT READ
 
   test("should grant read privilege to custom role for all databases and all labels") {
@@ -482,6 +506,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").resource("all_properties").map))
+  }
+
+  test("should fail granting read privilege for all databases and all labels to non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+      // THEN
+    } should have message "Role 'custom' does not exist."
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
   }
 
   test("should grant read privilege to custom role for all databases but only a specific label") {
@@ -1072,6 +1111,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } finally {
       tx.close()
     }
+  }
+
+  private def setupMultilabelData = {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {foo:1, bar:2})")
+    execute("CREATE (n:B {foo:3, bar:4})")
+    execute("CREATE (n:A:B {foo:5, bar:6})")
+    execute("CREATE (n {foo:7, bar:8})")
   }
 
   private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
