@@ -67,6 +67,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1;
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1_PREFIX;
@@ -400,7 +401,7 @@ public class ReadReplicaReplicationIT
                 database.getDependencyResolver().provideDependency( TransactionIdStore.class );
         AvailabilityGuard databaseAvailabilityGuard =
                 database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
-        return new TransactionIdTracker( transactionIdStore, databaseAvailabilityGuard );
+        return new TransactionIdTracker( transactionIdStore, databaseAvailabilityGuard, Clocks.nanoClock() );
     }
 
     private static LogFiles physicalLogFiles( ClusterMember clusterMember )
