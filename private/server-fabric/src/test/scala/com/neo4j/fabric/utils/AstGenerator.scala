@@ -28,6 +28,11 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _smallNonemptyListOf[T](gen: Gen[T]): Gen[List[T]] =
     Gen.choose(1, 3).flatMap(Gen.listOfN(_, gen))
 
+  def _tuple[A, B](ga: Gen[A], gb: Gen[B]): Gen[(A, B)] = for {
+    a <- ga
+    b <- gb
+  } yield (a, b)
+
   // IDENTIFIERS
   // ==========================================================================
 
@@ -134,13 +139,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     )
   } yield res
 
-  def _mapItem: Gen[(PropertyKeyName, Expression)] = for {
-    key <- _propertyKeyName
-    value <- _expression
-  } yield (key, value)
-
   def _map: Gen[MapExpression] = for {
-    items <- _smallListOf(_mapItem)
+    items <- _smallListOf(_tuple(_propertyKeyName, _expression))
   } yield MapExpression(items)(?)
 
   def _parameter: Gen[Parameter] =
@@ -153,6 +153,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       UnarySubtract(r)(?)
     )
   } yield exp
+
   def _arithmeticBinary: Gen[Expression] = for {
     l <- _expression
     r <- _expression
@@ -166,7 +167,12 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     )
   } yield exp
 
-//  ContainerIndex(l, r)(?),
+  def _case: Gen[CaseExpression] = for {
+    expression <- Gen.option(_expression)
+    alternatives <- _smallNonemptyListOf(_tuple(_expression, _expression))
+    default <- Gen.option(_expression)
+  } yield CaseExpression(expression, alternatives, default)(?)
+
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
@@ -189,6 +195,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       1 -> Gen.oneOf(
         Gen.lzy(_arithmeticUnary),
         Gen.lzy(_arithmeticBinary)
+      ),
+      1 -> Gen.oneOf(
+        Gen.lzy(_case),
+        Gen.lzy(_case)
       )
     )
 
