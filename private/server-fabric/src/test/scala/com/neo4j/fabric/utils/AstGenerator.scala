@@ -143,9 +143,35 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     items <- _smallListOf(_tuple(_propertyKeyName, _expression))
   } yield MapExpression(items)(?)
 
+  def _property: Gen[Property] = for {
+    map <- _expression
+    key <- _propertyKeyName
+  } yield Property(map, key)(?)
+
+  def _mapProjection: Gen[MapProjection] = for {
+    name <- _variable
+    items <- _smallNonemptyListOf(Gen.oneOf(
+      for {key <- _propertyKeyName; exp <- _expression} yield LiteralEntry(key, exp)(?),
+      for {id <- _variable} yield VariableSelector(id)(?),
+      for {id <- _variable} yield PropertySelector(id)(?),
+      Gen.const(AllPropertiesSelector()(?))
+    ))
+  } yield MapProjection(name, items)(?, None)
+
   def _list: Gen[ListLiteral] = for {
     parts <- _smallListOf(_expression)
   } yield ListLiteral(parts)(?)
+
+  def _listSlice: Gen[ListSlice] = for {
+    list <- _expression
+    from <- Gen.option(_expression)
+    to <- Gen.option(_expression)
+  } yield ListSlice(list, from, to)(?)
+
+  def _containerIndex: Gen[ContainerIndex] = for {
+    expr <- _expression
+    idx <- _expression
+  } yield ContainerIndex(expr, idx)(?)
 
   def _parameter: Gen[Parameter] =
     _identifier.map(Parameter(_, AnyType.instance)(?))
@@ -192,6 +218,62 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     args <- _smallListOf(_expression)
   } yield FunctionInvocation(namespace, functionName, distinct, args.toIndexedSeq)(?)
 
+
+  def _countStar: Gen[CountStar] =
+    Gen.const(CountStar()(?))
+
+  def _filterScope: Gen[FilterScope] = for {
+    variable <- _variable
+    innerPredicate <- Gen.option(_expression)
+  } yield FilterScope(variable, innerPredicate)(?)
+
+  def _filter: Gen[FilterExpression] = for {
+    scope <- _filterScope
+    expression <- _expression
+  } yield FilterExpression(scope, expression)(?)
+
+  def _extractScope: Gen[ExtractScope] = for {
+    variable <- _variable
+    innerPredicate <- Gen.option(_expression)
+    extractExpression <- Gen.option(_expression)
+  } yield ExtractScope(variable, innerPredicate, extractExpression)(?)
+
+  def _extract: Gen[ExtractExpression] = for {
+    scope <- _extractScope
+    expression <- _expression
+  } yield ExtractExpression(scope, expression)(?)
+
+  def _listComprehension: Gen[ListComprehension] = for {
+    scope <- _extractScope
+    expression <- _expression
+  } yield ListComprehension(scope, expression)(?)
+
+  def _iterablePredicate: Gen[IterablePredicateExpression] = for {
+    scope <- _filterScope
+    expression <- _expression
+    predicate <- Gen.oneOf(
+      AllIterablePredicate(scope, expression)(?),
+      AnyIterablePredicate(scope, expression)(?),
+      NoneIterablePredicate(scope, expression)(?),
+      SingleIterablePredicate(scope, expression)(?)
+    )
+  } yield predicate
+
+  def _degree: Gen[GetDegree] = for {
+    node <- _expression
+    relType <- Gen.option(_relTypeName)
+    dir <- _semanticDirection
+  } yield GetDegree(node, relType, dir)(?)
+
+  def _hasLabels: Gen[HasLabels] = for {
+    expression <- _expression
+    labels <- _smallNonemptyListOf(_labelName)
+  } yield HasLabels(expression, labels)(?)
+
+  def _nodePatternExpr = for {
+    patterns <- _smallListOf(_nodePattern)
+  } yield NodePatternExpression(patterns)(?)
+
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
@@ -208,8 +290,9 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_predicateComparison),
         Gen.lzy(_predicateUnary),
         Gen.lzy(_predicateBinary),
-        Gen.lzy(_predicateComparisonChain)
-
+        Gen.lzy(_predicateComparisonChain),
+        Gen.lzy(_iterablePredicate),
+        Gen.lzy(_hasLabels)
       ),
       1 -> Gen.oneOf(
         Gen.lzy(_arithmeticUnary),
@@ -218,8 +301,18 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       1 -> Gen.oneOf(
         Gen.lzy(_case),
         Gen.lzy(_functionInvocation),
+        Gen.lzy(_countStar),
+//        Gen.lzy(_nodePatternExpr),
         Gen.lzy(_map),
-        Gen.lzy(_list)
+        Gen.lzy(_mapProjection),
+        Gen.lzy(_property),
+        Gen.lzy(_list),
+        Gen.lzy(_listSlice),
+        Gen.lzy(_listComprehension),
+        Gen.lzy(_containerIndex),
+        Gen.lzy(_extract),
+        Gen.lzy(_filter)
+//        Gen.lzy(_degree)
       )
     )
 
@@ -421,6 +514,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         None
       } else {
         var point = Random.nextInt(splitPoints)
+
         def onPoint[T, R >: T](i: T)(f: => R): R = if (point == 0) {
           point -= 1
           f
