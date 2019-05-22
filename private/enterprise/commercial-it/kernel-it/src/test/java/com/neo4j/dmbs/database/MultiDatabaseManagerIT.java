@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
@@ -71,6 +72,20 @@ class MultiDatabaseManagerIT
     void tearDown()
     {
         managementService.shutdown();
+    }
+
+    @Test
+    void failToDropSystemDatabaseOnDatabaseManagerLevel()
+    {
+        DatabaseManager<?> databaseManager = getDatabaseManager();
+        assertThrows( DatabaseManagementException.class, () -> databaseManager.dropDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+    }
+
+    @Test
+    void failToStopSystemDatabase()
+    {
+        DatabaseManager<?> databaseManager = getDatabaseManager();
+        assertThrows( DatabaseManagementException.class, () -> databaseManager.stopDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
     }
 
     @Test
