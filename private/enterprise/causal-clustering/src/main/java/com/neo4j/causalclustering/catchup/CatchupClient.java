@@ -106,18 +106,15 @@ class CatchupClient implements VersionedCatchupClients
         public RESULT request() throws Exception
         {
             return channel
-                    .thenCompose( this::performRequest )
+                    .thenApply( this::performRequest )
                     .get( REQUEST_SENT_TIMEOUT, REQUEST_SENT_TIME_UNIT )
                     .get();
         }
 
-        private CompletableFuture<OperationProgressMonitor<RESULT>> performRequest( CatchupChannel catchupChannel )
+        private OperationProgressMonitor<RESULT> performRequest( CatchupChannel catchupChannel )
         {
-            return catchupChannel.protocol().thenApply( protocol -> performRequest( protocol, catchupChannel ) );
-        }
+            var protocol = catchupChannel.protocol();
 
-        private OperationProgressMonitor<RESULT> performRequest( ApplicationProtocol protocol, CatchupChannel catchupChannel )
-        {
             if ( protocol.equals( ApplicationProtocols.CATCHUP_3_0 ) )
             {
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );

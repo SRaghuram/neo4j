@@ -9,13 +9,16 @@ import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
@@ -26,6 +29,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.net.NettyUtil.toCompletableFuture;
+import static com.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 public class ChannelPoolService implements Lifecycle
@@ -38,7 +42,7 @@ public class ChannelPoolService implements Lifecycle
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock.WriteLock exclusiveService = lock.writeLock();
     private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
-    private CompletableFuture<Channel> endOfLife;
+    private CompletableFuture<PooledChannel> endOfLife;
 
     private SimpleChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
     private EventLoopGroup eventLoopGroup;
@@ -63,7 +67,9 @@ public class ChannelPoolService implements Lifecycle
             }
 
             SimpleChannelPool pool = poolMap.get( address );
-            return toCompletableFuture( pool.acquire() ).applyToEither( endOfLife, channel -> new PooledChannel( channel, pool ) );
+            return toCompletableFuture( pool.acquire() )
+                    .thenCompose( channel -> createPooledChannel( channel, pool ) )
+                    .applyToEither( endOfLife, Function.identity() );
         }
         finally
         {
@@ -135,5 +141,15 @@ public class ChannelPoolService implements Lifecycle
         {
             sharedService.unlock();
         }
+    }
+
+    private static CompletionStage<PooledChannel> createPooledChannel( Channel channel, ChannelPool pool )
+    {
+        var protocolFuture = channel.attr( PROTOCOL_STACK ).get();
+        if ( protocolFuture == null )
+        {
+            return failedFuture( new IllegalStateException( "Channel " + channel + " does not contain a protocol stack attribute" ) );
+        }
+        return protocolFuture.thenApply( protocol -> new PooledChannel( channel, pool, protocol ) );
     }
 }

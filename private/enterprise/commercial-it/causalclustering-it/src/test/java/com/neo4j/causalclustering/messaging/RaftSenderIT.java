@@ -25,6 +25,8 @@ import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
+import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -66,6 +68,8 @@ class RaftSenderIT
     private final ApplicationSupportedProtocols supportedApplicationProtocol = new ApplicationSupportedProtocols( RAFT,
             ApplicationProtocols.withCategory( RAFT ).stream().map( Protocol::implementation ).collect( toList() ) );
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols = emptyList();
+
+    private final Duration handshakeTimeout = Duration.ofSeconds( 20 );
 
     private final ApplicationProtocolRepository applicationProtocolRepository =
             new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
@@ -151,8 +155,10 @@ class RaftSenderIT
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> installer =
                 new ProtocolInstallerRepository<>( List.of( factoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
-        HandshakeServerInitializer channelInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 installer, pipelineFactory, logProvider );
+
+        ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
 
@@ -175,16 +181,17 @@ class RaftSenderIT
             throw new IllegalArgumentException( "Unexpected protocol " + clientProtocol );
         }
 
-        HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( clientRepository( clientProtocol ),
+        HandshakeClientInitializer handshakeInitializer = new HandshakeClientInitializer( clientRepository( clientProtocol ),
                 modifierProtocolRepository,
                 protocolInstaller,
                 pipelineFactory,
-                Duration.ofSeconds(5),
+                handshakeTimeout,
                 logProvider,
                 logProvider );
 
-        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider,
-                channelInitializer );
+        ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
+
+        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer );
     }
 
     private ApplicationProtocolRepository clientRepository( ApplicationProtocols clientProtocol )

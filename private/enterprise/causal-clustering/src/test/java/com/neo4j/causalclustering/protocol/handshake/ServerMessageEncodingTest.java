@@ -52,7 +52,6 @@ class ServerMessageEncodingTest
         return List.of(
                 new ApplicationProtocolRequest( "protocol",
                         Set.of( new ApplicationProtocolVersion( 3, 0 ), new ApplicationProtocolVersion( 7, 0 ), new ApplicationProtocolVersion( 13, 0 ) ) ),
-                new InitialMagicMessage( "Magic string" ),
                 new ModifierProtocolRequest( "modifierProtocol", Set.of( "Foo", "Bar", "Baz" ) ),
                 new SwitchOverRequest( "protocol", new ApplicationProtocolVersion( 38, 0 ), emptyList() ),
                 new SwitchOverRequest( "protocol", new ApplicationProtocolVersion( 38, 0 ),

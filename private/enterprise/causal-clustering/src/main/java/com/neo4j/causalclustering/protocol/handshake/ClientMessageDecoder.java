@@ -29,12 +29,6 @@ public class ClientMessageDecoder extends ByteToMessageDecoder
 
         switch ( messageCode )
         {
-        case InitialMagicMessage.MESSAGE_CODE:
-        {
-            String magic = StringMarshal.unmarshal( in );
-            out.add( new InitialMagicMessage( magic ) );
-            return;
-        }
         case ApplicationProtocolResponse.MESSAGE_CODE:
         {
             ApplicationProtocolResponse applicationProtocolResponse = decodeProtocolResponse( ApplicationProtocolResponse::new,

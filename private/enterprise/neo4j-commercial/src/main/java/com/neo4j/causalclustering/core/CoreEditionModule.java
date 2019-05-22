@@ -40,7 +40,6 @@ import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
-import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
@@ -49,6 +48,7 @@ import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
@@ -64,7 +64,6 @@ import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.io.File;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -185,20 +184,9 @@ public class CoreEditionModule extends ClusteringEditionModule
         supportedRaftProtocols = supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
         supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
 
-        ApplicationProtocolRepository applicationProtocolRepository =
-                new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedRaftProtocols );
-        ModifierProtocolRepository modifierProtocolRepository =
-                new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
-
-        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ) ), ModifierProtocolInstaller.allClientInstallers );
-
-        Duration handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
-        HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
-        RaftChannelPoolService raftChannelPoolService = new RaftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ),
-                globalModule.getJobScheduler(), logProvider, channelInitializer );
+        RaftChannelPoolService raftChannelPoolService = buildRaftChannelPoolService( globalModule );
         globalLife.add( raftChannelPoolService );
+
         this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
@@ -421,5 +409,29 @@ public class CoreEditionModule extends ClusteringEditionModule
     CoreDatabaseFactory coreDatabaseFactory()
     {
         return coreDatabaseFactory;
+    }
+
+    private RaftChannelPoolService buildRaftChannelPoolService( GlobalModule globalModule )
+    {
+        var clientChannelInitializer = buildClientChannelInitializer( globalModule.getLogService() );
+        var bootstrapConfig = BootstrapConfiguration.clientConfig( globalConfig );
+        return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer );
+    }
+
+    private ClientChannelInitializer buildClientChannelInitializer( LogService logService )
+    {
+        var applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedRaftProtocols );
+        var modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
+
+        var protocolInstallerRepository = new ProtocolInstallerRepository<>(
+                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ) ),
+                ModifierProtocolInstaller.allClientInstallers );
+
+        var handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
+
+        var handshakeInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
+                protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
+
+        return new ClientChannelInitializer( handshakeInitializer, pipelineBuilders.client(), handshakeTimeout, logProvider );
     }
 }

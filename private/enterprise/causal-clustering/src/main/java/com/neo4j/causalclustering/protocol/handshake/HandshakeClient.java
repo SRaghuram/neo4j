@@ -29,13 +29,12 @@ public class HandshakeClient implements ClientMessageHandler
     private ApplicationProtocol negotiatedApplicationProtocol;
     private List<Pair<String,Optional<ModifierProtocol>>> negotiatedModifierProtocols;
     private ProtocolStack protocolStack;
-    private boolean magicReceived;
 
     private final CompletableFuture<ProtocolStack> fProtocol;
 
-    HandshakeClient()
+    HandshakeClient( CompletableFuture<ProtocolStack> protocolFuture )
     {
-        this.fProtocol = new CompletableFuture<>();
+        this.fProtocol = protocolFuture;
     }
 
     public void initiate( Channel channel,
@@ -51,8 +50,6 @@ public class HandshakeClient implements ClientMessageHandler
         this.supportedModifierProtocols = modifierProtocolRepository.supportedProtocols();
 
         negotiatedModifierProtocols = new ArrayList<>( supportedModifierProtocols.size() );
-
-        channel.write( InitialMagicMessage.instance() );
 
         sendProtocolRequests( channel, supportedApplicationProtocol, supportedModifierProtocols );
     }
@@ -72,31 +69,9 @@ public class HandshakeClient implements ClientMessageHandler
         channel.writeAndFlush( new ApplicationProtocolRequest( applicationProtocolSelection.identifier(), applicationProtocolSelection.versions() ) );
     }
 
-    private void ensureMagic()
-    {
-        if ( !magicReceived )
-        {
-            fail( "Magic value not received." );
-            throw new IllegalStateException( "Magic value not received." );
-        }
-    }
-
-    @Override
-    public void handle( InitialMagicMessage magicMessage )
-    {
-        if ( !magicMessage.isCorrectMagic() )
-        {
-            fail( "Incorrect magic value received" );
-        }
-        // TODO: check clusterId as well
-
-        magicReceived = true;
-    }
-
     @Override
     public void handle( ApplicationProtocolResponse applicationProtocolResponse )
     {
-        ensureMagic();
         if ( applicationProtocolResponse.statusCode() != StatusCode.SUCCESS )
         {
             fail( "Unsuccessful application protocol response" );
@@ -126,7 +101,6 @@ public class HandshakeClient implements ClientMessageHandler
     @Override
     public void handle( ModifierProtocolResponse modifierProtocolResponse )
     {
-        ensureMagic();
         if ( modifierProtocolResponse.statusCode() == StatusCode.SUCCESS )
         {
             Optional<ModifierProtocol> selectedModifierProtocol =
@@ -169,7 +143,6 @@ public class HandshakeClient implements ClientMessageHandler
     @Override
     public void handle( SwitchOverResponse response )
     {
-        ensureMagic();
         if ( protocolStack == null )
         {
             fail( "Attempted to switch over when protocol stack not established" );

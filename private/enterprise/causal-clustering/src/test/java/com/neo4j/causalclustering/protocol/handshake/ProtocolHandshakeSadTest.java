@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class ProtocolHandshakeSadTest
 {
-    private final HandshakeClient handshakeClient = new HandshakeClient();
+    private final HandshakeClient handshakeClient = new HandshakeClient( new CompletableFuture<>() );
 
     private final Collection<ModifierSupportedProtocols> noModifiers = emptyList();
     private final ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), noModifiers );

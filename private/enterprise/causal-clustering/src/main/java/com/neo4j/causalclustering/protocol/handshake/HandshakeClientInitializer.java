@@ -15,8 +15,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
-import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -55,12 +55,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
     @Override
     protected void initChannel( SocketChannel channel )
     {
-        HandshakeClient handshakeClient = new HandshakeClient();
-
-        /* We store the Future<ProtocolStack> in a Netty channel attr to give us access to it at a higher level. For example,
-        we need to know which protocol has been agreed upon when deciding which version of a catchup request to execute (see CatchupClient). */
-        channel.attr( PROTOCOL_STACK ).set( handshakeClient.protocol() );
-        channel.closeFuture().addListener( ignored -> handshakeClient.protocol().completeExceptionally( new ClosedChannelException() ) );
+        HandshakeClient handshakeClient = newHandshakeClient( channel );
 
         try
         {
@@ -156,5 +151,15 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
                 "Connected to %s [%s]", channel.remoteAddress(), protocolStack ) );
         channel.closeFuture().addListener( f -> userLog.info( format(
                 "Lost connection to %s [%s]", channel.remoteAddress(), protocolStack ) ) );
+    }
+
+    private static HandshakeClient newHandshakeClient( Channel channel )
+    {
+        CompletableFuture<ProtocolStack> protocolFuture = channel.attr( PROTOCOL_STACK ).get();
+        if ( protocolFuture == null )
+        {
+            throw new IllegalStateException( "Channel " + channel + " does not contain a protocol stack attribute" );
+        }
+        return new HandshakeClient( protocolFuture );
     }
 }

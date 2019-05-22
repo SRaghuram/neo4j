@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
@@ -18,6 +17,8 @@ import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
+import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.bootstrap.Bootstrap;
@@ -53,6 +54,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.handshake_timeout;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
@@ -120,10 +122,10 @@ class NettyInstalledProtocolsIT
         NettyPipelineBuilderFactory serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
         NettyPipelineBuilderFactory clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 
-        server = new Server( serverPipelineBuilderFactory );
-        server.start( applicationProtocolRepository, modifierProtocolRepository, logProvider );
+        Config config = Config.builder().withSetting( handshake_timeout, TIMEOUT_SECONDS + "s" ).build();
 
-        Config config = Config.builder().withSetting( CausalClusteringSettings.handshake_timeout, TIMEOUT_SECONDS + "s" ).build();
+        server = new Server( serverPipelineBuilderFactory, config );
+        server.start( applicationProtocolRepository, modifierProtocolRepository, logProvider );
 
         client = new Client( applicationProtocolRepository, modifierProtocolRepository, clientPipelineBuilderFactory, config, logProvider );
 
@@ -164,7 +166,8 @@ class NettyInstalledProtocolsIT
         private Channel channel;
         private NioEventLoopGroup eventLoopGroup;
         private final List<Object> received = new CopyOnWriteArrayList<>();
-        private NettyPipelineBuilderFactory pipelineBuilderFactory;
+        private final NettyPipelineBuilderFactory pipelineBuilderFactory;
+        private final Config config;
 
         ChannelInboundHandler nettyHandler = new SimpleChannelInboundHandler<Object>()
         {
@@ -175,9 +178,10 @@ class NettyInstalledProtocolsIT
             }
         };
 
-        Server( NettyPipelineBuilderFactory pipelineBuilderFactory )
+        Server( NettyPipelineBuilderFactory pipelineBuilderFactory, Config config )
         {
             this.pipelineBuilderFactory = pipelineBuilderFactory;
+            this.config = config;
         }
 
         void start( final ApplicationProtocolRepository applicationProtocolRepository, final ModifierProtocolRepository modifierProtocolRepository,
@@ -189,12 +193,18 @@ class NettyInstalledProtocolsIT
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
             eventLoopGroup = new NioEventLoopGroup();
+
+            HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+                    protocolInstallerRepository, pipelineBuilderFactory, logProvider );
+
+            ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+                    config.get( handshake_timeout ), logProvider );
+
             ServerBootstrap bootstrap = new ServerBootstrap().group( eventLoopGroup )
                     .channel( NioServerSocketChannel.class )
                     .option( ChannelOption.SO_REUSEADDR, true )
                     .localAddress( PortAuthority.allocatePort() )
-                    .childHandler( new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                            protocolInstallerRepository, pipelineBuilderFactory, logProvider ).asChannelInitializer() );
+                    .childHandler( channelInitializer.asChannelInitializer() );
 
             channel = bootstrap.bind().syncUninterruptibly().channel();
         }
@@ -221,7 +231,7 @@ class NettyInstalledProtocolsIT
         private Bootstrap bootstrap;
         private NioEventLoopGroup eventLoopGroup;
         private Channel channel;
-        private HandshakeClientInitializer handshakeClientInitializer;
+        private HandshakeClientInitializer handshakeInitializer;
 
         Client( ApplicationProtocolRepository applicationProtocolRepository, ModifierProtocolRepository modifierProtocolRepository,
                 NettyPipelineBuilderFactory pipelineBuilderFactory, Config config, LogProvider logProvider )
@@ -230,10 +240,12 @@ class NettyInstalledProtocolsIT
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allClientInstallers );
             eventLoopGroup = new NioEventLoopGroup();
-            Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
-            handshakeClientInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
+            Duration handshakeTimeout = config.get( handshake_timeout );
+            handshakeInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilderFactory, handshakeTimeout, logProvider, logProvider );
-            bootstrap = new Bootstrap().group( eventLoopGroup ).channel( NioSocketChannel.class ).handler( handshakeClientInitializer );
+            ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+                    handshakeTimeout, logProvider );
+            bootstrap = new Bootstrap().group( eventLoopGroup ).channel( NioSocketChannel.class ).handler( channelInitializer );
         }
 
         @SuppressWarnings( "SameParameterValue" )

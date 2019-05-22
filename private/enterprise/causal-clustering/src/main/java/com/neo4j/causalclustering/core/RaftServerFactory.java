@@ -23,9 +23,11 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelInboundHandler;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -81,13 +83,17 @@ public class RaftServerFactory
                 new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstallerV2 ),
                         ModifierProtocolInstaller.allServerInstallers );
 
-        HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
+
+        Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
+        ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+                handshakeTimeout, logProvider );
 
         ListenSocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
         Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
-        Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider,
+        Server raftServer = new Server( channelInitializer, installedProtocolsHandler, logProvider,
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 

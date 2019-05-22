@@ -25,8 +25,6 @@ public class HandshakeServer implements ServerMessageHandler
     private final SupportedProtocols<ApplicationProtocolVersion,ApplicationProtocol> supportedApplicationProtocol;
     private final ProtocolStack.Builder protocolStackBuilder = ProtocolStack.builder();
     private final CompletableFuture<ProtocolStack> protocolStackFuture = new CompletableFuture<>();
-    private boolean magicReceived;
-    private boolean initialised;
 
     HandshakeServer( ApplicationProtocolRepository applicationProtocolRepository, ModifierProtocolRepository modifierProtocolRepository, Channel channel )
     {
@@ -36,42 +34,9 @@ public class HandshakeServer implements ServerMessageHandler
         this.supportedApplicationProtocol = applicationProtocolRepository.supportedProtocol();
     }
 
-    public void init()
-    {
-        channel.writeAndFlush( InitialMagicMessage.instance() );
-        initialised = true;
-    }
-
-    private void ensureMagic()
-    {
-        if ( !magicReceived )
-        {
-            decline( "No magic value received" );
-            throw new IllegalStateException( "Magic value not received." );
-        }
-        if ( !initialised )
-        {
-            init();
-        }
-    }
-
-    @Override
-    public void handle( InitialMagicMessage magicMessage )
-    {
-        if ( !magicMessage.isCorrectMagic() )
-        {
-            decline( "Incorrect magic value received" );
-        }
-        // TODO: check clusterId as well
-
-        magicReceived = true;
-    }
-
     @Override
     public void handle( ApplicationProtocolRequest request )
     {
-        ensureMagic();
-
         ApplicationProtocolResponse response;
         if ( !request.protocolName().equals( supportedApplicationProtocol.identifier().canonicalName() ) )
         {
@@ -102,8 +67,6 @@ public class HandshakeServer implements ServerMessageHandler
     @Override
     public void handle( ModifierProtocolRequest modifierProtocolRequest )
     {
-        ensureMagic();
-
         ModifierProtocolResponse response;
         Optional<ModifierProtocol> selected =
                 modifierProtocolRepository.select( modifierProtocolRequest.protocolName(), supportedVersionsFor( modifierProtocolRequest ) );
@@ -125,7 +88,6 @@ public class HandshakeServer implements ServerMessageHandler
     @Override
     public void handle( SwitchOverRequest switchOverRequest )
     {
-        ensureMagic();
         ProtocolStack protocolStack = protocolStackBuilder.build();
         Optional<ApplicationProtocol> switchOverProtocol =
                 applicationProtocolRepository.select( switchOverRequest.protocolName(), switchOverRequest.version() );

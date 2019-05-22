@@ -73,7 +73,7 @@ public class NettyProtocolHandshakeIT
         server = new Server();
         server.start( raftApplicationProtocolRepository, compressionModifierProtocolRepository );
 
-        handshakeClient = new HandshakeClient();
+        handshakeClient = new HandshakeClient( new CompletableFuture<>() );
 
         client = new Client( handshakeClient );
         client.connect( server.port() );

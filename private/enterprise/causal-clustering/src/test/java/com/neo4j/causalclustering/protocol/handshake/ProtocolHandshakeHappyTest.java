@@ -245,7 +245,7 @@ public class ProtocolHandshakeHappyTest
             clientApplicationProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), parameters.clientApplicationProtocol );
             clientModifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), parameters.clientModifierProtocols );
 
-            handshakeClient = new HandshakeClient();
+            handshakeClient = new HandshakeClient( new CompletableFuture<>() );
             handshakeServer = new HandshakeServer(
                     serverApplicationProtocolRepository,
                     serverModifierProtocolRepository,

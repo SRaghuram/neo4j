@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.SimpleNettyChannel;
-import com.neo4j.causalclustering.net.ChildInitializer;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
 import java.net.InetSocketAddress;
@@ -19,7 +19,7 @@ import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class HandshakeServerInitializer implements ChildInitializer
+public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel>
 {
     private final Log log;
     private final ApplicationProtocolRepository applicationProtocolRepository;

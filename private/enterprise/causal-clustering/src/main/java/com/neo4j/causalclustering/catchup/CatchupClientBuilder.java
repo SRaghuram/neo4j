@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.socket.SocketChannel;
 
@@ -137,15 +138,18 @@ public final class CatchupClientBuilder
             ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
 
-            Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory = handler -> {
+            Function<CatchupResponseHandler,ClientChannelInitializer> channelInitializerFactory = handler ->
+            {
                 List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> installers = List.of(
                         new CatchupProtocolClientInstallerV3.Factory( pipelineBuilder, debugLogProvider, handler ) );
 
                 ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>( installers,
                         ModifierProtocolInstaller.allClientInstallers );
 
-                return new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository, protocolInstallerRepository, pipelineBuilder,
-                        handshakeTimeout, debugLogProvider, userLogProvider );
+                HandshakeClientInitializer handshakeInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
+                        protocolInstallerRepository, pipelineBuilder, handshakeTimeout, debugLogProvider, debugLogProvider );
+
+                return new ClientChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout, debugLogProvider );
             };
 
             CatchupChannelPoolService catchupChannelPoolService = new CatchupChannelPoolService(

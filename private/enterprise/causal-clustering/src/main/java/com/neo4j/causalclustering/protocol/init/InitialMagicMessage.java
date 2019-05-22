@@ -3,11 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.protocol.handshake;
+package com.neo4j.causalclustering.protocol.init;
 
 import java.util.Objects;
 
-public class InitialMagicMessage implements ServerMessage, ClientMessage
+public class InitialMagicMessage
 {
     // these can never, ever change
     static final String CORRECT_MAGIC_VALUE = "NEO4J_CLUSTER";
@@ -26,18 +26,6 @@ public class InitialMagicMessage implements ServerMessage, ClientMessage
     public static InitialMagicMessage instance()
     {
         return instance;
-    }
-
-    @Override
-    public void dispatch( ServerMessageHandler handler )
-    {
-        handler.handle( this );
-    }
-
-    @Override
-    public void dispatch( ClientMessageHandler handler )
-    {
-        handler.handle( this );
     }
 
     @Override

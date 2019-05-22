@@ -39,12 +39,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-/**
- * @see HandshakeClientEnsureMagicTest
- */
 class HandshakeClientTest
 {
-    private final HandshakeClient client = new HandshakeClient();
+    private final HandshakeClient client = new HandshakeClient( new CompletableFuture<>() );
     private final Channel channel = mock( Channel.class );
     private final ApplicationProtocolCategory applicationProtocolIdentifier = RAFT;
     private final ApplicationSupportedProtocols supportedApplicationProtocol =
@@ -61,14 +58,6 @@ class HandshakeClientTest
             applicationProtocolRepository.select( applicationProtocolIdentifier.canonicalName(), raftVersion ).orElseThrow();
 
     //TODO: Test for concurrent handshakes (i.e. have we respected Sharable?)
-
-    @Test
-    void shouldSendInitialMagicOnInitiation()
-    {
-        client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-
-        verify( channel ).write( InitialMagicMessage.instance() );
-    }
 
     @Test
     void shouldSendApplicationProtocolRequestOnInitiation()
@@ -98,37 +87,10 @@ class HandshakeClientTest
     }
 
     @Test
-    void shouldExceptionallyCompleteProtocolStackOnReceivingIncorrectMagic()
-    {
-        // given
-        client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-
-        // when
-        client.handle( new InitialMagicMessage( "totally legit" ) );
-
-        // then
-        assertCompletedExceptionally( client.protocol() );
-    }
-
-    @Test
-    void shouldAcceptCorrectMagic()
-    {
-        // given
-        client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-
-        // when
-        client.handle( InitialMagicMessage.instance() );
-
-        // then
-        assertFalse( client.protocol().isDone() );
-    }
-
-    @Test
     void shouldExceptionallyCompleteProtocolStackWhenApplicationProtocolResponseNotSuccessful()
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         client.handle( new ApplicationProtocolResponse( StatusCode.FAILURE, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
@@ -142,7 +104,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, "zab", raftVersion ) );
@@ -156,7 +117,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         var version = new ApplicationProtocolVersion( Integer.MAX_VALUE, 0 );
@@ -172,7 +132,6 @@ class HandshakeClientTest
         var repo = new ModifierProtocolRepository( TestModifierProtocols.values(), emptyList() );
         // given
         client.initiate( channel, applicationProtocolRepository, repo );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
@@ -187,7 +146,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -203,7 +161,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         client.handle( new ModifierProtocolResponse( StatusCode.SUCCESS, ModifierProtocolCategory.COMPRESSION.canonicalName(), SNAPPY.implementation() ) );
@@ -218,7 +175,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -241,7 +197,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -262,7 +217,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -281,7 +235,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -302,7 +255,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
 
         // when
@@ -317,7 +269,6 @@ class HandshakeClientTest
     {
         // given
         client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
-        client.handle( InitialMagicMessage.instance() );
 
         // when
         client.handle( new SwitchOverResponse( StatusCode.SUCCESS ) );
@@ -335,7 +286,6 @@ class HandshakeClientTest
                 singletonList( new ModifierSupportedProtocols( ModifierProtocolCategory.COMPRESSION, emptyList() ) ) );
 
         client.initiate( channel, applicationProtocolRepository, repo );
-        client.handle( InitialMagicMessage.instance() );
         client.handle( new ApplicationProtocolResponse( StatusCode.SUCCESS, applicationProtocolIdentifier.canonicalName(), raftVersion ) );
         client.handle(
                 new ModifierProtocolResponse( StatusCode.SUCCESS, SNAPPY.category(), SNAPPY.implementation() ) );

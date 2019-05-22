@@ -42,9 +42,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-/**
- * @see HandshakeServerEnsureMagicTest
- */
 class HandshakeServerTest
 {
     private final Channel channel = mock( Channel.class );
@@ -65,9 +62,6 @@ class HandshakeServerTest
     @Test
     void shouldDeclineUnallowedApplicationProtocol()
     {
-        // given
-        server.handle( InitialMagicMessage.instance() );
-
         // when
         server.handle( new ApplicationProtocolRequest( TestApplicationProtocols.CATCHUP_1.category(),
                 Set.of( TestApplicationProtocols.CATCHUP_1.implementation() ) ) );
@@ -79,9 +73,6 @@ class HandshakeServerTest
     @Test
     void shouldExceptionallyCompleteProtocolStackOnUnallowedApplicationProtocol()
     {
-        // given
-        server.handle( InitialMagicMessage.instance() );
-
         // when
         server.handle( new ApplicationProtocolRequest( TestApplicationProtocols.CATCHUP_1.category(),
                 Set.of( TestApplicationProtocols.CATCHUP_1.implementation() ) ) );
@@ -91,41 +82,10 @@ class HandshakeServerTest
     }
 
     @Test
-    void shouldDisconnectOnWrongMagicValue()
-    {
-        // when
-        server.handle( new InitialMagicMessage( "PLAIN_VALUE" ) );
-
-        // then
-        verify( channel ).dispose();
-    }
-
-    @Test
-    void shouldExceptionallyCompleteProtocolStackOnWrongMagicValue()
-    {
-        // when
-        server.handle( new InitialMagicMessage( "PLAIN_VALUE" ) );
-
-        // then
-        assertExceptionallyCompletedProtocolStackFuture();
-    }
-
-    @Test
-    void shouldAcceptCorrectMagicValue()
-    {
-        // when
-        server.handle( InitialMagicMessage.instance() );
-
-        // then
-        assertUnfinished();
-    }
-
-    @Test
     void shouldSendApplicationProtocolResponseForKnownProtocol()
     {
         // given
         var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), versions ) );
@@ -140,7 +100,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), versions ) );
@@ -154,7 +113,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ApplicationProtocolRequest( "UNKNOWN", versions ) );
@@ -170,7 +128,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( new ApplicationProtocolVersion( 1, 0 ), new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ApplicationProtocolRequest( "UNKNOWN", versions ) );
@@ -184,7 +141,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( TestModifierProtocols.allVersionsOf( COMPRESSION ) );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), versions ) );
@@ -200,7 +156,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( SNAPPY.implementation(), LZO.implementation(), LZ4.implementation() );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), versions ) );
@@ -214,7 +169,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( "Not a real protocol" );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         var protocolName = COMPRESSION.canonicalName();
@@ -230,7 +184,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( "not a real algorithm" );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         var protocolName = COMPRESSION.canonicalName();
@@ -245,7 +198,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( SNAPPY.implementation(), LZO.implementation(), LZ4.implementation() );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         var protocolName = "let's just randomly reorder all the bytes";
@@ -261,7 +213,6 @@ class HandshakeServerTest
     {
         // given
         var versions = Set.of( SNAPPY.implementation(), LZO.implementation(), LZ4.implementation() );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         var protocolName = "let's just randomly reorder all the bytes";
@@ -277,7 +228,6 @@ class HandshakeServerTest
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
         var unknownProtocolName = "UNKNOWN";
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( unknownProtocolName, Set.of( version ) ) );
 
         // when
@@ -295,7 +245,6 @@ class HandshakeServerTest
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
         var unknownProtocolName = "UNKNOWN";
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( unknownProtocolName, Set.of( version ) ) );
 
         // when
@@ -310,7 +259,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new SwitchOverRequest( RAFT_1.category(), version, emptyList() ) );
@@ -326,7 +274,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
 
         // when
         server.handle( new SwitchOverRequest( RAFT_1.category(), version, emptyList() ) );
@@ -340,7 +287,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
 
         // when
@@ -357,7 +303,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
 
         // when
@@ -373,7 +318,6 @@ class HandshakeServerTest
         // given
         var modifierVersion = ROT13.implementation();
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( modifierVersion ) ) );
 
@@ -394,7 +338,6 @@ class HandshakeServerTest
         // given
         var modifierVersion = ROT13.implementation();
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( modifierVersion ) ) );
 
@@ -413,7 +356,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( SNAPPY.implementation() ) ) );
         server.handle( new ModifierProtocolRequest( GRATUITOUS_OBFUSCATION.canonicalName(), Set.of( ROT13.implementation() ) ) );
@@ -436,7 +378,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( SNAPPY.implementation() ) ) );
         server.handle( new ModifierProtocolRequest( GRATUITOUS_OBFUSCATION.canonicalName(), Set.of( ROT13.implementation() ) ) );
@@ -457,7 +398,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( SNAPPY.implementation() ) ) );
 
@@ -479,7 +419,6 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( SNAPPY.implementation() ) ) );
 
@@ -499,14 +438,12 @@ class HandshakeServerTest
     {
         // given
         var version = new ApplicationProtocolVersion( 1, 0 );
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( version ) ) );
 
         // when
         server.handle( new SwitchOverRequest( RAFT_1.category(), version, emptyList() ) );
 
         // then
-        verify( channel ).writeAndFlush( InitialMagicMessage.instance() );
         verify( channel ).writeAndFlush( new SwitchOverResponse( SUCCESS ) );
         var protocolStack = server.protocolStackFuture().getNow( null );
         assertThat( protocolStack, equalTo( new ProtocolStack( RAFT_1, emptyList() ) ) );
@@ -516,7 +453,6 @@ class HandshakeServerTest
     void shouldCompleteProtocolStackOnSuccessfulSwitchOverWithModifierProtocols()
     {
         // given
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( RAFT_1.implementation() ) ) );
         server.handle( new ModifierProtocolRequest( COMPRESSION.canonicalName(), Set.of( SNAPPY.implementation() ) ) );
         server.handle( new ModifierProtocolRequest( GRATUITOUS_OBFUSCATION.canonicalName(), Set.of( ROT13.implementation() ) ) );
@@ -529,7 +465,6 @@ class HandshakeServerTest
         server.handle( new SwitchOverRequest( RAFT_1.category(), RAFT_1.implementation(), modifierRequest ) );
 
         // then
-        verify( channel ).writeAndFlush( InitialMagicMessage.instance() );
         verify( channel ).writeAndFlush( new SwitchOverResponse( SUCCESS ) );
         var protocolStack = server.protocolStackFuture().getNow( null );
         var modifiers = List.<ModifierProtocol>of( SNAPPY, ROT13 );
@@ -552,7 +487,6 @@ class HandshakeServerTest
 
         var server = new HandshakeServer( applicationProtocolRepository, modifierProtocolRepository, channel );
 
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), Set.of( RAFT_1.implementation() ) ) );
         server.handle( new ModifierProtocolRequest(
                 COMPRESSION.canonicalName(),
@@ -563,7 +497,6 @@ class HandshakeServerTest
         server.handle( new SwitchOverRequest( RAFT_1.category(), RAFT_1.implementation(), modifierRequest ) );
 
         // then
-        verify( channel ).writeAndFlush( InitialMagicMessage.instance() );
         verify( channel ).writeAndFlush( new SwitchOverResponse( SUCCESS ) );
         var protocolStack = server.protocolStackFuture().getNow( null );
         var modifiers = List.<ModifierProtocol>of( SNAPPY );
@@ -581,14 +514,12 @@ class HandshakeServerTest
 
         var server = new HandshakeServer( applicationProtocolRepository, modifierProtocolRepository, channel );
 
-        server.handle( InitialMagicMessage.instance() );
         server.handle( new ApplicationProtocolRequest( RAFT.canonicalName(), requestedVersions ) );
 
         // when
         server.handle( new SwitchOverRequest( RAFT_1.category(), expectedNegotiatedVersion, emptyList() ) );
 
         // then
-        verify( channel ).writeAndFlush( InitialMagicMessage.instance() );
         verify( channel ).writeAndFlush( new SwitchOverResponse( SUCCESS ) );
         var protocolStack = server.protocolStackFuture().getNow( null );
         var expectedProtocolStack = new ProtocolStack(

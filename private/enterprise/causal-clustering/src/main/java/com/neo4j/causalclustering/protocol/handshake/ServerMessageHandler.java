@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 public interface ServerMessageHandler
 {
-    void handle( InitialMagicMessage magicMessage );
-
     void handle( ApplicationProtocolRequest applicationProtocolRequest );
 
     void handle( ModifierProtocolRequest modifierProtocolRequest );

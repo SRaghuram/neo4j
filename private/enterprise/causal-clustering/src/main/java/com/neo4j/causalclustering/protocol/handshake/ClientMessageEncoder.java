@@ -33,13 +33,6 @@ public class ClientMessageEncoder extends MessageToByteEncoder<ServerMessage>
         }
 
         @Override
-        public void handle( InitialMagicMessage magicMessage )
-        {
-            out.writeInt( InitialMagicMessage.MESSAGE_CODE );
-            StringMarshal.marshal( out, magicMessage.magic() );
-        }
-
-        @Override
         public void handle( ApplicationProtocolRequest applicationProtocolRequest )
         {
             out.writeInt( ApplicationProtocolRequest.MESSAGE_CODE );

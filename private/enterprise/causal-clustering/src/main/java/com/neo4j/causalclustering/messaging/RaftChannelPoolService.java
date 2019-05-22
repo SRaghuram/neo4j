@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChannelPoolService;
-import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -20,28 +20,28 @@ import org.neo4j.scheduler.JobScheduler;
 public class RaftChannelPoolService extends ChannelPoolService
 {
     public RaftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, LogProvider logProvider,
-            HandshakeClientInitializer handshakeClientInitializer )
+            ClientChannelInitializer channelInitializer )
     {
         super( bootstrapConfiguration, scheduler, Group.RAFT_CLIENT,
-                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), handshakeClientInitializer ) );
+                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ) );
     }
 
     private static class PipelineInstaller extends AbstractChannelPoolHandler
     {
         private final Log log;
-        private final HandshakeClientInitializer handshakeClientInitializer;
+        private final ClientChannelInitializer channelInitializer;
 
-        PipelineInstaller( Log log, HandshakeClientInitializer handshakeClientInitializer )
+        PipelineInstaller( Log log, ClientChannelInitializer channelInitializer )
         {
             this.log = log;
-            this.handshakeClientInitializer = handshakeClientInitializer;
+            this.channelInitializer = channelInitializer;
         }
 
         @Override
         public void channelCreated( Channel ch )
         {
             log.info( "Channel created [%s]", ch );
-            ch.pipeline().addLast( handshakeClientInitializer );
+            ch.pipeline().addLast( channelInitializer );
         }
     }
 }

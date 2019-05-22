@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
-import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.channel.Channel;
 
 import java.util.OptionalLong;
@@ -30,9 +28,9 @@ class CatchupChannel
         getOrCreateResponseHandler().setResponseHandler( handler, requestOutcomeSignal );
     }
 
-    CompletableFuture<ApplicationProtocol> protocol()
+    ApplicationProtocol protocol()
     {
-        return pooledChannel.getAttribute( ChannelAttribute.PROTOCOL_STACK ).thenApply( ProtocolStack::applicationProtocol );
+        return pooledChannel.protocolStack().applicationProtocol();
     }
 
     void send( CatchupProtocolMessage message )

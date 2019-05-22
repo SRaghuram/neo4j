@@ -20,8 +20,10 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -61,6 +63,11 @@ class TestCatchupServer extends Server
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
                 protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
-        return new HandshakeServerInitializer( catchupRepository, modifierRepository, protocolInstallerRepository, pipelineBuilder, logProvider );
+        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( catchupRepository, modifierRepository, protocolInstallerRepository,
+                pipelineBuilder, logProvider );
+
+        var handshakeTimeout = Duration.ofSeconds( 60 );
+
+        return new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout, logProvider );
     }
 }

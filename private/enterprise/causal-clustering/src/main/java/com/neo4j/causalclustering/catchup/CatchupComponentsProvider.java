@@ -123,6 +123,7 @@ public final class CatchupComponentsProvider
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
                 .serverName( CATCHUP_SERVER_NAME )
+                .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .build();
     }
 

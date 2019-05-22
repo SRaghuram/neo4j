@@ -18,10 +18,12 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.ServerSocketChannel;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -57,6 +59,7 @@ public final class CatchupServerBuilder
         private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
+        private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private ConnectorPortRegister portRegister;
         private String serverName = "catchup-server";
         private BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
@@ -143,6 +146,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout )
+        {
+            this.handshakeTimeout = handshakeTimeout;
+            return this;
+        }
+
+        @Override
         public NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
@@ -162,11 +172,14 @@ public final class CatchupServerBuilder
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
                     protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
-            HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+            HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilder, debugLogProvider );
+            ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout,
+                    debugLogProvider );
+
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
-            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, portRegister,
+            return new Server( channelInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, portRegister,
                     bootstrapConfiguration );
         }
     }
@@ -219,9 +232,13 @@ public final class CatchupServerBuilder
     public interface AcceptsOptionalParams
     {
         AcceptsOptionalParams serverName( String serverName );
+
         AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
+
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
+
+        AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout );
+
         Server build();
     }
-
 }

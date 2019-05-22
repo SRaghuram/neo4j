@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChannelPoolService;
-import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
+import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -24,17 +24,17 @@ class CatchupChannelPoolService extends ChannelPoolService
     static final AttributeKey<TrackingResponseHandler> TRACKING_RESPONSE_HANDLER = AttributeKey.valueOf( "TRACKING_RESPONSE_HANDLER" );
 
     CatchupChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
-            Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory )
+            Function<CatchupResponseHandler,ClientChannelInitializer> initializerFactory )
     {
         super( bootstrapConfiguration, jobScheduler, Group.CATCHUP_CLIENT, new TrackingResponsePoolHandler( initializerFactory, clock ) );
     }
 
     private static class TrackingResponsePoolHandler extends AbstractChannelPoolHandler
     {
-        private final Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory;
+        private final Function<CatchupResponseHandler,ClientChannelInitializer> initializerFactory;
         private final Clock clock;
 
-        TrackingResponsePoolHandler( Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory, Clock clock )
+        TrackingResponsePoolHandler( Function<CatchupResponseHandler,ClientChannelInitializer> initializerFactory, Clock clock )
         {
             this.initializerFactory = initializerFactory;
             this.clock = clock;

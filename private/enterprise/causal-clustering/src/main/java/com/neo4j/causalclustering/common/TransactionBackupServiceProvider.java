@@ -71,6 +71,7 @@ public class TransactionBackupServiceProvider
                     .portRegister( portRegister )
                     .debugLogProvider( logProvider )
                     .serverName( BACKUP_SERVER_NAME )
+                    .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                     .build();
             return Optional.of( catchupServer );
         }

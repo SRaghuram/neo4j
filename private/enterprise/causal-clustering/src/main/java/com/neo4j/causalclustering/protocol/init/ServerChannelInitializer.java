@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.protocol.init;
+
+import com.neo4j.causalclustering.net.ChildInitializer;
+import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+
+import java.time.Duration;
+
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
+/**
+ * A {@link ChannelInitializer} for server connections. It performs an initial handshake using a {@link InitialMagicMessage}
+ * and then installs a different {@link ChannelInitializer}. The next initializer is supposed to handle further protocol negotiations.
+ *
+ * @see HandshakeServerInitializer
+ */
+public class ServerChannelInitializer implements ChildInitializer
+{
+    private final ChannelInitializer<?> handshakeInitializer;
+    private final NettyPipelineBuilderFactory pipelineBuilderFactory;
+    private final Duration timeout;
+    private final LogProvider logProvider;
+    private final Log log;
+
+    public ServerChannelInitializer( ChannelInitializer<?> handshakeInitializer, NettyPipelineBuilderFactory pipelineBuilderFactory,
+            Duration timeout, LogProvider logProvider )
+    {
+        this.handshakeInitializer = handshakeInitializer;
+        this.pipelineBuilderFactory = pipelineBuilderFactory;
+        this.timeout = timeout;
+        this.logProvider = logProvider;
+        this.log = logProvider.getLog( getClass() );
+    }
+
+    @Override
+    public void initChannel( Channel channel ) throws Exception
+    {
+        log.info( "Initializing server channel %s", channel );
+
+        pipelineBuilderFactory.server( channel, log )
+                .add( "read_timeout_handler", new ReadTimeoutHandler( timeout.toMillis(), MILLISECONDS ) )
+                .add( InitMagicMessageEncoder.NAME, new InitMagicMessageEncoder() )
+                .add( InitMagicMessageDecoder.NAME, new InitMagicMessageDecoder( logProvider ) )
+                .add( InitMagicMessageServerHandler.NAME, new InitMagicMessageServerHandler( handshakeInitializer, pipelineBuilderFactory, logProvider ) )
+                .install();
+    }
+}

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
+import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.AttributeKey;
@@ -14,17 +15,20 @@ public class PooledChannel
 {
     private final Channel channel;
     private final ChannelPool pool;
+    private final ProtocolStack protocolStack;
 
     /**
      * Channel that belongs to a {@link ChannelPool}. Should always be released after finished using.
      *
      * @param channel the {@link Channel}
      * @param pool {@link ChannelPool} which the channel was acquired from.
+     * @param protocolStack the protocol stack used by this channel.
      */
-    PooledChannel( Channel channel, ChannelPool pool )
+    PooledChannel( Channel channel, ChannelPool pool, ProtocolStack protocolStack )
     {
         this.channel = channel;
         this.pool = pool;
+        this.protocolStack = protocolStack;
     }
 
     public <ATTR> ATTR getAttribute( AttributeKey<ATTR> key )
@@ -35,6 +39,11 @@ public class PooledChannel
     public Channel channel()
     {
         return channel;
+    }
+
+    public ProtocolStack protocolStack()
+    {
+        return protocolStack;
     }
 
     /**
