@@ -65,7 +65,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     str <- _unsignedIntString(prefix, radix)
     neg <- _boolean
     sig = if (neg) "-" else ""
-  } yield List(sig, prefix, str).mkString
+  } yield List(sig, str).mkString
 
   def _unsignedIntLit: Gen[UnsignedDecimalIntegerLiteral] =
     _unsignedIntString("", 10).map(UnsignedDecimalIntegerLiteral(_)(?))
