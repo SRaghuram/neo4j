@@ -183,7 +183,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
                 if ( outcome == PublishClusterIdOutcome.TIMEOUT )
                 {
-                    log.warn( "Attempt to set clusterId timed out" );
+                    log.warn( "Attempt to publish the clusterId to all other discovery members timed out" );
                     throw new DiscoveryTimeoutException();
                 }
 
@@ -193,7 +193,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             {
                 if ( e.getCause() instanceof AskTimeoutException )
                 {
-                    log.warn( "Attempt to set clusterId timed out" );
+                    log.warn( "Attempt validate published clusterId against other discovery members timed out" );
                     throw new DiscoveryTimeoutException( e );
                 }
                 log.error( e.getCause().getMessage() );
