@@ -15,9 +15,9 @@ import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseExistsException;
-import org.neo4j.dbms.database.DatabaseManagementException;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;

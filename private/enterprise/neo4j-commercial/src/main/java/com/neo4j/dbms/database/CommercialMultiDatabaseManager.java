@@ -6,8 +6,8 @@
 package com.neo4j.dbms.database;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.database.DatabaseManagementException;
-import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
