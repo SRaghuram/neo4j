@@ -21,8 +21,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 
-import scala.collection.mutable
-
 /**
   * General purpose aggregation operator, supporting clauses like
   *
@@ -38,7 +36,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   self =>
 
-  type AggPreMap = mutable.LinkedHashMap[groupings.KeyType, Array[Updater]]
+  type AggPreMap = java.util.LinkedHashMap[groupings.KeyType, Array[Updater]]
+
+  private val newUpdaters: java.util.function.Function[ groupings.KeyType, Array[Updater]] =
+    (_: groupings.KeyType) => aggregations.map(_.newUpdater)
 
   def mapper(argumentSlotOffset: Int,
              outputBufferId: BufferId,
@@ -95,7 +96,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         //loop over the entire morsel view and apply the aggregation
         while (morsel.isValidRow) {
           val groupingValue = groupings.computeGroupingKey(morsel, queryState)
-          val updaters = result.getOrElseUpdate(groupingValue, aggregations.map(_.newUpdater))
+          val updaters = result.computeIfAbsent(groupingValue, newUpdaters)
           var i = 0
           while (i < aggregations.length) {
             val value = expressionValues(i)(morsel, queryState)
@@ -130,14 +131,15 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     val reducerMap = new java.util.HashMap[groupings.KeyType, Array[Reducer]]
 
     override def update(data: AggPreMap): Unit = {
-      data.foreach[Unit] {
-        case (key, updaters) =>
-          val reducers = reducerMap.computeIfAbsent(key, key => aggregators.map(_.newStandardReducer))
-          var i = 0
-          while (i < reducers.length) {
-            reducers(i).update(updaters(i))
-            i += 1
-          }
+     val iterator = data.entrySet().iterator()
+      while (iterator.hasNext) {
+        val entry = iterator.next()
+        val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newStandardReducer))
+        var i = 0
+        while (i < reducers.length) {
+          reducers(i).update(entry.getValue()(i))
+          i += 1
+        }
       }
     }
 
@@ -150,12 +152,13 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     val reducerMap = new ConcurrentHashMap[groupings.KeyType, Array[Reducer]]
 
     override def update(data: AggPreMap): Unit = {
-      data.foreach[Unit] {
-        case (key, updaters) =>
-          val reducers = reducerMap.computeIfAbsent(key, key => aggregators.map(_.newConcurrentReducer))
+      val iterator = data.entrySet().iterator()
+      while (iterator.hasNext) {
+        val entry = iterator.next()
+          val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newConcurrentReducer))
           var i = 0
           while (i < reducers.length) {
-            reducers(i).update(updaters(i))
+            reducers(i).update(entry.getValue()(i))
             i += 1
           }
       }
