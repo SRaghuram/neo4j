@@ -12,6 +12,13 @@ import java.util.concurrent.atomic.AtomicInteger
   */
 class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
   private val data = new java.util.concurrent.ConcurrentLinkedQueue[T]()
+
+  /**
+    * The size counter is here in order to track the size of data, and we don't want to rely on `data.size`
+    * since that has linear complexity. The buffer has a soft requirement not to grow above `Buffer.MAX_SIZE_HINT`,
+    * since that is only a soft limit we don't need to worry about the situations where size and data.size temporarily
+    * gets out of sync.
+    */
   private val size = new AtomicInteger(0)
 
   override def hasData: Boolean = !data.isEmpty
