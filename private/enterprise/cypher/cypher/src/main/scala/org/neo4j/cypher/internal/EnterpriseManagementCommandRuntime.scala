@@ -254,9 +254,15 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case GrantTraverse(database, qualifier, roleName) => (_, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
 
+    case RevokeTraverse(database, qualifier, roleName) => (_, _) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
+
     // GRANT READ (prop) ON GRAPH foo NODES A (*) TO role
     case GrantRead(resource, database, qualifier, roleName) => (_, _) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
+
+    case RevokeRead(resource, database, qualifier, roleName) => (_, _) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _) =>
@@ -454,6 +460,48 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler.handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)
       ).handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
+    )
+  }
+
+  private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String) = {
+    val action = Values.stringValue(actionName)
+    val role = Values.stringValue(roleName)
+    val (property: Value, resourceType: Value, resourceMatch: String) = resource match {
+      case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MATCH (res:Resource {type: $resource, arg1: $property})")
+      case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MATCH (res:Resource {type: $resource})")
+      case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MATCH (res:Resource {type: $resource})") // The label is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant resource type $resource")
+    }
+    val (label: Value, qualifierMatch: String) = qualifier match {
+      case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {label: $label})")
+      case ast.AllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
+    }
+    val (dbName, db, scopeMatch) = database match {
+      case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
+    }
+    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+      s"""
+         |// Find the segment scope qualifier (eg. label qualifier, or all labels)
+         |$qualifierMatch
+         |
+         |// Find the segment connecting the database to the qualifier
+         |$scopeMatch
+         |
+         |// Find the action connecting the resource and segment
+         |$resourceMatch
+         |MATCH (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
+         |
+         |// Find the privilege assignment connecting the role to the action
+         |MATCH (r:Role {name: $$role})-[g:GRANTED]->(a)
+         |
+         |// Remove the assignment
+         |DELETE g
+         |RETURN g AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+      VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
+      QueryHandler.handleNoResult(() => throw new InvalidArgumentsException("The privilege or the role '" + roleName + "' does not exist."))
     )
   }
 

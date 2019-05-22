@@ -19,8 +19,8 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
@@ -240,6 +240,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
   private val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  private def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
+  private def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
   private def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
   private def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
   private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
@@ -254,7 +256,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
   }
 
   test("should grant traversal privilege to custom role for all databases but only a specific label") {
@@ -266,7 +268,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").label("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and a specific label") {
@@ -279,7 +281,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").database("foo").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").label("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and all labels") {
@@ -292,7 +294,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("find").role("custom").database("foo").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and multiple labels") {
@@ -307,8 +309,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantGraph().action("find").role("custom").database("foo").label("A").map,
-      grantGraph().action("find").role("custom").database("foo").label("B").map
+      grantTraverse().role("custom").database("foo").label("A").map,
+      grantTraverse().role("custom").database("foo").label("B").map
     ))
   }
 
@@ -441,6 +443,65 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     }) should be(2)
   }
 
+  test("should see properties and nodes when revoking privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("GRANT ROLE role1 TO joe")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role1")
+
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role1")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role1")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role1")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role1")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
   private def setupMultilabelData = {
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {foo:1, bar:2})")
@@ -458,7 +519,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").resource("all_properties").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").resource("all_properties").map))
   }
 
   test("should grant read privilege to custom role for all databases but only a specific label") {
@@ -470,7 +531,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").resource("all_properties").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").resource("all_properties").label("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and a specific label") {
@@ -483,7 +544,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").resource("all_properties").label("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and all labels") {
@@ -496,7 +557,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().action("read").role("custom").database("foo").resource("all_properties").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").resource("all_properties").map))
   }
 
   test("should grant read privilege to custom role for a specific database and multiple labels") {
@@ -511,8 +572,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("A").map,
-      grantGraph().action("read").role("custom").database("foo").resource("all_properties").label("B").map
+      grantRead().role("custom").database("foo").resource("all_properties").label("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").label("B").map
     ))
   }
 
@@ -534,7 +595,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().role("custom").action("read").property("bar").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").map))
   }
 
   test("should grant read privilege for specific property to custom role for all databases but only a specific label") {
@@ -546,7 +607,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().role("custom").action("read").property("bar").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").label("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and a specific label") {
@@ -559,7 +620,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").label("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and all labels") {
@@ -572,7 +633,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantGraph().database("foo").role("custom").action("read").property("bar").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and multiple labels") {
@@ -587,8 +648,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
-      grantGraph().database("foo").role("custom").action("read").property("bar").label("B").map
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
     ))
   }
 
@@ -604,8 +665,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
-      grantGraph().database("foo").role("custom").action("read").property("baz").label("A").map
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("baz").label("A").map
     ))
   }
 
@@ -621,9 +682,205 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantGraph().database("foo").role("custom").action("read").property("bar").label("A").map,
-      grantGraph().database("foo").role("custom").action("read").property("baz").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("baz").label("B").map
     ))
+  }
+
+  test("should revoke correct read privilege different label qualifier") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT READ (bar) ON GRAPH foo NODES B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (bar) ON GRAPH foo NODES A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (bar) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+  }
+
+  test("should revoke correct read privilege different property") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT READ (a) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT READ (b) ON GRAPH foo NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("a").map,
+      grantRead().database("foo").role("custom").property("b").map,
+      grantRead().database("foo").role("custom").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (a) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("b").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("b").map
+    ))
+  }
+
+  test("should revoke correct read privilege different databases") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT READ (*) ON GRAPH bar NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").map,
+      grantRead().role("custom").database("foo").map,
+      grantRead().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").map,
+      grantRead().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").database("bar").map
+    ))
+  }
+
+
+
+  test("should revoke correct traverse privilege different label qualifier") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantTraverse().database("foo").role("custom").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantTraverse().database("foo").role("custom").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("B").map
+    ))
+  }
+
+  test("should revoke correct traverse privilege different databases") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH bar NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantTraverse().role("custom").database("foo").map,
+      grantTraverse().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantTraverse().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("bar").map
+    ))
+  }
+
+  test("should fail revoke privilege from non-existent role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+    } should have message "The privilege or the role 'wrongRole' does not exist."
+  }
+
+  test("should fail revoke privilege not granted to role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE ROLE role")
+    execute("CREATE DATABASE foo")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role")
+    } should have message "The privilege or the role 'role' does not exist."
   }
 
   test("should create role") {
@@ -1279,10 +1536,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   }
 
   override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.auth_enabled -> "true")
-
-  private def threadToStatementContextBridge() = {
-    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-  }
 
   private def selectDatabase(name: String): Unit = {
     val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(new DatabaseId(name))
