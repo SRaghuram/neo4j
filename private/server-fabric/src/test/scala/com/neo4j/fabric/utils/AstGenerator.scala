@@ -146,6 +146,27 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _parameter: Gen[Parameter] =
     _identifier.map(Parameter(_, AnyType.instance)(?))
 
+  def _arithmeticUnary: Gen[Expression] = for {
+    r <- _expression
+    exp <- Gen.oneOf(
+      UnaryAdd(r)(?),
+      UnarySubtract(r)(?)
+    )
+  } yield exp
+  def _arithmeticBinary: Gen[Expression] = for {
+    l <- _expression
+    r <- _expression
+    exp <- Gen.oneOf(
+      Add(l, r)(?),
+      Multiply(l, r)(?),
+      Divide(l, r)(?),
+      Pow(l, r)(?),
+      Modulo(l, r)(?),
+      Subtract(l, r)(?)
+    )
+  } yield exp
+
+//  ContainerIndex(l, r)(?),
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
@@ -163,6 +184,11 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_predicateUnary),
         Gen.lzy(_predicateBinary),
         Gen.lzy(_predicateComparisonChain)
+
+      ),
+      1 -> Gen.oneOf(
+        Gen.lzy(_arithmeticUnary),
+        Gen.lzy(_arithmeticBinary)
       )
     )
 
