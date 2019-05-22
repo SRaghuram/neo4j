@@ -13,7 +13,8 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager, DatabaseNotFoundException}
+import org.neo4j.dbms.api.DatabaseNotFoundException
+import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException

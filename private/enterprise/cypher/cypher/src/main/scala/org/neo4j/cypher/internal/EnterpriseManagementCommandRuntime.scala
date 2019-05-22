@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.dbms.database.DatabaseNotFoundException
+import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.impl.query.QueryExecution
@@ -146,7 +146,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
           .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
-          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
           .handleResult(_ => clearCacheForUser(userName))
       )
 
