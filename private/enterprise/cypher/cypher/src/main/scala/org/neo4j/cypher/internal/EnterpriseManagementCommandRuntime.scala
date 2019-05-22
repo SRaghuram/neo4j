@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.result.InternalExecutionResult
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
+import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -43,12 +44,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
   override def name: String = "enterprise management-commands"
 
-  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext, username: String): ExecutionPlan = {
+  private def throwCantCompile(unknownPlan: LogicalPlan): Nothing = {
+    throw new CantCompileQueryException(
+      s"Plan is not a recognized database administration command: ${unknownPlan.getClass.getSimpleName}")
+  }
 
-    def throwCantCompile(unknownPlan: LogicalPlan): Nothing = {
-      throw new CantCompileQueryException(
-        s"Plan is not a recognized database administration command: ${unknownPlan.getClass.getSimpleName}")
-    }
+  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext, username: String): ExecutionPlan = {
 
     val (withSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
@@ -136,7 +137,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
           case Some(value: String) =>
             Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(UTF8.encode(value)), secureHasher).serialize())))
-          case Some(p) => throw new IllegalArgumentException(s"Invalid option type for ALTER USER, expected string or boolean but got: ${p.getClass.getSimpleName}")
+          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected string or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
       val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
@@ -231,31 +232,39 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // GRANT ROLE foo TO user
-    case GrantRolesToUsers(roleNames, userNames) => (_, _, _) =>
-      val roles = Values.stringArray(roleNames: _*)
-      val users = Values.stringArray(userNames: _*)
+    case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping, currentUser) =>
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
-        """UNWIND $roles AS role
-          |UNWIND $users AS user
-          |MATCH (r:Role {name: role}), (u:User {name: user})
+        """MATCH (r:Role {name: $role})
+          |OPTIONAL MATCH (u:User {name: $user})
+          |WITH r, u
           |MERGE (u)-[a:HAS_ROLE]->(r)
-          |RETURN user, collect(role) AS roles""".stripMargin,
-        VirtualValues.map(Array("roles", "users"), Array(roles, users)),
-        QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
+          |RETURN u.name AS user""".stripMargin,
+        VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
+        QueryHandler
+          .handleResult(row => clearCacheForUser(row.get("user").toString))
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot grant non-existent role '$roleName' to user '$userName'"))
+          .handleError(e => throw new InvalidArgumentsException(s"Cannot grant role '$roleName' to non-existent user '$userName'")),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
     // REVOKE ROLE foo FROM user
-    case RevokeRolesFromUsers(roleNames, userNames) => (_, _, _) =>
-      val roles = Values.stringArray(roleNames: _*)
-      val users = Values.stringArray(userNames: _*)
+    case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping, currentUser) =>
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
-        """UNWIND $roles AS role
-          |UNWIND $users AS user
-          |MATCH (u:User {name: user})-[a:HAS_ROLE]->(r:Role {name: role})
+        """MATCH (r:Role {name: $role})
+          |OPTIONAL MATCH (u:User {name: $user})
+          |WITH r, u
+          |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
-          |RETURN user, collect(role) AS roles""".stripMargin,
-        VirtualValues.map(Array("roles", "users"), Array(roles, users)),
-        QueryHandler.handleResult(row => clearCacheForUser(row.get("user").toString))
+          |RETURN u.name AS user""".stripMargin,
+        VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
+        QueryHandler
+          .handleResult(row => {
+            val u = row.get("user")
+            if (u != null) clearCacheForUser(u.toString)
+            else throw new InvalidArgumentsException(s"Cannot revoke role '$roleName' from non-existent user '$userName'")
+          })
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot revoke non-existent role '$roleName' from user '$userName'")),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
     // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
@@ -398,6 +407,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // Ultimately this should go to the trigger handling done in the reconciler
   }
 
+  protected def clearCacheForRole(role: String): Unit = {
+    // TODO: Get handle on BasicSystemGraphRealm to clear the cache
+    //See: BasicSystemGraphRealm.clearCacheForRole(rolename)
+    // Ultimately this should go to the trigger handling done in the reconciler
+  }
+
   // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
   private val usernamePattern = Pattern.compile("^[\\x21-\\x2B\\x2D-\\x39\\x3B-\\x7E]+$")
 
@@ -467,8 +482,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |// Return the table of results
          |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
-      QueryHandler.handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)
-      ).handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
+      QueryHandler
+        .handleResult(row => clearCacheForRole(roleName))
+        .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
+        .handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t))
     )
   }
 
@@ -504,14 +521,28 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |MATCH (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
          |
          |// Find the privilege assignment connecting the role to the action
-         |MATCH (r:Role {name: $$role})-[g:GRANTED]->(a)
+         |OPTIONAL MATCH (r:Role {name: $$role})
+         |WITH a, r, d, q
+         |OPTIONAL MATCH (r)-[g:GRANTED]->(a)
          |
          |// Remove the assignment
          |DELETE g
          |RETURN g AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
-      QueryHandler.handleNoResult(() => throw new InvalidArgumentsException("The privilege or the role '" + roleName + "' does not exist."))
+      QueryHandler
+        .handleResult(row => {
+          if (row.get("role") == null) throw new InvalidArgumentsException(s"The role '$roleName' does not exist.")
+          if (row.get("grant") != null) clearCacheForRole(roleName)
+          else throw new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}.")
+        })
+        .handleNoResult(() => throw new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))
     )
+  }
+
+  private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier): String = {
+    // TODO: Improve description - or unify with main prettifier
+    val (res, db, label) = Prettifier.extractScope(resource, database, qualifier)
+    s"$actionName $res ON GRAPH $db NODES $label"
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =

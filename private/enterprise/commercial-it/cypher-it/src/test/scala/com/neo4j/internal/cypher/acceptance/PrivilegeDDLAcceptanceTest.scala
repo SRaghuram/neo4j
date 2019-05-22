@@ -867,7 +867,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
-    } should have message "The privilege or the role 'wrongRole' does not exist."
+    } should have message "The role 'wrongRole' does not exist."
   }
 
   test("should fail revoke privilege not granted to role") {
@@ -879,9 +879,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
-    the [InvalidArgumentsException] thrownBy {
+    val e = the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role")
-    } should have message "The privilege or the role 'role' does not exist."
+    }
+    e.getMessage should include("The role 'role' does not have the specified privilege")
   }
 
   // Tests for granting roles to users
@@ -992,38 +993,36 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
   }
 
-  test("should do nothing when granting non-existing role to user") {
-    // TODO this test should fail
-    //   There are two parts and they are surrounded by out-commented error checking
+  test("should fail when granting non-existing role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-    //    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE dragon TO Bar")
-    //    } should have message "Role 'dragon' does not exist."
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-  // and an invalid (non-existing) one
-    //    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE `` TO Bar")
-    //    } should have message "Role '' does not exist."
+    // and an invalid (non-existing) one
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE `` TO Bar")
+      // THEN
+    } should have message "Cannot grant non-existent role '' to user 'Bar'"
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 
-  test("should do nothing when granting role to non-existing user") {
-    // TODO this test should fail
-    //   There are two parts and they are surrounded by out-commented error checking
+  test("should fail when granting role to non-existing user") {
     // GIVEN
     val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "is_built_in" -> false, "member" -> null))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1031,48 +1030,50 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
-    //    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
-    //    } should have message "User 'Bar' does not exist."
+      // THEN
+    } should have message "Cannot grant role 'dragon' to non-existent user 'Bar'"
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
-  // and an invalid (non-existing) one
+    // and an invalid (non-existing) one
 
-    //    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO ``")
-    //    } should have message "User '' does not exist."
+      // THEN
+    } should have message "Cannot grant role 'dragon' to non-existent user ''"
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
   }
 
-  test("should do nothing when granting non-existing role to non-existing user") {
-    // TODO this test should fail
-    //   There are two parts and they are surrounded by out-commented error checking
+  test("should fail when granting non-existing role to non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-    //    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
-    //    } should have message "Role 'dragon' does not exist."
+      // THEN
+    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) ones
-    //    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE `` TO ``")
-    //    } should have message "Role '' does not exist."
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE `` TO ``")
+      // THEN
+    } should have message "Cannot grant non-existent role '' to user ''"
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
@@ -1129,39 +1130,45 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
-  //TODO reevaluate if that is the behaviour we really want (or an error)
-  test("should not fail revoking non-existent role from (existing) user") {
+  test("should fail revoking non-existent role from (existing) user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
 
-    // WHEN
-    execute("REVOKE ROLE custom FROM user").toSet should be (Set.empty) // it should work but do nothing
+    the [InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
   }
 
-  //TODO reevaluate if that is the behaviour we really want (or an error)
-  test("should not fail revoking role from non-existing user") {
+  test("should fail revoking role from non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("REVOKE ROLE custom FROM user").toSet should be (Set.empty)
+    the [InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke role 'custom' from non-existent user 'user'"
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
-  //TODO reevaluate if that is the behaviour we really want (or an error)
-  test("should not fail revoking non-existing role from non-existing user") {
+  test("should fail revoking non-existing role from non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    // WHEN
-    execute("REVOKE ROLE custom FROM user").toSet should be (Set.empty)
+    the [InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)

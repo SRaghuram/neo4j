@@ -136,6 +136,49 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should grant and revoke multiple roles to multiple users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE ROLE foo")
+    execute("CREATE ROLE fum")
+    val admin = Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")
+    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "is_built_in" -> false)
+
+    // WHEN using single user and role version of GRANT
+    execute("GRANT ROLE foo TO Bar")
+    execute("GRANT ROLE foo TO Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz")))
+
+    // WHEN using single user and role version of REVOKE
+    execute("REVOKE ROLE foo FROM Bar")
+    execute("REVOKE ROLE foo FROM Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+
+    // WHEN granting with multiple users and roles version
+    execute("GRANT ROLE foo, fum TO Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking only one of many
+    execute("REVOKE ROLE foo FROM Bar")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking with multiple users and roles version
+    execute("REVOKE ROLE foo, fum FROM Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+  }
+
   // Tests for creating roles
 
   test("should create role") {
