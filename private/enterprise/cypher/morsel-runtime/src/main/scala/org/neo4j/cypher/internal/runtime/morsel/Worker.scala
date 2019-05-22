@@ -107,15 +107,18 @@ class Worker(val workerId: Int,
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
     val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
-    if (upstreamWorkUnitEvent != null) Seq(upstreamWorkUnitEvent) else Seq.empty
+    if (upstreamWorkUnitEvent != null) Array(upstreamWorkUnitEvent) else Worker.NO_WORK
   }
+}
+
+object Worker {
+  val NO_WORK: Seq[WorkUnitEvent] = Array.empty[WorkUnitEvent]
 }
 
 class Sleeper(val workerId: Int,
               private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
 
   private val sleepNs = sleepDuration.toNanos
-  private var isIdle = false
   private var workStreak = 0
   @volatile private var sleepy: Boolean = false
 

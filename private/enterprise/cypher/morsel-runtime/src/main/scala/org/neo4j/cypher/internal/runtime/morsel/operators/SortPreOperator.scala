@@ -9,13 +9,13 @@ import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 
 class SortPreOperator(val workIdentity: WorkIdentity,
                       argumentSlotOffset: Int,
@@ -50,7 +50,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     private def sortInPlace(morsel: MorselExecutionContext, comparator: Comparator[Integer]): MorselExecutionContext = {
       // First we create an array of the same size as the rows in the morsel that we'll sort.
       // This array contains only the pointers to the morsel rows
-      var outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
+      val outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
 
       // We have to sort everything
       java.util.Arrays.sort(outputToInputIndexes, comparator)
