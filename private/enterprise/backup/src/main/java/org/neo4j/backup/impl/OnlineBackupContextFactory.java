@@ -77,12 +77,10 @@ class OnlineBackupContextFactory
             "Perform additional consistency checks on property ownership. This check is *very* expensive in time and " +
             "memory.";
 
-    private final Path homeDir;
     private final Path configDir;
 
-    OnlineBackupContextFactory( Path homeDir, Path configDir )
+    OnlineBackupContextFactory( Path configDir )
     {
-        this.homeDir = homeDir;
         this.configDir = configDir;
     }
 
@@ -128,7 +126,7 @@ class OnlineBackupContextFactory
             Path configFile = configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
             Path additionalConfigFile = arguments.getOptionalPath( ARG_NAME_ADDITIONAL_CONFIG_DIR ).orElse( null );
 
-            Config config = buildConfig( pageCacheMemory, configFile, additionalConfigFile );
+            Config config = buildConfig( pageCacheMemory, configFile, additionalConfigFile, backupDirectory );
 
             return OnlineBackupContext.builder()
                     .withAddress( address )
@@ -154,10 +152,10 @@ class OnlineBackupContextFactory
         }
     }
 
-    private Config buildConfig( String pageCacheMemory, Path configFile, Path additionalConfigFile )
+    private Config buildConfig( String pageCacheMemory, Path configFile, Path additionalConfigFile, Path backupDirectory )
     {
         Config config = Config.fromFile( configFile )
-                .withHome( homeDir )
+                .withHome( backupDirectory )
                 .withConnectorsDisabled()
                 .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
                 .build();

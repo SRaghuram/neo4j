@@ -75,7 +75,7 @@ public class OnlineBackupCommandProvider implements AdminCommand.Provider
         LogProvider userLogProvider = FormattedLogProvider.toOutputStream( outsideWorld.outStream() );
         LogProvider internalLogProvider = buildInternalLogProvider( ctx, outsideWorld );
 
-        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( ctx.getHomeDir(), ctx.getConfigDir() );
+        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( ctx.getConfigDir() );
 
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
                 .withFileSystem( outsideWorld.fileSystem() )
