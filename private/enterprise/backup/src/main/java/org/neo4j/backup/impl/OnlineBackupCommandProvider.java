@@ -72,7 +72,7 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
         LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( debug ? Level.DEBUG : Level.NONE ).toOutputStream( outsideWorld.outStream() );
         Monitors monitors = new Monitors();
 
-        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( homeDir, configDir );
+        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( configDir );
         BackupModule backupModule = new BackupModule( outsideWorld, logProvider, monitors );
 
         BackupSupportingClassesFactoryProvider classesFactoryProvider =
