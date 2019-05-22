@@ -212,10 +212,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             }
 
             LabelSet labelSet = labelSupplier.get();
+            IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
             for ( long labelAsLong : labelSet.all() )
             {
                 int label = (int) labelAsLong;
-                IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
                 if ( whiteListed != null && whiteListed.contains( label ) )
                 {
                     return true;
