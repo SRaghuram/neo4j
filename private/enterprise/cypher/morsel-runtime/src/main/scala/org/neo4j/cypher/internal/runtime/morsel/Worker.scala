@@ -105,6 +105,10 @@ class Worker(val workerId: Int,
     }
   }
 
+  def close() :Unit = {
+    resources.close()
+  }
+
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
     val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
     if (upstreamWorkUnitEvent != null) Array(upstreamWorkUnitEvent) else Worker.NO_WORK

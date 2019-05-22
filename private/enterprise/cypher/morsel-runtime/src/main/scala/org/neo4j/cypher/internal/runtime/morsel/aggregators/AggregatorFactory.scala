@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, FunctionInvocation, Null, functions, Expression => AstExpression}
+import org.neo4j.cypher.internal.v4_0.util.SyntaxException
 
 case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
@@ -18,6 +19,12 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
     */
   def newAggregator(expression: AstExpression): (Aggregator, AstExpression) =
     expression match {
+        // TODO move somewhere else
+      case e if e.arguments.exists(_.containsAggregate) =>
+        throw new SyntaxException("Can't use aggregate functions inside of aggregate functions.")
+      case e if !e.isDeterministic =>
+        throw new SyntaxException("Can't use non-deterministic (random) functions inside of aggregate functions.")
+
       case _: CountStar => (CountStarAggregator, Null.NULL)
       case c: FunctionInvocation =>
         c.function match {

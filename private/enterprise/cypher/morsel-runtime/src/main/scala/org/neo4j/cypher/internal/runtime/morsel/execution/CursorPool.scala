@@ -22,7 +22,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     () => cursorFactory.allocateNodeLabelIndexCursor())
 
   override def close(): Unit = {
-    IOUtils.closeAll(nodeCursorPool)
+    IOUtils.closeAll(nodeCursorPool, relationshipGroupCursorPool, relationshipTraversalCursorPool, nodeValueIndexCursorPool, nodeLabelIndexCursorPool)
   }
 }
 
