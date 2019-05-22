@@ -270,9 +270,25 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     labels <- _smallNonemptyListOf(_labelName)
   } yield HasLabels(expression, labels)(?)
 
-  def _nodePatternExpr = for {
-    patterns <- _smallListOf(_nodePattern)
-  } yield NodePatternExpression(patterns)(?)
+  def _reduceScope = for {
+    accumulator <- _variable
+    variable <- _variable
+    expression <- _expression
+  } yield ReduceScope(accumulator, variable, expression)(?)
+
+  def _reduceExpr = for {
+    scope <- _reduceScope
+    init <- _expression
+    list <- _expression
+  } yield ReduceExpression(scope, init, list)(?)
+
+  def _relationshipsPattern: Gen[RelationshipsPattern] = for {
+    chain <- _relationshipChain
+  } yield RelationshipsPattern(chain)(?)
+
+  def _patternExpr: Gen[PatternExpression] = for {
+    pattern <- _relationshipsPattern
+  } yield PatternExpression(pattern)
 
   def _expression: Gen[Expression] =
     Gen.frequency(
@@ -302,7 +318,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_case),
         Gen.lzy(_functionInvocation),
         Gen.lzy(_countStar),
-//        Gen.lzy(_nodePatternExpr),
+        Gen.lzy(_reduceExpr),
+        Gen.lzy(_patternExpr),
         Gen.lzy(_map),
         Gen.lzy(_mapProjection),
         Gen.lzy(_property),
@@ -312,7 +329,6 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_containerIndex),
         Gen.lzy(_extract),
         Gen.lzy(_filter)
-//        Gen.lzy(_degree)
       )
     )
 
