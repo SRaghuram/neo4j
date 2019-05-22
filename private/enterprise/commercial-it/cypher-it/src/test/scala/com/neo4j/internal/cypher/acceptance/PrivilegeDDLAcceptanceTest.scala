@@ -287,6 +287,43 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should grant traversal privilege to custom role for a specific database and multiple labels in one grant") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A, B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").label("A").map,
+      grantTraverse().role("custom").database("foo").label("B").map
+    ))
+  }
+
+  test("should grant traversal privilege to multiple roles for a specific database and multiple labels in one grant") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo NODES A, B (*) TO role1, role2")
+
+    // THEN
+    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("role1").database("foo").label("A").map,
+      grantTraverse().role("role1").database("foo").label("B").map
+    ))
+    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("role2").database("foo").label("A").map,
+      grantTraverse().role("role2").database("foo").label("B").map
+    ))
+  }
+
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
   test("should fail when granting traversal privilege with missing database") {
@@ -688,6 +725,26 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should grant read privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT READ (a, b, c) ON GRAPH foo NODES A, B, C (*) TO role1, role2, role3")
+
+    // THEN
+    val expected = for (p <- Seq("a", "b", "c"); l <- Seq("A", "B", "C")) yield {
+      grantRead().database("foo").property(p).label(l)
+    }
+    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+  }
+
   // Tests for revoking privileges
 
   test("should revoke correct read privilege different label qualifier") {
@@ -993,6 +1050,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
   }
 
+  test("should fail grant non existent role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    the [InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE custom TO user")
+      // THEN
+    } should have message "Cannot grant non-existent role 'custom' to user 'user'"
+
+    // AND
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
   test("should fail when granting non-existing role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1017,7 +1089,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message "Cannot grant non-existent role '' to user 'Bar'"
 
-    // THEN
+    // AND
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
@@ -1164,13 +1236,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    the [InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
     } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
 
-    // THEN
+    // AND
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
   }
 

@@ -268,18 +268,22 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // GRANT TRAVERSE ON GRAPH foo NODES A (*) TO role
-    case GrantTraverse(database, qualifier, roleName) => (_, _, _) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
+    case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
-    case RevokeTraverse(database, qualifier, roleName) => (_, _, _) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName)
+    case RevokeTraverse(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
     // GRANT READ (prop) ON GRAPH foo NODES A (*) TO role
-    case GrantRead(resource, database, qualifier, roleName) => (_, _, _) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
+    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
-    case RevokeRead(resource, database, qualifier, roleName) => (_, _, _) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName)
+    case RevokeRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _, _) =>
@@ -438,7 +442,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     if (roleName != null && PredefinedRolesBuilder.roles.keySet.contains(roleName)) throw new InvalidArgumentsException(format("'%s' is a predefined role and can not be deleted or modified.", roleName))
   }
 
-  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String) = {
+  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String, source: Option[ExecutionPlan]) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
     val (property: Value, resourceType: Value, resourceMerge: String) = resource match {
@@ -485,11 +489,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       QueryHandler
         .handleResult(row => clearCacheForRole(roleName))
         .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
-        .handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t))
+        .handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)),
+      source
     )
   }
 
-  private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String) = {
+  private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String,source: Option[ExecutionPlan]) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
     val (property: Value, resourceType: Value, resourceMatch: String) = resource match {
@@ -535,7 +540,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           if (row.get("grant") != null) clearCacheForRole(roleName)
           else throw new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}.")
         })
-        .handleNoResult(() => throw new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))
+        .handleNoResult(() => throw new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist.")),
+      source
     )
   }
 
