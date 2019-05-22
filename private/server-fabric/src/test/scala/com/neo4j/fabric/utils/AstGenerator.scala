@@ -143,6 +143,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     items <- _smallListOf(_tuple(_propertyKeyName, _expression))
   } yield MapExpression(items)(?)
 
+  def _list: Gen[ListLiteral] = for {
+    parts <- _smallListOf(_expression)
+  } yield ListLiteral(parts)(?)
+
   def _parameter: Gen[Parameter] =
     _identifier.map(Parameter(_, AnyType.instance)(?))
 
@@ -173,6 +177,21 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     default <- Gen.option(_expression)
   } yield CaseExpression(expression, alternatives, default)(?)
 
+  def _namespace: Gen[Namespace] = for {
+    parts <- _smallListOf(_identifier)
+  } yield Namespace(parts)(?)
+
+  def _functionName: Gen[FunctionName] = for {
+    name <- _identifier
+  } yield FunctionName(name)(?)
+
+  def _functionInvocation: Gen[FunctionInvocation] = for {
+    namespace <- _namespace
+    functionName <- _functionName
+    distinct <- _boolean
+    args <- _smallListOf(_expression)
+  } yield FunctionInvocation(namespace, functionName, distinct, args.toIndexedSeq)(?)
+
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
@@ -198,7 +217,9 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       ),
       1 -> Gen.oneOf(
         Gen.lzy(_case),
-        Gen.lzy(_case)
+        Gen.lzy(_functionInvocation),
+        Gen.lzy(_map),
+        Gen.lzy(_list)
       )
     )
 
