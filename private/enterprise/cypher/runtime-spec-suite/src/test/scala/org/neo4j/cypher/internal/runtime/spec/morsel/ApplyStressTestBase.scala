@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 abstract class ApplyStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime) {
 
-  ignore("should support nested Apply") {
+  test("should support nested Apply") {
     // given
     init()
 

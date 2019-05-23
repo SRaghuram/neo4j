@@ -46,7 +46,7 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
       Seq("g", "amount")
     )
 
-  ignore("should support chained aggregations") {
+  test("should support chained aggregations") {
     // given
     init()
 
@@ -75,7 +75,7 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
     runtimeResult should beColumns("s").withSingleRow(expectedSingleRow.sum)
   }
 
-  ignore("should support aggregations after two expands") {
+  test("should support aggregations after two expands") {
     // given
     init()
 
