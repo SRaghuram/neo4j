@@ -18,6 +18,8 @@ import org.neo4j.metrics.output.CompositeEventReporter;
 import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.output.EventReporterBuilder;
 
+import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
+
 public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 {
     private final LifeSupport life = new LifeSupport();
@@ -43,15 +45,22 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     public void init()
     {
         configured = !reporter.isEmpty();
+        LogService logService = dependencies.logService();
+        Config config = dependencies.configuration();
+
+        if ( !config.get( metricsEnabled ) )
+        {
+            logger.info( "Metric is disabled by config. To activate, set '" + metricsEnabled.name() + "' to `true`." );
+            return;
+        }
+
         if ( !configured )
         {
             logger.warn( "Metrics extension reporting is not configured. Please configure one of the available exporting options to be able to use metrics. " +
                     "Metrics extension is disabled." );
             return;
         }
-        LogService logService = dependencies.logService();
-        Config configuration = dependencies.configuration();
-        new GlobalMetricsExporter( registry, configuration, logService, context, dependencies, life ).export();
+        new GlobalMetricsExporter( registry, config, logService, context, dependencies, life ).export();
         life.init();
     }
 

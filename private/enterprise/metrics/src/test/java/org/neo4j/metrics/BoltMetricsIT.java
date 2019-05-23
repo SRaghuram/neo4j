@@ -8,7 +8,6 @@ package org.neo4j.metrics;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
@@ -20,60 +19,61 @@ import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.DbmsExtension;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.test.PortUtils.getBoltPort;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( TestDirectoryExtension.class )
+@DbmsExtension( configurationCallback = "configure" )
 class BoltMetricsIT
 {
     @Inject
     private TestDirectory testDirectory;
 
-    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
-
+    @Inject
     private GraphDatabaseAPI db;
+
+    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+    private File metricsFolder;
     private TransportConnection conn;
-    private DatabaseManagementService managementService;
+
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        metricsFolder = testDirectory.directory( "metrics" );
+        builder.setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
+            .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
+            .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
+            .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
+            .setConfig( MetricsSettings.metricsEnabled, "true" )
+            .setConfig( MetricsSettings.boltMessagesEnabled, "true" )
+            .setConfig( MetricsSettings.csvEnabled, "true" )
+            .setConfig( MetricsSettings.csvInterval, "100ms" )
+            .setConfig( MetricsSettings.csvPath, metricsFolder.getAbsolutePath() )
+            .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+    }
 
     @AfterEach
     void cleanup() throws Exception
     {
         conn.disconnect();
-        managementService.shutdown();
     }
 
     @Test
     void shouldMonitorBolt() throws Throwable
     {
-        // Given
-        File metricsFolder = testDirectory.directory( "metrics" );
-        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
-                .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
-                .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
-                .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
-                .setConfig( MetricsSettings.metricsEnabled, "false" )
-                .setConfig( MetricsSettings.boltMessagesEnabled, "true" )
-                .setConfig( MetricsSettings.csvEnabled, "true" )
-                .setConfig( MetricsSettings.csvInterval, "100ms" )
-                .setConfig( MetricsSettings.csvPath, metricsFolder.getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
-        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
-
         // When
         conn = new SocketConnection()
                 .connect( new HostnamePort( "localhost", getBoltPort( db ) ) )

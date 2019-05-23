@@ -48,7 +48,7 @@ class FileDescriptorMetricsTestIT
         metricsFolder = testDirectory.directory( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( MetricsSettings.metricsEnabled, "false" )
+                .setConfig( MetricsSettings.metricsEnabled, "true" )
                 .setConfig( MetricsSettings.jvmFileDescriptorsEnabled, "true" )
                 .build();
     }

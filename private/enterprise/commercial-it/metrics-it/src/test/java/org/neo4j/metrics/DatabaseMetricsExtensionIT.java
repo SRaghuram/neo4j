@@ -61,7 +61,6 @@ class DatabaseMetricsExtensionIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE );
         builder.setConfig( MetricsSettings.metricsEnabled, Settings.TRUE );
         builder.setConfig( MetricsSettings.csvEnabled, Settings.TRUE );
         builder.setConfig( cypher_min_replan_interval, "0m" );

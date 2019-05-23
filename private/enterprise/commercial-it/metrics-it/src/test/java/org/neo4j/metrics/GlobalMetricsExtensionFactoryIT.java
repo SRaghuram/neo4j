@@ -64,7 +64,6 @@ class GlobalMetricsExtensionFactoryIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE );
         builder.setConfig( MetricsSettings.metricsEnabled, Settings.TRUE );
         builder.setConfig( MetricsSettings.jmxEnabled, Settings.TRUE );
         builder.setConfig( MetricsSettings.csvEnabled, Settings.TRUE );
@@ -107,7 +106,7 @@ class GlobalMetricsExtensionFactoryIT
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
 
         DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( disabledTracerDb )
-                .setConfig( MetricsSettings.neoEnabled, Settings.TRUE )
+                .setConfig( MetricsSettings.metricsEnabled, Settings.TRUE )
                 .setConfig( MetricsSettings.csvEnabled, Settings.TRUE )
                 .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!

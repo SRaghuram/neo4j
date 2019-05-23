@@ -41,70 +41,54 @@ public class MetricsSettings implements LoadableConfig
 
     // The below settings define what metrics to gather
     // By default everything is on
-    @Description( "The default enablement value for all the supported metrics. Set this to `false` to turn off all " +
-                  "metrics by default. The individual settings can then be used to selectively re-enable specific " +
-                  "metrics." )
+    @Description( "Enable metrics. Setting this to `false` will to turn off all metrics." )
     public static final Setting<Boolean> metricsEnabled = setting( "metrics.enabled", BOOLEAN, TRUE );
 
-    @Description( "The default enablement value for all Neo4j specific support metrics. Set this to `false` to turn " +
-                  "off all Neo4j specific metrics by default. The individual `metrics.neo4j.*` metrics can then be " +
-                  "turned on selectively." )
-    public static final Setting<Boolean> neoEnabled = buildSetting( "metrics.neo4j.enabled", BOOLEAN ).inherits( metricsEnabled ).build();
-
     @Description( "Enable reporting metrics about transactions; number of transactions started, committed, etc." )
-    public static final Setting<Boolean> neoTxEnabled = buildSetting( "metrics.neo4j.tx.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoTxEnabled = setting( "metrics.neo4j.tx.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the Neo4j page cache; page faults, evictions, flushes, exceptions, " +
                   "etc." )
-    public static final Setting<Boolean> neoPageCacheEnabled = buildSetting(
-            "metrics.neo4j.pagecache.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoPageCacheEnabled = setting( "metrics.neo4j.pagecache.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about approximately how many entities are in the database; nodes, " +
                   "relationships, properties, etc." )
-    public static final Setting<Boolean> neoCountsEnabled = buildSetting(
-            "metrics.neo4j.counts.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoCountsEnabled = setting( "metrics.neo4j.counts.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about Causal Clustering mode." )
-    public static final Setting<Boolean> causalClusteringEnabled = buildSetting(
-            "metrics.neo4j.causal_clustering.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> causalClusteringEnabled = setting( "metrics.neo4j.causal_clustering.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about Neo4j check pointing; when it occurs and how much time it takes to " +
                   "complete." )
-    public static final Setting<Boolean> neoCheckPointingEnabled = buildSetting(
-            "metrics.neo4j.checkpointing.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoCheckPointingEnabled = setting( "metrics.neo4j.checkpointing.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the Neo4j log rotation; when it occurs and how much time it takes to "
                   + "complete." )
-    public static final Setting<Boolean> neoLogRotationEnabled = buildSetting(
-            "metrics.neo4j.logrotation.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoLogRotationEnabled = setting( "metrics.neo4j.logrotation.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about Server threading info." )
-    public static final Setting<Boolean> neoServerEnabled = buildSetting(
-            "metrics.neo4j.server.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> neoServerEnabled = setting( "metrics.neo4j.server.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the duration of garbage collections" )
-    public static final Setting<Boolean> jvmGcEnabled =
-            buildSetting( "metrics.jvm.gc.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> jvmGcEnabled = setting( "metrics.jvm.gc.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the memory usage." )
-    public static final Setting<Boolean> jvmMemoryEnabled = buildSetting( "metrics.jvm.memory.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> jvmMemoryEnabled = setting( "metrics.jvm.memory.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the buffer pools." )
-    public static final Setting<Boolean> jvmBuffersEnabled = buildSetting( "metrics.jvm.buffers.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> jvmBuffersEnabled = setting( "metrics.jvm.buffers.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the current number of threads running." )
-    public static final Setting<Boolean> jvmThreadsEnabled = buildSetting( "metrics.jvm.threads.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> jvmThreadsEnabled = setting( "metrics.jvm.threads.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about the number of open file descriptors." )
-    public static final Setting<Boolean> jvmFileDescriptorsEnabled =
-            buildSetting( "metrics.jvm.file.descriptors.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> jvmFileDescriptorsEnabled = setting( "metrics.jvm.file.descriptors.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about number of occurred replanning events." )
-    public static final Setting<Boolean> cypherPlanningEnabled =
-            buildSetting( "metrics.cypher.replanning.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> cypherPlanningEnabled = setting( "metrics.cypher.replanning.enabled", BOOLEAN, TRUE );
 
     @Description( "Enable reporting metrics about Bolt Protocol message processing." )
-    public static final Setting<Boolean> boltMessagesEnabled = buildSetting( "metrics.bolt.messages.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+    public static final Setting<Boolean> boltMessagesEnabled = setting( "metrics.bolt.messages.enabled", BOOLEAN, TRUE );
 
     // CSV settings
     @Description( "Set to `true` to enable exporting metrics to CSV files" )

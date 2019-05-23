@@ -84,7 +84,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         long pagesInMemory = waitForCacheProfile( db.getMonitors() );
 
         db.restartDatabase(
-                MetricsSettings.neoPageCacheEnabled.name(), Settings.TRUE,
+                MetricsSettings.metricsEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvInterval.name(), "100ms",
                 MetricsSettings.csvPath.name(), metricsDirectory.getAbsolutePath() );
@@ -117,7 +117,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         };
         db.restartDatabase( useBackupDir,
                 OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE,
-                MetricsSettings.neoPageCacheEnabled.name(), Settings.TRUE,
+                MetricsSettings.metricsEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvInterval.name(), "100ms",
                 MetricsSettings.csvPath.name(), metricsDirectory.getAbsolutePath() );
@@ -188,7 +188,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         deleteRecursively( graphdb );
 
         File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
-        db.withSetting( MetricsSettings.neoPageCacheEnabled, Settings.TRUE )
+        db.withSetting( MetricsSettings.metricsEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvInterval, "100ms" )
           .withSetting( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
@@ -211,7 +211,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         long pagesInMemory = waitForCacheProfile( db.getMonitors() );
 
         db.restartDatabase(
-                MetricsSettings.neoPageCacheEnabled.name(), Settings.TRUE,
+                MetricsSettings.metricsEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvEnabled.name(), Settings.TRUE,
                 MetricsSettings.csvInterval.name(), "100ms",
                 MetricsSettings.csvPath.name(), metricsDirectory.getAbsolutePath() );
