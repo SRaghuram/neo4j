@@ -229,7 +229,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
       // THEN
-    } should have message "Trying to run `CATALOG GRANT TRAVERSE` against non-system database."
+    } should have message "Trying to run `GRANT TRAVERSE` against non-system database."
   }
 
   test("should grant traversal privilege to custom role for all databases but only a specific label (that does not need to exist)") {
@@ -745,7 +745,239 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
   }
 
-  // Tests for revoking privileges
+  // Tests for GRANT MATCH privileges
+
+  test("should grant MATCH privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantRead().role("custom").resource("all_properties").map
+    ))
+  }
+
+  test("should grant MATCH privilege to custom role for all databases but only a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").label("A").map,
+      grantRead().role("custom").resource("all_properties").label("A").map
+    ))
+  }
+
+  test("should grant MATCH privilege to custom role for a specific database and a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH foo NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").label("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").label("A").map
+    ))
+  }
+
+  test("should grant MATCH privilege to custom role for a specific database and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").map,
+      grantRead().role("custom").database("foo").resource("all_properties").map
+    ))
+  }
+
+  test("should grant MATCH privilege to custom role for a specific database and multiple labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH foo NODES B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").label("A").map,
+      grantTraverse().role("custom").database("foo").label("B").map,
+      grantRead().role("custom").database("foo").resource("all_properties").label("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").label("B").map
+    ))
+  }
+
+  test("should fail grant MATCH privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    the [DatabaseNotFoundException] thrownBy {
+      execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+    } should have message "Database 'foo' does not exist."
+  }
+
+  test("should grant MATCH privilege for specific property to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantRead().role("custom").property("bar").map
+    ))
+  }
+
+  test("should grant MATCH privilege for specific property to custom role for all databases but only a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").label("A").map,
+      grantRead().role("custom").property("bar").label("A").map
+    ))
+  }
+
+  test("should grant MATCH privilege for specific property to custom role for a specific database and a specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map
+    ))
+  }
+
+  test("should grant MATCH privilege for specific property to custom role for a specific database and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("bar").map
+    ))
+  }
+
+  test("should grant MATCH privilege for specific property to custom role for a specific database and multiple labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+  }
+
+  test("should grant MATCH privilege for multiple properties to custom role for a specific database and specific label") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (baz) ON GRAPH foo NODES A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("baz").label("A").map
+    ))
+  }
+
+  test("should grant MATCH privilege for multiple properties to custom role for a specific database and multiple labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (baz) ON GRAPH foo NODES B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantRead().database("foo").role("custom").property("baz").label("B").map
+    ))
+  }
+
+  test("should grant MATCH privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT MATCH (a, b, c) ON GRAPH foo NODES A, B, C (*) TO role1, role2, role3")
+
+    // THEN
+    val expected = (for (l <- Seq("A", "B", "C")) yield {
+      (for(p <- Seq("a", "b", "c")) yield {
+        grantRead().database("foo").property(p).label(l)
+      }) :+ grantTraverse().database("foo").label(l)
+    }).flatten
+    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+  }
+
+  // Tests for REVOKE READ, TRAVERSE and MATCH
 
   test("should revoke correct read privilege different label qualifier") {
     // GIVEN
