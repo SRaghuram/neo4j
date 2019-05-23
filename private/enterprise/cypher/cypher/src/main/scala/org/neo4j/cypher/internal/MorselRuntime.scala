@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.CompiledQueryResultRec
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics, createParameterArray}
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
@@ -189,9 +189,11 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
           nExpressionSlots,
           prePopulateResults,
           subscriber)
+        //Only call onResult on first call
+        subscriber.onResult(fieldNames.length)
       }
+
       querySubscription.request(numberOfRecords)
-      subscriber.onResult(fieldNames.length)
     }
 
     override def cancel(): Unit =
