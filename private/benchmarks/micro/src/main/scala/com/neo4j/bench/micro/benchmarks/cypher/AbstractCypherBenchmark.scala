@@ -35,7 +35,7 @@ import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead, Transac
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.{Database, DatabaseId}
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
@@ -111,7 +111,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val schemaRead = transactionalContext.kernelTransaction().schemaRead()
       val cursors = dependencyResolver.resolveDependency(classOf[Kernel]).cursors()
       val txBridge = dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, new LifeSupport)
+      val lifeSupport = dependencyResolver.resolveDependency( classOf[Database] ).getLife
+      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, lifeSupport)
       val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
       solve(logicalPlan)
       val compilationStateBefore = getLogicalQuery(logicalPlan, semanticTable, resultColumns)
