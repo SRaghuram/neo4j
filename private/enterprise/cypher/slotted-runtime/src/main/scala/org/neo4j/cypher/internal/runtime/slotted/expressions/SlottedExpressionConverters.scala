@@ -53,9 +53,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.ReferenceFromSlot(offset))
       case runtimeAst.NodeProperty(offset, token, _) =>
         Some(runtimeExpression.NodeProperty(offset, token))
-      case runtimeAst.CachedProperty(offset, token, cachedPropertyOffset, CACHED_NODE) =>
+      case runtimeAst.CachedProperty(_, _, offset, token, cachedPropertyOffset, CACHED_NODE) =>
         Some(runtimeExpression.SlottedCachedNodeProperty(offset, token, cachedPropertyOffset))
-      case runtimeAst.CachedProperty(offset, token, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
+      case runtimeAst.CachedProperty(_, _, offset, token, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
         Some(runtimeExpression.SlottedCachedRelationshipProperty(offset, token, cachedPropertyOffset))
       case runtimeAst.RelationshipProperty(offset, token, _) =>
         Some(runtimeExpression.RelationshipProperty(offset, token))
@@ -63,9 +63,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.IdFromSlot(offset))
       case runtimeAst.NodePropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.NodePropertyLate(offset, propKey))
-      case runtimeAst.CachedPropertyLate(offset, propertyKey, cachedPropertyOffset, CACHED_NODE) =>
+      case runtimeAst.CachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, CACHED_NODE) =>
         Some(runtimeExpression.SlottedCachedNodePropertyLate(offset, propertyKey, cachedPropertyOffset))
-      case runtimeAst.CachedPropertyLate(offset, propertyKey, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
+      case runtimeAst.CachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
         Some(runtimeExpression.SlottedCachedRelationshipPropertyLate(offset, propertyKey, cachedPropertyOffset))
       case runtimeAst.RelationshipPropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.RelationshipPropertyLate(offset, propKey))

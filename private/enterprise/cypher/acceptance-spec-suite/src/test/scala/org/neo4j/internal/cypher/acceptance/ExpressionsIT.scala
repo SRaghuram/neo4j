@@ -3107,10 +3107,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val node = createNode("txStateProp" -> "hello from tx state")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val context = SlottedExecutionContext(slots)
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     context.setLongAt(0, node.getId)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from tx state"))
@@ -3121,10 +3122,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello from tx state")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val context = SlottedExecutionContext(slots)
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     context.setLongAt(0, relationship.getId)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from tx state"))
@@ -3135,14 +3137,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val node = createNode("txStateProp" -> "hello from disk")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored node that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, node.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from cache"))
@@ -3153,14 +3156,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello from disk")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored relationship that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, relationship.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from cache"))
@@ -3171,8 +3175,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val node = createNode("txStateProp" -> "hello from disk")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored node that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
@@ -3181,7 +3186,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //invalidate
     context.invalidateCachedProperties(node.getId)
 
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from disk"))
@@ -3192,8 +3197,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello from disk")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored relationship that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
@@ -3202,7 +3208,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //invalidate
     context.invalidateCachedProperties(relationship.getId)
 
-    val expression = ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
+    val expression = ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from disk"))
@@ -3212,11 +3218,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //NOTE: we are in an open transaction so everything we add here will populate the tx state
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val context = SlottedExecutionContext(slots)
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val node = createNode("txStateProp" -> "hello from tx state")
     context.setLongAt(0, node.getId)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-    val expression = CachedPropertyLate(0, "txStateProp", cachedPropertyOffset, CACHED_NODE)
+    val expression = CachedPropertyLate("n", pkn, 0, "txStateProp", cachedPropertyOffset, CACHED_NODE)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from tx state"))
@@ -3226,11 +3233,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //NOTE: we are in an open transaction so everything we add here will populate the tx state
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val context = SlottedExecutionContext(slots)
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello from tx state")
     context.setLongAt(0, relationship.getId)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-    val expression = CachedPropertyLate(0, "txStateProp", cachedPropertyOffset, CACHED_RELATIONSHIP)
+    val expression = CachedPropertyLate("n", pkn, 0, "txStateProp", cachedPropertyOffset, CACHED_RELATIONSHIP)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from tx state"))
@@ -3241,14 +3249,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val node = createNode("txStateProp" -> "hello from tx state")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored node that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, node.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = CachedPropertyLate(0, "txStateProp", cachedPropertyOffset, CACHED_NODE)
+    val expression = CachedPropertyLate("n", pkn, 0, "txStateProp", cachedPropertyOffset, CACHED_NODE)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from cache"))
@@ -3259,14 +3268,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello from tx state")
     startNewTransaction()
 
+    val pkn = PropertyKeyName("prop")(pos)
     //now we have a stored relationship that's not in the tx state
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, relationship.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = CachedPropertyLate(0, "txStateProp", cachedPropertyOffset, CACHED_RELATIONSHIP)
+    val expression = CachedPropertyLate("n", pkn, 0, "txStateProp", cachedPropertyOffset, CACHED_RELATIONSHIP)
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(stringValue("hello from cache"))
@@ -3275,13 +3285,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("cached node property existence") {
     val node = createNode("prop" -> "hello")
 
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, node.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = function("exists", ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE))
+    val expression = function("exists", ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_NODE))
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(Values.TRUE)
@@ -3290,13 +3301,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("cached relationship property existence") {
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello")
 
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, relationship.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
-    val expression = function("exists", ast.CachedProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP))
+    val expression = function("exists", ast.CachedProperty("n", pkn, 0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset, CACHED_RELATIONSHIP))
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(Values.TRUE)
@@ -3305,14 +3317,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("late cached node property existence") {
     val node = createNode("prop" -> "hello")
 
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_NODE)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_NODE)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, node.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
     val expression = function("exists",
-                              CachedPropertyLate(0, "prop", cachedPropertyOffset, CACHED_NODE))
+                              CachedPropertyLate("n", pkn, 0, "prop", cachedPropertyOffset, CACHED_NODE))
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(Values.TRUE)
@@ -3321,14 +3334,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("late cached relationship property existence") {
     val relationship = relate(createNode(), createNode(), "txStateProp" -> "hello")
 
-    val property = plans.CachedProperty("n", PropertyKeyName("prop")(pos), CACHED_RELATIONSHIP)(pos)
+    val pkn = PropertyKeyName("prop")(pos)
+    val property = plans.CachedProperty("n", pkn, CACHED_RELATIONSHIP)(pos)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, relationship.getId)
     context.setCachedProperty(property, stringValue("hello from cache"))
     val expression = function("exists",
-                              CachedPropertyLate(0, "prop", cachedPropertyOffset, CACHED_RELATIONSHIP))
+                              CachedPropertyLate("n", pkn, 0, "prop", cachedPropertyOffset, CACHED_RELATIONSHIP))
     val compiled = compile(expression, slots)
 
     evaluate(compiled, context) should equal(Values.TRUE)

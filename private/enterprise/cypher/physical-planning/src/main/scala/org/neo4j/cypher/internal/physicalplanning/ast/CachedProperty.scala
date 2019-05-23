@@ -7,15 +7,20 @@ package org.neo4j.cypher.internal.physicalplanning.ast
 
 import org.neo4j.cypher.internal.logical.plans.{ASTCachedProperty, CachedType}
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyName
 
-case class CachedProperty(offset: Int,
+case class CachedProperty(variableName: String,
+                          propertyKey: PropertyKeyName,
+                          offset: Int,
                           propToken: Int,
                           cachedPropertyOffset: Int,
                           override val cachedType: CachedType
                          ) extends RuntimeExpression with ASTCachedProperty
 
 // Token did not exist at plan time, so we'll need to look it up at runtime
-case class CachedPropertyLate(offset: Int,
+case class CachedPropertyLate(variableName: String,
+                              propertyKey: PropertyKeyName,
+                              offset: Int,
                               propKey: String,
                               cachedPropertyOffset: Int,
                               override val cachedType: CachedType
