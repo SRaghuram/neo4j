@@ -43,7 +43,6 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
     val queryState = QueryState(params,
                                 subscriber,
                                 tracker,
-                                null,
                                 morselSize,
                                 queryIndexes,
                                 transactionBinder,
