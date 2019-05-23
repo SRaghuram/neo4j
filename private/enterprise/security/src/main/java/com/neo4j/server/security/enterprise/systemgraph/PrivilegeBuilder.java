@@ -34,6 +34,11 @@ class PrivilegeBuilder
 
     PrivilegeBuilder withinScope( NodeValue qualifier )
     {
+        if ( qualifier.labels().length() != 1 )
+        {
+            throw new IllegalStateException(
+                    "Privilege segments require qualifier nodes with exactly one label, but this qualifier has: " + qualifier.labels().prettyPrint() );
+        }
         qualifier.labels().forEach( label ->
         {
             switch ( ((StringValue)label).stringValue() )

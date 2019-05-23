@@ -46,6 +46,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
   private val neo4jUser = user("neo4j", Seq("admin"))
 
+  // Tests for user and role management
+
   test("should list all default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -150,7 +152,9 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     ))
   }
 
-  test("should show privileges for all users") {
+  // Tests for showing privileges
+
+  test("should show all privileges") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
@@ -225,28 +229,7 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     result.toSet should be(expected)
   }
 
-  private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
-    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
-
-    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
-
-    def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
-
-    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
-
-    def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
-
-    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
-
-    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
-  }
-  private val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
-  private def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
-  private def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
-  private def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
-  private def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
-  private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
-  private def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
+  // Tests for granting and revoking privileges
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -314,6 +297,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       grantTraverse().role("custom").database("foo").label("B").map
     ))
   }
+
+  // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -510,6 +495,8 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     execute("CREATE (n:A:B {foo:5, bar:6})")
     execute("CREATE (n {foo:7, bar:8})")
   }
+
+  // Tests for GRANT READ privileges
 
   test("should grant read privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -787,8 +774,6 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       grantRead().role("custom").database("bar").map
     ))
   }
-
-
 
   test("should revoke correct traverse privilege different label qualifier") {
     // GIVEN
@@ -1121,13 +1106,13 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
     // neo4j : admin
     // Bar   : dragon, fairy
     // Baz   :
+    // Zet   : fairy
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE USER Zet SET PASSWORD 'NeX'")
     execute("CREATE ROLE dragon")
     execute("CREATE ROLE fairy")
-    //TODO: execute("GRANT ROLE fairy TO Bar, Zet")
 
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
@@ -1496,6 +1481,29 @@ class SecurityCypherAcceptanceTest extends ExecutionEngineFunSuite with Commerci
       case e: ParameterWrongTypeException => e.getMessage should be("Only string values are accepted as password, got: List")
     }
   }
+
+  private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
+    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
+
+    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
+
+    def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
+
+    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
+
+    def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
+
+    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
+
+    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
+  }
+  private val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  private def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
+  private def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
+  private def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
+  private def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
+  private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
+  private def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
 
   private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)

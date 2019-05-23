@@ -226,7 +226,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}" : "q:LabelQualifier {label: $label}";
 
         String query = String.format(
-                "MATCH (r:Role {name: $roleName}) %s " +
+                "MATCH (r:Role {name: $roleName}) " +
+                "%s " +
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) " +
                 "MERGE (%s) " +
                 "MERGE (db)<-[:FOR]-(segment:Segment)-[:QUALIFIED]->(q) " +
@@ -249,7 +250,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MATCH (role:Role)-[g:GRANTED]->(action:Action)-[:APPLIES_TO]->(res:Resource), " +
                 "(action)-[:SCOPE]->(segment:Segment), " +
                 "(segment)-[:FOR]->(%s), " +
-                "(segment)-[:QUALIFIED]-(%s) " +
+                "(segment)-[:QUALIFIED]->(%s) " +
                 "WHERE role.name = $roleName AND action.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
                 "DELETE g RETURN 0",
                 databasePattern, qualifierPattern

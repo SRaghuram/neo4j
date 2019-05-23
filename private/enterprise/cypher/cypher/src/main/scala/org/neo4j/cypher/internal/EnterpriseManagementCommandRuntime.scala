@@ -213,7 +213,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // DROP ROLE foo
     case DropRole(roleName) => (_, _) =>
       assertNotPredefinedRoleName(roleName)
-      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
@@ -437,20 +437,20 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       s"""
          |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
          |$qualifierMerge
-         |
          |WITH q
+         |
          |// Find the specified database, or find/create the special DatabaseAll node for '*'
          |$databaseMerge
-         |
          |WITH q, d
+         |
          |// Create a new scope connecting the database to the qualifier using a :Segment node
          |$scopeMerge
          |
          |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
          |$resourceMerge
          |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
-         |
          |WITH q, d, a
+         |
          |// Connect the role to the action to complete the privilege assignment
          |OPTIONAL MATCH (r:Role {name: $$role})
          |MERGE (r)-[:GRANTED]->(a)
