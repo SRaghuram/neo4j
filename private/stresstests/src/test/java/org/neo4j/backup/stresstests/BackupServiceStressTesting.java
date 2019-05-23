@@ -19,6 +19,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -38,6 +39,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.Settings.TRUE;
@@ -68,6 +70,7 @@ class BackupServiceStressTesting
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
                 new CommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, TRUE )
+                        .setConfig( auth_enabled, Settings.TRUE )
                 .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
                 .setConfig( keep_logical_logs, txPrune )
                 .setConfig( logical_log_rotation_threshold, "1M" );
