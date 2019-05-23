@@ -28,6 +28,7 @@ import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class CommandExecutor implements Runnable
 {
@@ -59,6 +60,7 @@ class CommandExecutor implements Runnable
             try
             {
                 List<DatabaseId> databases = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
+                databases.remove( new DatabaseId( SYSTEM_DATABASE_NAME ) );
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
@@ -112,7 +114,7 @@ class CommandExecutor implements Runnable
         executionLatch.countDown();
     }
 
-    private DatabaseId createDatabaseId()
+    private static DatabaseId createDatabaseId()
     {
         return new DatabaseId( "database" + dbCounter.getAndIncrement() );
     }
