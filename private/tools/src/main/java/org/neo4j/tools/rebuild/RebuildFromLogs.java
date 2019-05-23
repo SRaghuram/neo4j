@@ -57,6 +57,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLog;
+import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
@@ -239,6 +240,7 @@ class RebuildFromLogs
         private final LabelScanStore labelScanStore;
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
+        private final TokenHolders tokenHolders;
 
         ConsistencyChecker( DatabaseLayout layout, PageCache pageCache )
         {
@@ -246,13 +248,14 @@ class RebuildFromLogs
             DependencyResolver resolver = graphdb.getDependencyResolver();
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
+            this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
         }
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, storageEngine.testAccessCountsStore() );
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, storageEngine.testAccessCountsStore(), tokenHolders );
             FullCheck fullCheck = new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
