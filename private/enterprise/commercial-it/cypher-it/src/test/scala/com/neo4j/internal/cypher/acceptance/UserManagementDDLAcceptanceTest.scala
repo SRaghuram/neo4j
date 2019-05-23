@@ -15,7 +15,7 @@ import org.parboiled.errors.ParserRuntimeException
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val neo4jUser = user("neo4j", Seq("admin"))
 
-  // SHOW USERS
+  // Tests for showing users
 
   test("should show default user") {
     // GIVEN
@@ -55,7 +55,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
   }
 
-  // CREATE USER
+  // Tests for creating users
 
   test("should create user with password as string") {
     // GIVEN
@@ -260,7 +260,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
   }
 
-  // DROP USER
+  // Tests for dropping users
 
   test("should drop user") {
     // GIVEN
@@ -339,7 +339,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG DROP USER` against non-system database."
   }
 
-  // ALTER USER
+  // Tests for altering users
 
   test("should alter user password") {
     // GIVEN

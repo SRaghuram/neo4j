@@ -20,7 +20,7 @@ import scala.collection.Map
 
 class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
-  // SHOW PRIVILEGES
+  // Tests for showing privileges
 
   test("should show privileges for users") {
     // GIVEN
@@ -195,7 +195,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
   }
 
-  // GRANT TRAVERSAL
+  // Tests for granting traverse privileges
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -494,7 +494,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(2)
   }
 
-  // GRANT READ
+  // Tests for granting read privileges
 
   test("should grant read privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -688,6 +688,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  // Tests for revoking privileges
 
   test("should revoke correct read privilege different label qualifier") {
     // GIVEN
@@ -883,7 +884,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "The privilege or the role 'role' does not exist."
   }
 
-  // GRANT ROLE TO USER
+  // Tests for granting roles to users
 
   test("should grant role to user") {
     // GIVEN
@@ -965,8 +966,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE dragon TO Bar")
     execute("GRANT ROLE fairy TO Bar")
     execute("GRANT ROLE fairy TO Zet")
-    // TODO: execute("GRANT ROLE fairy TO Bar, Zet")
-    //  also test with non-existing role/user (whole list, part of list..)
 
     // THEN
     val result = execute("SHOW USERS")
@@ -1098,7 +1097,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
   }
 
-  // REVOKE ROLE FROM USER
+  // Tests for revoking roles from users
 
   test("should revoke role from user") {
     // GIVEN

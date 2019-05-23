@@ -22,7 +22,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val foo = Map("role" -> "foo", "is_built_in" -> false)
   private val bar = Map("role" -> "bar", "is_built_in" -> false)
 
-  // SHOW ROLES
+  // Tests for showing roles
 
   test("should show all default roles") {
     // GIVEN
@@ -136,7 +136,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  // CREATE ROLE
+  // Tests for creating roles
 
   test("should create role") {
     // GIVEN
@@ -264,7 +264,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
   }
 
-  // DROP ROLE
+  // Tests for dropping roles
 
   test("should drop role") {
     // GIVEN

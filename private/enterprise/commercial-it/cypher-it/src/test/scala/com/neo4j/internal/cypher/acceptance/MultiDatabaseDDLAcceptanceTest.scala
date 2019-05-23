@@ -26,7 +26,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults()
 
-  // SHOW DATABASE
+  // Tests for showing databases
 
   test("should show default database") {
     // GIVEN
@@ -120,7 +120,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG SHOW DATABASES` against non-system database."
   }
 
-  // CREATE DATABASE
+  // Tests for creating databases
 
   test("should create database in systemdb") {
     setup( defaultConfig )
@@ -167,7 +167,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG CREATE DATABASE` against non-system database."
   }
 
-  // DROP DATABASE
+  // Tests for dropping databases
 
   test("should create and drop databases") {
     setup( defaultConfig )
@@ -246,7 +246,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG DROP DATABASE` against non-system database."
   }
 
-  // START DATABASE
+  // Tests for starting databases
 
   test("should start database on create") {
     setup( defaultConfig )
@@ -344,7 +344,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Trying to run `CATALOG START DATABASE` against non-system database."
   }
 
-  // STOP DATABASE
+  // Tests for stopping databases
 
   test("should stop database") {
     setup( defaultConfig )
