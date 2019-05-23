@@ -37,7 +37,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
-import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
@@ -61,7 +60,7 @@ public final class CausalClusteringTestHelpers
         return CatchupClientBuilder.builder()
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
-                .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
+                .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) ).scheduler( scheduler )
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .debugLogProvider( logProvider )
@@ -75,7 +74,7 @@ public final class CausalClusteringTestHelpers
                 .catchupServerHandler( catchupServerHandler )
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
-                .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
+                .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress ).scheduler( scheduler )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )

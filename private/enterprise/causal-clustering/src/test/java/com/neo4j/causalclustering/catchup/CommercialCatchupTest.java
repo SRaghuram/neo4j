@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
@@ -70,7 +69,7 @@ abstract class CommercialCatchupTest
     @BeforeEach
     void setUp()
     {
-        pipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
+        pipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
         databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig()
                 .withDatabaseId( DEFAULT_DB_ID )

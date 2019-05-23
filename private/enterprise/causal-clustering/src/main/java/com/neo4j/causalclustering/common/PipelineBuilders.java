@@ -6,12 +6,8 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -22,15 +18,17 @@ public final class PipelineBuilders
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final NettyPipelineBuilderFactory backupServerPipelineBuilderFactory;
 
-    public PipelineBuilders( Supplier<DuplexPipelineWrapperFactory> pipelineWrapperFactory, Config config, SslPolicyLoader sslPolicyLoader )
+    public PipelineBuilders( Config config, SslPolicyLoader sslPolicyLoader )
     {
-        PipelineWrapper serverPipelineWrapper = pipelineWrapperFactory.get().forServer( config, CausalClusteringSettings.ssl_policy, sslPolicyLoader );
-        PipelineWrapper clientPipelineWrapper = pipelineWrapperFactory.get().forClient( config, CausalClusteringSettings.ssl_policy, sslPolicyLoader );
-        PipelineWrapper backupServerPipelineWrapper = pipelineWrapperFactory.get().forServer( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
+        var clusterSslPolicyName = config.get( CausalClusteringSettings.ssl_policy );
+        var backupSslPolicyName = config.get( OnlineBackupSettings.ssl_policy );
 
-        clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( clientPipelineWrapper );
-        serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( serverPipelineWrapper );
-        backupServerPipelineBuilderFactory = new NettyPipelineBuilderFactory( backupServerPipelineWrapper );
+        var clusterSslPolicy = sslPolicyLoader.getPolicy( clusterSslPolicyName );
+        var backupSslPolicy = sslPolicyLoader.getPolicy( backupSslPolicyName );
+
+        clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( clusterSslPolicy );
+        serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( clusterSslPolicy );
+        backupServerPipelineBuilderFactory = new NettyPipelineBuilderFactory( backupSslPolicy );
     }
 
     public NettyPipelineBuilderFactory client()

@@ -13,8 +13,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -34,6 +32,7 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.util.VisibleForTesting;
@@ -97,11 +96,9 @@ public class BackupSupportingClassesFactory
     }
 
     @VisibleForTesting
-    protected PipelineWrapper createPipelineWrapper( Config config )
+    protected NettyPipelineBuilderFactory createPipelineBuilderFactory( SslPolicy sslPolicy )
     {
-        SecurePipelineFactory factory = new SecurePipelineFactory();
-        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
-        return factory.forClient( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
+        return new NettyPipelineBuilderFactory( sslPolicy );
     }
 
     private CatchupClientFactory catchUpClient( OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
@@ -109,11 +106,13 @@ public class BackupSupportingClassesFactory
         Config config = onlineBackupContext.getConfig();
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         ApplicationSupportedProtocols supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
+        SslPolicy sslPolicy = loadSslPolicy( config );
+        NettyPipelineBuilderFactory pipelineBuilderFactory = createPipelineBuilderFactory( sslPolicy );
 
         return CatchupClientBuilder.builder()
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
-                .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )
+                .pipelineBuilder( pipelineBuilderFactory )
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( jobScheduler )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
@@ -121,6 +120,13 @@ public class BackupSupportingClassesFactory
                 .clock( clock )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider ).build();
+    }
+
+    private SslPolicy loadSslPolicy( Config config )
+    {
+        var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
+        var sslPolicyName = config.get( OnlineBackupSettings.ssl_policy );
+        return sslPolicyLoader.getPolicy( sslPolicyName );
     }
 
     private static BackupDelegator backupDelegator(

@@ -19,7 +19,6 @@ import java.util.Map;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -35,7 +34,7 @@ class ServerChannelInitializerTest
 
     private final Duration timeout = Duration.ofSeconds( 42 );
     private final ServerChannelInitializer serverChannelInitializer = new ServerChannelInitializer( new NoOpChannelInitializer(),
-            new NettyPipelineBuilderFactory( VOID_WRAPPER ), timeout, NullLogProvider.getInstance() );
+            NettyPipelineBuilderFactory.insecure(), timeout, NullLogProvider.getInstance() );
     private final ChannelInitializer<Channel> nettyServerChannelInitializer = serverChannelInitializer.asChannelInitializer();
 
     @AfterEach

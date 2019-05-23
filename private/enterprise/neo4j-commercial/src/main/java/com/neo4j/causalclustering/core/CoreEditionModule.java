@@ -28,8 +28,6 @@ import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
 import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
 import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
@@ -177,7 +175,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
+        pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
 
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( globalConfig, logProvider );
@@ -351,11 +349,6 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
-    }
-
-    private DuplexPipelineWrapperFactory pipelineWrapperFactory()
-    {
-        return new SecurePipelineFactory();
     }
 
     @Override

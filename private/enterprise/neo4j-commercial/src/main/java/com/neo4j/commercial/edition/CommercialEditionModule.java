@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
@@ -218,7 +217,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, config, sslPolicyLoader );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( config, sslPolicyLoader );
 
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),

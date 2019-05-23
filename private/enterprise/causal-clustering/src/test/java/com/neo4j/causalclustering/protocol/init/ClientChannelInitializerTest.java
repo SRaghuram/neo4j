@@ -18,7 +18,6 @@ import java.util.Map;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
@@ -34,7 +33,7 @@ class ClientChannelInitializerTest
 
     private final Duration timeout = Duration.ofSeconds( 42 );
     private final ClientChannelInitializer clientChannelInitializer = new ClientChannelInitializer( new NoOpChannelInitializer(),
-            new NettyPipelineBuilderFactory( VOID_WRAPPER ), timeout, NullLogProvider.getInstance() );
+            NettyPipelineBuilderFactory.insecure(), timeout, NullLogProvider.getInstance() );
 
     @AfterEach
     void afterEach()

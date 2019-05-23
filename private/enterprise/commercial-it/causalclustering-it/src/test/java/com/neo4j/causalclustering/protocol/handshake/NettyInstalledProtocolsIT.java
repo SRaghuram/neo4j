@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.protocol.handshake;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -119,8 +118,8 @@ class NettyInstalledProtocolsIT
         ModifierProtocolRepository modifierProtocolRepository =
                 new ModifierProtocolRepository( ModifierProtocols.values(), parameters.modifierSupportedProtocols );
 
-        NettyPipelineBuilderFactory serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
-        NettyPipelineBuilderFactory clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
+        NettyPipelineBuilderFactory serverPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
+        NettyPipelineBuilderFactory clientPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
 
         Config config = Config.builder().withSetting( handshake_timeout, TIMEOUT_SECONDS + "s" ).build();
 

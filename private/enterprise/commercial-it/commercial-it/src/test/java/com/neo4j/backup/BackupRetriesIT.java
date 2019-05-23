@@ -6,13 +6,13 @@
 package com.neo4j.backup;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
+import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
+import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +56,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.ssl.SslPolicy;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -300,35 +301,27 @@ class BackupRetriesIT
         }
 
         @Override
-        protected PipelineWrapper createPipelineWrapper( Config config )
+        protected NettyPipelineBuilderFactory createPipelineBuilderFactory( SslPolicy sslPolicy )
         {
-            PipelineWrapper realPipelineWrapper = super.createPipelineWrapper( config );
-            return new ChannelTrackingPipelineWrapper( realPipelineWrapper, channels );
+            return new ChannelTrackingPipelineBuilderFactory( sslPolicy, channels );
         }
     }
 
-    private static class ChannelTrackingPipelineWrapper implements PipelineWrapper
+    private static class ChannelTrackingPipelineBuilderFactory extends NettyPipelineBuilderFactory
     {
-        final PipelineWrapper delegate;
         final Set<Channel> channels;
 
-        ChannelTrackingPipelineWrapper( PipelineWrapper delegate, Set<Channel> channels )
+        ChannelTrackingPipelineBuilderFactory( SslPolicy sslPolicy, Set<Channel> channels )
         {
-            this.delegate = delegate;
+            super( sslPolicy );
             this.channels = channels;
         }
 
         @Override
-        public List<ChannelHandler> handlersFor( Channel channel ) throws Exception
+        public ClientNettyPipelineBuilder client( Channel channel, Log log )
         {
             channels.add( channel );
-            return delegate.handlersFor( channel );
-        }
-
-        @Override
-        public String name()
-        {
-            return delegate.name();
+            return super.client( channel, log );
         }
     }
 

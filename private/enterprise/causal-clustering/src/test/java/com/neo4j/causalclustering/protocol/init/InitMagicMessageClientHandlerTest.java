@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -55,6 +54,6 @@ class InitMagicMessageClientHandlerTest
 
     private InitMagicMessageClientHandler newClientHandler()
     {
-        return new InitMagicMessageClientHandler( handshakeInitializer, new NettyPipelineBuilderFactory( VOID_WRAPPER ), NullLogProvider.getInstance() );
+        return new InitMagicMessageClientHandler( handshakeInitializer, NettyPipelineBuilderFactory.insecure(), NullLogProvider.getInstance() );
     }
 }

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.protocol;
 import com.neo4j.causalclustering.messaging.MessageGate;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -21,9 +22,11 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import javax.net.ssl.SSLException;
 
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.logging.Log;
+import org.neo4j.ssl.SslPolicy;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -44,8 +47,10 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
     static final String MESSAGE_GATE_NAME = "message_gate";
     static final String ERROR_HANDLER_TAIL = "error_handler_tail";
     static final String ERROR_HANDLER_HEAD = "error_handler_head";
+    static final String SSL_HANDLER_NAME = "ssl_handler";
 
     private final ChannelPipeline pipeline;
+    private final SslPolicy sslPolicy;
     private final Log log;
     private final List<HandlerInfo> handlerInfos = new ArrayList<>();
 
@@ -54,9 +59,10 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
     @SuppressWarnings( "unchecked" )
     private BUILDER self = (BUILDER) this;
 
-    NettyPipelineBuilder( ChannelPipeline pipeline, Log log )
+    NettyPipelineBuilder( ChannelPipeline pipeline, SslPolicy sslPolicy, Log log )
     {
         this.pipeline = pipeline;
+        this.sslPolicy = sslPolicy;
         this.log = log;
     }
 
@@ -64,24 +70,26 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
      * Entry point for the client builder.
      *
      * @param pipeline The pipeline to build for.
+     * @param sslPolicy The SSL policy or {@code null} if encryption is not required.
      * @param log The log used for last-resort errors occurring in the pipeline.
      * @return The client builder.
      */
-    public static ClientNettyPipelineBuilder client( ChannelPipeline pipeline, Log log )
+    public static ClientNettyPipelineBuilder client( ChannelPipeline pipeline, SslPolicy sslPolicy, Log log )
     {
-        return new ClientNettyPipelineBuilder( pipeline, log );
+        return new ClientNettyPipelineBuilder( pipeline, sslPolicy, log );
     }
 
     /**
      * Entry point for the server builder.
      *
      * @param pipeline The pipeline to build for.
+     * @param sslPolicy The SSL policy or {@code null} if encryption is not required.
      * @param log The log used for last-resort errors occurring in the pipeline.
      * @return The server builder.
      */
-    public static ServerNettyPipelineBuilder server( ChannelPipeline pipeline, Log log )
+    public static ServerNettyPipelineBuilder server( ChannelPipeline pipeline, SslPolicy sslPolicy, Log log )
     {
-        return new ServerNettyPipelineBuilder( pipeline, log );
+        return new ServerNettyPipelineBuilder( pipeline, sslPolicy, log );
     }
 
     /**
@@ -90,6 +98,14 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
      * {@link ByteToMessageDecoder}.
      */
     public abstract BUILDER addFraming();
+
+    /**
+     * Instantiate a new SSL handler.
+     * This method is invoked only once per channel.
+     *
+     * @return a new SSL handler.
+     */
+    abstract ChannelHandler createSslHandler( Channel channel, SslPolicy sslPolicy ) throws SSLException;
 
     public BUILDER modify( ModifierProtocolInstaller<O> modifier )
     {
@@ -143,10 +159,11 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
     public void install()
     {
         ensureErrorHandling();
+        ensureSslHandlerInstalled();
         installGate();
         clearUserHandlers();
 
-        String userHead = ERROR_HANDLER_HEAD;
+        String userHead = findUserHandlerHead();
         for ( HandlerInfo info : handlerInfos )
         {
             pipeline.addAfter( userHead, info.name, info.handler );
@@ -172,6 +189,7 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
                 .filter( this::isNotDefault )
                 .filter( this::isNotErrorHandler )
                 .filter( this::isNotGate )
+                .filter( this::isNotSslHandler )
                 .forEach( pipeline::remove );
     }
 
@@ -191,6 +209,11 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
         return !name.equals( MESSAGE_GATE_NAME );
     }
 
+    private boolean isNotSslHandler( String name )
+    {
+        return !name.equals( SSL_HANDLER_NAME );
+    }
+
     private void ensureErrorHandling()
     {
         int size = pipeline.names().size();
@@ -208,6 +231,35 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
         pipeline.addLast( ERROR_HANDLER_TAIL, new ErrorHandlerTail( log ) );
 
         pipeline.addFirst( ERROR_HANDLER_HEAD, new ErrorHandlerHead( log ) );
+    }
+
+    private void ensureSslHandlerInstalled()
+    {
+        if ( sslPolicy != null && pipeline.get( SSL_HANDLER_NAME ) == null )
+        {
+            // only install SSL handler it not already present
+            // never override an existing SSL handler because it might've already performed an SSL handshake
+            try
+            {
+                var sslHandler = createSslHandler( pipeline.channel(), sslPolicy );
+                pipeline.addAfter( ERROR_HANDLER_HEAD, SSL_HANDLER_NAME, sslHandler );
+            }
+            catch ( SSLException e )
+            {
+                throw new IllegalStateException( "Unable to create an SSL handler", e );
+            }
+        }
+    }
+
+    private String findUserHandlerHead()
+    {
+        if ( sslPolicy != null )
+        {
+            // user handlers should be added after the SSL handler if it is installed
+            return SSL_HANDLER_NAME;
+        }
+        // without SSL handler, user handlers should be added after the head error handler
+        return ERROR_HANDLER_HEAD;
     }
 
     /**

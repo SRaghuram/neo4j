@@ -24,8 +24,6 @@ import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
@@ -127,7 +125,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
@@ -236,11 +234,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
-    }
-
-    private DuplexPipelineWrapperFactory pipelineWrapperFactory()
-    {
-        return new SecurePipelineFactory();
     }
 
     private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<?> databaseManager )

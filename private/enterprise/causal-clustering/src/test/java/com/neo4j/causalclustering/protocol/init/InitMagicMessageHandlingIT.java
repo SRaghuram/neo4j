@@ -27,7 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.neo4j.logging.AssertableLogProvider;
 
-import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.contains;
@@ -186,12 +185,12 @@ class InitMagicMessageHandlingIT
 
     private ServerChannelInitializer newServerChannelInitializer( Duration timeout, ChannelInitializer<?> initializer )
     {
-        return new ServerChannelInitializer( initializer, new NettyPipelineBuilderFactory( VOID_WRAPPER ), timeout, logProvider );
+        return new ServerChannelInitializer( initializer, NettyPipelineBuilderFactory.insecure(), timeout, logProvider );
     }
 
     private ClientChannelInitializer newClientChannelInitializer( Duration timeout, ChannelInitializer<?> initializer )
     {
-        return new ClientChannelInitializer( initializer, new NettyPipelineBuilderFactory( VOID_WRAPPER ), timeout, logProvider );
+        return new ClientChannelInitializer( initializer, NettyPipelineBuilderFactory.insecure(), timeout, logProvider );
     }
 
     private static void assertEventuallyClosed( Channel clientChannel ) throws InterruptedException

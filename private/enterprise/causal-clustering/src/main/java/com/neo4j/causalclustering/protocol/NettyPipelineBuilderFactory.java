@@ -5,41 +5,32 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
-import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 
 import org.neo4j.logging.Log;
+import org.neo4j.ssl.SslPolicy;
 
 public class NettyPipelineBuilderFactory
 {
-    private final PipelineWrapper wrapper;
+    private final SslPolicy sslPolicy;
 
-    public NettyPipelineBuilderFactory( PipelineWrapper wrapper )
+    public NettyPipelineBuilderFactory( SslPolicy sslPolicy )
     {
-        this.wrapper = wrapper;
+        this.sslPolicy = sslPolicy;
     }
 
-    public ClientNettyPipelineBuilder client( Channel channel, Log log ) throws Exception
+    public static NettyPipelineBuilderFactory insecure()
     {
-        return create( channel, NettyPipelineBuilder.client( channel.pipeline(), log ) );
+        return new NettyPipelineBuilderFactory( null );
     }
 
-    public ServerNettyPipelineBuilder server( Channel channel, Log log ) throws Exception
+    public ClientNettyPipelineBuilder client( Channel channel, Log log )
     {
-        return create( channel, NettyPipelineBuilder.server( channel.pipeline(), log ) );
+        return NettyPipelineBuilder.client( channel.pipeline(), sslPolicy, log );
     }
 
-    private <O extends Orientation, BUILDER extends NettyPipelineBuilder<O,BUILDER>> BUILDER create(
-            Channel channel, BUILDER nettyPipelineBuilder ) throws Exception
+    public ServerNettyPipelineBuilder server( Channel channel, Log log )
     {
-        int i = 0;
-        for ( ChannelHandler handler : wrapper.handlersFor( channel ) )
-        {
-            nettyPipelineBuilder.add( String.format( "%s_%d", wrapper.name(), i ), handler );
-            i++;
-        }
-        return nettyPipelineBuilder;
+        return NettyPipelineBuilder.server( channel.pipeline(), sslPolicy, log );
     }
 }

@@ -14,42 +14,47 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import io.netty.handler.ssl.SslHandler;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
+import org.neo4j.ssl.SslPolicy;
 
+import static com.neo4j.causalclustering.protocol.NettyPipelineBuilder.SSL_HANDLER_NAME;
+import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.any;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-public class NettyPipelineBuilderTest
+class NettyPipelineBuilderTest
 {
-    private AssertableLogProvider logProvider = new AssertableLogProvider();
-    private Log log = logProvider.getLog( getClass() );
-    private EmbeddedChannel channel = new EmbeddedChannel();
-    private ChannelHandlerAdapter EMPTY_HANDLER = new ChannelHandlerAdapter()
-    {
-    };
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
+    private final Log log = logProvider.getLog( getClass() );
+    private final EmbeddedChannel channel = new EmbeddedChannel();
+    private final ChannelHandlerAdapter emptyHandler = new ChannelInboundHandlerAdapter();
 
     @Test
-    public void shouldLogExceptionInbound()
+    void shouldLogExceptionInbound()
     {
         // given
         RuntimeException ex = new RuntimeException();
-        NettyPipelineBuilder.server( channel.pipeline(), log ).add( "read_handler", new ChannelInboundHandlerAdapter()
+        newServerPipelineBuilder().add( "read_handler", new ChannelInboundHandlerAdapter()
         {
             @Override
             public void channelRead( ChannelHandlerContext ctx, Object msg )
@@ -67,11 +72,11 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldLogUnhandledMessageInbound()
+    void shouldLogUnhandledMessageInbound()
     {
         // given
         Object msg = new Object();
-        NettyPipelineBuilder.server( channel.pipeline(), log ).install();
+        newServerPipelineBuilder().install();
 
         // when
         channel.writeOneInbound( msg );
@@ -83,11 +88,11 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldLogUnhandledMessageOutbound()
+    void shouldLogUnhandledMessageOutbound()
     {
         // given
         Object msg = new Object();
-        NettyPipelineBuilder.server( channel.pipeline(), log ).install();
+        newServerPipelineBuilder().install();
 
         // when
         channel.writeAndFlush( msg );
@@ -99,10 +104,10 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldLogExceptionOutbound()
+    void shouldLogExceptionOutbound()
     {
         RuntimeException ex = new RuntimeException();
-        NettyPipelineBuilder.server( channel.pipeline(), log ).add( "write_handler", new ChannelOutboundHandlerAdapter()
+        newServerPipelineBuilder().add( "write_handler", new ChannelOutboundHandlerAdapter()
         {
             @Override
             public void write( ChannelHandlerContext ctx, Object msg, ChannelPromise promise )
@@ -120,10 +125,10 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldLogExceptionOutboundWithVoidPromise()
+    void shouldLogExceptionOutboundWithVoidPromise()
     {
         RuntimeException ex = new RuntimeException();
-        NettyPipelineBuilder.server( channel.pipeline(), log ).add( "write_handler", new ChannelOutboundHandlerAdapter()
+        newServerPipelineBuilder().add( "write_handler", new ChannelOutboundHandlerAdapter()
         {
             @Override
             public void write( ChannelHandlerContext ctx, Object msg, ChannelPromise promise )
@@ -141,7 +146,7 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldNotLogAnythingForHandledInbound()
+    void shouldNotLogAnythingForHandledInbound()
     {
         // given
         Object msg = new Object();
@@ -153,7 +158,7 @@ public class NettyPipelineBuilderTest
                 // handled
             }
         };
-        NettyPipelineBuilder.server( channel.pipeline(), log ).add( "read_handler", handler ).install();
+        newServerPipelineBuilder().add( "read_handler", handler ).install();
 
         // when
         channel.writeOneInbound( msg );
@@ -163,7 +168,7 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldNotLogAnythingForHandledOutbound()
+    void shouldNotLogAnythingForHandledOutbound()
     {
         // given
         Object msg = new Object();
@@ -175,7 +180,7 @@ public class NettyPipelineBuilderTest
                 ctx.write( ctx.alloc().buffer() );
             }
         };
-        NettyPipelineBuilder.server( channel.pipeline(), log ).add( "write_handler", encoder ).install();
+        newServerPipelineBuilder().add( "write_handler", encoder ).install();
 
         // when
         channel.writeAndFlush( msg );
@@ -185,12 +190,12 @@ public class NettyPipelineBuilderTest
     }
 
     @Test
-    public void shouldReInstallWithPreviousGate()
+    void shouldReInstallWithPreviousGate()
     {
         // given
         Object gatedMessage = new Object();
 
-        ServerNettyPipelineBuilder builderA = NettyPipelineBuilder.server( channel.pipeline(), log );
+        ServerNettyPipelineBuilder builderA = newServerPipelineBuilder();
         builderA.addGate( p -> p == gatedMessage );
         builderA.install();
 
@@ -200,8 +205,8 @@ public class NettyPipelineBuilderTest
                         NettyPipelineBuilder.ERROR_HANDLER_TAIL ) );
 
         // when
-        ServerNettyPipelineBuilder builderB = NettyPipelineBuilder.server( channel.pipeline(), log );
-        builderB.add( "my_handler", EMPTY_HANDLER );
+        ServerNettyPipelineBuilder builderB = newServerPipelineBuilder();
+        builderB.add( "my_handler", emptyHandler );
         builderB.install();
 
         // then
@@ -211,7 +216,55 @@ public class NettyPipelineBuilderTest
                         NettyPipelineBuilder.ERROR_HANDLER_TAIL ) );
     }
 
-    private List<ChannelHandler> getHandlers( ChannelPipeline pipeline )
+    @Test
+    void shouldNotInstallSslHandlerWhenSslPolicyAbsent()
+    {
+        NettyPipelineBuilder.server( channel.pipeline(), null, log ).install();
+
+        assertNull( channel.pipeline().get( SSL_HANDLER_NAME ) );
+        assertNull( channel.pipeline().get( SslHandler.class ) );
+    }
+
+    @Test
+    void shouldInstallSslHandlerWhenSslPolicyPresent() throws Exception
+    {
+        var sslHandler = new ChannelInboundHandlerAdapter();
+        var sslPolicy = mock( SslPolicy.class );
+        when( sslPolicy.nettyServerHandler( channel ) ).thenReturn( sslHandler );
+
+        NettyPipelineBuilder.server( channel.pipeline(), sslPolicy, log ).install();
+
+        assertEquals( sslHandler, channel.pipeline().get( SSL_HANDLER_NAME ) );
+    }
+
+    @Test
+    void shouldKeepExistingSslHandlerWhenInstallingNewPipeline() throws Exception
+    {
+        var sslHandler1 = new ChannelInboundHandlerAdapter();
+        var sslHandler2 = new ChannelInboundHandlerAdapter();
+        var sslPolicy = mock( SslPolicy.class );
+        when( sslPolicy.nettyServerHandler( channel ) ).thenReturn( sslHandler1, sslHandler2 );
+
+        NettyPipelineBuilder.server( channel.pipeline(), sslPolicy, log ).install();
+        assertEquals( sslHandler1, channel.pipeline().get( SSL_HANDLER_NAME ) );
+
+        NettyPipelineBuilder.server( channel.pipeline(), sslPolicy, log )
+                .add( "my_handler", emptyHandler )
+                .install();
+        assertEquals( emptyHandler, channel.pipeline().get( "my_handler" ) );
+        assertEquals( sslHandler1, channel.pipeline().get( SSL_HANDLER_NAME ) );
+
+        var allHandlers = Iterables.stream( channel.pipeline() ).map( Map.Entry::getValue ).collect( toList() );
+        assertTrue( allHandlers.contains( sslHandler1 ) );
+        assertFalse( allHandlers.contains( sslHandler2 ) );
+    }
+
+    private ServerNettyPipelineBuilder newServerPipelineBuilder()
+    {
+        return NettyPipelineBuilder.server( channel.pipeline(), null, log );
+    }
+
+    private static List<ChannelHandler> getHandlers( ChannelPipeline pipeline )
     {
         return pipeline.names().stream().map( pipeline::get ).filter( Objects::nonNull ).collect( Collectors.toList() );
     }

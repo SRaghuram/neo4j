@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.protocol;
 
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
@@ -47,7 +46,7 @@ class ProtocolInstallerRepositoryTest
                     new Rot13ServerInstaller() );
 
     private final NettyPipelineBuilderFactory pipelineBuilderFactory =
-            new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
+            NettyPipelineBuilderFactory.insecure();
     private final RaftProtocolClientInstallerV2.Factory raftProtocolClientInstaller =
             new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, NullLogProvider.getInstance() );
     private final RaftProtocolServerInstallerV2.Factory raftProtocolServerInstaller =

@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -25,6 +24,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
     private final ProtocolVersion version;
     private final Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler;
     private final LogProvider logProvider;
+    private final NettyPipelineBuilderFactory pipelineBuilderFactory;
 
     RaftProtocolInstallers( ProtocolVersion version,
                             Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler,
@@ -33,6 +33,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         this.version = version;
         this.handler = handler;
         this.logProvider = logProvider;
+        this.pipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
     }
 
     @Override
@@ -40,7 +41,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
     {
         if ( version == ProtocolVersion.V2 )
         {
-            return new RaftProtocolClientInstallerV2( new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
+            return new RaftProtocolClientInstallerV2( pipelineBuilderFactory,
                                                       Collections.emptyList(),
                                                       logProvider );
         }
@@ -56,7 +57,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         if ( version == ProtocolVersion.V2 )
         {
             return new RaftProtocolServerInstallerV2( raftMessageNettyHandler,
-                                                      new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
+                    pipelineBuilderFactory,
                                                       Collections.emptyList(),
                                                       logProvider );
         }
