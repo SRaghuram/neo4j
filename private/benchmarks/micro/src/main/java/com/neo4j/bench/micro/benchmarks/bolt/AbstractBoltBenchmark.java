@@ -39,7 +39,7 @@ import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -55,13 +55,13 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        DatabaseManagementService managementService = resolver.resolveDependency( DatabaseManagementService.class );
         Config config = resolver.resolveDependency( Config.class );
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
 
         return new BoltStateMachineFactoryImpl(
-                databaseManager,
+                managementService,
                 authentication,
                 Clocks.nanoClock(),
                 config,
