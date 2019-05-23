@@ -195,28 +195,39 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       }
 
     // CREATE ROLE foo AS COPY OF bar
-    case CreateRole(roleName, Some(from)) => (_, _, _) =>
-      assertValidRoleName(roleName)
-      val names: Array[AnyValue] = Array(Values.stringValue(from), Values.stringValue(roleName))
-      UpdatingSystemCommandExecutionPlan("CopyRole", normalExecutionEngine,
-        """MATCH (old:Role {name: $old})
-          |CREATE (new:Role {name: $new})
-          |RETURN old.name, new.name""".stripMargin,
-        VirtualValues.map(Array("old", "new"), names),
-        QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot create role '$roleName' from non-existent role '$from'."))
-          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e))
-      )
-
-    // CREATE ROLE foo
-    case CreateRole(roleName, _) => (_, _, _) =>
+    case CreateRole(source, roleName) => (context, parameterMapping, currentUser) =>
       assertValidRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        """CREATE (role:Role {name: $name})
-          |RETURN role""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        """CREATE (new:Role {name: $new})
+          |RETURN new.name""".stripMargin,
+        VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e))
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create '$roleName'."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e)),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
+      )
+
+    // Used to split the requirement from the source role before copying privileges
+    case RequireRole(source, roleName) => (context, parameterMapping, currentUser) =>
+      UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
+        """MATCH (role:Role {name: $name})
+          |RETURN role.name""".stripMargin,
+        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        QueryHandler.handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist.")),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
+      )
+
+    // COPY PRIVILEGES FROM role1 TO role2
+    case CopyRolePrivileges(source, to, from, grantDeny) => (context, parameterMapping, currentUser) =>
+      // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
+      UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
+        s"""MATCH (to:Role {name: $$to})
+           |MATCH (from:Role {name: $$from})-[:$grantDeny]->(a:Action)
+           |MERGE (to)-[g:$grantDeny]->(a)
+           |RETURN from.name, to.name, count(g)""".stripMargin,
+        VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
+        QueryHandler.handleError(e => throw new InvalidArgumentsException(s"Failed to copy privileges from '$from' to '$to'.", e)),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
     // DROP ROLE foo

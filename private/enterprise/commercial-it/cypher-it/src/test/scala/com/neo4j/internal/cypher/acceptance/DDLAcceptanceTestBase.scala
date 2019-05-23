@@ -40,4 +40,27 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     graph = new GraphDatabaseCypherService(graphOps)
     eengine = ExecutionEngineHelper.createEngine(graph)
   }
+
+  case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
+    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
+
+    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
+
+    def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
+
+    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
+
+    def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
+
+    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
+
+    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
+  }
+  val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
+  def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
+  def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
+  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
+  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
+  def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
 }

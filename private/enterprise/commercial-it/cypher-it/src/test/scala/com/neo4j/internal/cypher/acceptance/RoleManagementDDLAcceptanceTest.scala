@@ -238,6 +238,31 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE bar AS COPY OF foo")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should create role from existing role and copy privileges") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
+    execute("GRANT READ (a,b,c) ON GRAPH * NODES A (*) TO foo")
+    val expected = Set(grantTraverse().map,
+      grantRead().property("a").label("A").map,
+      grantRead().property("b").label("A").map,
+      grantRead().property("c").label("A").map
+    )
+    val expectedFoo = expected.map(_ ++ Map("role" -> "foo"))
+    val expectedBar = expected.map(_ ++ Map("role" -> "bar"))
+
+    // WHEN
+    execute("CREATE ROLE bar AS COPY OF foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLE foo PRIVILEGES").toSet should be(expectedFoo)
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(expectedBar)
   }
 
   test("should fail when creating from non-existing role") {
@@ -248,14 +273,14 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
-    } should have message "Cannot create role 'bar' from non-existent role 'foo'."
+    } should have message "Role 'foo' does not exist."
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF ``")
       // THEN
-    } should have message "Cannot create role 'bar' from non-existent role ''."
+    } should have message "Role '' does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -302,7 +327,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
-    } should have message "Cannot create role 'bar' from non-existent role 'foo'."
+    } should have message "Role 'foo' does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
   }

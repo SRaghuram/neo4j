@@ -1740,28 +1740,4 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE (n:A:B {foo:5, bar:6})")
     execute("CREATE (n {foo:7, bar:8})")
   }
-
-  private case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
-    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
-
-    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
-
-    def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
-
-    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
-
-    def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
-
-    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
-
-    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
-  }
-  private val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
-  private def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
-  private def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
-  private def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))
-  private def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
-  private def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
-  private def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
-
 }
