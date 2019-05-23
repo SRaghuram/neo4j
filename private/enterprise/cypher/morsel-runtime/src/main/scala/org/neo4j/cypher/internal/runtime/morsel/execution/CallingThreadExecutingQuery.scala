@@ -21,6 +21,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
 
   override def request(numberOfRecords: Long): Unit = {
     flowControl.request(numberOfRecords)
+    while (!executionState.isCompleted && flowControl.hasDemand) {
+      worker.workOnQuery(this)
+    }
   }
 
   override def cancel(): Unit = {
@@ -28,11 +31,6 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   }
 
   override def await(): Boolean = {
-    //TODO: move this to request? (this is consistent to how it is done in ReactiveIterator)
-    while (!executionState.isCompleted && flowControl.hasDemand) {
-      worker.workOnQuery(this)
-    }
-
     flowControl.await()
   }
 }
