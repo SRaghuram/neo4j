@@ -118,7 +118,7 @@ class CatchupClient implements VersionedCatchupClients
 
         private OperationProgressMonitor<RESULT> performRequest( ApplicationProtocol protocol, CatchupChannel catchupChannel )
         {
-            if ( protocol.equals( ApplicationProtocols.CATCHUP_3 ) )
+            if ( protocol.equals( ApplicationProtocols.CATCHUP_3_0 ) )
             {
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );
                 return performRequest( client, v3Request, protocol, catchupChannel );

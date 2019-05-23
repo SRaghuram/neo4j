@@ -173,7 +173,7 @@ abstract class CommercialCatchupTest
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
             MultiDatabaseCatchupServerHandler responseHandler ) throws Exception
     {
-        if ( applicationProtocols == ApplicationProtocols.CATCHUP_3 )
+        if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
             new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
             new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );

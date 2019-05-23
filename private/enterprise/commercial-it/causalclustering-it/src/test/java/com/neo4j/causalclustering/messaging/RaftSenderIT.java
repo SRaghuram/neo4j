@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -90,14 +90,14 @@ class RaftSenderIT
     }
 
     @ParameterizedTest
-    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "^RAFT_\\d" )
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldSendAndReceiveBlocking( ApplicationProtocols clientProtocol ) throws Throwable
     {
         shouldSendAndReceive( clientProtocol, true );
     }
 
     @ParameterizedTest
-    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "^RAFT_\\d" )
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldSendAndReceiveNonBlocking( ApplicationProtocols clientProtocol ) throws Throwable
     {
         shouldSendAndReceive( clientProtocol, false );
@@ -165,7 +165,7 @@ class RaftSenderIT
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstaller;
-        if ( clientProtocol == ApplicationProtocols.RAFT_2 )
+        if ( clientProtocol == ApplicationProtocols.RAFT_2_0 )
         {
             RaftProtocolClientInstallerV2.Factory factoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineFactory, logProvider );
             protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV2 ), ModifierProtocolInstaller.allClientInstallers );

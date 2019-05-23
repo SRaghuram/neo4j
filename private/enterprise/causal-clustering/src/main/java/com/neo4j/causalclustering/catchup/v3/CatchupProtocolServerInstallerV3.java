@@ -46,7 +46,7 @@ import org.neo4j.logging.LogProvider;
 
 public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orientation.Server>
 {
-    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_3;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_3_0;
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {

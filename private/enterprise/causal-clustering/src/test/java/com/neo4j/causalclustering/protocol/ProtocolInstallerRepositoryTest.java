@@ -63,7 +63,7 @@ class ProtocolInstallerRepositoryTest
     {
         assertEquals(
                 raftProtocolServerInstaller.applicationProtocol(),
-                serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, emptyList() ) ).applicationProtocol() );
+                serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2_0, emptyList() ) ).applicationProtocol() );
     }
 
     @Test
@@ -71,7 +71,7 @@ class ProtocolInstallerRepositoryTest
     {
         assertEquals(
                 raftProtocolClientInstaller.applicationProtocol(),
-                clientRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, emptyList() ) ).applicationProtocol() );
+                clientRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2_0, emptyList() ) ).applicationProtocol() );
     }
 
     @Test
@@ -79,7 +79,7 @@ class ProtocolInstallerRepositoryTest
     {
         // given
         ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( expected ) );
 
         // when
         Collection<Collection<ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
@@ -93,7 +93,7 @@ class ProtocolInstallerRepositoryTest
     {
         // given
         ModifierProtocol expected = TestProtocols.TestModifierProtocols.SNAPPY;
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( expected ) );
 
         // when
         Collection<Collection<ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
@@ -109,7 +109,7 @@ class ProtocolInstallerRepositoryTest
         ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION;
 
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( expected ) );
 
         // when
         Collection<Collection<ModifierProtocol>> actual = clientRepository.installerFor( protocolStack ).modifiers();
@@ -125,7 +125,7 @@ class ProtocolInstallerRepositoryTest
         ModifierProtocol expected = TestProtocols.TestModifierProtocols.LZ4_HIGH_COMPRESSION_VALIDATING;
         TestProtocols.TestModifierProtocols alsoSupported = TestProtocols.TestModifierProtocols.LZ4_VALIDATING;
 
-        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( expected ) );
+        ProtocolStack protocolStack = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( expected ) );
 
         // when
         Collection<Collection<ModifierProtocol>> actual = serverRepository.installerFor( protocolStack ).modifiers();
@@ -138,8 +138,8 @@ class ProtocolInstallerRepositoryTest
     void shouldUseDifferentInstancesOfProtocolInstaller()
     {
         // given
-        ProtocolStack protocolStack1 = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( TestProtocols.TestModifierProtocols.SNAPPY ) );
-        ProtocolStack protocolStack2 = new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( TestProtocols.TestModifierProtocols.LZO ) );
+        ProtocolStack protocolStack1 = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( TestProtocols.TestModifierProtocols.SNAPPY ) );
+        ProtocolStack protocolStack2 = new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( TestProtocols.TestModifierProtocols.LZO ) );
 
         // when
         ProtocolInstaller<Orientation.Client> protocolInstaller1 = clientRepository.installerFor( protocolStack1 );
@@ -154,7 +154,7 @@ class ProtocolInstallerRepositoryTest
     {
         // given
         ProtocolStack protocolStack = new ProtocolStack(
-                ApplicationProtocols.RAFT_2,
+                ApplicationProtocols.RAFT_2_0,
                 asList( TestProtocols.TestModifierProtocols.SNAPPY, TestProtocols.TestModifierProtocols.LZO ) );
 
         // then
@@ -198,7 +198,7 @@ class ProtocolInstallerRepositoryTest
 
         // then
         assertThrows( IllegalStateException.class,
-                () -> serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2, List.of( unknownProtocol ) ) ) );
+                () -> serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2_0, List.of( unknownProtocol ) ) ) );
     }
 
     // Dummy installers

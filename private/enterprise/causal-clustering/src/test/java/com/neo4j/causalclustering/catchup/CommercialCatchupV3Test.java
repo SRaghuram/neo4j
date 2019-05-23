@@ -18,7 +18,7 @@ class CommercialCatchupV3Test extends CommercialCatchupTest
 {
     CommercialCatchupV3Test()
     {
-        super( ApplicationProtocols.CATCHUP_3 );
+        super( ApplicationProtocols.CATCHUP_3_0 );
     }
 
     @ParameterizedTest

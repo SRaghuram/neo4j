@@ -27,7 +27,7 @@ import org.neo4j.logging.LogProvider;
 
 public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
 {
-    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_2;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_2_0;
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,RaftProtocolClientInstallerV2>
     {

@@ -95,7 +95,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         @Override
         public RESULT request() throws Exception
         {
-            if ( protocol.equals( ApplicationProtocols.CATCHUP_3 ) )
+            if ( protocol.equals( ApplicationProtocols.CATCHUP_3_0 ) )
             {
                 return withProgressMonitor( v3Request.apply( v3Client ).execute( null ) ).get();
             }

@@ -94,7 +94,7 @@ class CatchupPollingProcessTest
         when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
         when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
 
-        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3, v3Client );
+        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
@@ -139,7 +139,7 @@ class CatchupPollingProcessTest
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when
         txPuller.tick().get();
@@ -155,7 +155,7 @@ class CatchupPollingProcessTest
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when
         txPuller.tick().get();
@@ -200,7 +200,7 @@ class CatchupPollingProcessTest
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when (tx pull)
         txPuller.tick().get();
@@ -261,7 +261,7 @@ class CatchupPollingProcessTest
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3 );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when
         txPuller.start();

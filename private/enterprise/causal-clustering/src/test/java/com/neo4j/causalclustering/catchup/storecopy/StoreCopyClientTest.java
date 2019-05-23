@@ -51,7 +51,7 @@ import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
-import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -302,7 +302,7 @@ class StoreCopyClientTest
     {
 
         ArgumentCaptor<File> fileArgumentCaptor = ArgumentCaptor.forClass( File.class );
-        if ( protocol.equals( CATCHUP_3 ) )
+        if ( protocol.equals( CATCHUP_3_0 ) )
         {
             verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( DatabaseId.class ) );
         }

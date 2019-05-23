@@ -16,10 +16,10 @@ import org.neo4j.function.Predicates;
 public enum ApplicationProtocols implements ApplicationProtocol
 {
     // support for raft 1.0 was removed in neo4j 4.0
-    RAFT_2( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 2, 0 ) ),
+    RAFT_2_0( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 2, 0 ) ),
 
     // support for catchup 1.0 and 2.0 was removed in neo4j 4.0
-    CATCHUP_3( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) );
+    CATCHUP_3_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) );
 
     private final ApplicationProtocolVersion version;
     private final ApplicationProtocolCategory identifier;

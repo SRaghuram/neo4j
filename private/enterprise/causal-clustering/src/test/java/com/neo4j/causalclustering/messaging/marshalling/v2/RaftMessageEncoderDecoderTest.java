@@ -20,8 +20,8 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
@@ -145,7 +145,7 @@ class RaftMessageEncoderDecoderTest
 
     private void setupChannels( ApplicationProtocolVersion raftProtocol ) throws Exception
     {
-        if ( ApplicationProtocols.RAFT_2.implementation().equals( raftProtocol ) )
+        if ( ApplicationProtocols.RAFT_2_0.implementation().equals( raftProtocol ) )
         {
             new RaftProtocolClientInstallerV2( new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ), Collections.emptyList(),
                     FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );

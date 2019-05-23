@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -54,7 +54,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
-import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -82,7 +82,7 @@ class NettyInstalledProtocolsIT
     private static Parameters raft2WithCompressionModifiers( Optional<ModifierProtocol> protocol )
     {
         List<String> versions = protocol.stream().map( Protocol::implementation ).collect( Collectors.toList() );
-        return new Parameters( "Raft 2, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_2.implementation() ) ),
+        return new Parameters( "Raft 2, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_2_0.implementation() ) ),
                 singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }
 
