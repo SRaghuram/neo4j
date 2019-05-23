@@ -5,10 +5,13 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
+import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,44 +22,48 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
+import static java.time.temporal.ChronoUnit.MILLIS;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class LeaderProviderTest
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
+class LeaderProviderTest
 {
-
     private static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
     private final ExecutorService executorService = Executors.newCachedThreadPool();
-    private final LeaderProvider leaderProvider = new LeaderProvider();
 
-    @Before
-    public void before()
+    @AfterAll
+    void after()
     {
-        leaderProvider.setLeader( null );
+        executorService.shutdown();
     }
 
     @Test
-    public void shouldGiveCurrentLeaderIfAvailable() throws InterruptedException
+    void shouldGiveCurrentLeaderImmediatelyIfAvailable() throws InterruptedException, NoLeaderFoundException
     {
+        LeaderProvider leaderProvider = new LeaderProvider( Duration.of( 0, SECONDS ) );
         leaderProvider.setLeader( MEMBER_ID );
-        assertEquals( leaderProvider.currentLeader(), MEMBER_ID );
-        assertEquals( leaderProvider.awaitLeader(), MEMBER_ID );
+
+        assertEquals( leaderProvider.awaitLeaderOrThrow(), MEMBER_ID );
     }
 
     @Test
-    public void shouldWaitForNonNullValue() throws InterruptedException, ExecutionException, TimeoutException
+    void shouldTriggerWakeupOfWaitingThreads() throws InterruptedException, ExecutionException, TimeoutException
     {
         // given
         int threads = 3;
+        LeaderProvider leaderProvider = new LeaderProvider( Duration.of( 15, SECONDS ) );
         assertNull( leaderProvider.currentLeader() );
 
         // when
         CompletableFuture<ArrayList<MemberId>> futures = CompletableFuture.completedFuture( new ArrayList<>() );
         for ( int i = 0; i < threads; i++ )
         {
-            CompletableFuture<MemberId> future = CompletableFuture.supplyAsync( getCurrentLeader(), executorService );
+            CompletableFuture<MemberId> future = CompletableFuture.supplyAsync( awaitLeader( leaderProvider ), executorService );
             futures = futures.thenCombine( future, ( completableFutures, memberId ) ->
             {
                 completableFutures.add( memberId );
@@ -65,7 +72,7 @@ public class LeaderProviderTest
         }
 
         // then
-        Thread.sleep( 100 );
+        Thread.sleep( 10 );
         assertFalse( futures.isDone() );
 
         // when
@@ -77,17 +84,28 @@ public class LeaderProviderTest
         assertTrue( memberIds.stream().allMatch( memberId -> memberId.equals( MEMBER_ID ) ) );
     }
 
-    private Supplier<MemberId> getCurrentLeader()
+    @Test
+    void shouldTimeoutWaitingForLeaderThatNeverComes()
+    {
+        // given
+        LeaderProvider leaderProvider = new LeaderProvider( Duration.of( 10, MILLIS ) );
+        assertNull( leaderProvider.currentLeader() );
+
+        // then
+        assertThrows( NoLeaderFoundException.class, leaderProvider::awaitLeaderOrThrow );
+    }
+
+    private Supplier<MemberId> awaitLeader( LeaderProvider leaderProvider )
     {
         return () ->
         {
             try
             {
-                return leaderProvider.awaitLeader();
+                return leaderProvider.awaitLeaderOrThrow();
             }
-            catch ( InterruptedException e )
+            catch ( InterruptedException | NoLeaderFoundException e )
             {
-                throw new RuntimeException( "Interrupted" );
+                throw new RuntimeException( e );
             }
         };
     }

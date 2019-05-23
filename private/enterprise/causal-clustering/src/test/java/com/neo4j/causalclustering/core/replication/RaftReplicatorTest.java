@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
@@ -40,6 +41,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -71,6 +73,7 @@ class RaftReplicatorTest
     private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
     private DatabaseAvailabilityGuard availabilityGuard;
     private StubClusteredDatabaseManager clusteredDatabaseManager;
+    private Duration leaderAwaitDuration = Duration.of( 500, MILLIS );
 
     @Inject
     private LifeSupport lifeSupport;
@@ -316,7 +319,7 @@ class RaftReplicatorTest
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
         return new RaftReplicator( leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10, availabilityGuard,
-                NullLogProvider.getInstance(), clusteredDatabaseManager, monitors );
+                NullLogProvider.getInstance(), clusteredDatabaseManager, monitors, leaderAwaitDuration );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )

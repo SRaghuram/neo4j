@@ -358,6 +358,10 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Duration> replication_retry_timeout_limit =
             setting( "causal_clustering.replication_retry_timeout_limit", DURATION, "60s" );
 
+    @Description( "The duration for which the replicator will await a new leader." )
+    public static final Setting<Duration> replication_leader_await_timeout =
+            setting( "causal_clustering.replication_leader_await_timeout", DURATION, "10s" );
+
     @Description( "The number of operations to be processed before the state machines flush to disk" )
     public static final Setting<Integer> state_machine_flush_window_size =
             setting( "causal_clustering.state_machine_flush_window_size", INTEGER, "4096" );

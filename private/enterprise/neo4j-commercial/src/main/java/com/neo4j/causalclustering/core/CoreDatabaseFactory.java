@@ -419,8 +419,10 @@ class CoreDatabaseFactory
         TimeoutStrategy progressRetryStrategy = new ExponentialBackoffStrategy( initialBackoff, upperBoundBackoff );
         long availabilityTimeoutMillis = config.get( CausalClusteringSettings.replication_retry_timeout_base ).toMillis();
 
+        Duration leaderAwaitDuration = config.get( CausalClusteringSettings.replication_leader_await_timeout );
+
         return new RaftReplicator( leaderLocator, myIdentity, raftOutbound, sessionPool, progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
-                availabilityGuard, debugLog, databaseManager, monitors );
+                availabilityGuard, debugLog, databaseManager, monitors, leaderAwaitDuration );
     }
 
     private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicService, JobScheduler jobScheduler,
