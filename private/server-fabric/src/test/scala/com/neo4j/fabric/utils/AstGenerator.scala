@@ -148,15 +148,20 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     key <- _propertyKeyName
   } yield Property(map, key)(?)
 
-  def _mapProjection: Gen[MapProjection] = for {
-    name <- _variable
-    items <- _smallNonemptyListOf(Gen.oneOf(
+
+  def _mapProjectionElement: Gen[MapProjectionElement] =
+    Gen.oneOf(
       for {key <- _propertyKeyName; exp <- _expression} yield LiteralEntry(key, exp)(?),
       for {id <- _variable} yield VariableSelector(id)(?),
       for {id <- _variable} yield PropertySelector(id)(?),
       Gen.const(AllPropertiesSelector()(?))
-    ))
+    )
+
+  def _mapProjection: Gen[MapProjection] = for {
+    name <- _variable
+    items <- _smallNonemptyListOf(_mapProjectionElement)
   } yield MapProjection(name, items)(?, None)
+
 
   def _list: Gen[ListLiteral] = for {
     parts <- _smallListOf(_expression)
@@ -218,7 +223,6 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     args <- _smallListOf(_expression)
   } yield FunctionInvocation(namespace, functionName, distinct, args.toIndexedSeq)(?)
 
-
   def _countStar: Gen[CountStar] =
     Gen.const(CountStar()(?))
 
@@ -270,13 +274,13 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     labels <- _smallNonemptyListOf(_labelName)
   } yield HasLabels(expression, labels)(?)
 
-  def _reduceScope = for {
+  def _reduceScope: Gen[ReduceScope] = for {
     accumulator <- _variable
     variable <- _variable
     expression <- _expression
   } yield ReduceScope(accumulator, variable, expression)(?)
 
-  def _reduceExpr = for {
+  def _reduceExpr: Gen[ReduceExpression] = for {
     scope <- _reduceScope
     init <- _expression
     list <- _expression
@@ -290,6 +294,29 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     pattern <- _relationshipsPattern
   } yield PatternExpression(pattern)
 
+  def _shortestPaths: Gen[ShortestPaths] = for {
+    element <- _patternElement
+    single <- _boolean
+  } yield ShortestPaths(element, single)(?)
+
+  def _shortestPathExpr: Gen[ShortestPathExpression] = for {
+    pattern <- _shortestPaths
+  } yield ShortestPathExpression(pattern)
+
+  def _existsSubClause: Gen[ExistsSubClause] = for {
+    pattern <- _pattern
+    where <- Gen.option(_expression)
+    outerScope <- _smallListOf(_variable)
+  } yield ExistsSubClause(pattern, where)(?, outerScope.toSet)
+
+  def _patternComprehension: Gen[PatternComprehension] = for {
+    namedPath <- Gen.option(_variable)
+    pattern <- _relationshipsPattern
+    predicate <- Gen.option(_expression)
+    projection <- _expression
+    outerScope <- _smallListOf(_variable)
+  } yield PatternComprehension(namedPath, pattern, predicate, projection)(?, outerScope.toSet)
+
   def _expression: Gen[Expression] =
     Gen.frequency(
       10 -> Gen.oneOf(
@@ -300,7 +327,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_signedHexIntLit),
         Gen.lzy(_signedOctIntLit),
         Gen.lzy(_doubleLit),
-        Gen.lzy(_variable)
+        Gen.lzy(_variable),
+        Gen.lzy(_parameter)
       ),
       1 -> Gen.oneOf(
         Gen.lzy(_predicateComparison),
@@ -319,7 +347,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_functionInvocation),
         Gen.lzy(_countStar),
         Gen.lzy(_reduceExpr),
-        Gen.lzy(_patternExpr),
+        Gen.lzy(_shortestPathExpr),
+        Gen.lzy(_patternExpr)
+      ),
+      1 -> Gen.oneOf(
         Gen.lzy(_map),
         Gen.lzy(_mapProjection),
         Gen.lzy(_property),
@@ -329,6 +360,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         Gen.lzy(_containerIndex),
         Gen.lzy(_extract),
         Gen.lzy(_filter)
+      ),
+      1 -> Gen.oneOf(
+        Gen.lzy(_existsSubClause),
+        Gen.lzy(_patternComprehension)
       )
     )
 
