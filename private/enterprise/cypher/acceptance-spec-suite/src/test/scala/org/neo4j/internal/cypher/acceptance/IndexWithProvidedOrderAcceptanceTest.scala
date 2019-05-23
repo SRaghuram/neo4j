@@ -1143,6 +1143,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
                   .withOrder(ProvidedOrder.asc(prop("a", "prop3")))))
       )
 
+    println(result.executionPlanDescription())
+
     result.toList should be(List(
       Map("a.prop3" -> "fooism"), Map("a.prop3" -> "fooism"),
       Map("a.prop3" -> "footurama"), Map("a.prop3" -> "footurama"),

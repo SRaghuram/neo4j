@@ -7,9 +7,10 @@ package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.v4_0.expressions.{Property, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
-import org.neo4j.cypher.internal.v4_0.util.{Rewriter, topDown}
+import org.neo4j.cypher.internal.v4_0.util.{InputPosition, Rewriter, topDown}
 
 /**
   * Replace index plans that have indexed properties with `GetValue` by plans
@@ -23,9 +24,13 @@ case object projectIndexProperties {
 
     val rewriter = topDown(Rewriter.lift {
       case indexLeafPlan: IndexLeafPlan if indexLeafPlan.cachedProperties.nonEmpty =>
-        val projections = indexLeafPlan.availableCachedProperties.map {
-          case (prop, cachedNodeProperty) => (cachedNodeProperty.cacheKey, prop)
-        }
+        val projections: Map[String, Property] = indexLeafPlan.cachedProperties.map { cachedProperty =>
+          cachedProperty.cacheKey -> Property(
+            Variable(cachedProperty.variableName)(InputPosition.NONE),
+            cachedProperty.propertyKey
+          )(InputPosition.NONE)
+        }.toMap
+
         // Register all variables in the property lookups as nodes
         projections.values.foreach { prop =>
           currentTypes = currentTypes.updated(prop.map, ExpressionTypeInfo(CTNode.invariant, None))

@@ -266,10 +266,16 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case e: Expression =>
         acc: Accumulator => {
-          if (acc.doNotTraverseExpression.contains(e))
+          if (acc.doNotTraverseExpression.contains(e)) {
             (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
-          else
+          } else {
+            e match {
+              case c: CachedProperty =>
+                slots.newCachedProperty(c)
+              case _ => // Do nothing
+            }
             (acc, TRAVERSE_INTO_CHILDREN)
+          }
         }
     }
   }

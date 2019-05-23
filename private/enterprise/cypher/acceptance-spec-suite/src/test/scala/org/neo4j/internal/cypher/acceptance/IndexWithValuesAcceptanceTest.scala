@@ -137,7 +137,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     ))
   }
 
-  test("should plan projection and index seek with GetValue when the property is used in ORDER BY") {
+  test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN n.prop2 ORDER BY n.prop1",
       executeBefore = createSomeNodes)
 
@@ -145,7 +145,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       .containingArgument("{n.prop2 : n.prop2}")
       // just for n.prop2, not for n.prop1
       .withDBHits(6)
-      .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n", "cached[n.prop1]"))
+      .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
       and not(includeSomewhere.aPlan("Sort")))
     result.toList should equal(List(
       Map("n.prop2" -> 3), Map("n.prop2" -> 3),
@@ -436,7 +436,16 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     ))
   }
 
-  test("should not use cached property after or when different properties used on each side") {
+  /*
+   * Cached node properties work such that they fetch the value from the property store if the
+   * cached value is not available. This usually happens after a cache invalidation because of writes.
+   * This behavior makes it safe to make the Union of cached properties available after a union
+   * instead of the intersection.
+   *
+   * Depending on the overlap of rows in the Distinct, this could potentially cache a lot properties of properties
+   * that will be thrown away, but it will also improve any property read of cached properties after the union.
+   */
+  test("should allow cached property after OR when different properties used on each side") {
     for (_ <- 1 to 10) createLabeledNode("Awesome")
 
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 41 OR n.prop2 < 2 RETURN n.prop1, n.prop2"
@@ -444,7 +453,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{n.prop1 : n.prop1, n.prop2 : n.prop2}")
+      .containingArgument("{n.prop1 : cached[n.prop1], n.prop2 : cached[n.prop2]}")
       .withDBHits()
         .onTopOf(includeSomewhere.aPlan("Union")
           .withLHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
