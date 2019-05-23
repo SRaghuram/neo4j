@@ -383,6 +383,41 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
   }
 
+  test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+
+    // THEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+    }
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be(null)
+    }) should be(1)
+  }
+
   test("read privilege should not imply traverse privilege") {
     //TODO: This should be an integration test
 
@@ -402,7 +437,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
-  test("should see properties and nodes depending on privileges for role") {
+  test("should see properties and nodes depending on granted traverse and read privileges for role") {
     //TODO: This should be an integration test
 
     // GIVEN
@@ -419,6 +454,73 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
     execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role2")
     execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role2")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT ROLE role1 TO joe")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role1 FROM joe")
+    execute("GRANT ROLE role2 TO joe")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role2 FROM joe")
+    execute("GRANT ROLE role3 TO joe")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
+  test("should see properties and nodes depending on granted MATCH privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO role1")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
+    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT MATCH (bar) ON GRAPH * NODES B (*) TO role2")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
@@ -1109,6 +1211,54 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").label("B").map
+    ))
+  }
+
+  test("should revoke correct traverse and read privileges from different MATCH privileges") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").label("A").property("foo").map,
+      grantRead().database("foo").role("custom").label("B").property("foo").map,
+      grantRead().database("foo").role("custom").label("A").property("bar").map,
+      grantRead().database("foo").role("custom").label("B").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse.database("foo").role("custom").label("B").map,
+      grantRead.database("foo").role("custom").label("A").property("foo").map,
+      grantRead.database("foo").role("custom").label("B").property("foo").map,
+      grantRead.database("foo").role("custom").label("A").property("bar").map,
+      grantRead.database("foo").role("custom").label("B").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse.database("foo").role("custom").label("B").map,
+      grantRead.database("foo").role("custom").label("A").property("foo").map,
+      grantRead.database("foo").role("custom").label("A").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (foo) ON GRAPH foo NODES A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse.database("foo").role("custom").label("B").map,
+      grantRead.database("foo").role("custom").label("A").property("bar").map
     ))
   }
 
