@@ -7,8 +7,8 @@ package com.neo4j.commercial.edition;
 
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.PipelineBuilders;
+import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.core.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
