@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.logical.plans.CachedProperty
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber, ValuePopulation}
@@ -142,11 +142,11 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def isNull(key: String): Boolean = fail()
 
-  override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit = fail()
+  override def setCachedProperty(key: CachedProperty, value: Value): Unit = fail()
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = fail()
 
-  override def getCachedProperty(key: CachedNodeProperty): Value = fail()
+  override def getCachedProperty(key: CachedProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = fail()
 

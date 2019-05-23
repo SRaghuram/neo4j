@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.logical.plans.CachedProperty
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
@@ -119,18 +119,18 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   override def invalidateCachedProperties(node: Long): Unit = {
     slots.foreachCachedSlot {
       case (cnp, refSlot) =>
-        if (getLongAt(slots.getLongOffsetFor(cnp.nodeVariableName)) == node) {
+        if (getLongAt(slots.getLongOffsetFor(cnp.variableName)) == node) {
           setCachedPropertyAt(refSlot.offset, null)
         }
     }
   }
 
-  override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit =
-    setCachedPropertyAt(slots.getCachedNodePropertyOffsetFor(key), value)
+  override def setCachedProperty(key: CachedProperty, value: Value): Unit =
+    setCachedPropertyAt(slots.getCachedPropertyOffsetFor(key), value)
 
   override def getCachedPropertyAt(offset: Int): Value = refs(offset).asInstanceOf[Value]
 
-  override def getCachedProperty(key: CachedNodeProperty): Value = fail()
+  override def getCachedProperty(key: CachedProperty): Value = fail()
 
   private def fail(): Nothing = throw new InternalException("Tried using a slotted context as a map")
 

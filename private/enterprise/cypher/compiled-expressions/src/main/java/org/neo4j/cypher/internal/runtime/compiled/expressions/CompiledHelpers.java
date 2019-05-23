@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -39,8 +40,14 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
-    public static Value cachedProperty( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey,
-            int propertyOffset, NodeCursor nodeCursor, PropertyCursor propertyCursor )
+    public static Value cachedNodeProperty(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
     {
         long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
@@ -56,13 +63,47 @@ public final class CompiledHelpers
                 if ( propertyOrNull == null )
                 {
                     propertyOrNull = dbAccess.nodeProperty( nodeId, propertyKey, nodeCursor, propertyCursor );
+                    // Re-cache the value
+                    ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
                 }
             }
             return propertyOrNull;
         }
     }
 
-    public static Value cachedPropertyExists( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey )
+
+    public static Value cachedRelationshipProperty(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
+    {
+        long relId = ctx.getLongAt( relOffset );
+        if ( relId == StatementConstants.NO_SUCH_RELATIONSHIP || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
+        {
+            return NO_VALUE;
+        }
+        else
+        {
+            Value propertyOrNull = dbAccess.getTxStateRelationshipPropertyOrNull( relId, propertyKey );
+            if ( propertyOrNull == null )
+            {
+                propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
+                if ( propertyOrNull == null )
+                {
+                    propertyOrNull = dbAccess.relationshipProperty( relId, propertyKey, relCursor, propertyCursor );
+                    // Re-cache the value
+                    ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
+                }
+            }
+            return propertyOrNull;
+        }
+    }
+
+    public static Value cachedNodePropertyExists( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey )
     {
         long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE )
@@ -72,6 +113,19 @@ public final class CompiledHelpers
         else
         {
             return Values.booleanValue( dbAccess.hasTxStatePropertyForCachedNodeProperty( nodeId, propertyKey ) );
+        }
+    }
+
+    public static Value cachedRelationshipPropertyExists( ExecutionContext ctx, DbAccess dbAccess, int relOffset, int propertyKey )
+    {
+        long relId = ctx.getLongAt( relOffset );
+        if ( relId == StatementConstants.NO_SUCH_RELATIONSHIP )
+        {
+            return NO_VALUE;
+        }
+        else
+        {
+            return Values.booleanValue( dbAccess.hasTxStatePropertyForCachedRelationshipProperty( relId, propertyKey ) );
         }
     }
 

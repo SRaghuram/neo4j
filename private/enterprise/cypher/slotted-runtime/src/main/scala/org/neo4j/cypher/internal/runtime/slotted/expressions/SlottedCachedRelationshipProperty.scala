@@ -8,13 +8,13 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedNodeProperty
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedRelationshipProperty
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.Value
 
-case class SlottedCachedNodeProperty(nodeOffset: Int,
-                                     propertyKey: Int,
-                                     cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
+case class SlottedCachedRelationshipProperty(nodeOffset: Int,
+                                             propertyKey: Int,
+                                             cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
   override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
 
@@ -27,9 +27,9 @@ case class SlottedCachedNodeProperty(nodeOffset: Int,
   override def children: Seq[AstNode[_]] = Seq.empty
 }
 
-case class SlottedCachedNodePropertyLate(nodeOffset: Int,
-                                         propertyKey: String,
-                                         cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
+case class SlottedCachedRelationshipPropertyLate(nodeOffset: Int,
+                                                 propertyKey: String,
+                                                 cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
   override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
 

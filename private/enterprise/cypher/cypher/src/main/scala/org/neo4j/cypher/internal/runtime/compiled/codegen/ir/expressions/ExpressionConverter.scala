@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions.functionConverter
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.logical.plans.{CachedNodeProperty, CoerceToPredicate}
+import org.neo4j.cypher.internal.logical.plans.{CachedProperty, CoerceToPredicate}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
@@ -191,7 +191,7 @@ object ExpressionConverter {
 
       case x: ast.LogicalVariable => LoadVariable(context.getVariable(x.name))
 
-      case x: CachedNodeProperty => LoadVariable(context.getVariable(x.cacheKey))
+      case x: CachedProperty => LoadVariable(context.getVariable(x.cacheKey))
 
       case other => throw new CantCompileQueryException(s"Expression of $other not yet supported")
     }

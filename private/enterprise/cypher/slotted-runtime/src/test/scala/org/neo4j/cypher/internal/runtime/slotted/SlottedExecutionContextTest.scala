@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.logical.plans.{CACHED_NODE, CachedProperty}
 import org.neo4j.values.storable.BooleanValue
 import org.neo4j.values.storable.Values.stringValue
 import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyName
@@ -73,7 +73,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     lhsCtx.mergeWith(rhsCtx, null)
 
     // then
-    def cachedPropAt(key: CachedNodeProperty, ctx: ExecutionContext) =
+    def cachedPropAt(key: CachedProperty, ctx: ExecutionContext) =
       ctx.getCachedPropertyAt(offsetFor(key, slots))
 
     cachedPropAt(prop("n", "name"), lhsCtx) should be(stringValue("b"))
@@ -112,8 +112,8 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     result.mergeWith(arg, null)
 
     // then
-    def cachedPropAt(key: CachedNodeProperty) =
-      result.getCachedPropertyAt(resultSlots.getCachedNodePropertyOffsetFor(key))
+    def cachedPropAt(key: CachedProperty) =
+      result.getCachedPropertyAt(resultSlots.getCachedPropertyOffsetFor(key))
 
     cachedPropAt(prop("a", "name")) should be(stringValue("initial"))
     cachedPropAt(prop("b", "name")) should be(stringValue("arg"))
@@ -123,7 +123,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
   }
 
   private def prop(node: String, prop: String) =
-    CachedNodeProperty(node, PropertyKeyName(prop)(InputPosition.NONE))(InputPosition.NONE)
+    CachedProperty(node, PropertyKeyName(prop)(InputPosition.NONE), CACHED_NODE)(InputPosition.NONE)
 
   private def mutatingLeftDoesNotAffectRight(left: ExecutionContext, right: ExecutionContext, extraCachedOffset: Int): Unit = {
     // given
@@ -139,5 +139,5 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     right.getCachedPropertyAt(extraCachedOffset) should equal(null)
   }
 
-  private def offsetFor(key: CachedNodeProperty, slots: SlotConfiguration) = slots.getCachedNodePropertyOffsetFor(key)
+  private def offsetFor(key: CachedProperty, slots: SlotConfiguration) = slots.getCachedPropertyOffsetFor(key)
 }

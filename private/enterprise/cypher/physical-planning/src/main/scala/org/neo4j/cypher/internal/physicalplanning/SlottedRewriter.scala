@@ -138,16 +138,18 @@ class SlottedRewriter(tokenContext: TokenContext) {
             prop.copy(map = ReferenceFromSlot(offset, key))(prop.position)
         }
 
-      case prop@plans.CachedNodeProperty(nodeVariableName, PropertyKeyName(propKey)) =>
+      case prop@plans.CachedProperty(nodeVariableName, PropertyKeyName(propKey), cachedType) =>
         slotConfiguration(nodeVariableName) match {
-          case LongSlot(offset, _, CTNode) =>
+          case LongSlot(offset, _, cypherType) if
+          (cypherType == CTNode && cachedType == CACHED_NODE) || (cypherType == CTRelationship && cachedType == CACHED_RELATIONSHIP) =>
             tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.CachedNodeProperty(offset, propId, slotConfiguration.getCachedNodePropertyOffsetFor(prop))
-              case None => ast.CachedNodePropertyLate(offset, propKey, slotConfiguration.getCachedNodePropertyOffsetFor(prop))
+              case Some(propId) => ast.CachedProperty(offset, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
+              case None => ast.CachedPropertyLate(offset, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
             }
-
+          case slot@LongSlot(offset, _, cypherType) =>
+            throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
           case slot: Slot =>
-            throw new InternalException(s"We only support cached node properties on known nodes (from index seeks), got slot '$slot'")
+            throw new InternalException(s"We only support cached properties on long slots, got slot '$slot' for cached property $prop")
         }
 
       case e@Equals(Variable(k1), Variable(k2)) =>

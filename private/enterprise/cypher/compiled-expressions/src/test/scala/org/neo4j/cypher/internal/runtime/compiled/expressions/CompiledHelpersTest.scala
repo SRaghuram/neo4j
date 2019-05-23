@@ -5,16 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import org.mockito.Mockito.when
+import org.mockito.Mockito._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor}
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.values.storable.Values._
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
 class CompiledHelpersTest extends CypherFunSuite {
+
   test("assertBooleanOrNoValue") {
     assertBooleanOrNoValue(TRUE) should equal(TRUE)
     assertBooleanOrNoValue(FALSE) should equal(FALSE)
@@ -22,7 +23,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     a[CypherTypeException] should be thrownBy assertBooleanOrNoValue(PI)
   }
 
-  test("cachedProperty should return NO_VALUE for missing node and missing property") {
+  test("cachedNodeProperty should return NO_VALUE for missing node and missing property") {
     //given
     val nodeOffset = 42
     val noNodeOffset = 43
@@ -33,19 +34,42 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getLongAt(nodeOffset)).thenReturn(1)
 
     //then
-    cachedProperty(context, mock[DbAccess],
+    cachedNodeProperty(context, mock[DbAccess],
                    noNodeOffset,
                    1337, 11,
                    mock[NodeCursor],
                    mock[PropertyCursor]) should equal(NO_VALUE)
-    cachedProperty(context, mock[DbAccess],
+    cachedNodeProperty(context, mock[DbAccess],
                    nodeOffset,
                    -1, 11,
                    mock[NodeCursor],
                    mock[PropertyCursor]) should equal(NO_VALUE)
   }
 
-  test("cachedProperty should return from tx state") {
+  test("cachedRelationshipProperty should return NO_VALUE for missing node and missing property") {
+    //given
+    val relationshipOffset = 42
+    val noRelationshipOffset = 43
+    val context = mock[ExecutionContext]
+
+    //when
+    when(context.getLongAt(noRelationshipOffset)).thenReturn(-1)
+    when(context.getLongAt(relationshipOffset)).thenReturn(1)
+
+    //then
+    cachedRelationshipProperty(context, mock[DbAccess],
+      noRelationshipOffset,
+                   1337, 11,
+                   mock[RelationshipScanCursor],
+                   mock[PropertyCursor]) should equal(NO_VALUE)
+    cachedRelationshipProperty(context, mock[DbAccess],
+      relationshipOffset,
+                   -1, 11,
+                   mock[RelationshipScanCursor],
+                   mock[PropertyCursor]) should equal(NO_VALUE)
+  }
+
+  test("cachedNodeProperty should return from tx state") {
     //given
     val nodeOffset = 42
     val context = mock[ExecutionContext]
@@ -58,7 +82,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.getTxStateNodePropertyOrNull(nodeId, property)).thenReturn(PI)
 
     //then
-    cachedProperty(context, access,
+    cachedNodeProperty(context, access,
                    nodeOffset,
                    property, 11,
                    mock[NodeCursor],
@@ -66,7 +90,28 @@ class CompiledHelpersTest extends CypherFunSuite {
 
   }
 
-  test("cachedProperty should return cached if not in tx state") {
+  test("cachedRelationshipProperty should return from tx state") {
+    //given
+    val relationshipOffset = 42
+    val context = mock[ExecutionContext]
+    val relationshipId = 1
+    val access = mock[DbAccess]
+    val property = 11
+
+    //when
+    when(context.getLongAt(relationshipOffset)).thenReturn(relationshipId)
+    when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(PI)
+
+    //then
+    cachedRelationshipProperty(context, access,
+      relationshipOffset,
+                   property, 11,
+                   mock[RelationshipScanCursor],
+                   mock[PropertyCursor]) should equal(PI)
+
+  }
+
+  test("cachedNodeProperty should return cached if not in tx state") {
     //given
     val nodeOffset = 42
     val context = mock[ExecutionContext]
@@ -81,7 +126,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getCachedPropertyAt(propertyOffset)).thenReturn(PI)
 
     //then
-    cachedProperty(context, access,
+    cachedNodeProperty(context, access,
                    nodeOffset,
                    property, propertyOffset,
                    mock[NodeCursor],
@@ -89,7 +134,30 @@ class CompiledHelpersTest extends CypherFunSuite {
 
   }
 
-  test("cachedProperty should get from store if not in tx state nor in cache") {
+  test("cachedRelationshipProperty should return cached if not in tx state") {
+    //given
+    val relationshipOffset = 42
+    val context = mock[ExecutionContext]
+    val relationshipId = 1
+    val access = mock[DbAccess]
+    val property = 11
+    val propertyOffset = 11
+
+    //when
+    when(context.getLongAt(relationshipOffset)).thenReturn(relationshipId)
+    when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(null)
+    when(context.getCachedPropertyAt(propertyOffset)).thenReturn(PI)
+
+    //then
+    cachedRelationshipProperty(context, access,
+      relationshipOffset,
+                   property, propertyOffset,
+                   mock[RelationshipScanCursor],
+                   mock[PropertyCursor]) should equal(PI)
+
+  }
+
+  test("cachedNodeProperty should get from store if not in tx state nor in cache, and re-cache") {
     //given
     val nodeOffset = 42
     val context = mock[ExecutionContext]
@@ -107,12 +175,40 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor)).thenReturn(PI)
 
     //then
-    cachedProperty(context, access,
+    cachedNodeProperty(context, access,
                    nodeOffset,
                    property, propertyOffset,
                    nodeCursor,
                    propertyCursor) should equal(PI)
 
+    verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
+  }
+
+  test("cachedRelationshipProperty should get from store if not in tx state nor in cache, and re-cache") {
+    //given
+    val relationshipOffset = 42
+    val context = mock[ExecutionContext]
+    val relationshipId = 1
+    val access = mock[DbAccess]
+    val property = 11
+    val propertyOffset = 11
+    val relationshipCursor = mock[RelationshipScanCursor]
+    val propertyCursor = mock[PropertyCursor]
+
+    //when
+    when(context.getLongAt(relationshipOffset)).thenReturn(relationshipId)
+    when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(null)
+    when(context.getCachedPropertyAt(propertyOffset)).thenReturn(null)
+    when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor)).thenReturn(PI)
+
+    //then
+    cachedRelationshipProperty(context, access,
+      relationshipOffset,
+                   property, propertyOffset,
+      relationshipCursor,
+                   propertyCursor) should equal(PI)
+
+    verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
   }
 
   test("nodeOrNoValue") {

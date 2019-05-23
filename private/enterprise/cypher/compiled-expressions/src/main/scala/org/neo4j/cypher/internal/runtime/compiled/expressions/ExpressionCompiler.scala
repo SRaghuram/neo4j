@@ -13,7 +13,7 @@ import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, noValue, or, ternary, variable}
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
-import org.neo4j.cypher.internal.logical.plans.{ASTCachedNodeProperty, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
+import org.neo4j.cypher.internal.logical.plans.{ASTCachedProperty, CACHED_NODE, CACHED_RELATIONSHIP, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
@@ -1249,16 +1249,24 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case CachedNodeProperty(offset, token, cachedPropertyOffset) =>
+    case CachedProperty(offset, token, cachedPropertyOffset, cachedType) =>
       val variableName = namer.nextVariableName()
-      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, invokeStatic(
-        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
-        LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset),
-        NODE_CURSOR, PROPERTY_CURSOR)))
+      val (cachedPropertyMethodInvocation, cursor) = cachedType match {
+        case CACHED_NODE =>
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
+            LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
+            vNODE_CURSOR)
+        case CACHED_RELATIONSHIP =>
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
+            LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+            vRELATIONSHIP_CURSOR)
+      }
+
+      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, cachedPropertyMethodInvocation))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1273,18 +1281,27 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case CachedNodePropertyLate(offset, propKey, cachedPropertyOffset) =>
+    case CachedPropertyLate(offset, propKey, cachedPropertyOffset, cachedType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
+      val (cachedPropertyMethodInvocation, cursor) = cachedType match {
+        case CACHED_NODE =>
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
+            LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
+            vNODE_CURSOR)
+        case CACHED_RELATIONSHIP =>
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
+            LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+            vRELATIONSHIP_CURSOR)
+      }
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
-                                   invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
-                                                LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR))))
+                                   cachedPropertyMethodInvocation)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
+      Some(IntermediateExpression(ops, Seq(f), Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case NodePropertyExists(offset, token, _) =>
       Some(
@@ -1645,7 +1662,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                            in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR ),
             in.fields, in.variables ++ vCURSORS, in.nullChecks))
 
-        case property: ASTCachedNodeProperty => cachedNodeExists(property)
+        case property: ASTCachedProperty => cachedExists(property)
         case _: PatternExpression => None//TODO
         case _: NestedPipeExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
@@ -2599,31 +2616,39 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     set
   }
 
-  private def cachedNodeExists(property: ASTCachedNodeProperty) = property match {
-    case CachedNodeProperty(offset, prop, _) =>
+  private def cachedExists(property: ASTCachedProperty) = property match {
+    case CachedProperty(offset, prop, _, cachedType) =>
+      val methodName = cachedType match {
+        case CACHED_NODE => "cachedNodePropertyExists"
+        case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"
+      }
 
       Some(IntermediateExpression(
         invokeStatic(
-          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int](methodName),
           LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(prop)), Seq.empty,
         Seq.empty, Set.empty))
 
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, invokeStatic(
-        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int](methodName),
         LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(prop))))
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq.empty, Set(nullChecks), requireNullCheck = false))
 
-    case CachedNodePropertyLate(offset, prop, _) =>
+    case CachedPropertyLate(offset, prop, _, cachedType) =>
+      val methodName = cachedType match {
+        case CACHED_NODE => "cachedNodePropertyExists"
+        case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"
+      }
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(prop)))),
         invokeStatic(
-          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int](methodName),
           LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f)))))
 
       val ops = block(lazySet, load(variableName))

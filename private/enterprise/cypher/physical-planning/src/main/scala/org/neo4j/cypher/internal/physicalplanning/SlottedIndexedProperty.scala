@@ -11,7 +11,7 @@ object SlottedIndexedProperty {
   def apply(node: String, property: IndexedProperty, slots: SlotConfiguration): SlottedIndexedProperty = {
     val maybeOffset =
       if (property.shouldGetValue) {
-        Some(slots.getCachedNodePropertyOffsetFor(property.asCachedNodeProperty(node)))
+        Some(slots.getCachedPropertyOffsetFor(property.asCachedProperty(node)))
       } else {
         None
       }

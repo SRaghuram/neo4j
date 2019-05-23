@@ -22,8 +22,8 @@ case object projectIndexProperties {
     var currentTypes = semanticTable.types
 
     val rewriter = topDown(Rewriter.lift {
-      case indexLeafPlan: IndexLeafPlan if indexLeafPlan.cachedNodeProperties.nonEmpty =>
-        val projections = indexLeafPlan.availableCachedNodeProperties.map {
+      case indexLeafPlan: IndexLeafPlan if indexLeafPlan.cachedProperties.nonEmpty =>
+        val projections = indexLeafPlan.availableCachedProperties.map {
           case (prop, cachedNodeProperty) => (cachedNodeProperty.cacheKey, prop)
         }
         // Register all variables in the property lookups as nodes

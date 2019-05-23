@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.logical.plans.CachedProperty
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
@@ -241,11 +241,11 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def isNull(key: String): Boolean = fail()
 
-  override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit = fail()
+  override def setCachedProperty(key: CachedProperty, value: Value): Unit = fail()
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = setRefAt(offset, value)
 
-  override def getCachedProperty(key: CachedNodeProperty): Value = fail()
+  override def getCachedProperty(key: CachedProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 

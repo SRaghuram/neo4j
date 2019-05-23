@@ -418,9 +418,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
             copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
           case _ => // do nothing, already added by lhs
         }, { cnp =>
-          val offset = rhsSlots.getCachedNodePropertyOffsetFor(cnp)
+          val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
           if (offset >= argumentSize.nReferences) {
-            copyCachedPropertiesFromRHS += offset -> slots.getCachedNodePropertyOffsetFor(cnp)
+            copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
           }
         })
 

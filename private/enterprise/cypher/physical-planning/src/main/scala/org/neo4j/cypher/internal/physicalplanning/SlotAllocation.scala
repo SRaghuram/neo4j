@@ -202,6 +202,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     val TRAVERSE_INTO_CHILDREN = Some((s: Accumulator) => s)
     val DO_NOT_TRAVERSE_INTO_CHILDREN = None
 
+    // TODO we do not need this any longer
     p.treeFind[Expression] {
       case _: PatternExpression =>
         true
@@ -226,8 +227,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         _: Accumulator =>
           (Accumulator(doNotTraverseExpression = Some(lhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at rhsExpression
 
-      // Only allocate expression on the LHS for these plans
-      case _: AbstractSelectOrSemiApply | _: AbstractLetSelectOrSemiApply if !shouldAllocateLhs =>
+      // Only allocate expression on the LHS for these other two-child plans (which have expressions)
+      case _: ApplyPlan if !shouldAllocateLhs =>
         acc: Accumulator =>
           (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
 
@@ -284,7 +285,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     lp match {
       case leaf: IndexLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
-        leaf.cachedNodeProperties.foreach(slots.newCachedProperty)
+        leaf.cachedProperties.foreach(slots.newCachedProperty)
 
       case leaf: NodeLogicalLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
@@ -515,7 +516,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
-        rhs.foreachSlotOrdered(result.add, result.newCachedPropertyIfUnseen)
+        rhs.foreachSlotOrdered(result.add, result.newCachedProperty)
 
         result
 
@@ -529,7 +530,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           if (!nodes(key))
             result.add(key, slot.asNullable)
 
-        lhs.foreachSlotOrdered(onVariableSlot, result.newCachedPropertyIfUnseen)
+        lhs.foreachSlotOrdered(onVariableSlot, result.newCachedProperty)
         result
 
       case LeftOuterHashJoin(nodes, _, _) =>
@@ -542,7 +543,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           if (!nodes(key))
             result.add(key, slot.asNullable)
 
-        rhs.foreachSlotOrdered(onVariableSlot, result.newCachedPropertyIfUnseen)
+        rhs.foreachSlotOrdered(onVariableSlot, result.newCachedProperty)
         result
 
       case NodeHashJoin(nodes, _, _) =>
@@ -555,7 +556,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           if (!nodes(key))
             result.add(key, slot)
 
-        rhs.foreachSlotOrdered(onVariableSlot, result.newCachedPropertyIfUnseen)
+        rhs.foreachSlotOrdered(onVariableSlot, result.newCachedProperty)
         result
 
       case _: ValueHashJoin =>
@@ -564,7 +565,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
-        rhs.foreachSlotOrdered(result.add, result.newCachedPropertyIfUnseen)
+        rhs.foreachSlotOrdered(result.add, result.newCachedProperty)
         result
 
       case RollUpApply(_, _, collectionName, _, _) =>
