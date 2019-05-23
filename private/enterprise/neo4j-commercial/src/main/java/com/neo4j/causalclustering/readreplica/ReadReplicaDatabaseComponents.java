@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
@@ -48,7 +49,8 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
-        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, globalModule.getLogService() ).select();
+        DatabaseLogService databaseLogService = new DatabaseLogService( databaseId::name, globalModule.getLogService() );
+        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
         IdContextFactory idContextFactory =
                 IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( globalConfig ), globalModule.getJobScheduler() )

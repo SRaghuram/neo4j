@@ -28,6 +28,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.Group;
@@ -42,8 +44,6 @@ class ReadReplicaDatabaseFactory
     private final Config config;
     private final SystemNanoClock clock;
     private final JobScheduler jobScheduler;
-    private final LogProvider debugLog;
-    private final LogProvider neo4jLog;
     private final TopologyService topologyService;
     private final MemberId myIdentity;
     private final CatchupComponentsRepository catchupComponentsRepository;
@@ -58,8 +58,6 @@ class ReadReplicaDatabaseFactory
         this.config = config;
         this.clock = clock;
         this.jobScheduler = jobScheduler;
-        this.debugLog = logService.getInternalLogProvider();
-        this.neo4jLog = logService.getInternalLogProvider();
         this.topologyService = topologyService;
         this.myIdentity = myIdentity;
         this.catchupComponentsRepository = catchupComponentsRepository;
@@ -70,27 +68,31 @@ class ReadReplicaDatabaseFactory
 
     LifeSupport createDatabase( ReadReplicaDatabaseContext databaseContext )
     {
+        DatabaseLogService databaseLogService = databaseContext.database().getLogService();
+        DatabaseLogProvider internalLogProvider = databaseLogService.getInternalLogProvider();
+        DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();
+
         LifeSupport life = new LifeSupport();
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
-        initialiseStatusDescriptionEndpoint( commandIndexTracker, life, databaseContext.dependencies() );
+        initialiseStatusDescriptionEndpoint( commandIndexTracker, life, databaseContext.dependencies(), internalLogProvider );
 
-        TimerService timerService = new TimerService( jobScheduler, debugLog );
+        TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
-        defaultStrategy.inject( topologyService, config, debugLog, myIdentity );
+        defaultStrategy.inject( topologyService, config, internalLogProvider, myIdentity );
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
-                myIdentity, config, debugLog, topologyService, defaultStrategy );
+                myIdentity, config, internalLogProvider, topologyService, defaultStrategy );
 
         CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, health,
-                topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, debugLog, pageCursorTracerSupplier,
-                config );
+                topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
+                pageCursorTracerSupplier, config );
 
         // TODO: Fix lifecycle issue.
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseContext.databaseId() ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseContext.databaseId().name() ) ) );
 
-        life.add( new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, debugLog, neo4jLog, topologyService,
-                catchupComponentsSupplier ) );
+        life.add( new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
+                topologyService, catchupComponentsSupplier ) );
 
         return life;
     }
@@ -112,7 +114,8 @@ class ReadReplicaDatabaseFactory
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    private void initialiseStatusDescriptionEndpoint( CommandIndexTracker commandIndexTracker, LifeSupport life, Dependencies dependencies )
+    private void initialiseStatusDescriptionEndpoint( CommandIndexTracker commandIndexTracker, LifeSupport life, Dependencies dependencies,
+            DatabaseLogProvider debugLog )
     {
         Duration samplingWindow = config.get( status_throughput_window );
         ThroughputMonitor throughputMonitor = new ThroughputMonitor( debugLog, clock, jobScheduler, samplingWindow,

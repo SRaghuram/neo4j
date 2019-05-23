@@ -15,6 +15,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 
 public class RaftGroupFactory
@@ -36,10 +37,10 @@ public class RaftGroupFactory
     }
 
     public RaftGroup create( DatabaseId databaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
-            Dependencies dependencies )
+            Dependencies dependencies, DatabaseLogService logService )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
-        return new RaftGroup( globalModule.getGlobalConfig(), globalModule.getLogService(), globalModule.getFileSystem(), globalModule.getJobScheduler(),
+        return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
                 globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState, topologyService, storageFactory, databaseId );
     }
 }

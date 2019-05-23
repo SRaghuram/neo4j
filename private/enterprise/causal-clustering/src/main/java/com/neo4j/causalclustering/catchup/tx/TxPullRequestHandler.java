@@ -20,7 +20,6 @@ import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
@@ -41,14 +40,14 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final TxPullRequestsMonitor monitor;
     private final Log log;
 
-    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, LogProvider logProvider )
+    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db )
     {
         this.protocol = protocol;
         this.db = db;
         this.transactionIdStore = transactionIdStore( db );
         this.logicalTransactionStore = logicalTransactionStore( db );
         this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
-        this.log = logProvider.getLog( getClass() );
+        this.log = db.getInternalLogProvider().getLog( getClass() );
     }
 
     @Override

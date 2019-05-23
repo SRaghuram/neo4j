@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 
 import java.util.function.Function;
 
-import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.token.TokenHolders;
 
 public class CoreDatabaseComponents implements EditionDatabaseComponents
@@ -33,12 +34,11 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseTransactionStats transactionMonitor;
 
-    CoreDatabaseComponents( GlobalModule globalModule, AbstractEditionModule editionModule, CoreEditionKernelComponents kernelComponents )
+    CoreDatabaseComponents( Config config, AbstractEditionModule editionModule, CoreEditionKernelComponents kernelComponents, DatabaseLogService logService )
     {
         this.editionModule = editionModule;
         this.kernelComponents = kernelComponents;
-        this.statementLocksFactory = new StatementLocksFactorySelector( kernelComponents.lockManager(), globalModule.getGlobalConfig(),
-                globalModule.getLogService() ).select();
+        this.statementLocksFactory = new StatementLocksFactorySelector( kernelComponents.lockManager(), config, logService ).select();
         this.transactionMonitor = editionModule.createTransactionMonitor();
     }
 

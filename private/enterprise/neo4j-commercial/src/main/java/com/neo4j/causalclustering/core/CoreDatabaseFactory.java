@@ -116,6 +116,8 @@ import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -158,8 +160,6 @@ class CoreDatabaseFactory
     private final JobScheduler jobScheduler;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
-    private final LogService logService;
-    private final LogProvider debugLog;
     private final CompositeDatabaseAvailabilityGuard availabilityGuard;
     private final StorageEngineFactory storageEngineFactory;
 
@@ -196,8 +196,6 @@ class CoreDatabaseFactory
         this.jobScheduler = globalModule.getJobScheduler();
         this.fileSystem = globalModule.getFileSystem();
         this.pageCache = globalModule.getPageCache();
-        this.logService = globalModule.getLogService();
-        this.debugLog = globalModule.getLogService().getInternalLogProvider();
         this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
 
@@ -225,8 +223,10 @@ class CoreDatabaseFactory
     }
 
     CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
-            BootstrapContext bootstrapContext )
+            BootstrapContext bootstrapContext, DatabaseLogService logService )
     {
+        DatabaseLogProvider debugLog = logService.getInternalLogProvider();
+
         // Must be constructed before storage is touched by other modules.
         StartupCoreStateCheck startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, storageFactory.layout(), databaseId );
 
@@ -235,10 +235,10 @@ class CoreDatabaseFactory
 
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( databaseId, NO_INITIALIZATION );
         RaftBinder raftBinder = createRaftBinder(
-                databaseId, config, monitors, storageFactory, bootstrapContext, temporaryDatabaseFactory, databaseInitializer );
+                databaseId, config, monitors, storageFactory, bootstrapContext, temporaryDatabaseFactory, databaseInitializer, debugLog );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
-        initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life );
+        initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life, debugLog );
 
         long logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
 
@@ -246,26 +246,27 @@ class CoreDatabaseFactory
                 new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, myIdentity, clock ), myIdentity,
                 raftLogger );
 
-        RaftGroup raftGroup = raftGroupFactory.create( databaseId, raftOutbound, life, monitors, dependencies );
+        RaftGroup raftGroup = raftGroupFactory.create( databaseId, raftOutbound, life, monitors, dependencies, logService );
 
         GlobalSession myGlobalSession = new GlobalSession( UUID.randomUUID(), myIdentity );
         LocalSessionPool sessionPool = new LocalSessionPool( myGlobalSession );
 
         ProgressTracker progressTracker = new ProgressTrackerImpl( myGlobalSession );
-        RaftReplicator replicator = createReplicator( raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound );
+        RaftReplicator replicator = createReplicator( raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog );
 
         return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder );
     }
 
     CoreEditionKernelComponents createKernelComponents( DatabaseId databaseId, LifeSupport life, CoreRaftContext raftContext,
-            CoreKernelResolvers kernelResolvers )
+            CoreKernelResolvers kernelResolvers, DatabaseLogService logService )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
         Replicator replicator = raftContext.replicator();
+        DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseId, life );
+        ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseId, life, debugLog );
         DatabaseIdContext idContext = createIdContext( databaseId, raftGroup.raftMachine(), raftContext.commandIndexTracker(), raftContext.replicator(),
-                idAllocationStateMachine );
+                idAllocationStateMachine, debugLog );
 
         Supplier<StorageEngine> storageEngineSupplier = kernelResolvers.storageEngine();
 
@@ -281,7 +282,7 @@ class CoreDatabaseFactory
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( databaseId, labelTokenRegistry, replicator,
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
-        ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine = createLockTokenStateMachine( databaseId, life );
+        ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine = createLockTokenStateMachine( databaseId, life, debugLog );
 
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry, debugLog, databaseManager );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, debugLog, databaseManager );
@@ -310,23 +311,24 @@ class CoreDatabaseFactory
     }
 
     void createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies, StoreDownloadContext downloadContext,
-            Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext )
+            Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext, DatabaseLogService logService )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
+        DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        SessionTracker sessionTracker = createSessionTracker( databaseId, life );
+        SessionTracker sessionTracker = createSessionTracker( databaseId, life, debugLog );
 
-        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId, life );
+        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId, life, debugLog );
         CoreState coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
         CommandApplicationProcess commandApplicationProcess = createCommandApplicationProcess( raftGroup, panicService, config, life, jobScheduler,
-                dependencies, monitors, raftContext.progressTracker(), sessionTracker, coreState );
+                dependencies, monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
 
         CoreSnapshotService snapshotService = new CoreSnapshotService( commandApplicationProcess, raftGroup.raftLog(), coreState, raftGroup.raftMachine() );
         dependencies.satisfyDependencies( snapshotService );
 
         CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicService, jobScheduler, monitors, commandApplicationProcess,
-                snapshotService, downloadContext );
+                snapshotService, downloadContext, debugLog );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, config, debugLog, myIdentity );
@@ -357,12 +359,13 @@ class CoreDatabaseFactory
     }
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, CoreStateStorageFactory storageFactory,
-            BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer )
+            BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
+            DatabaseLogProvider debugLog )
     {
         CoreBootstrapper coreBootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, fileSystem, config, debugLog,
                 pageCache, storageEngineFactory );
 
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId );
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId, debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( databaseId, raftIdStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ), clusterBindingTimeout, coreBootstrapper,
@@ -388,7 +391,7 @@ class CoreDatabaseFactory
 
     private CommandApplicationProcess createCommandApplicationProcess( RaftGroup raftGroup, Panicker panicker, Config config, LifeSupport life,
             JobScheduler jobScheduler, Dependencies dependencies, Monitors monitors, ProgressTracker progressTracker, SessionTracker sessionTracker,
-            CoreState coreState )
+            CoreState coreState, DatabaseLogProvider debugLog )
     {
         CommandApplicationProcess commandApplicationProcess = new CommandApplicationProcess( raftGroup.raftLog(),
                 config.get( state_machine_apply_max_batch_size ), config.get( state_machine_flush_window_size ), debugLog, progressTracker,
@@ -404,14 +407,14 @@ class CoreDatabaseFactory
         return commandApplicationProcess;
     }
 
-    private SessionTracker createSessionTracker( DatabaseId databaseId, LifeSupport life )
+    private SessionTracker createSessionTracker( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( databaseId, life );
+        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( databaseId, life, databaseLogProvider );
         return new SessionTracker( sessionTrackerStorage );
     }
 
     private RaftReplicator createReplicator( LeaderLocator leaderLocator, LocalSessionPool sessionPool, ProgressTracker progressTracker, Monitors monitors,
-            Outbound<MemberId,RaftMessage> raftOutbound )
+            Outbound<MemberId,RaftMessage> raftOutbound, DatabaseLogProvider debugLog )
     {
         Duration initialBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_base );
         Duration upperBoundBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_limit );
@@ -426,7 +429,8 @@ class CoreDatabaseFactory
     }
 
     private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicService, JobScheduler jobScheduler,
-            Monitors monitors, CommandApplicationProcess commandApplicationProcess, CoreSnapshotService snapshotService, StoreDownloadContext downloadContext )
+            Monitors monitors, CommandApplicationProcess commandApplicationProcess, CoreSnapshotService snapshotService, StoreDownloadContext downloadContext,
+            DatabaseLogProvider debugLog )
     {
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( debugLog, catchupComponentsProvider.catchupClientFactory() );
         StoreDownloader storeDownloader = new StoreDownloader( catchupComponentsRepository, debugLog );
@@ -438,7 +442,7 @@ class CoreDatabaseFactory
     }
 
     private DatabaseIdContext createIdContext( DatabaseId databaseId, RaftMachine raftMachine, CommandIndexTracker commandIndexTracker, Replicator replicator,
-            ReplicatedIdAllocationStateMachine idAllocationStateMachine )
+            ReplicatedIdAllocationStateMachine idAllocationStateMachine, DatabaseLogProvider debugLog )
     {
         ReplicatedIdRangeAcquirer idRangeAcquirer = new ReplicatedIdRangeAcquirer( databaseId, replicator, idAllocationStateMachine, allocationSizes,
                 myIdentity, debugLog );
@@ -450,15 +454,16 @@ class CoreDatabaseFactory
         return idContextFactory.createIdContext( databaseId );
     }
 
-    private ReplicatedIdAllocationStateMachine createIdAllocationStateMachine( DatabaseId databaseId, LifeSupport life )
+    private ReplicatedIdAllocationStateMachine createIdAllocationStateMachine( DatabaseId databaseId, LifeSupport life,
+            DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseId, life );
+        StateStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseId, life, databaseLogProvider );
         return new ReplicatedIdAllocationStateMachine( idAllocationStorage );
     }
 
-    private ReplicatedLockTokenStateMachine createLockTokenStateMachine( DatabaseId databaseId, LifeSupport life )
+    private ReplicatedLockTokenStateMachine createLockTokenStateMachine( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseId, life );
+        StateStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseId, life, databaseLogProvider );
         return new ReplicatedLockTokenStateMachine( lockTokenStorage );
     }
 
@@ -497,7 +502,8 @@ class CoreDatabaseFactory
         return new LeaderOnlyLockManager( myself, replicator, leaderLocator, localLocks, lockTokenStateMachine, databaseId );
     }
 
-    private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life )
+    private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life,
+            DatabaseLogProvider debugLog )
     {
         Duration samplingWindow = config.get( status_throughput_window );
         ThroughputMonitor throughputMonitor = new ThroughputMonitor( debugLog, clock, jobScheduler, samplingWindow,

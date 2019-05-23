@@ -33,6 +33,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -152,17 +153,18 @@ public final class CatchupComponentsProvider
      */
     public CatchupComponentsRepository.CatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext )
     {
+        DatabaseLogProvider databaseLogProvider = clusteredDatabaseContext.database().getInternalLogProvider();
         Monitors monitors = clusteredDatabaseContext.monitors();
         StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors,
-                logProvider, storeCopyBackoffStrategy );
+                databaseLogProvider, storeCopyBackoffStrategy );
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
-        TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 
-        RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
+        RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache,
                 storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory, clusteredDatabaseContext.databaseId() );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
-                copiedStoreRecovery, remoteStore, logProvider );
+                copiedStoreRecovery, remoteStore, databaseLogProvider );
 
         return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy );
     }

@@ -29,8 +29,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.storageengine.api.StoreId;
@@ -62,9 +60,8 @@ class GetStoreFileRequestHandlerTest
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
-        GetStoreFileRequestHandler getStoreFileRequestHandler =
-                new NiceGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(),
-                        fileSystemAbstraction, NullLogProvider.getInstance() );
+        GetStoreFileRequestHandler getStoreFileRequestHandler = new NiceGetStoreFileRequestHandler( catchupServerProtocol, database,
+                new StoreFileStreamingProtocol(), fileSystemAbstraction );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
         when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
@@ -122,8 +119,7 @@ class GetStoreFileRequestHandlerTest
     void shouldResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
-                new EvilGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(),
-                        fileSystemAbstraction, NullLogProvider.getInstance() ) );
+                new EvilGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(), fileSystemAbstraction ) );
 
         assertThrows( IllegalStateException.class,
                 () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
@@ -140,7 +136,7 @@ class GetStoreFileRequestHandlerTest
     void transactionsTooFarBehindStartCheckpointAsynchronously()
     {
         // given checkpoint will fail if performed
-        checkPointer._tryCheckPoint = Optional.empty();
+        checkPointer.tryCheckPoint = Optional.empty();
 
         // when
         RuntimeException error = assertThrows( RuntimeException.class,
@@ -160,9 +156,9 @@ class GetStoreFileRequestHandlerTest
     {
         private NiceGetStoreFileRequestHandler( CatchupServerProtocol protocol, Database db,
                 StoreFileStreamingProtocol storeFileStreamingProtocol,
-                FileSystemAbstraction fs, LogProvider logProvider )
+                FileSystemAbstraction fs )
         {
-            super( protocol, db, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, db, storeFileStreamingProtocol, fs );
         }
 
         @Override
@@ -175,9 +171,9 @@ class GetStoreFileRequestHandlerTest
     private class EvilGetStoreFileRequestHandler extends GetStoreFileRequestHandler
     {
         private EvilGetStoreFileRequestHandler( CatchupServerProtocol protocol, Database db,
-                StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
+                StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs )
         {
-            super( protocol, db, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, db, storeFileStreamingProtocol, fs );
         }
 
         @Override
@@ -189,10 +185,10 @@ class GetStoreFileRequestHandlerTest
 
     private class FakeCheckPointer implements CheckPointer
     {
-        Optional<Long> _checkPointIfNeeded = Optional.of( 1L );
-        Optional<Long> _tryCheckPoint = Optional.of( 1L );
-        Optional<Long> _forceCheckPoint = Optional.of( 1L );
-        Optional<Long> _lastCheckPointedTransactionId = Optional.of( 1L );
+        Optional<Long> checkPointIfNeeded = Optional.of( 1L );
+        Optional<Long> tryCheckPoint = Optional.of( 1L );
+        Optional<Long> forceCheckPoint = Optional.of( 1L );
+        Optional<Long> lastCheckPointedTransactionId = Optional.of( 1L );
         Supplier<RuntimeException> exceptionIfEmpty = () -> new RuntimeException( "FakeCheckPointer" );
         AtomicInteger invocationCounter = new AtomicInteger();
         AtomicInteger failCounter = new AtomicInteger();
@@ -200,43 +196,43 @@ class GetStoreFileRequestHandlerTest
         @Override
         public long checkPointIfNeeded( TriggerInfo triggerInfo )
         {
-            incrementInvocationCounter( _checkPointIfNeeded );
-            return _checkPointIfNeeded.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( checkPointIfNeeded );
+            return checkPointIfNeeded.orElseThrow( exceptionIfEmpty );
         }
 
         @Override
         public long tryCheckPoint( TriggerInfo triggerInfo )
         {
-            incrementInvocationCounter( _tryCheckPoint );
-            return _tryCheckPoint.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( tryCheckPoint );
+            return tryCheckPoint.orElseThrow( exceptionIfEmpty );
         }
 
         @Override
         public long tryCheckPoint( TriggerInfo triggerInfo, BooleanSupplier timeout )
         {
-            incrementInvocationCounter( _tryCheckPoint );
-            return _tryCheckPoint.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( tryCheckPoint );
+            return tryCheckPoint.orElseThrow( exceptionIfEmpty );
         }
 
         @Override
         public long tryCheckPointNoWait( TriggerInfo triggerInfo )
         {
-            incrementInvocationCounter( _tryCheckPoint );
-            return _tryCheckPoint.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( tryCheckPoint );
+            return tryCheckPoint.orElseThrow( exceptionIfEmpty );
         }
 
         @Override
         public long forceCheckPoint( TriggerInfo triggerInfo )
         {
-            incrementInvocationCounter( _forceCheckPoint );
-            return _forceCheckPoint.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( forceCheckPoint );
+            return forceCheckPoint.orElseThrow( exceptionIfEmpty );
         }
 
         @Override
         public long lastCheckPointedTransactionId()
         {
-            incrementInvocationCounter( _lastCheckPointedTransactionId );
-            return _lastCheckPointedTransactionId.orElseThrow( exceptionIfEmpty );
+            incrementInvocationCounter( lastCheckPointedTransactionId );
+            return lastCheckPointedTransactionId.orElseThrow( exceptionIfEmpty );
         }
 
         private void incrementInvocationCounter( Optional<Long> variable )

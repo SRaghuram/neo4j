@@ -42,6 +42,8 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLog;
+import org.neo4j.logging.internal.DatabaseLogService;
+import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -101,7 +103,9 @@ class TxPullRequestHandlerTest
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
-        txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        DatabaseLogService databaseLogService = new DatabaseLogService( () -> DEFAULT_DATABASE_NAME, new SimpleLogService( logProvider ) );
+        when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
+        txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
         lifeSupport.add( availabilityGuard );
     }
 
@@ -180,7 +184,7 @@ class TxPullRequestHandlerTest
 
         when( database.getStoreId() ).thenReturn( serverStoreId );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
@@ -189,8 +193,8 @@ class TxPullRequestHandlerTest
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_ID_MISMATCH, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " +
-                        "from this machine with %s", 2L, clientStoreId, serverStoreId ) );
+                .info( containsString( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " +
+                                       "from this machine with %s" ), 2L, clientStoreId, serverStoreId ) );
     }
 
     @Test
@@ -200,7 +204,7 @@ class TxPullRequestHandlerTest
         availabilityGuard.require( new DescriptiveAvailabilityRequirement( "Test" ) );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
@@ -209,14 +213,14 @@ class TxPullRequestHandlerTest
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", 2L ) );
+                .info( containsString( "Failed to serve TxPullRequest for tx %d because the local database is unavailable." ), 2L ) );
     }
 
     @ParameterizedTest
     @ValueSource( longs = {Long.MIN_VALUE, BASE_TX_ID - 42, BASE_TX_ID - 2, BASE_TX_ID - 1} )
     void shouldRespondWithIllegalRequestWhenTransactionIdIsIncorrect( long incorrectTxId ) throws Exception
     {
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
 
         TxPullRequest request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
@@ -243,7 +247,7 @@ class TxPullRequestHandlerTest
         ChannelFuture channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 

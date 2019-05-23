@@ -46,7 +46,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
@@ -65,21 +66,21 @@ public class RaftGroup
     private final InFlightCache inFlightCache;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
-    RaftGroup( Config config, LogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock, MemberId myself,
-            LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+    RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
+            MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             ClusterStateLayout clusterState, CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, DatabaseId databaseId )
     {
-        LogProvider logProvider = logService.getInternalLogProvider();
+        DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
         RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, databaseId );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
-        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseId, life );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseId, life, logProvider );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, monitors );
-        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseId, life );
-        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseId, life );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseId, life, logProvider );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseId, life, logProvider );
 
         leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
 

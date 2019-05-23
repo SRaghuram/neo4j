@@ -20,7 +20,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<PrepareStoreCopyRequest>
 {
@@ -31,12 +30,12 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     private final Log log;
 
     public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Database db,
-            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider, LogProvider logProvider )
+            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
     {
         this.protocol = catchupServerProtocol;
         this.prepareStoreCopyFilesProvider = prepareStoreCopyFilesProvider;
         this.db = db;
-        this.log = logProvider.getLog( getClass() );
+        this.log = db.getInternalLogProvider().getLog( getClass() );
     }
 
     @Override

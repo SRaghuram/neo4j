@@ -31,6 +31,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 
@@ -53,6 +54,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LifeSupport coreDatabaseLife = new LifeSupport();
         Monitors coreDatabaseMonitors = new Monitors( globalModule.getGlobalMonitors() );
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
+        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( databaseId::name, globalModule.getLogService() );
 
         DatabaseLayout databaseLayout = globalModule.getStoreLayout().databaseLayout( databaseId.name() );
 
@@ -60,23 +62,23 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext(
-                databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext );
+                databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService );
 
         CoreKernelResolvers kernelResolvers = new CoreKernelResolvers();
         CoreEditionKernelComponents kernelContext = edition.coreDatabaseFactory().createKernelComponents(
-                databaseId, coreDatabaseLife, raftContext, kernelResolvers );
+                databaseId, coreDatabaseLife, raftContext, kernelResolvers, coreDatabaseLogService );
 
         log.info( "Creating '%s' database.", databaseId.name() );
         DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, kernelContext, coreDatabaseDependencies,
-                coreDatabaseMonitors );
+                coreDatabaseMonitors, coreDatabaseLogService );
         Database kernelDatabase = new Database( databaseCreationContext );
 
         // TODO: Merge/change these contexts into something better? Perhaps a ReplicatedDatabaseContext again?
         StoreDownloadContext downloadContext = new StoreDownloadContext(
-                kernelDatabase, storeFiles, transactionLogs, globalModule.getLogService().getInternalLogProvider() );
+                kernelDatabase, storeFiles, transactionLogs, coreDatabaseLogService.getInternalLogProvider() );
 
         edition.coreDatabaseFactory().createDatabase( databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, downloadContext,
-                kernelDatabase, kernelContext, raftContext );
+                kernelDatabase, kernelContext, raftContext, coreDatabaseLogService );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 coreDatabaseLife, coreDatabaseMonitors );
@@ -86,11 +88,13 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, CoreEditionKernelComponents kernelComponents,
-            Dependencies parentDependencies, Monitors parentMonitors )
+            Dependencies parentDependencies, Monitors parentMonitors, DatabaseLogService databaseLogService )
     {
-        CoreDatabaseComponents coreDatabaseComponents = new CoreDatabaseComponents( globalModule, edition, kernelComponents );
+        Config config = globalModule.getGlobalConfig();
+        CoreDatabaseComponents coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         GlobalProcedures globalProcedures = edition.getGlobalProcedures();
-        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents, globalProcedures );
+        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents,
+                globalProcedures, databaseLogService );
     }
 
     @Override

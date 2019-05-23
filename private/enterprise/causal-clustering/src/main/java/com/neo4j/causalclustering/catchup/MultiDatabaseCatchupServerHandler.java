@@ -75,27 +75,27 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
                 CoreSnapshotRequest.class, logProvider );
     }
 
-    private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
+    private static TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new TxPullRequestHandler( protocol, db, logProvider );
+        return new TxPullRequestHandler( protocol, db );
     }
 
-    private GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )
+    private static GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new GetStoreIdRequestHandler( protocol, db );
     }
 
     private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new PrepareStoreCopyRequestHandler( protocol, db, new PrepareStoreCopyFilesProvider( fs ), logProvider );
+        return new PrepareStoreCopyRequestHandler( protocol, db, new PrepareStoreCopyFilesProvider( fs ) );
     }
 
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
+        return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs );
     }
 
-    private CoreSnapshotRequestHandler buildCoreSnapshotRequestRequestHandler( Database db, CatchupServerProtocol protocol )
+    private static CoreSnapshotRequestHandler buildCoreSnapshotRequestRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new CoreSnapshotRequestHandler( protocol, db );
     }

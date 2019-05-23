@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 @ExtendWith( {TestDirectoryExtension.class, LifeExtension.class} )
 class DumpClusterStateTest
@@ -86,17 +87,17 @@ class DumpClusterStateTest
     {
         // We're writing to 4 pieces of cluster state
         SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( DATABASE_ID );
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( DATABASE_ID, nullDatabaseLogProvider() );
 
-        StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life );
+        StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
 
         // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
-        storageFactory.createLockTokenStorage( DATABASE_ID, life );
-        storageFactory.createIdAllocationStorage( DATABASE_ID, life );
-        storageFactory.createSessionTrackerStorage( DATABASE_ID, life );
-        storageFactory.createLastFlushedStorage( DATABASE_ID, life );
-        storageFactory.createRaftMembershipStorage( DATABASE_ID, life );
-        storageFactory.createRaftVoteStorage( DATABASE_ID, life );
+        storageFactory.createLockTokenStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createIdAllocationStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createSessionTrackerStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createLastFlushedStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createRaftMembershipStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createRaftVoteStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
 
         memberIdStorage.writeState( nonDefaultMember );
         termStateStateStorage.writeState( nonDefaultTermState );

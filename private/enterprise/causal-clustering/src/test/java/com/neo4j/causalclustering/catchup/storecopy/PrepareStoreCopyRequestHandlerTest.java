@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,11 +25,13 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.internal.DatabaseLogService;
+import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,7 +39,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 //TODO: Update with some test cases for issues related to databaseId
-public class PrepareStoreCopyRequestHandlerTest
+class PrepareStoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 6000, 7000, 8000, 9000, 10000 );
@@ -53,8 +55,8 @@ public class PrepareStoreCopyRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
@@ -64,11 +66,13 @@ public class PrepareStoreCopyRequestHandlerTest
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( db.getDatabaseId() ).thenReturn( DATABASE_ID );
+        DatabaseLogService databaseLogService = new DatabaseLogService( () -> DEFAULT_DATABASE_NAME, new SimpleLogService( logProvider ) );
+        when( db.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         embeddedChannel = new EmbeddedChannel( createHandler() );
     }
 
     @Test
-    public void shouldGiveErrorResponseIfStoreMismatch()
+    void shouldGiveErrorResponseIfStoreMismatch()
     {
         // given store id doesn't match
 
@@ -85,7 +89,7 @@ public class PrepareStoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldGetSuccessfulResponseFromPrepareStoreCopyRequest() throws Exception
+    void shouldGetSuccessfulResponseFromPrepareStoreCopyRequest() throws Exception
     {
         // given storeId matches
         File[] files = new File[]{new File( "file" )};
@@ -106,7 +110,7 @@ public class PrepareStoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldRetainLockWhileStreaming() throws Exception
+    void shouldRetainLockWhileStreaming() throws Exception
     {
         // given
         ChannelPromise channelPromise = embeddedChannel.newPromise();
@@ -136,7 +140,7 @@ public class PrepareStoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldFailToPrepareForStoreCopyWhenDatabaseIsNotAvailable()
+    void shouldFailToPrepareForStoreCopyWhenDatabaseIsNotAvailable()
     {
         // database is unavailable
         when( availabilityGuard.isAvailable() ).thenReturn( false );
@@ -165,7 +169,7 @@ public class PrepareStoreCopyRequestHandlerTest
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );
 
-        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider, logProvider );
+        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider );
     }
 
     private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, File[] files, long lastCommitedTx )

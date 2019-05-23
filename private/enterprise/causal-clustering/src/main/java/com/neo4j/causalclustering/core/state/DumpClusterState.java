@@ -21,6 +21,8 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
+
 public class DumpClusterState
 {
     private final CoreStateStorageFactory storageFactory;
@@ -89,17 +91,17 @@ public class DumpClusterState
         try
         {
             dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
-            dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump ) );
+            dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump, nullDatabaseLogProvider() ) );
 
-            dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life ) );
-            dumpState( CoreStateFiles.LOCK_TOKEN, storageFactory.createLockTokenStorage( databaseToDump, life ) );
-            dumpState( CoreStateFiles.ID_ALLOCATION, storageFactory.createIdAllocationStorage( databaseToDump, life ) );
-            dumpState( CoreStateFiles.SESSION_TRACKER, storageFactory.createSessionTrackerStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.LOCK_TOKEN, storageFactory.createLockTokenStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.ID_ALLOCATION, storageFactory.createIdAllocationStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.SESSION_TRACKER, storageFactory.createSessionTrackerStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
 
             /* raft state */
-            dumpState( CoreStateFiles.RAFT_MEMBERSHIP, storageFactory.createRaftMembershipStorage( databaseToDump, life ) );
-            dumpState( CoreStateFiles.RAFT_TERM, storageFactory.createRaftTermStorage( databaseToDump, life ) );
-            dumpState( CoreStateFiles.RAFT_VOTE, storageFactory.createRaftVoteStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.RAFT_MEMBERSHIP, storageFactory.createRaftMembershipStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.RAFT_TERM, storageFactory.createRaftTermStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.RAFT_VOTE, storageFactory.createRaftVoteStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
         }
         finally
         {

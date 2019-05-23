@@ -47,6 +47,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 public class ClusterBindingIT
 {
@@ -221,7 +222,7 @@ public class ClusterBindingIT
     {
         ClusterStateLayout layout = coreMember.clusterStateLayout();
         CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId );
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId, nullDatabaseLogProvider() );
         raftIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
     }
 

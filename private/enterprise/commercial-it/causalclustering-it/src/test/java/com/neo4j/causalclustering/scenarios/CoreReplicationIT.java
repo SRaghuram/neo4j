@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,11 +40,13 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+
 @SkipThreadLeakageGuard
 @ClusterExtension
 class CoreReplicationIT
@@ -89,7 +90,7 @@ class CoreReplicationIT
         } );
 
         // then
-        Assertions.assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
+        assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 
@@ -222,7 +223,7 @@ class CoreReplicationIT
         } );
 
         // then
-        Assertions.assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
+        assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -249,7 +250,7 @@ class CoreReplicationIT
         } );
 
         // then
-        Assertions.assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
+        assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -272,7 +273,7 @@ class CoreReplicationIT
         cluster.newCoreMember().start();
 
         // then
-        Assertions.assertEquals( nodesBeforeTest + 15, DataCreator.countNodes( last ) );
+        assertEquals( nodesBeforeTest + 15, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -298,7 +299,7 @@ class CoreReplicationIT
         } );
 
         // then
-        Assertions.assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
+        assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 

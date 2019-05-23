@@ -25,7 +25,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.util.VisibleForTesting;
@@ -43,13 +42,13 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
     private final Log log;
 
     public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Database db, StoreFileStreamingProtocol storeFileStreamingProtocol,
-            FileSystemAbstraction fs, LogProvider logProvider )
+            FileSystemAbstraction fs )
     {
         this.protocol = protocol;
         this.db = db;
         this.storeFileStreamingProtocol = storeFileStreamingProtocol;
         this.fs = fs;
-        this.log = logProvider.getLog( getClass() );
+        this.log = db.getInternalLogProvider().getLog( getClass() );
     }
 
     @Override
