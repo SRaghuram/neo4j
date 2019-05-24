@@ -220,7 +220,6 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         configuredSetup( defaultConfiguration() );
 
         Map<String,Set<String>> expected = genericMap(
-                "dbms.changePassword", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.functions", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.killQueries", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.killQuery", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),

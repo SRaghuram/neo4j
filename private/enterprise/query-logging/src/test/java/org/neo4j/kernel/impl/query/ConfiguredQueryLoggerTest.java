@@ -270,14 +270,6 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordDeprecated()
-    {
-        String inputQuery = "CALL dbms.changePassword('abc123')";
-        String outputQuery = "CALL dbms.changePassword('******')";
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
     public void shouldNotLogChangeUserPassword()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
