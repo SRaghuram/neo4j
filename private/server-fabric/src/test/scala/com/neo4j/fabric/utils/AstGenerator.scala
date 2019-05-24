@@ -78,10 +78,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     sig = if (neg) "-" else ""
   } yield List(sig, str).mkString
 
-  def _unsignedIntLit: Gen[UnsignedDecimalIntegerLiteral] =
+  def _unsignedDecIntLit: Gen[UnsignedDecimalIntegerLiteral] =
     _unsignedIntString("", 10).map(UnsignedDecimalIntegerLiteral(_)(?))
 
-  def _signedIntLit: Gen[SignedDecimalIntegerLiteral] =
+  def _signedDecIntLit: Gen[SignedDecimalIntegerLiteral] =
     _signedIntString("", 10).map(SignedDecimalIntegerLiteral(_)(?))
 
   def _signedHexIntLit: Gen[SignedHexIntegerLiteral] =
@@ -89,6 +89,12 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
   def _signedOctIntLit: Gen[SignedOctalIntegerLiteral] =
     _signedIntString("0", 8).map(SignedOctalIntegerLiteral(_)(?))
+
+  def _signedIntLit: Gen[SignedIntegerLiteral] = oneOf(
+    _signedDecIntLit,
+    _signedHexIntLit,
+    _signedOctIntLit
+  )
 
   def _doubleLit: Gen[DecimalDoubleLiteral] =
     Arbitrary.arbDouble.arbitrary.map(_.toString).map(DecimalDoubleLiteral(_)(?))
@@ -335,11 +341,11 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
 
   def _expression: Gen[Expression] =
     frequency(
-      10 -> oneOf(
+      5 -> oneOf(
         lzy(_nullLit),
         lzy(_stringLit),
         lzy(_booleanLit),
-        lzy(_signedIntLit),
+        lzy(_signedDecIntLit),
         lzy(_signedHexIntLit),
         lzy(_signedOctIntLit),
         lzy(_doubleLit),
@@ -352,21 +358,15 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         lzy(_predicateBinary),
         lzy(_predicateComparisonChain),
         lzy(_iterablePredicate),
-        lzy(_hasLabels)
-      ),
-      1 -> oneOf(
+        lzy(_hasLabels),
         lzy(_arithmeticUnary),
-        lzy(_arithmeticBinary)
-      ),
-      1 -> oneOf(
+        lzy(_arithmeticBinary),
         lzy(_case),
         lzy(_functionInvocation),
         lzy(_countStar),
         lzy(_reduceExpr),
         lzy(_shortestPathExpr),
-        lzy(_patternExpr)
-      ),
-      1 -> oneOf(
+        lzy(_patternExpr),
         lzy(_map),
         lzy(_mapProjection),
         lzy(_property),
@@ -375,9 +375,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
         lzy(_listComprehension),
         lzy(_containerIndex),
         lzy(_extract),
-        lzy(_filter)
-      ),
-      1 -> oneOf(
+        lzy(_filter),
         lzy(_existsSubClause),
         lzy(_patternComprehension)
       )
@@ -394,8 +392,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   } yield NodePattern(variable, labels, properties, baseNode)(?)
 
   def _range: Gen[Range] = for {
-    lower <- option(_unsignedIntLit)
-    upper <- option(_unsignedIntLit)
+    lower <- option(_unsignedDecIntLit)
+    upper <- option(_unsignedDecIntLit)
   } yield Range(lower, upper)(?)
 
   def _semanticDirection: Gen[SemanticDirection] =
@@ -613,7 +611,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   def _startItem: Gen[StartItem] = for {
     variable <- _variable
     parameter <- _parameter
-    ids <- oneOrMore(_unsignedIntLit)
+    ids <- oneOrMore(_unsignedDecIntLit)
     item <- oneOf(
       NodeByParameter(variable, parameter)(?),
       AllNodes(variable)(?),
@@ -648,8 +646,11 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     label <- _labelName
   } yield UsingScanHint(variable, label)(?)
 
-  def _hint: Gen[UsingHint] =
-    oneOf(_usingIndexHint, _usingJoinHint, _usingScanHint)
+  def _hint: Gen[UsingHint] = oneOf(
+    _usingIndexHint,
+    _usingJoinHint,
+    _usingScanHint
+  )
 
   def _clause: Gen[Clause] = oneOf(
     lzy(_with),
@@ -667,11 +668,42 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     lzy(_start)
   )
 
-  def _query: Gen[Query] = for {
+  def _singleQuery: Gen[SingleQuery] = for {
     s <- choose(1, 1)
     clauses <- listOfN(s, _clause)
-  } yield Query(None, SingleQuery(clauses)(?))(?)
+  } yield SingleQuery(clauses)(?)
 
+  def _union: Gen[Union] = for {
+    part <- _queryPart
+    single <- _singleQuery
+    union <- oneOf(
+      UnionDistinct(part, single)(?),
+      UnionAll(part, single)(?)
+    )
+  } yield union
+
+  def _queryPart: Gen[QueryPart] = frequency(
+    5 -> lzy(_singleQuery),
+    1 -> lzy(_union)
+  )
+
+  def _regularQuery: Gen[Query] = for {
+    part <- _queryPart
+  } yield Query(None, part)(?)
+
+  def _periodicCommitHint: Gen[PeriodicCommitHint] = for {
+    size <- option(_signedIntLit)
+  } yield PeriodicCommitHint(size)(?)
+
+  def _bulkImportQuery: Gen[Query] = for {
+    periodicCommitHint <- option(_periodicCommitHint)
+    load <- _loadCsv
+  } yield Query(periodicCommitHint, SingleQuery(Seq(load))(?))(?)
+
+  def _query: Gen[Query] = frequency(
+    10 -> _regularQuery,
+    1 -> _bulkImportQuery
+  )
 
   object Shrinker {
 
