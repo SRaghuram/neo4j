@@ -166,9 +166,10 @@ class BenchmarksRunner
                                      ? Neo4jConfig.withDefaults()
                                      : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
 
-        neo4jConfigDef
-            .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-            .withSetting( new HttpConnector( "http" ).enabled, "false" );
+        neo4jConfigDef = neo4jConfigDef
+                .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                .withSetting( new HttpConnector( "https" ).enabled, "false" );
 
         String[] defaultJvmArgs = (null == neo4jPackageForJvmArgs)
                                   ? new String[0]
