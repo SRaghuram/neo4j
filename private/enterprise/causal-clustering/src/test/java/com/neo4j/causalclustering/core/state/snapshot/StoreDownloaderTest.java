@@ -37,6 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 class StoreDownloaderTest
 {
@@ -150,6 +151,7 @@ class StoreDownloaderTest
 
         Database database = mock( Database.class );
         when( database.getDatabaseId() ).thenReturn( databaseId );
+        when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
@@ -157,7 +159,7 @@ class StoreDownloaderTest
 
         LogFiles transactionLogs = mock( LogFiles.class );
 
-        return new StoreDownloadContext( database, storeFiles, transactionLogs, NullLogProvider.getInstance() );
+        return new StoreDownloadContext( database, storeFiles, transactionLogs );
     }
 
     private RemoteStore mockRemoteSuccessfulStore( DatabaseId databaseId ) throws StoreIdDownloadFailedException

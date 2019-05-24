@@ -14,7 +14,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -27,15 +26,14 @@ public class ReadReplicaDatabaseContext
     private final LogFiles transactionLogs;
     private final Log log;
 
-    ReadReplicaDatabaseContext( Database kernelDatabase, Monitors monitors, Dependencies dependencies, StoreFiles storeFiles, LogFiles transactionLogs,
-            LogProvider logProvider )
+    ReadReplicaDatabaseContext( Database kernelDatabase, Monitors monitors, Dependencies dependencies, StoreFiles storeFiles, LogFiles transactionLogs )
     {
         this.kernelDatabase = kernelDatabase;
         this.monitors = monitors;
         this.dependencies = dependencies;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
-        this.log = logProvider.getLog( getClass() );
+        this.log = kernelDatabase.getInternalLogProvider().getLog( getClass() );
     }
 
     public DatabaseId databaseId()

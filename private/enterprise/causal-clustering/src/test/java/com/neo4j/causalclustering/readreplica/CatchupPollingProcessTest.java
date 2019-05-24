@@ -52,6 +52,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class CatchupPollingProcessTest
@@ -81,12 +82,12 @@ class CatchupPollingProcessTest
         Database kernelDatabase = mock( Database.class );
         when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
         when( kernelDatabase.getStoreId() ).thenReturn( storeId );
+        when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any() )).thenReturn( storeId );
 
-        databaseContext = spy(
-                new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ), nullLogProvider() ) );
+        databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ) ) );
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );

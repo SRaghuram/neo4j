@@ -27,7 +27,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 
@@ -50,16 +49,14 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     {
         Monitors readReplicaMonitors = new Monitors( globalModule.getGlobalMonitors() );
         Dependencies readReplicaDependencies = new Dependencies( globalModule.getGlobalDependencies() );
-        DatabaseLogService readReplicaLogService = new DatabaseLogService( databaseId::name, globalModule.getLogService() );
 
         log.info( "Creating '%s' database.", databaseId.name() );
-        DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, readReplicaDependencies, readReplicaMonitors,
-                readReplicaLogService );
+        DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, readReplicaDependencies, readReplicaMonitors );
         Database kernelDatabase = new Database( databaseCreationContext );
 
         LogFiles transactionLogs = buildTransactionLogs( kernelDatabase.getDatabaseLayout() );
         ReadReplicaDatabaseContext databaseContext = new ReadReplicaDatabaseContext( kernelDatabase, readReplicaMonitors, readReplicaDependencies, storeFiles,
-                transactionLogs, readReplicaLogService.getInternalLogProvider() );
+                transactionLogs );
 
         LifeSupport readReplicaLife = edition.readReplicaDatabaseFactory().createDatabase( databaseContext );
 
@@ -67,13 +64,11 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
                 readReplicaLife, readReplicaMonitors );
     }
 
-    private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, Dependencies parentDependencies, Monitors parentMonitors,
-            DatabaseLogService readReplicaLogService )
+    private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, Dependencies parentDependencies, Monitors parentMonitors )
     {
         EditionDatabaseComponents editionDatabaseComponents = edition.createDatabaseComponents( databaseId );
         GlobalProcedures globalProcedures = edition.getGlobalProcedures();
-        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, editionDatabaseComponents,
-                globalProcedures, readReplicaLogService );
+        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, editionDatabaseComponents, globalProcedures );
     }
 
     @Override

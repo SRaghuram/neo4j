@@ -74,11 +74,10 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         Database kernelDatabase = new Database( databaseCreationContext );
 
         // TODO: Merge/change these contexts into something better? Perhaps a ReplicatedDatabaseContext again?
-        StoreDownloadContext downloadContext = new StoreDownloadContext(
-                kernelDatabase, storeFiles, transactionLogs, coreDatabaseLogService.getInternalLogProvider() );
+        StoreDownloadContext downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs );
 
         edition.coreDatabaseFactory().createDatabase( databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, downloadContext,
-                kernelDatabase, kernelContext, raftContext, coreDatabaseLogService );
+                kernelDatabase, kernelContext, raftContext );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 coreDatabaseLife, coreDatabaseMonitors );
@@ -93,8 +92,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         Config config = globalModule.getGlobalConfig();
         CoreDatabaseComponents coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         GlobalProcedures globalProcedures = edition.getGlobalProcedures();
-        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents,
-                globalProcedures, databaseLogService );
+        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents, globalProcedures );
     }
 
     @Override

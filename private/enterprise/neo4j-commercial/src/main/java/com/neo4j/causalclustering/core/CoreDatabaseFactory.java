@@ -311,10 +311,10 @@ class CoreDatabaseFactory
     }
 
     void createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies, StoreDownloadContext downloadContext,
-            Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext, DatabaseLogService logService )
+            Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
-        DatabaseLogProvider debugLog = logService.getInternalLogProvider();
+        DatabaseLogProvider debugLog = kernelDatabase.getInternalLogProvider();
 
         SessionTracker sessionTracker = createSessionTracker( databaseId, life, debugLog );
 

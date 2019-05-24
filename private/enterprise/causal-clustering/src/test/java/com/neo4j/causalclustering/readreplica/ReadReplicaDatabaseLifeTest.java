@@ -48,6 +48,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 class ReadReplicaDatabaseLifeTest
 {
@@ -98,9 +99,10 @@ class ReadReplicaDatabaseLifeTest
 
         Database kernelDatabase = mock( Database.class );
         when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, nullLogProvider() );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs );
     }
 
     private ReadReplicaDatabaseContext failToReadLocalStoreId( DatabaseId databaseId, Class<? extends Throwable> throwableClass ) throws IOException
@@ -110,9 +112,10 @@ class ReadReplicaDatabaseLifeTest
 
         Database kernelDatabase = mock( Database.class );
         when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, nullLogProvider() );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs );
     }
 
     @Test

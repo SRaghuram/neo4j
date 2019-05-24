@@ -14,7 +14,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 public class StoreDownloadContext
@@ -26,12 +25,12 @@ public class StoreDownloadContext
 
     private volatile StoreId storeId;
 
-    public StoreDownloadContext( Database database, StoreFiles storeFiles, LogFiles transactionLogs, LogProvider logProvider )
+    public StoreDownloadContext( Database database, StoreFiles storeFiles, LogFiles transactionLogs )
     {
         this.database = database;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
-        this.log = logProvider.getLog( getClass() );
+        this.log = database.getInternalLogProvider().getLog( getClass() );
     }
 
     DatabaseId databaseId()
