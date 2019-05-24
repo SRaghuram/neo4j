@@ -3,10 +3,6 @@
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 # This file is a commercial add-on to Neo4j Enterprise Edition.
 
-#############################################################
-#      File content is generated based on .m4 template      #
-#############################################################
-
 set -o errexit -o nounset -o pipefail
 [[ "${TRACE:-}" ]] && set -o xtrace
 
