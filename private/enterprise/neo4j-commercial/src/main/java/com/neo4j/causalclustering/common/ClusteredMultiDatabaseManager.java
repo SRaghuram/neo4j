@@ -80,7 +80,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         try
         {
             log.info( "Stopping '%s' database.", databaseId.name() );
-            context.clusterDatabaseLife().stop();
+            context.clusterDatabaseLife().shutdown();
         }
         catch ( Throwable t )
         {
