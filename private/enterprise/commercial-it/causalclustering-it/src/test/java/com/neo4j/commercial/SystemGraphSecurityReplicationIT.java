@@ -39,7 +39,6 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.NATIVE_REALM_NAME;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.function.Predicates.await;
@@ -66,7 +65,8 @@ class SystemGraphSecurityReplicationIT
     {
         Map<String,String> params = stringMap(
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
-                SecuritySettings.auth_provider.name(), NATIVE_REALM_NAME
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME
         );
 
         int noOfCoreMembers = 3;

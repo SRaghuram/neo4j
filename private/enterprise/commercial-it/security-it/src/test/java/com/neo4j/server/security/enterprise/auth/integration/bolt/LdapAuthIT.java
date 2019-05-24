@@ -129,7 +129,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     protected Map<Setting<?>,String> getSettings()
     {
         Map<Setting<?>,String> settings = new HashMap<>();
-        settings.put( SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME );
+        settings.put( SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME );
+        settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
         settings.put( SecuritySettings.ldap_server, "0.0.0.0:" + ldapPort );
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authentication_cache_enabled, "true" );
@@ -372,11 +373,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldGetCombinedAuthorization() throws Throwable
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.native_authentication_enabled.name(), "true",
-                SecuritySettings.native_authorization_enabled.name(), "true",
-                SecuritySettings.ldap_authentication_enabled.name(), "true",
-                SecuritySettings.ldap_authorization_enabled.name(), "true",
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.ldap_authorization_use_system_account.name(), "true"
         );
 
@@ -406,11 +404,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.native_authentication_enabled.name(), "true",
-                SecuritySettings.native_authorization_enabled.name(), "true",
-                SecuritySettings.ldap_authentication_enabled.name(), "true",
-                SecuritySettings.ldap_authorization_enabled.name(), "true",
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.ldap_authorization_use_system_account.name(), "true"
         );
 
@@ -431,11 +426,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.native_authentication_enabled.name(), "true",
-                SecuritySettings.native_authorization_enabled.name(), "true",
-                SecuritySettings.ldap_authentication_enabled.name(), "true",
-                SecuritySettings.ldap_authorization_enabled.name(), "true",
+                SecuritySettings.authentication_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.ldap_authorization_use_system_account.name(), "true"
         );
 
@@ -467,11 +459,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws Throwable
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.native_authentication_enabled.name(), "true",
-                SecuritySettings.native_authorization_enabled.name(), "true",
-                SecuritySettings.ldap_authentication_enabled.name(), "true",
-                SecuritySettings.ldap_authorization_enabled.name(), "true",
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.ldap_authorization_use_system_account.name(), "true"
         );
 
@@ -513,11 +502,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws Throwable
     {
         restartServerWithOverriddenSettings(
-            SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-            SecuritySettings.native_authentication_enabled.name(), "true",
-            SecuritySettings.native_authorization_enabled.name(), "true",
-            SecuritySettings.ldap_authentication_enabled.name(), "true",
-            SecuritySettings.ldap_authorization_enabled.name(), "true",
+            SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+            SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
             SecuritySettings.ldap_authorization_use_system_account.name(), "true",
             SecuritySettings.ldap_server.name(), "ldap://" + REFUSED_IP
         );
@@ -618,9 +604,9 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings(
-                SecuritySettings.auth_provider.name(), SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name()
-        );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(),
+                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name(), SecuritySettings.authorization_providers.name(),
+                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name() );
 
         Map<String,Object> parameters = MapUtil.map( "port", ldapServer.getPort() );
 

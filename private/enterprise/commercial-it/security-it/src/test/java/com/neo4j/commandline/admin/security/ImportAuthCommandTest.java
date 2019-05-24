@@ -148,10 +148,8 @@ class ImportAuthCommandTest
                             "    HEAP_SIZE     Set JVM maximum heap size during command execution.%n" +
                             "                  Takes a number and a unit, for example 512m.%n" +
                             "%n" +
-                            "Import users and roles from files into the system graph, for example when%n" +
-                            "upgrading to Neo4j 3.5 Commercial Edition. This can be used to migrate auth data%n" +
-                            "from the flat files used as storage by the old native auth provider into the%n" +
-                            "'system-graph' auth provider.%n" +
+                            "Import users and roles from flat files into the system graph, for example when%n" +
+                            "upgrading to Neo4j 3.5 Commercial Edition.%n" +
                             "%n" +
                             "options:%n" +
                             "  --users-file=<auth>      File name of user repository file to import.%n" +

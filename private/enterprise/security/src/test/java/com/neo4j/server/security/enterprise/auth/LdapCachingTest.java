@@ -61,10 +61,6 @@ class LdapCachingTest
     private static Config getLdapConfig()
     {
         return Config.defaults( stringMap(
-                SecuritySettings.native_authentication_enabled.name(), "false",
-                SecuritySettings.native_authorization_enabled.name(), "false",
-                SecuritySettings.ldap_authentication_enabled.name(), "true",
-                SecuritySettings.ldap_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authorization_user_search_base.name(), "dc=example,dc=com",
                 SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "gidnumber",
                 SecuritySettings.ldap_authorization_use_system_account.name(), "true"
@@ -190,7 +186,7 @@ class LdapCachingTest
 
         TestRealm( Config config, SecurityLog securityLog, SecureHasher secureHasher )
         {
-            super( config, securityLog, secureHasher );
+            super( config, securityLog, secureHasher, true, true );
             setAuthenticationCachingEnabled( true );
             setAuthorizationCachingEnabled( true );
         }

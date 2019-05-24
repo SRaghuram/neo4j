@@ -72,8 +72,6 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_membership_attribute_names ) )
                 .thenReturn( singletonList( "memberOf" ) );
 
-        when( config.get( SecuritySettings.ldap_authentication_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.ldap_authorization_enabled ) ).thenReturn( true );
         when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
@@ -86,7 +84,7 @@ public class LdapRealmTest
     {
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) ).thenReturn( null );
 
-        new LdapRealm( config, securityLog, secureHasher );
+        new LdapRealm( config, securityLog, secureHasher, true, true );
     }
 
     @Test
@@ -94,7 +92,7 @@ public class LdapRealmTest
     {
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) ).thenReturn( "" );
 
-        new LdapRealm( config, securityLog, secureHasher );
+        new LdapRealm( config, securityLog, secureHasher,true, true );
     }
 
     @Test
@@ -103,7 +101,7 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) )
                 .thenReturn( "group=role1,role2,role3" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
         assertThat( realm.getGroupToRoleMapping().get( "group" ),
                 equalTo( asList( "role1", "role2", "role3" ) ) );
@@ -116,7 +114,7 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) )
                 .thenReturn( "group1=role1;group2=role2,role3;group3=role4" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
         assertThat( realm.getGroupToRoleMapping().keySet(),
                 equalTo( new TreeSet<>( asList( "group1", "group2", "group3" ) ) ) );
@@ -132,7 +130,7 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) )
                 .thenReturn( "'group1' = role1;\t \"group2\"\n=\t role2,role3 ;  gr oup3= role4\n ;'group4 '= ; g =r" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
         assertThat( realm.getGroupToRoleMapping().keySet(),
                 equalTo( new TreeSet<>( asList( "group1", "group2", "gr oup3", "group4 ", "g" ) ) ) );
@@ -149,7 +147,7 @@ public class LdapRealmTest
     {
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) ).thenReturn( "group=role;;" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
         assertThat( realm.getGroupToRoleMapping().get( "group" ), equalTo( singletonList( "role" ) ) );
         assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
@@ -161,7 +159,7 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) )
                 .thenReturn( "group=role1,role2,role3,,," );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
         assertThat( realm.getGroupToRoleMapping().keySet(),
                 equalTo( Stream.of( "group" ).collect( Collectors.toSet() ) ) );
@@ -175,7 +173,7 @@ public class LdapRealmTest
     {
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) ).thenReturn( "group=," );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
         assertThat( realm.getGroupToRoleMapping().get( "group" ).size(), equalTo( 0 ) );
         assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
@@ -189,7 +187,7 @@ public class LdapRealmTest
         expectedException.expect( IllegalArgumentException.class );
         expectedException.expectMessage( "wrong number of fields" );
 
-        new LdapRealm( config, securityLog, secureHasher );
+        new LdapRealm( config, securityLog, secureHasher, true, true );
     }
 
     @Test
@@ -200,7 +198,7 @@ public class LdapRealmTest
         expectedException.expect( IllegalArgumentException.class );
         expectedException.expectMessage( "wrong number of fields" );
 
-        new LdapRealm( config, securityLog, secureHasher );
+        new LdapRealm( config, securityLog, secureHasher, true, true );
     }
 
     @Test
@@ -209,7 +207,7 @@ public class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) )
                 .thenReturn( "GrouP=role1,role2,role3" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
         assertThat( realm.getGroupToRoleMapping().get( "group" ),
                 equalTo( asList( "role1", "role2", "role3" ) ) );
@@ -278,7 +276,7 @@ public class LdapRealmTest
         when( result.next() ).thenReturn( searchResult );
         when( searchResult.toString() ).thenReturn( "<ldap search result>" );
 
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
         realm.findRoleNamesForUser( "username", ldapContext );
 
         verify( securityLog ).warn( contains( "LDAP user search for user principal 'username' is ambiguous" ) );
@@ -331,7 +329,7 @@ public class LdapRealmTest
         when( groupEnumeration3.next() ).thenReturn( "groupWithNoRole" );
 
         // When
-        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+        LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
         Set<String> roles = realm.findRoleNamesForUser( "username", ldapContext );
 
         // Then
@@ -444,7 +442,7 @@ public class LdapRealmTest
 
         TestLdapRealm( Config config, SecurityLog securityLog, boolean failAuth )
         {
-            super( config, securityLog, secureHasher );
+            super( config, securityLog, secureHasher, true, true );
             this.failAuth = failAuth;
         }
 
@@ -475,7 +473,7 @@ public class LdapRealmTest
     {
         try
         {
-            LdapRealm realm = new LdapRealm( config, securityLog, secureHasher );
+            LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
             realm.initialize();
         }
         catch ( Exception e )

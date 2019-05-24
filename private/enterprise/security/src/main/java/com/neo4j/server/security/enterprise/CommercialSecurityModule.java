@@ -30,7 +30,9 @@ import org.apache.shiro.realm.Realm;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -138,7 +140,7 @@ public class CommercialSecurityModule extends SecurityModule
             // TODO shouldn't this be registered always now with assignable privileges?
             globalProcedures.registerComponent( EnterpriseUserManager.class,
                     ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
-            if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
+            if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
             {
                 globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
             }
@@ -237,7 +239,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.hasLdapProvider )
         {
-            realms.add( new LdapRealm( config, securityLog, secureHasher ) );
+            realms.add( new LdapRealm( config, securityLog, secureHasher, securityConfig.ldapAuthentication, securityConfig.ldapAuthorization ) );
         }
 
         if ( !securityConfig.pluginAuthProviders.isEmpty() )
@@ -300,8 +302,8 @@ public class CommercialSecurityModule extends SecurityModule
                 secureHasher,
                 new BasicPasswordPolicy(),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
-                config.get( SecuritySettings.native_authentication_enabled ),
-                config.get( SecuritySettings.native_authorization_enabled )
+                securityConfig.nativeAuthentication,
+                securityConfig.nativeAuthorization
         );
     }
 
@@ -486,7 +488,9 @@ public class CommercialSecurityModule extends SecurityModule
         final List<String> authProviders;
         boolean hasNativeProvider;
         boolean hasLdapProvider;
-        final List<String> pluginAuthProviders;
+        final Set<String> pluginAuthProviders;
+        final List<String> pluginAuthenticationProviders;
+        final List<String> pluginAuthorizationProviders;
         final boolean nativeAuthentication;
         final boolean nativeAuthorization;
         final boolean ldapAuthentication;
@@ -500,32 +504,37 @@ public class CommercialSecurityModule extends SecurityModule
 
         SecurityConfig( Config config )
         {
-            authProviders = new ArrayList<>();
-            for ( String authProvider : config.get( SecuritySettings.auth_providers ) )
-            {
-                if ( authProvider.equals( SecuritySettings.SYSTEM_GRAPH_REALM_NAME ) )
-                {
-                    // Translate from old system graph name
-                    authProviders.add( SecuritySettings.NATIVE_REALM_NAME );
-                }
-                else
-                {
-                    authProviders.add( authProvider );
-                }
-            }
-            hasNativeProvider = authProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
-            hasLdapProvider = authProviders.contains( SecuritySettings.LDAP_REALM_NAME );
-            pluginAuthProviders = authProviders.stream()
+            List<String> authenticationProviders = new ArrayList<>( config.get( SecuritySettings.authentication_providers ) );
+            List<String> authorizationProviders = new ArrayList<>( config.get( SecuritySettings.authorization_providers ) );
+
+            authProviders = mergeAuthenticationAndAuthorization( authenticationProviders, authorizationProviders);
+
+            hasNativeProvider = authenticationProviders.contains( SecuritySettings.NATIVE_REALM_NAME ) ||
+                    authorizationProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
+            hasLdapProvider = authenticationProviders.contains( SecuritySettings.LDAP_REALM_NAME ) ||
+                    authorizationProviders.contains( SecuritySettings.LDAP_REALM_NAME );
+
+            pluginAuthenticationProviders = authenticationProviders.stream()
+                    .filter( r -> r.startsWith( SecuritySettings.PLUGIN_REALM_NAME_PREFIX ) )
+                    .collect( Collectors.toList() );
+            pluginAuthorizationProviders = authorizationProviders.stream()
                     .filter( r -> r.startsWith( SecuritySettings.PLUGIN_REALM_NAME_PREFIX ) )
                     .collect( Collectors.toList() );
 
-            nativeAuthentication = config.get( SecuritySettings.native_authentication_enabled );
-            nativeAuthorization = config.get( SecuritySettings.native_authorization_enabled );
+            pluginAuthProviders = new HashSet<>();
+            pluginAuthProviders.addAll( pluginAuthenticationProviders );
+            pluginAuthProviders.addAll( pluginAuthorizationProviders );
+
+            nativeAuthentication = authenticationProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
+            nativeAuthorization = authorizationProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
             nativeAuthEnabled = nativeAuthentication || nativeAuthorization;
-            ldapAuthentication = config.get( SecuritySettings.ldap_authentication_enabled );
-            ldapAuthorization = config.get( SecuritySettings.ldap_authorization_enabled );
-            pluginAuthentication = config.get( SecuritySettings.plugin_authentication_enabled );
-            pluginAuthorization = config.get( SecuritySettings.plugin_authorization_enabled );
+
+            ldapAuthentication = authenticationProviders.contains( SecuritySettings.LDAP_REALM_NAME );
+            ldapAuthorization = authorizationProviders.contains( SecuritySettings.LDAP_REALM_NAME );
+
+            pluginAuthentication = !pluginAuthenticationProviders.isEmpty();
+            pluginAuthorization = !pluginAuthorizationProviders.isEmpty();
+
             propertyAuthorization = config.get( SecuritySettings.property_level_authorization_enabled );
             propertyAuthMapping = config.get( SecuritySettings.property_level_authorization_permissions );
         }
@@ -534,31 +543,14 @@ public class CommercialSecurityModule extends SecurityModule
         {
             if ( !nativeAuthentication && !ldapAuthentication && !pluginAuthentication )
             {
-                throw illegalConfiguration( "All authentication providers are disabled." );
+                throw illegalConfiguration( "No authentication provider found." );
             }
 
             if ( !nativeAuthorization && !ldapAuthorization && !pluginAuthorization )
             {
-                throw illegalConfiguration( "All authorization providers are disabled." );
+                throw illegalConfiguration( "No authorization provider found." );
             }
 
-            if ( hasNativeProvider && !nativeAuthentication && !nativeAuthorization )
-            {
-                throw illegalConfiguration(
-                        "Native auth provider configured, but both authentication and authorization are disabled." );
-            }
-
-            if ( hasLdapProvider && !ldapAuthentication && !ldapAuthorization )
-            {
-                throw illegalConfiguration(
-                        "LDAP auth provider configured, but both authentication and authorization are disabled." );
-            }
-
-            if ( !pluginAuthProviders.isEmpty() && !pluginAuthentication && !pluginAuthorization )
-            {
-                throw illegalConfiguration(
-                        "Plugin auth provider configured, but both authentication and authorization are disabled." );
-            }
             if ( propertyAuthorization && !parsePropertyPermissions() )
             {
                 throw illegalConfiguration(
@@ -612,6 +604,40 @@ public class CommercialSecurityModule extends SecurityModule
         {
             return !nativeAuthorization && !ldapAuthorization && pluginAuthorization;
         }
+    }
+
+    static List<String> mergeAuthenticationAndAuthorization( List<String> authenticationProviders, List<String> authorizationProviders )
+    {
+        Deque<String> authorizationDeque = new ArrayDeque<>( authorizationProviders );
+        List<String> authProviders = new ArrayList<>();
+        for ( String authenticationProvider : authenticationProviders )
+        {
+            if ( authProviders.contains( authenticationProvider ) )
+            {
+                throw illegalConfiguration( "The relative order of authentication providers and authorization providers must match." );
+            }
+
+            if ( !authorizationDeque.contains( authenticationProvider ) )
+            {
+                authProviders.add( authenticationProvider );
+            }
+            else
+            {
+                // Exists in both
+                while ( !authorizationDeque.isEmpty() )
+                {
+                    String top = authorizationDeque.pop();
+                    authProviders.add( top );
+                    if ( authenticationProvider.equals( top ) )
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        authProviders.addAll( authorizationDeque );
+
+        return authProviders;
     }
 
     // This is used by ImportAuthCommand for offline import of auth information

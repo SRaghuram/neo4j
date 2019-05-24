@@ -168,7 +168,8 @@ public class ImportAuthCommand implements AdminCommand
         fileSystem.copyFile( sourceRoleFile, targetRoleFile );
 
         outsideWorld.stdOutLine( "Users and roles files copied to import files. " +
-                "Please restart the database with configuration setting " + SecuritySettings.auth_provider.name() + "=" +
+                "Please restart the database with configuration setting " + SecuritySettings.authentication_providers.name() + "=" +
+                SecuritySettings.NATIVE_REALM_NAME + " and " + SecuritySettings.authorization_providers.name() + "=" +
                 SecuritySettings.NATIVE_REALM_NAME + " to complete the import." );
     }
 

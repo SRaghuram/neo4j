@@ -79,7 +79,6 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
 
     public static final String LDAP_CONNECTION_TIMEOUT_CLIENT_MESSAGE = "LDAP connection timed out.";
     public static final String LDAP_READ_TIMEOUT_CLIENT_MESSAGE = "LDAP response timed out.";
-    public static final String LDAP_AUTHORIZATION_FAILURE_CLIENT_MESSAGE = "LDAP authorization request failed.";
     public static final String LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE = "LDAP connection refused.";
 
     private Boolean authenticationEnabled;
@@ -99,11 +98,13 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private static final String VALUE_GROUP = "\\s*(.*)";
     private Pattern keyValuePattern = Pattern.compile( KEY_GROUP + KEY_VALUE_DELIMITER + VALUE_GROUP );
 
-    public LdapRealm( Config config, SecurityLog securityLog, SecureHasher secureHasher )
+    public LdapRealm( Config config, SecurityLog securityLog, SecureHasher secureHasher, boolean authenticationEnabled, boolean authorizationEnabled )
     {
         super();
         this.securityLog = securityLog;
         this.secureHasher = secureHasher;
+        this.authenticationEnabled = authenticationEnabled;
+        this.authorizationEnabled = authorizationEnabled;
         setName( SecuritySettings.LDAP_REALM_NAME );
         configureRealm( config );
         if ( isAuthenticationCachingEnabled() )
@@ -433,8 +434,6 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
             setUserDnTemplate( userDnTemplate );
         }
 
-        authenticationEnabled = config.get( SecuritySettings.ldap_authentication_enabled );
-        authorizationEnabled = config.get( SecuritySettings.ldap_authorization_enabled );
         useStartTls = config.get( SecuritySettings.ldap_use_starttls );
 
         userSearchBase = config.get( SecuritySettings.ldap_authorization_user_search_base );

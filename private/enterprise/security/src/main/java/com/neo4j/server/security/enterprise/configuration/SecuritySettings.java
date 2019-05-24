@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.configuration;
 
 import java.io.File;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -47,7 +46,6 @@ import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLE
 public class SecuritySettings implements LoadableConfig
 {
     public static final String NATIVE_REALM_NAME = "native";
-    public static final String SYSTEM_GRAPH_REALM_NAME = "system-graph";
     public static final String LDAP_REALM_NAME = "ldap";
     public static final String PLUGIN_REALM_NAME_PREFIX = "plugin-";
 
@@ -55,56 +53,19 @@ public class SecuritySettings implements LoadableConfig
     // Realm settings
     //=========================================================================
 
-    @Description( "The authentication and authorization provider that contains both the users and roles. " +
-                  "This can be one of the built-in `" + NATIVE_REALM_NAME + "` or `" + LDAP_REALM_NAME + "` providers, " +
-                  "or it can be an externally provided plugin, with a custom name prefixed by `" +
-                  PLUGIN_REALM_NAME_PREFIX + "`, i.e. `" + PLUGIN_REALM_NAME_PREFIX + "<AUTH_PROVIDER_NAME>`. " )
-    public static final Setting<String> auth_provider =
-            setting( "dbms.security.auth_provider", STRING, NATIVE_REALM_NAME );
+    @Description( "A list of security authentication providers containing the users and roles. " +
+            "This can be any of the built-in `" + NATIVE_REALM_NAME + "` or `" + LDAP_REALM_NAME + "` providers, " +
+            "or it can be an externally provided plugin, with a custom name prefixed by `" +
+            PLUGIN_REALM_NAME_PREFIX + "`, i.e. `" + PLUGIN_REALM_NAME_PREFIX + "<AUTH_PROVIDER_NAME>`. " +
+            "They will be queried in the given order when login is attempted." )
+    public static final Setting<List<String>> authentication_providers = setting( "dbms.security.authentication_providers", STRING_LIST, NATIVE_REALM_NAME );
 
-    @Description( "A list of security authentication and authorization providers containing the users and roles. " +
-                  "They will be queried in the given order when login is attempted." )
-    @Internal
-    public static final Setting<List<String>> auth_providers =
-            derivedSetting( "dbms.security.auth_providers", auth_provider, Arrays::asList, STRING_LIST );
-
-    @Description( "Enable authentication via native authentication provider." )
-    @Internal
-    public static final Setting<Boolean> native_authentication_enabled =
-            derivedSetting( "dbms.security.native.authentication_enabled", auth_providers,
-                    providers -> providers.contains( NATIVE_REALM_NAME ) || providers.contains( SYSTEM_GRAPH_REALM_NAME ) , BOOLEAN );
-
-    @Description( "Enable authorization via native authorization provider." )
-    @Internal
-    public static final Setting<Boolean> native_authorization_enabled =
-            derivedSetting( "dbms.security.native.authorization_enabled", auth_providers,
-                    providers -> providers.contains( NATIVE_REALM_NAME ) || providers.contains( SYSTEM_GRAPH_REALM_NAME ), BOOLEAN );
-
-    @Description( "Enable authentication via settings configurable LDAP authentication provider." )
-    @Internal
-    public static final Setting<Boolean> ldap_authentication_enabled =
-            derivedSetting( "dbms.security.ldap.authentication_enabled", auth_providers,
-                    providers -> providers.contains( LDAP_REALM_NAME ), BOOLEAN );
-
-    @Description( "Enable authorization via settings configurable LDAP authorization provider." )
-    @Internal
-    public static final Setting<Boolean> ldap_authorization_enabled =
-            derivedSetting( "dbms.security.ldap.authorization_enabled", auth_providers,
-                    providers -> providers.contains( LDAP_REALM_NAME ), BOOLEAN );
-
-    @Description( "Enable authentication via plugin authentication providers." )
-    @Internal
-    public static final Setting<Boolean> plugin_authentication_enabled =
-            derivedSetting( "dbms.security.plugin.authentication_enabled", auth_providers,
-                    providers -> providers.stream().anyMatch( r -> r.startsWith( PLUGIN_REALM_NAME_PREFIX ) ),
-                    BOOLEAN );
-
-    @Description( "Enable authorization via plugin authorization providers." )
-    @Internal
-    public static final Setting<Boolean> plugin_authorization_enabled =
-            derivedSetting( "dbms.security.plugin.authorization_enabled", auth_providers,
-                    providers -> providers.stream().anyMatch( r -> r.startsWith( PLUGIN_REALM_NAME_PREFIX ) ),
-                    BOOLEAN );
+    @Description( "A list of security authorization providers containing the users and roles. " +
+            "This can be any of the built-in `" + NATIVE_REALM_NAME + "` or `" + LDAP_REALM_NAME + "` providers, " +
+            "or it can be an externally provided plugin, with a custom name prefixed by `" +
+            PLUGIN_REALM_NAME_PREFIX + "`, i.e. `" + PLUGIN_REALM_NAME_PREFIX + "<AUTH_PROVIDER_NAME>`. " +
+            "They will be queried in the given order when login is attempted." )
+    public static final Setting<List<String>> authorization_providers = setting( "dbms.security.authorization_providers", STRING_LIST, NATIVE_REALM_NAME );
 
     //=========================================================================
     // LDAP settings

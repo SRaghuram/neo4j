@@ -12,7 +12,6 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +49,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Override
     protected Map<Setting<?>,String> getSettings()
     {
-        return Collections.singletonMap( SecuritySettings.auth_providers, DEFAULT_TEST_PLUGIN_REALMS );
+        return Map.of( SecuritySettings.authentication_providers, DEFAULT_TEST_PLUGIN_REALMS,
+                SecuritySettings.authorization_providers, DEFAULT_TEST_PLUGIN_REALMS);
     }
 
     @Test
@@ -153,7 +153,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateAndAuthorizeWithTestCombinedAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_providers.name(), "plugin-TestCombinedAuthPlugin" );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCombinedAuthPlugin",
+                SecuritySettings.authorization_providers.name(), "plugin-TestCombinedAuthPlugin" );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCombinedAuthPlugin" ) )
         {
@@ -165,7 +166,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateAndAuthorizeWithTwoSeparateTestPlugins() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_providers.name(), "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin" );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin",
+                SecuritySettings.authorization_providers.name(), "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin" );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j" ) )
         {
@@ -177,7 +179,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldFailIfAuthorizationExpiredWithAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCacheableAdminAuthPlugin",
+                SecuritySettings.authorization_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" ) )
         {
@@ -194,7 +197,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCacheableAdminAuthPlugin",
+                SecuritySettings.authorization_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
 
         // Then
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
@@ -220,7 +224,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldPassOnAuthorizationExpiredException() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_providers.name(), "plugin-TestCombinedAuthPlugin" );
+        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCombinedAuthPlugin",
+                SecuritySettings.authorization_providers.name(), "plugin-TestCombinedAuthPlugin" );
 
         try ( Driver driver = connectDriver( "authorization_expired_user", "neo4j" ) )
         {

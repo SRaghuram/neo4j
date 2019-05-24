@@ -204,7 +204,8 @@ class ClusteredSystemDatabaseBackupRestoreIT
         Map<String,String> configMap = new HashMap<>();
         configMap.put( OnlineBackupSettings.online_backup_enabled.name(), "true" );
         configMap.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
-        configMap.put( SecuritySettings.auth_provider.name(), SecuritySettings.NATIVE_REALM_NAME );
+        configMap.put( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
+        configMap.put( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
         return configMap;
     }
 }

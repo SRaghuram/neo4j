@@ -37,7 +37,8 @@ public class SecureClusterInProcessRunnerIT
                         .withLogger( NullLogProvider.getInstance() )
                         .atPath( clusterPath )
                         .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
-                        .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.NATIVE_REALM_NAME )
+                        .withConfig( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
+                        .withConfig( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
                         .withOptionalPortsStrategy( portPickingStrategy )
                         .build();
 

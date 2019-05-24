@@ -8,21 +8,28 @@ package com.neo4j.server.security.enterprise;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static com.neo4j.server.security.enterprise.CommercialSecurityModule.mergeAuthenticationAndAuthorization;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,63 +66,39 @@ class CommercialSecurityModuleTest
     void shouldFailOnIllegalRealmNameConfiguration()
     {
         // Given
-        nativeAuth( true, true );
-        ldapAuth( true, true );
-        pluginAuth( false, false );
-        authProviders( "this-realm-does-not-exist" );
+        providers( "this-realm-does-not-exist" );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: No valid auth provider is active." );
+        assertIllegalArgumentException( "Illegal configuration: No authentication provider found." );
     }
 
     @Test
     void shouldFailOnNoAuthenticationMechanism()
     {
         // Given
-        nativeAuth( false, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        authenticationProviders();
+        authorizationProviders( SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: All authentication providers are disabled." );
+        assertIllegalArgumentException( "Illegal configuration: No authentication provider found." );
     }
 
     @Test
     void shouldFailOnNoAuthorizationMechanism()
     {
         // Given
-        nativeAuth( true, false );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        authenticationProviders( SecuritySettings.NATIVE_REALM_NAME );
+        authorizationProviders();
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: All authorization providers are disabled." );
-    }
-
-    @Test
-    void shouldFailOnIllegalAdvancedRealmConfiguration()
-    {
-        // Given
-        nativeAuth( false, false );
-        ldapAuth( false, false );
-        pluginAuth( true, true );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
-
-        // Then
-        assertIllegalArgumentException(
-                "Illegal configuration: Native auth provider configured, but both authentication and authorization are disabled." );
+        assertIllegalArgumentException( "Illegal configuration: No authorization provider found." );
     }
 
     @Test
     void shouldFailOnNotLoadedPluginAuthProvider()
     {
         // Given
-        nativeAuth( false, false );
-        ldapAuth( false, false );
-        pluginAuth( true, true );
-        authProviders( SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthenticationPlugin",
+        providers( SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthenticationPlugin",
                 SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "IllConfiguredAuthorizationPlugin" );
 
         // Then
@@ -123,44 +106,10 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldTranslateFromSystemGraphProviderToNative()
-    {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
-
-        CommercialSecurityModule.SecurityConfig securityConfig = new CommercialSecurityModule.SecurityConfig( config );
-        securityConfig.validate();
-
-        assertThat( securityConfig.hasNativeProvider, equalTo( true ) );
-    }
-
-    @Test
-    void shouldTranslateWithNativeProviderAndSystemGraphProviderTogether()
-    {
-        // Given
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.NATIVE_REALM_NAME );
-
-        CommercialSecurityModule.SecurityConfig securityConfig = new CommercialSecurityModule.SecurityConfig( config );
-        securityConfig.validate();
-
-        // Then
-        assertThat( securityConfig.hasNativeProvider, equalTo( true ) );
-    }
-
-    @Test
     void shouldNotFailNativeProviderhWithLdapAuthorizationProvider()
     {
         // Given
-        nativeAuth( true, true );
-        ldapAuth( true, true );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
+        providers( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // When
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
@@ -177,10 +126,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailNativeWithPluginAuthorizationProvider()
     {
         // Given
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( true, true );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin" );
+        providers( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin" );
 
         assertSuccess();
     }
@@ -188,10 +134,7 @@ class CommercialSecurityModuleTest
     @Test
     void shouldNotFailWithPropertyLevelPermissions()
     {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        providers( SecuritySettings.NATIVE_REALM_NAME );
 
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
@@ -202,10 +145,7 @@ class CommercialSecurityModuleTest
     @Test
     void shouldFailOnIllegalPropertyLevelPermissions()
     {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        providers( SecuritySettings.NATIVE_REALM_NAME );
 
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smithmalias" );
@@ -216,10 +156,7 @@ class CommercialSecurityModuleTest
     @Test
     void shouldParsePropertyLevelPermissions()
     {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        providers( SecuritySettings.NATIVE_REALM_NAME );
 
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn(
@@ -232,28 +169,88 @@ class CommercialSecurityModuleTest
         assertThat( securityConfig.propertyBlacklist.get( "abel" ), equalTo( Arrays.asList( "alias", "hasSilver" ) ) );
     }
 
+    @Test
+    void testMerge()
+    {
+        List<String> merged = mergeAuthenticationAndAuthorization( List.of( "a" ), List.of( "b", "c" ) );
+        assertThat( merged, containsInAnyOrder( "a", "b", "c" ) );
+        assertThat( merged, containsInRelativeOrder( "b", "c" ) );
+        assertThat( merged.size(), is( 3 ) );
+
+        merged = mergeAuthenticationAndAuthorization( List.of( "a", "b" ), List.of( "b", "c" ) );
+        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
+        assertThat( merged.size(), is( 3 ) );
+
+        merged = mergeAuthenticationAndAuthorization( List.of( "a", "b", "d" ), List.of( "b", "c", "d" ) );
+        assertThat( merged, containsInRelativeOrder( "a", "b", "c", "d" ) );
+        assertThat( merged.size(), is( 4 ) );
+
+        merged = mergeAuthenticationAndAuthorization( List.of( "a", "b", "c" ), List.of() );
+        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
+        assertThat( merged.size(), is( 3 ) );
+
+        merged = mergeAuthenticationAndAuthorization( List.of(), List.of("a", "b", "c" ) );
+        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
+        assertThat( merged.size(), is( 3 ) );
+
+        merged = mergeAuthenticationAndAuthorization( List.of(), List.of() );
+        assertThat( merged.size(), is( 0 ) );
+
+        IllegalArgumentException illegalArgumentException =
+                assertThrows( IllegalArgumentException.class, () -> mergeAuthenticationAndAuthorization( List.of( "a", "b" ), List.of( "b", "a" ) ) );
+        assertEquals( "Illegal configuration: The relative order of authentication providers and authorization providers must match.",
+                illegalArgumentException.getMessage() );
+    }
+
+    @RepeatedTest( 100 )
+    void testMergeRandom()
+    {
+        Random random = new Random();
+
+        List<String> a = new ArrayList<>();
+        List<String> b = new ArrayList<>();
+        List<String> r = new ArrayList<>();
+        for ( int i = 'a'; i <= 'z'; i++ )
+        {
+            String c = Character.toString( i );
+            switch ( random.nextInt( 3 ) )
+            {
+            case 0:
+                a.add( c );
+                break;
+            case 1:
+                b.add( c );
+                break;
+            case 2:
+                a.add( c );
+                b.add( c );
+                break;
+            default:
+                throw new RuntimeException( "?!" );
+            }
+            r.add( c );
+        }
+        List<String> merged = mergeAuthenticationAndAuthorization( a, b );
+        assertThat( merged.size(), is( r.size() ) );
+        assertThat( merged, containsInRelativeOrder( a.toArray() ) );
+        assertThat( merged, containsInRelativeOrder( b.toArray() ) );
+    }
+
     // --------- HELPERS ----------
-    private void nativeAuth( boolean authn, boolean authr )
+    private void providers( String... providers )
     {
-        when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
-        when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );
+        authenticationProviders( providers );
+        authorizationProviders( providers );
     }
 
-    private void ldapAuth( boolean authn, boolean authr )
+    private void authenticationProviders( String... providers )
     {
-        when( config.get( SecuritySettings.ldap_authentication_enabled ) ).thenReturn( authn );
-        when( config.get( SecuritySettings.ldap_authorization_enabled ) ).thenReturn( authr );
+        when( config.get( SecuritySettings.authentication_providers ) ).thenReturn( Arrays.asList( providers ) );
     }
 
-    private void pluginAuth( boolean authn, boolean authr )
+    private void authorizationProviders( String... providers )
     {
-        when( config.get( SecuritySettings.plugin_authentication_enabled ) ).thenReturn( authn );
-        when( config.get( SecuritySettings.plugin_authorization_enabled ) ).thenReturn( authr );
-    }
-
-    private void authProviders( String... authProviders )
-    {
-        when( config.get( SecuritySettings.auth_providers ) ).thenReturn( Arrays.asList( authProviders ) );
+        when( config.get( SecuritySettings.authorization_providers ) ).thenReturn( Arrays.asList( providers ) );
     }
 
     private void assertSuccess()

@@ -22,9 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -47,7 +45,6 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
@@ -75,7 +72,8 @@ class SystemGraphInternalsTest
     {
         File storeDir = testDirectory.storeDir();
         final DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( storeDir );
-        builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
+        builder.setConfig( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME );
+        builder.setConfig( SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME );
         managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseManager<?> databaseManager = getDatabaseManager();

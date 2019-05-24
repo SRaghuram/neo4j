@@ -85,7 +85,8 @@ public class ActiveDirectoryAuthenticationIT
         return settings ->
         {
             settings.put( GraphDatabaseSettings.auth_enabled, "true" );
-            settings.put( SecuritySettings.auth_provider, "ldap" );
+            settings.put( SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME );
+            settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
             settings.put( SecuritySettings.ldap_server, "activedirectory.neohq.net" );
             settings.put( SecuritySettings.ldap_authentication_user_dn_template, "CN={0},CN=Users,DC=neo4j,DC=com" );
             settings.put( SecuritySettings.ldap_authorization_use_system_account, "false" );

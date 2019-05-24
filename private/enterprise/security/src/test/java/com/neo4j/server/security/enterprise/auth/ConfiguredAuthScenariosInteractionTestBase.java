@@ -50,7 +50,10 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     @Test
     void shouldWarnWhenUsingInternalAndOtherProvider() throws Throwable
     {
-        configuredSetup( stringMap( SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + " ,LDAP" ) );
+        configuredSetup( stringMap(
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME )
+        );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
@@ -68,7 +71,10 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     @Test
     void shouldNotWarnWhenOnlyUsingInternalProvider() throws Throwable
     {
-        configuredSetup( stringMap( SecuritySettings.auth_provider.name(), SecuritySettings.NATIVE_REALM_NAME ) );
+        configuredSetup( stringMap(
+                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME
+        ) );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
