@@ -16,9 +16,8 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 
-import org.neo4j.commandline.admin.AdminTool;
-import org.neo4j.commandline.admin.CommandLocator;
-import org.neo4j.commandline.admin.RealOutsideWorld;
+import org.neo4j.cli.AdminTool;
+import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -38,8 +37,6 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.io.FileUtils.cleanDirectory;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
@@ -160,17 +157,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         db.shutdownAndKeepStore();
 
-        AdminTool adminTool = new AdminTool(
-                CommandLocator.fromServiceLocator(),
-                new RealOutsideWorld()
-                {
-                    @Override
-                    public void exit( int status )
-                    {
-                        assertThat( "exit code", status, is( 0 ) );
-                    }
-                },
-                true );
         File databaseDir = db.databaseLayout().databaseDirectory();
         File databases = new File( data, "databases" );
         File graphdb = testDirectory.databaseDir( databases );
@@ -178,12 +164,13 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         deleteRecursively( databaseDir );
         Path homePath = data.toPath().getParent();
         File dumpDir = testDirectory.cleanDirectory( "dump-dir" );
-        adminTool.execute( homePath, homePath, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
 
+        ExecutionContext ctx = new ExecutionContext( homePath, homePath, System.out, System.err, testDirectory.getFileSystem() );
+        AdminTool.execute( ctx, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
         deleteRecursively( graphdb );
         cleanDirectory( logs );
         File dumpFile = new File( dumpDir, "neo4j.dump" );
-        adminTool.execute( homePath, homePath, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
+        AdminTool.execute( ctx, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
         FileUtils.copyRecursively( graphdb, databaseDir );
         deleteRecursively( graphdb );
 

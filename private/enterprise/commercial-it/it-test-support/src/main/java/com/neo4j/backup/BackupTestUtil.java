@@ -5,23 +5,22 @@
  */
 package com.neo4j.backup;
 
+import com.neo4j.backup.impl.OnlineBackupCommand;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.restore.RestoreDatabaseCommand;
+import picocli.CommandLine;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import org.neo4j.commandline.admin.AdminTool;
-import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.CommandLocator;
+import org.neo4j.cli.AdminTool;
+import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
@@ -49,13 +48,13 @@ public class BackupTestUtil
         return new File( baseBackupDir, databaseId.name() );
     }
 
-    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException, CommandFailed
+    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException
     {
         restoreFromBackup( backup, fsa, clusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
-            ClusterMember clusterMember, String databaseName ) throws IOException, CommandFailed
+            ClusterMember clusterMember, String databaseName ) throws IOException
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
                 .withConnectorsDisabled()
@@ -79,7 +78,7 @@ public class BackupTestUtil
     {
         return new String[]{
                 "--from=" + from,
-                "--cc-report-dir=" + backupsDir,
+                "--report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
                 "--database=" + databaseId.name()
         };
@@ -100,6 +99,7 @@ public class BackupTestUtil
 
         ProcessBuilder processBuilder = new ProcessBuilder().command( allArgs.toArray( new String[0] ) );
         processBuilder.environment().put( "NEO4J_HOME", neo4jHome.getAbsolutePath() );
+        processBuilder.environment().put( "NEO4J_CONF", neo4jHome.getAbsolutePath() );
         if ( debug )
         {
             processBuilder.environment().put( "NEO4J_DEBUG", "anything_works" );
@@ -112,19 +112,19 @@ public class BackupTestUtil
 
     public static int runBackupToolFromSameJvm( File neo4jHome, String... args )
     {
-        try ( ExitCodeMemorizingOutsideWorld outsideWorld = new ExitCodeMemorizingOutsideWorld() )
+        final var homeDir = neo4jHome.getAbsoluteFile().toPath();
+        final var configDir = homeDir.resolve( "conf" );
+        final var ctx = new ExecutionContext( homeDir, configDir );
+
+        final var command = CommandLine.populateCommand( new OnlineBackupCommand( ctx ), args );
+
+        try
         {
-            AdminTool adminTool = new AdminTool( CommandLocator.fromServiceLocator(), outsideWorld, false );
-
-            List<String> allArgs = new ArrayList<>();
-            allArgs.add( "backup" );
-            Collections.addAll( allArgs, args );
-
-            Path homeDir = neo4jHome.getAbsoluteFile().toPath();
-            Path configDir = homeDir.resolve( "conf" );
-            adminTool.execute( homeDir, configDir, allArgs.toArray( new String[0] ) );
-
-            return outsideWorld.getExitCode();
+            return command.call();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
         }
     }
 }

@@ -6,89 +6,86 @@
 package com.neo4j.backup.impl;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import picocli.CommandLine;
 
-import org.neo4j.commandline.admin.CommandLocator;
-import org.neo4j.commandline.admin.Usage;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.SuppressOutput;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.file.Path;
 
-import static java.lang.String.format;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
+import org.neo4j.cli.ExecutionContext;
 
-@ExtendWith( SuppressOutputExtension.class )
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
 class OnlineBackupCommandTest
 {
-    @Inject
-    private SuppressOutput suppressOutput;
-
     @Test
-    void shouldPrintNiceHelp()
+    void printUsageHelp()
     {
-        Usage usage = new Usage( "neo4j-admin", mock( CommandLocator.class ) );
-        usage.printUsageForCommand( new OnlineBackupCommandProvider(), System.out::println );
-
-        String output = suppressOutput.getOutputVoice().toString();
-
-        assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> [--from=<address>]%n" +
-                              "                          [--database=<neo4j>]%n" +
-                              "                          [--fallback-to-full[=<true|false>]] [--pagecache=<8m>]%n" +
-                              "                          [--check-consistency[=<true|false>]]%n" +
-                              "                          [--cc-report-dir=<directory>]%n" +
-                              "                          [--additional-config=<config-file-path>]%n" +
-                              "                          [--cc-graph[=<true|false>]]%n" +
-                              "                          [--cc-indexes[=<true|false>]]%n" +
-                              "                          [--cc-label-scan-store[=<true|false>]]%n" +
-                              "                          [--cc-property-owners[=<true|false>]]%n" +
-                              "%n" +
-                              "environment variables:%n" +
-                              "    NEO4J_CONF    Path to directory which contains neo4j.conf.%n" +
-                              "    NEO4J_DEBUG   Set to anything to enable debug output.%n" +
-                              "    NEO4J_HOME    Neo4j home directory.%n" +
-                              "    HEAP_SIZE     Set JVM maximum heap size during command execution.%n" +
-                              "                  Takes a number and a unit, for example 512m.%n" +
-                              "%n" +
-                              "Perform an online backup from a running Neo4j enterprise server. Neo4j's backup%n" +
-                              "service must have been configured on the server beforehand.%n" +
-                              "%n" +
-                              "All consistency checks except 'cc-graph' can be quite expensive so it may be%n" +
-                              "useful to turn them off for very large databases. Increasing the heap size can%n" +
-                              "also be a good idea. See 'neo4j-admin help' for details.%n" +
-                              "%n" +
-                              "For more information see:%n" +
-                              "https://neo4j.com/docs/operations-manual/current/backup/%n" +
-                              "%n" +
-                              "options:%n" +
-                              "  --backup-dir=<backup-path>               Directory to place backup in.%n" +
-                              "  --from=<address>                         Host and port of Neo4j.%n" +
-                              "                                           [default:localhost:6362]%n" +
-                              "  --database=<neo4j>                       Name of the remote database to%n" +
-                              "                                           backup. [default:null]%n" +
-                              "  --fallback-to-full=<true|false>          If an incremental backup fails backup%n" +
-                              "                                           will move the old backup to%n" +
-                              "                                           <name>.err.<N> and fallback to a full%n" +
-                              "                                           backup instead. [default:true]%n" +
-                              "  --pagecache=<8m>                         The size of the page cache to use for%n" +
-                              "                                           the backup process. [default:8m]%n" +
-                              "  --check-consistency=<true|false>         If a consistency check should be%n" +
-                              "                                           made. [default:true]%n" +
-                              "  --cc-report-dir=<directory>              Directory where consistency report%n" +
-                              "                                           will be written. [default:.]%n" +
-                              "  --additional-config=<config-file-path>   Configuration file to supply%n" +
-                              "                                           additional configuration in. This%n" +
-                              "                                           argument is DEPRECATED. [default:]%n" +
-                              "  --cc-graph=<true|false>                  Perform consistency checks between%n" +
-                              "                                           nodes, relationships, properties,%n" +
-                              "                                           types and tokens. [default:true]%n" +
-                              "  --cc-indexes=<true|false>                Perform consistency checks on%n" +
-                              "                                           indexes. [default:true]%n" +
-                              "  --cc-label-scan-store=<true|false>       Perform consistency checks on the%n" +
-                              "                                           label scan store. [default:true]%n" +
-                              "  --cc-property-owners=<true|false>        Perform additional consistency checks%n" +
-                              "                                           on property ownership. This check is%n" +
-                              "                                           *very* expensive in time and memory.%n" +
-                              "                                           [default:false]%n" ), output );
+        final var baos = new ByteArrayOutputStream();
+        final var command = new OnlineBackupCommand( new ExecutionContext( Path.of( "." ), Path.of( "." ) ) );
+        try ( var out = new PrintStream( baos ) )
+        {
+            CommandLine.usage( command, new PrintStream( out ) );
+        }
+        assertThat( baos.toString().trim(), equalTo(
+                "Perform an online backup from a running Neo4j enterprise server.\n" +
+                        "\n" +
+                        "USAGE\n" +
+                        "\n" +
+                        "backup [--check-consistency] [--fallback-to-full] [--verbose]\n" +
+                        "       [--additional-config=<path>] --backup-dir=<path>\n" +
+                        "       [--check-graph=<true/false>] [--check-indexes=<true/false>]\n" +
+                        "       [--check-label-scan-store=<true/false>]\n" +
+                        "       [--check-property-owners=<true/false>] [--database=<database>]\n" +
+                        "       [--from=<host:port>] [--pagecache=<size>] [--report-dir=<path>]\n" +
+                        "\n" +
+                        "DESCRIPTION\n" +
+                        "\n" +
+                        "Perform an online backup from a running Neo4j enterprise server. Neo4j's backup\n" +
+                        "service must have been configured on the server beforehand.\n" +
+                        "\n" +
+                        "All consistency checks except 'cc-graph' can be quite expensive so it may be\n" +
+                        "useful to turn them off for very large databases. Increasing the heap size can\n" +
+                        "also be a good idea. See 'neo4j-admin help' for details.\n" +
+                        "\n" +
+                        "For more information see: https://neo4j.\n" +
+                        "com/docs/operations-manual/current/backup/\n" +
+                        "\n" +
+                        "OPTIONS\n" +
+                        "\n" +
+                        "      --verbose             Enable verbose output.\n" +
+                        "      --backup-dir=<path>   Directory to place backup in.\n" +
+                        "      --from=<host:port>    Host and port of Neo4j.\n" +
+                        "                              Default: localhost:6362\n" +
+                        "      --database=<database> Name of the remote database to backup.\n" +
+                        "                              Default: neo4j\n" +
+                        "      --fallback-to-full    If an incremental backup fails backup will move the old\n" +
+                        "                              backup to <name>.err.<N> and fallback to a full.\n" +
+                        "                              Default: true\n" +
+                        "      --pagecache=<size>    The size of the page cache to use for the backup process.\n" +
+                        "                              Default: 8m\n" +
+                        "      --check-consistency   If a consistency check should be made.\n" +
+                        "                              Default: true\n" +
+                        "      --report-dir=<path>   Directory where consistency report will be written.\n" +
+                        "                              Default: .\n" +
+                        "      --check-graph=<true/false>\n" +
+                        "                            Perform consistency checks between nodes, relationships,\n" +
+                        "                              properties, types and tokens.\n" +
+                        "                              Default: true\n" +
+                        "      --check-indexes=<true/false>\n" +
+                        "                            Perform consistency checks on indexes.\n" +
+                        "                              Default: true\n" +
+                        "      --check-label-scan-store=<true/false>\n" +
+                        "                            Perform consistency checks on the label scan store.\n" +
+                        "                              Default: true\n" +
+                        "      --check-property-owners=<true/false>\n" +
+                        "                            Perform additional consistency checks on property\n" +
+                        "                              ownership. This check is very expensive in time and\n" +
+                        "                              memory.\n" +
+                        "                              Default: false\n" +
+                        "      --additional-config=<path>\n" +
+                        "                            Configuration file to supply additional configuration in."
+        ) );
     }
 }

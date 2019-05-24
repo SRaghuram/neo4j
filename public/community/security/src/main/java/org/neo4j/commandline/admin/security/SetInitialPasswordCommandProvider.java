@@ -19,58 +19,16 @@
  */
 package org.neo4j.commandline.admin.security;
 
-import javax.annotation.Nonnull;
-
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.commandline.admin.AdminCommand;
-import org.neo4j.commandline.admin.AdminCommandSection;
-import org.neo4j.commandline.admin.CommandContext;
-import org.neo4j.commandline.arguments.Arguments;
-
-import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import org.neo4j.cli.CommandProvider;
+import org.neo4j.cli.ExecutionContext;
 
 @ServiceProvider
-public class SetInitialPasswordCommandProvider implements AdminCommand.Provider
+public class SetInitialPasswordCommandProvider implements CommandProvider<SetInitialPasswordCommand>
 {
-    @Nonnull
     @Override
-    public String getName()
+    public SetInitialPasswordCommand createCommand( ExecutionContext ctx )
     {
-        return "set-initial-password";
-    }
-
-    @Override
-    @Nonnull
-    public Arguments allArguments()
-    {
-        return SetInitialPasswordCommand.arguments();
-    }
-
-    @Override
-    @Nonnull
-    public String description()
-    {
-        return "Sets the initial password of the initial admin user ('" + INITIAL_USER_NAME + "').";
-    }
-
-    @Override
-    @Nonnull
-    public String summary()
-    {
-        return description();
-    }
-
-    @Override
-    @Nonnull
-    public AdminCommandSection commandSection()
-    {
-        return AuthenticationCommandSection.instance();
-    }
-
-    @Override
-    @Nonnull
-    public AdminCommand create( CommandContext ctx )
-    {
-        return new SetInitialPasswordCommand( ctx.getHomeDir(), ctx.getConfigDir(), ctx.getOutsideWorld() );
+        return new SetInitialPasswordCommand( ctx );
     }
 }

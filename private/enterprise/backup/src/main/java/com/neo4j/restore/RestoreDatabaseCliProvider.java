@@ -7,57 +7,16 @@ package com.neo4j.restore;
 
 import com.neo4j.OnlineBackupCommandSection;
 
-import javax.annotation.Nonnull;
-
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.commandline.admin.AdminCommand;
-import org.neo4j.commandline.admin.AdminCommandSection;
-import org.neo4j.commandline.admin.CommandContext;
-import org.neo4j.commandline.arguments.Arguments;
+import org.neo4j.cli.CommandProvider;
+import org.neo4j.cli.ExecutionContext;
 
 @ServiceProvider
-public class RestoreDatabaseCliProvider implements AdminCommand.Provider
+public class RestoreDatabaseCliProvider implements CommandProvider<RestoreDatabaseCli>
 {
-
-    @Nonnull
     @Override
-    public String getName()
+    public RestoreDatabaseCli createCommand( ExecutionContext ctx )
     {
-        return "restore";
-    }
-
-    @Override
-    @Nonnull
-    public Arguments allArguments()
-    {
-        return RestoreDatabaseCli.arguments();
-    }
-
-    @Override
-    @Nonnull
-    public String description()
-    {
-        return "Restore a backed up database.";
-    }
-
-    @Override
-    @Nonnull
-    public String summary()
-    {
-        return description();
-    }
-
-    @Override
-    @Nonnull
-    public AdminCommandSection commandSection()
-    {
-        return OnlineBackupCommandSection.instance();
-    }
-
-    @Override
-    @Nonnull
-    public AdminCommand create( CommandContext ctx )
-    {
-        return new RestoreDatabaseCli( ctx.getHomeDir(), ctx.getConfigDir() );
+        return new RestoreDatabaseCli( ctx );
     }
 }

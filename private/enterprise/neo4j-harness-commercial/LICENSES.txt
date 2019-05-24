@@ -72,6 +72,7 @@ Apache Software License, Version 2.0
   org.opentest4j:opentest4j
   parboiled-core
   parboiled-scala
+  picocli - a mighty tiny Command Line Interface
   Prometheus Java Simpleclient
   Prometheus Java Simpleclient Common
   Prometheus Java Simpleclient Dropwizard

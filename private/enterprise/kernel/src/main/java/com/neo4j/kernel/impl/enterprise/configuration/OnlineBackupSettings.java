@@ -28,6 +28,7 @@ import static org.neo4j.configuration.Settings.setting;
 @ServiceProvider
 public class OnlineBackupSettings implements LoadableConfig
 {
+    public static final String DEFAULT_BACKUP_HOST = "localhost";
     public static final int DEFAULT_BACKUP_PORT = 6362;
 
     @Description( "Enable support for running online backups." )

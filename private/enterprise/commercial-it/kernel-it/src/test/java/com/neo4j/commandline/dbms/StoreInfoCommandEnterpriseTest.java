@@ -8,15 +8,15 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import picocli.CommandLine;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.function.Consumer;
 
+import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -26,10 +26,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
 @PageCacheExtension
@@ -43,9 +42,8 @@ class StoreInfoCommandEnterpriseTest
     private PageCache pageCache;
 
     private Path databaseDirectory;
-    private ArgumentCaptor<String> outCaptor;
     private StoreInfoCommand command;
-    private Consumer<String> out;
+    private PrintStream out;
 
     @BeforeEach
     void setUp() throws Exception
@@ -53,31 +51,23 @@ class StoreInfoCommandEnterpriseTest
         Path homeDir = testDirectory.directory( "home-dir" ).toPath();
         databaseDirectory = homeDir.resolve( "data/databases/foo" );
         Files.createDirectories( databaseDirectory );
-        outCaptor = ArgumentCaptor.forClass( String.class );
-        out = mock( Consumer.class );
-        command = new StoreInfoCommand( out );
+        out = mock( PrintStream.class );
+        command = new StoreInfoCommand( new ExecutionContext( homeDir, homeDir.resolve( "conf" ), out, mock( PrintStream.class ),
+                testDirectory.getFileSystem() ) );
     }
 
     @Test
     void readsEnterpriseStoreVersionCorrectly() throws Exception
     {
         prepareNeoStoreFile( HighLimitV3_4_0.RECORD_FORMATS.storeVersion() );
+        CommandLine.populateCommand( command, databaseDirectory.toFile().getAbsolutePath() );
 
-        execute( databaseDirectory.toString() );
+        command.execute();
 
-        verify( out, times( 3 ) ).accept( outCaptor.capture() );
-
-        assertEquals(
-                Arrays.asList(
-                        "Store format version:         vE.H.4",
-                        "Store format introduced in:   3.4.0",
-                        "Store format superseded in:   4.0.0" ),
-                outCaptor.getAllValues() );
-    }
-
-    private void execute( String storePath ) throws Exception
-    {
-        command.execute( new String[]{"--store=" + storePath} );
+        verify( out ).println( "Store format version:         vE.H.4" );
+        verify( out ).println( "Store format introduced in:   3.4.0" );
+        verify( out ).println( "Store format superseded in:   4.0.0" );
+        verifyNoMoreInteractions( out );
     }
 
     private void prepareNeoStoreFile( String storeVersion ) throws IOException

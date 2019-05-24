@@ -10,15 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.Optional;
 
-import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.CommandLocator;
-import org.neo4j.commandline.admin.Usage;
+import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
@@ -49,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -85,7 +80,7 @@ class RestoreDatabaseCommandIT
         createDbAt( fromPath, fromNodeCount );
         createDbAt( toLayout, toNodeCount );
 
-        CommandFailed commandFailedException = assertThrows( CommandFailed.class, () ->
+        CommandFailedException commandFailedException = assertThrows( CommandFailedException.class, () ->
         {
             try ( StoreLocker storeLocker = new StoreLocker( fileSystem, testStore ) )
             {
@@ -183,7 +178,7 @@ class RestoreDatabaseCommandIT
 
     @Test
     void restoreTransactionLogsInCustomDirectoryForTargetDatabaseWhenConfigured()
-            throws IOException, CommandFailed
+            throws IOException
     {
         StoreLayout toStoreLayout = directory.storeLayout( "new" );
         StoreLayout fromStoreLayout = directory.storeLayout( "old" );
@@ -216,7 +211,7 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void doNotRemoveRelativeTransactionDirectoryAgain() throws IOException, CommandFailed
+    void doNotRemoveRelativeTransactionDirectoryAgain() throws IOException
     {
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
         File fromPath = directory.directory( "old" );
@@ -232,37 +227,6 @@ class RestoreDatabaseCommandIT
 
         verify( fs ).deleteRecursively( eq( testLayout.databaseDirectory() ) );
         verify( fs, never() ).deleteRecursively( eq( relativeLogDirectory ) );
-    }
-
-    @Test
-    void shouldPrintNiceHelp() throws Throwable
-    {
-        try ( ByteArrayOutputStream baos = new ByteArrayOutputStream() )
-        {
-            PrintStream ps = new PrintStream( baos );
-
-            Usage usage = new Usage( "neo4j-admin", mock( CommandLocator.class ) );
-            usage.printUsageForCommand( new RestoreDatabaseCliProvider(), ps::println );
-
-            assertEquals( String.format( "usage: neo4j-admin restore --from=<backup-directory> [--database=<name>]%n" +
-                            "                           [--force[=<true|false>]]%n" +
-                            "%n" +
-                            "environment variables:%n" +
-                            "    NEO4J_CONF    Path to directory which contains neo4j.conf.%n" +
-                            "    NEO4J_DEBUG   Set to anything to enable debug output.%n" +
-                            "    NEO4J_HOME    Neo4j home directory.%n" +
-                            "    HEAP_SIZE     Set JVM maximum heap size during command execution.%n" +
-                            "                  Takes a number and a unit, for example 512m.%n" +
-                            "%n" +
-                            "Restore a backed up database.%n" +
-                            "%n" +
-                            "options:%n" +
-                            "  --from=<backup-directory>   Path to backup to restore from.%n" +
-                            "  --database=<name>           Name of database. [default:neo4j]%n" +
-                            "  --force=<true|false>        If an existing database should be replaced.%n" +
-                            "                              [default:false]%n" ),
-                    baos.toString() );
-        }
     }
 
     private static Config configWith( String dataDirectory )

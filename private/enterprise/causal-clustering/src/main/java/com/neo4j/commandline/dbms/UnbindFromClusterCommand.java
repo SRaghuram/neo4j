@@ -12,11 +12,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.neo4j.commandline.admin.AdminCommand;
-import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.IncorrectUsage;
-import org.neo4j.commandline.admin.OutsideWorld;
-import org.neo4j.commandline.arguments.Arguments;
+import org.neo4j.cli.AbstractCommand;
+import org.neo4j.cli.CommandFailedException;
+import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.CannotWriteException;
 import org.neo4j.commandline.dbms.StoreLockChecker;
 import org.neo4j.configuration.Config;
@@ -31,25 +29,24 @@ import org.neo4j.kernel.impl.util.Validators;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
 import static org.neo4j.configuration.Config.fromFile;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static picocli.CommandLine.Command;
+import static picocli.CommandLine.Option;
 
-public class UnbindFromClusterCommand implements AdminCommand
+@Command(
+        name = "unbind",
+        header = "Removes cluster state data for the specified database.",
+        description = "Removes cluster state data for the specified database, so that the instance can rebind to a new or recovered cluster."
+)
+class UnbindFromClusterCommand extends AbstractCommand
 {
-    private static final Arguments arguments = new Arguments().withDatabase();
-    private final Path homeDir;
-    private final Path configDir;
-    private final OutsideWorld outsideWorld;
+    @Option( names = "--database", description = "Name of the database.", defaultValue = DEFAULT_DATABASE_NAME )
+    private String database;
 
-    UnbindFromClusterCommand( Path homeDir, Path configDir, OutsideWorld outsideWorld )
+    UnbindFromClusterCommand( ExecutionContext ctx )
     {
-        this.homeDir = homeDir;
-        this.configDir = configDir;
-        this.outsideWorld = outsideWorld;
-    }
-
-    static Arguments arguments()
-    {
-        return arguments;
+        super( ctx );
     }
 
     private static Config loadNeo4jConfig( Path homeDir, Path configDir )
@@ -60,13 +57,13 @@ public class UnbindFromClusterCommand implements AdminCommand
     }
 
     @Override
-    public void execute( String[] args ) throws IncorrectUsage, CommandFailed
+    public void execute()
     {
         try
         {
-            Config config = loadNeo4jConfig( homeDir, configDir );
+            Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
             DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
-            DatabaseId databaseId = databaseIdRepository.get( arguments.parse( args ).get( ARG_DATABASE ) );
+            DatabaseId databaseId = databaseIdRepository.get( database );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
             File databasesRoot = config.get( databases_root_path );
             DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseId.name() );
@@ -89,26 +86,22 @@ public class UnbindFromClusterCommand implements AdminCommand
 
             File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
 
-            if ( outsideWorld.fileSystem().fileExists( clusterStateDirectory ) )
+            if ( ctx.fs().fileExists( clusterStateDirectory ) )
             {
                 deleteClusterStateIn( clusterStateDirectory );
             }
             else
             {
-                outsideWorld.stdErrLine( "This instance was not bound. No work performed." );
+                ctx.err().println( "This instance was not bound. No work performed." );
             }
         }
         catch ( StoreLockException e )
         {
-            throw new CommandFailed( "Database is currently locked. Please shutdown Neo4j.", e );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new IncorrectUsage( e.getMessage() );
+            throw new CommandFailedException( "Database is currently locked. Please shutdown Neo4j.", e );
         }
         catch ( Exception e )
         {
-            throw new CommandFailed( e.getMessage(), e );
+            throw new CommandFailedException( e.getMessage(), e );
         }
     }
 
@@ -125,7 +118,7 @@ public class UnbindFromClusterCommand implements AdminCommand
     {
         try
         {
-            outsideWorld.fileSystem().deleteRecursively( target );
+            ctx.fs().deleteRecursively( target );
         }
         catch ( IOException e )
         {
@@ -133,7 +126,7 @@ public class UnbindFromClusterCommand implements AdminCommand
         }
     }
 
-    private class UnbindFailureException extends Exception
+    private static class UnbindFailureException extends Exception
     {
         UnbindFailureException( Exception e )
         {

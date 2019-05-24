@@ -13,14 +13,16 @@ import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import picocli.CommandLine;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.IncorrectUsage;
+import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -29,6 +31,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -71,27 +74,24 @@ public class EmbeddedDatabase implements Database
 
     public static void verifyStoreFormat( Store store )
     {
-        ArrayList<String> outputFromAdminTool = new ArrayList<>();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream( baos );
 
-        StoreInfoCommand storeInfoCommand = new StoreInfoCommand( outputFromAdminTool::add );
-        try
+        StoreInfoCommand storeInfoCommand = new StoreInfoCommand( new ExecutionContext( Path.of( "" ), Path.of( "" ), out, System.err,
+                new DefaultFileSystemAbstraction() ) );
+        CommandLine.populateCommand( storeInfoCommand, store.graphDbDirectory().toAbsolutePath().toString() );
+        storeInfoCommand.execute();
+        out.flush();
+        if ( isStoreSuperseded( baos.toString() ) )
         {
-            storeInfoCommand.execute( new String[]{"--store=" + store.graphDbDirectory().toString()} );
-        }
-        catch ( IncorrectUsage | CommandFailed incorrectUsage )
-        {
-            throw new RuntimeException( "Did not find the store or the admin command have changed: " + incorrectUsage );
-        }
-        if ( isStoreSuperseded( outputFromAdminTool ) )
-        {
-            throw new RuntimeException( "Store not updated, please update. Got this output from the admin tool: " + String.join( "\n", outputFromAdminTool ) );
+            throw new RuntimeException( "Store not updated, please update. Got this output from the admin tool: " + baos );
         }
     }
 
-    private static boolean isStoreSuperseded( ArrayList<String> outputFromAdminTool )
+    private static boolean isStoreSuperseded( String output )
     {
         //if the output contains superseded we know that there is a new store format that we should upgrade to.
-        return outputFromAdminTool.stream().anyMatch( message -> message.contains( "superseded" ) );
+        return output.contains( "superseded" );
     }
 
     public static void verifySchema( Store store, Edition edition, Path neo4jConfig, Schema expectedSchema )

@@ -8,7 +8,6 @@ package com.neo4j.restore;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -25,7 +24,7 @@ import static org.neo4j.configuration.LayoutConfig.of;
 
 public class RestoreDatabaseCommand
 {
-    private FileSystemAbstraction fs;
+    private final FileSystemAbstraction fs;
     private final File fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
     private final boolean forceOverwrite;
@@ -38,7 +37,7 @@ public class RestoreDatabaseCommand
         this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).getAbsoluteFile(), of( config ), databaseId.name() );
     }
 
-    public void execute() throws IOException, CommandFailed
+    public void execute() throws IOException
     {
         if ( !fs.fileExists( fromDatabasePath ) )
         {

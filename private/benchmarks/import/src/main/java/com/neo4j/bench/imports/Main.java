@@ -215,8 +215,8 @@ public class Main
                 "--database", databaseName,
                 "--nodes", CSV_LOCATION + size + "/nodes.csv",
                 "--relationships", CSV_LOCATION + size + "/relationships.csv",
-                "--ignore-missing-nodes", String.valueOf( true ),
-                "--ignore-duplicate-nodes", String.valueOf( true ),
+                "--skip-bad-relationships", String.valueOf( true ),
+                "--skip-duplicate-nodes", String.valueOf( true ),
                 "--additional-config", CSV_LOCATION + size + "/additional.conf"
         };
         Map<String,String> neo4jHomeEnvironment = Collections.singletonMap( "NEO4J_HOME", storeDir );

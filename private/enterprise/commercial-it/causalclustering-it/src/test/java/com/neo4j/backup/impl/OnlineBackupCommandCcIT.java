@@ -270,7 +270,7 @@ class OnlineBackupCommandCcIT
         String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().defaultDatabase() );
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupDir,
+                "--report-dir=" + backupDir,
                 "--backup-dir=" + backupDir,
                 "--additional-config=" + configOverrideFile,
                 "--database=" + DEFAULT_DATABASE_NAME ) );
@@ -285,7 +285,7 @@ class OnlineBackupCommandCcIT
         // when we perform an incremental backup
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupDir,
+                "--report-dir=" + backupDir,
                 "--backup-dir=" + backupDir,
                 "--additional-config=" + configOverrideFile,
                 "--database=" + DEFAULT_DATABASE_NAME,
@@ -452,7 +452,7 @@ class OnlineBackupCommandCcIT
     {
         return runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupsDir,
+                "--report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
                 "--database=" + databaseName );
     }
@@ -461,7 +461,7 @@ class OnlineBackupCommandCcIT
     {
         return runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupsDir,
+                "--report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
                 "--database=" + databaseName,
                 "--fallback-to-full=false" );

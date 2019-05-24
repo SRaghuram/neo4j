@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -145,7 +144,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( numberOfDefaultAdmins > 1 )
             {
                 throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " +
-                        "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+                        "Please use " +
+                        "`neo4j-admin set-default-admin` to select a valid admin." );
             }
             else if ( numberOfDefaultAdmins == 1 )
             {
@@ -163,7 +163,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( systemGraphOperations.getUser( newAdmin, true ) == null )
             {
                 throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " +
-                        "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+                        "Please use " +
+                        "`neo4j-admin set-default-admin` to select a valid admin." );
             }
             return newAdmin;
         }
@@ -181,7 +182,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             throw new InvalidArgumentsException(
                     "No roles defined, and cannot determine which user should be admin. " +
-                            "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select an admin. " );
+                            "Please use `neo4j-admin set-default-admin` to select an admin. " );
         }
     }
 

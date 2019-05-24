@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ListenSocketAddress;
@@ -97,10 +96,10 @@ public class OnlineBackupContext
         private boolean fallbackToFullBackup = true;
         private Config config;
         private boolean consistencyCheck = true;
-        private Boolean consistencyCheckGraph;
-        private Boolean consistencyCheckIndexes;
-        private Boolean consistencyCheckLabelScanStore;
-        private Boolean consistencyCheckPropertyOwners;
+        private boolean consistencyCheckGraph;
+        private boolean consistencyCheckIndexes;
+        private boolean consistencyCheckLabelScanStore;
+        private boolean consistencyCheckPropertyOwners;
 
         private Builder()
         {
@@ -222,24 +221,7 @@ public class OnlineBackupContext
 
         private ConsistencyFlags buildConsistencyFlags()
         {
-            if ( consistencyCheckGraph == null )
-            {
-                consistencyCheckGraph = config.get( ConsistencyCheckSettings.consistency_check_graph );
-            }
-            if ( consistencyCheckIndexes == null )
-            {
-                consistencyCheckIndexes = config.get( ConsistencyCheckSettings.consistency_check_indexes );
-            }
-            if ( consistencyCheckLabelScanStore == null )
-            {
-                consistencyCheckLabelScanStore = config.get( ConsistencyCheckSettings.consistency_check_label_scan_store );
-            }
-            if ( consistencyCheckPropertyOwners == null )
-            {
-                consistencyCheckPropertyOwners = config.get( ConsistencyCheckSettings.consistency_check_property_owners );
-            }
-            return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckLabelScanStore,
-                    consistencyCheckPropertyOwners );
+            return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckLabelScanStore, consistencyCheckPropertyOwners );
         }
     }
 }

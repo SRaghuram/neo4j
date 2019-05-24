@@ -100,6 +100,7 @@ Apache Software License, Version 2.0
   oauth-sign
   parboiled-core
   parboiled-scala
+  picocli - a mighty tiny Command Line Interface
   Prometheus Java Simpleclient
   Prometheus Java Simpleclient Common
   Prometheus Java Simpleclient Dropwizard
