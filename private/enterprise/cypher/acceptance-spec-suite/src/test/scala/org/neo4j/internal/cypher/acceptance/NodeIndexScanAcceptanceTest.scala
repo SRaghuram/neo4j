@@ -138,7 +138,6 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, q)
-    println(result.executionPlanDescription())
     result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))
