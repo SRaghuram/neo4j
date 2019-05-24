@@ -29,6 +29,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -103,7 +104,7 @@ class TxPullRequestHandlerTest
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
-        DatabaseLogService databaseLogService = new DatabaseLogService( () -> DEFAULT_DATABASE_NAME, new SimpleLogService( logProvider ) );
+        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( DATABASE_ID ), new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
         lifeSupport.add( availabilityGuard );

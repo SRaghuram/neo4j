@@ -19,6 +19,7 @@ import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -49,7 +50,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
-        DatabaseLogService databaseLogService = new DatabaseLogService( databaseId::name, globalModule.getLogService() );
+        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
         IdContextFactory idContextFactory =

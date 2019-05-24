@@ -27,6 +27,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
@@ -54,7 +55,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LifeSupport coreDatabaseLife = new LifeSupport();
         Monitors coreDatabaseMonitors = new Monitors( globalModule.getGlobalMonitors() );
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
-        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( databaseId::name, globalModule.getLogService() );
+        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
 
         DatabaseLayout databaseLayout = globalModule.getStoreLayout().databaseLayout( databaseId.name() );
 
