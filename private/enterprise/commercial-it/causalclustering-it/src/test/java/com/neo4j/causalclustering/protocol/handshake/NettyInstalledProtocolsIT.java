@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -59,7 +58,11 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.contains;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class NettyInstalledProtocolsIT
@@ -76,13 +79,13 @@ class NettyInstalledProtocolsIT
         return Stream
                 .concat( noModifierProtocols, individualModifierProtocols )
                 .flatMap( protocol -> Stream.of( raft2WithCompressionModifiers( protocol ) ) )
-                .collect( Collectors.toList() );
+                .collect( toList() );
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private static Parameters raft2WithCompressionModifiers( Optional<ModifierProtocol> protocol )
     {
-        List<String> versions = protocol.stream().map( Protocol::implementation ).collect( Collectors.toList() );
+        List<String> versions = protocol.stream().map( Protocol::implementation ).collect( toList() );
         return new Parameters( "Raft 2, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_2_0.implementation() ) ),
                 singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }
@@ -129,6 +132,7 @@ class NettyInstalledProtocolsIT
         client = new Client( applicationProtocolRepository, modifierProtocolRepository, clientPipelineBuilderFactory, config, logProvider );
 
         client.connect( server.port() );
+        client.verifyProtocolStack( parameters );
     }
 
     @AfterEach
@@ -247,7 +251,6 @@ class NettyInstalledProtocolsIT
             bootstrap = new Bootstrap().group( eventLoopGroup ).channel( NioSocketChannel.class ).handler( channelInitializer );
         }
 
-        @SuppressWarnings( "SameParameterValue" )
         void connect( int port )
         {
             ChannelFuture channelFuture = bootstrap.connect( "localhost", port ).syncUninterruptibly();
@@ -266,6 +269,28 @@ class NettyInstalledProtocolsIT
         ChannelFuture send( Object message )
         {
             return channel.writeAndFlush( message );
+        }
+
+        void verifyProtocolStack( Parameters parameters )
+        {
+            var protocolStackFuture = channel.attr( ChannelAttribute.PROTOCOL_STACK ).get();
+            assertNotNull( protocolStackFuture );
+            var protocolStack = protocolStackFuture.join();
+
+            var applicationProtocol = protocolStack.applicationProtocol();
+            var modifierProtocols = protocolStack.modifierProtocols();
+
+            assertEquals( parameters.applicationSupportedProtocol.identifier().canonicalName(), applicationProtocol.category() );
+
+            var expectedModifierProtocolCategories = parameters.modifierSupportedProtocols.stream()
+                    .map( mp -> mp.identifier().canonicalName() )
+                    .collect( toSet() );
+
+            var actualModifierProtocolCategories = modifierProtocols.stream()
+                    .map( Protocol::category )
+                    .collect( toSet() );
+
+            assertEquals( expectedModifierProtocolCategories, actualModifierProtocolCategories );
         }
     }
 
