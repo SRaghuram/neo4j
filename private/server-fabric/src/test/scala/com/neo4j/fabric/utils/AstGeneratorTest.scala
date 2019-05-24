@@ -89,50 +89,28 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
     case i @ UnaliasedReturnItem(e, _) => UnaliasedReturnItem(e, "")(i.position)
   }
 
-  "ORDER BY SKIP" in {
-    Pipeline.parseOnly.process("ORDER BY SKIP 1")
-  }
-
-  "hints" in {
-    roundTripCheck("MATCH (a:X) USING INDEX b:Y(v, u) USING INDEX SEEK c:Z(x, y)")
-    roundTripCheck("MATCH (a:X) USING SCAN b:Y USING SCAN c:Z")
-    roundTripCheck("MATCH (a:X) USING JOIN ON a, b USING JOIN ON c")
-  }
-
-  "COPY OF" in {
-    roundTripCheck("MATCH (a COPY OF b)")
-    roundTripCheck("MATCH ()-[a COPY OF b]-()")
-  }
-
-  "RETURN *" in {
-    roundTripCheck("RETURN *")
-    roundTripCheck("RETURN *, a")
-    roundTripCheck("WITH *")
-    roundTripCheck("WITH *, a")
-  }
 
   def show(q: String) = {
-    println("orig: " + q)
+    println("original: " + q)
     val statement = Pipeline.parseOnly.process(q).statement()
-    println("stmt: " + statement)
+    println("  - stmt: " + statement)
     val pretty = pr.asString(statement)
-    println("pret: " + pretty)
+    println("  - pret: " + pretty)
     val statement2 = Pipeline.parseOnly.process(pretty).statement()
-    println("stmt: " + statement2)
+    println("  - stmt: " + statement2)
   }
 
-  "ands" in {
-    show("RETURN x > y = z")
-    show("RETURN x > y AND y = z")
-    show("RETURN x > (y = z)")
+  "show" in {
+    show("RETURN x ORDER BY foo SKIP 1 LIMIT 3")
   }
 
-  implicit val propCfg: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
+  implicit val propCfg: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 300)
 
   "gen" in {
     forAll(gen._query) { q =>
       roundTripCheck(q)
-      println("## success")
+      println("-- success --------------------------------------")
+      println(pr.asString(q))
     }
   }
 
