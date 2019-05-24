@@ -20,12 +20,41 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import scala.collection.Map
 
 abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
+  val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
     Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
     Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
     Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
     Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
     Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
+  )
+
+  lazy val defaultRolePrivileges = Set(
+    grantGraph().role("reader").action("find").map,
+    grantGraph().role("reader").action("read").map,
+
+    grantGraph().role("editor").action("find").map,
+    grantGraph().role("editor").action("read").map,
+    grantGraph().role("editor").action("write").map,
+
+    grantGraph().role("publisher").action("find").map,
+    grantGraph().role("publisher").action("read").map,
+    grantGraph().role("publisher").action("write").map,
+    grantToken().role("publisher").action("write").map,
+
+    grantGraph().role("architect").action("find").map,
+    grantGraph().role("architect").action("read").map,
+    grantGraph().role("architect").action("write").map,
+    grantToken().role("architect").action("write").map,
+    grantSchema().role("architect").action("write").map,
+
+    grantGraph().role("admin").action("find").map,
+    grantGraph().role("admin").action("read").map,
+    grantGraph().role("admin").action("write").map,
+    grantSystem().role("admin").action("write").map,
+    grantToken().role("admin").action("write").map,
+    grantSchema().role("admin").action("write").map,
   )
 
   def authManager: CommercialAuthManager = graph.getDependencyResolver.resolveDependency(classOf[CommercialAuthManager])
@@ -56,7 +85,6 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
 
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
-  val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
   def grantTraverse(): PrivilegeMapBuilder = grantGraph().action("find")
   def grantRead(): PrivilegeMapBuilder = grantGraph().action("read").resource("all_properties")
   def grantGraph(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph"))

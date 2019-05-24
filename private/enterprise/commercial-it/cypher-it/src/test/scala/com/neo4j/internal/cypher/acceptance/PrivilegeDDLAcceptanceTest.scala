@@ -27,37 +27,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val result = execute("SHOW PRIVILEGES")
-
-    // THEN
-    val expected = Set(
-      grantGraph().role("reader").action("find").map,
-      grantGraph().role("reader").action("read").map,
-
-      grantGraph().role("editor").action("find").map,
-      grantGraph().role("editor").action("read").map,
-      grantGraph().role("editor").action("write").map,
-
-      grantGraph().role("publisher").action("find").map,
-      grantGraph().role("publisher").action("read").map,
-      grantGraph().role("publisher").action("write").map,
-      grantToken().role("publisher").action("write").map,
-
-      grantGraph().role("architect").action("find").map,
-      grantGraph().role("architect").action("read").map,
-      grantGraph().role("architect").action("write").map,
-      grantToken().role("architect").action("write").map,
-      grantSchema().role("architect").action("write").map,
-
-      grantGraph().role("admin").action("find").map,
-      grantGraph().role("admin").action("read").map,
-      grantGraph().role("admin").action("write").map,
-      grantSystem().role("admin").action("write").map,
-      grantToken().role("admin").action("write").map,
-      grantSchema().role("admin").action("write").map,
-    )
-
-    result.toSet should be(expected)
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
   test("should show all privileges") {
@@ -65,37 +35,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val result = execute("SHOW ALL PRIVILEGES")
-
-    // THEN
-    val expected = Set(
-      grantGraph().role("reader").action("find").map,
-      grantGraph().role("reader").action("read").map,
-
-      grantGraph().role("editor").action("find").map,
-      grantGraph().role("editor").action("read").map,
-      grantGraph().role("editor").action("write").map,
-
-      grantGraph().role("publisher").action("find").map,
-      grantGraph().role("publisher").action("read").map,
-      grantGraph().role("publisher").action("write").map,
-      grantToken().role("publisher").action("write").map,
-
-      grantGraph().role("architect").action("find").map,
-      grantGraph().role("architect").action("read").map,
-      grantGraph().role("architect").action("write").map,
-      grantToken().role("architect").action("write").map,
-      grantSchema().role("architect").action("write").map,
-
-      grantGraph().role("admin").action("find").map,
-      grantGraph().role("admin").action("read").map,
-      grantGraph().role("admin").action("write").map,
-      grantSystem().role("admin").action("write").map,
-      grantToken().role("admin").action("write").map,
-      grantSchema().role("admin").action("write").map,
-    )
-
-    result.toSet should be(expected)
+    execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
   test("should fail when showing privileges for all users when not on system database") {
@@ -103,7 +43,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
+    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
   }
 
   test("should show privileges for specific role") {
@@ -146,7 +86,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
+    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
   }
 
   test("should show privileges for specific user") {
@@ -192,7 +132,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW USER neo4j PRIVILEGES")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW PRIVILEGE` against non-system database."
+    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
   }
 
   // Tests for granting traverse privileges
@@ -336,8 +276,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
-    //TODO: This should be an integration test
-
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -359,8 +297,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should read properties when granted read privilege to custom role for all databases and all labels") {
-    //TODO: This should be an integration test
-
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -419,8 +355,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("read privilege should not imply traverse privilege") {
-    //TODO: This should be an integration test
-
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
@@ -437,9 +371,15 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
-  test("should see properties and nodes depending on granted traverse and read privileges for role") {
-    //TODO: This should be an integration test
+  test("should fail when revoking traversal privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+      // THEN
+    } should have message "Trying to run `REVOKE TRAVERSE` against non-system database."
+  }
 
+  test("should see properties and nodes depending on granted traverse and read privileges for role") {
     // GIVEN
     setupMultilabelData
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1538,7 +1478,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
+    } should have message "Trying to run `GRANT ROLE` against non-system database."
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1550,7 +1490,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Trying to run `CATALOG GRANT ROLE` against non-system database."
+    } should have message "Trying to run `GRANT ROLE` against non-system database."
   }
 
   // Tests for revoking roles from users
@@ -1690,7 +1630,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
-    } should have message "Trying to run `CATALOG REVOKE ROLE` against non-system database."
+    } should have message "Trying to run `REVOKE ROLE` against non-system database."
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1703,7 +1643,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
-    } should have message "Trying to run `CATALOG REVOKE ROLE` against non-system database."
+    } should have message "Trying to run `REVOKE ROLE` against non-system database."
   }
 
   // helper variable, methods and class

@@ -40,7 +40,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ROLES")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW ALL ROLES` against non-system database."
+    } should have message "Trying to run `SHOW ALL ROLES` against non-system database."
   }
 
   test("should show populated default roles") {
@@ -225,7 +225,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
-    } should have message "Trying to run `CATALOG CREATE ROLE` against non-system database."
+    } should have message "Trying to run `CREATE ROLE` against non-system database."
   }
 
   test("should create role from existing role") {
@@ -386,6 +386,6 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
-    } should have message "Trying to run `CATALOG DROP ROLE` against non-system database."
+    } should have message "Trying to run `DROP ROLE` against non-system database."
   }
 }

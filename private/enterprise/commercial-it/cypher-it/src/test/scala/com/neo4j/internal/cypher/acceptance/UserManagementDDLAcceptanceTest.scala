@@ -33,7 +33,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW USERS")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW USERS` against non-system database."
+    } should have message "Trying to run `SHOW USERS` against non-system database."
   }
 
   test("should show all users") {
@@ -161,7 +161,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
       // THEN
-    } should have message "Trying to run `CATALOG CREATE USER` against non-system database."
+    } should have message "Trying to run `CREATE USER` against non-system database."
   }
 
   test("should create user with password change not required") {
@@ -336,7 +336,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP USER foo")
       // THEN
-    } should have message "Trying to run `CATALOG DROP USER` against non-system database."
+    } should have message "Trying to run `DROP USER` against non-system database."
   }
 
   // Tests for altering users
@@ -445,7 +445,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN
-    } should have message "Trying to run `CATALOG ALTER USER` against non-system database."
+    } should have message "Trying to run `ALTER USER` against non-system database."
   }
 
   test("should alter user password mode") {
