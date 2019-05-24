@@ -429,6 +429,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     parts <- _smallNonemptyListOf(_patternPart)
   } yield Pattern(parts)(?)
 
+  def _patternSingle: Gen[Pattern] = for {
+    part <- _patternPart
+  } yield Pattern(Seq(part))(?)
+
   // HINTS
   // ==========================================================================
 
@@ -525,6 +529,10 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     pattern <- _pattern
   } yield Create(pattern)(?)
 
+  def _createUnique: Gen[CreateUnique] = for {
+    pattern <- _pattern
+  } yield CreateUnique(pattern)(?)
+
   def _unwind: Gen[Unwind] = for {
     expression <- _expression
     variable <- _variable
@@ -543,20 +551,74 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     )
   } yield item
 
-  def _setClause: Gen[SetClause] = for {
+  def _set: Gen[SetClause] = for {
     items <- _smallNonemptyListOf(_setItem)
   } yield SetClause(items)(?)
 
+  def _delete: Gen[Delete] = for {
+    expressions <- _smallNonemptyListOf(_expression)
+    forced <- _boolean
+  } yield Delete(expressions, forced)(?)
+
+
+  def _mergeAction: Gen[MergeAction] = for {
+    set <- _set
+    action <- Gen.oneOf(
+      OnCreate(set)(?),
+      OnMatch(set)(?)
+    )
+  } yield action
+
+  def _merge: Gen[Merge] = for {
+    pattern <- _patternSingle
+    actions <- _smallNonemptyListOf(_mergeAction)
+  } yield Merge(pattern, actions)(?)
+
+  def _procedureName: Gen[ProcedureName] = for {
+    name <- _identifier
+  } yield ProcedureName(name)(?)
+
+  def _procedureOutput: Gen[ProcedureOutput] = for {
+    name <- _identifier
+  } yield ProcedureOutput(name)(?)
+
+  def _procedureResultItem: Gen[ProcedureResultItem] = for {
+    output <- Gen.option(_procedureOutput)
+    variable <- _variable
+  } yield ProcedureResultItem(output, variable)(?)
+
+  def _procedureResult: Gen[ProcedureResult] = for {
+    items <- _smallNonemptyListOf(_procedureResultItem)
+    where <- Gen.option(_where)
+  } yield ProcedureResult(items.toIndexedSeq, where)(?)
+
+  def _call: Gen[UnresolvedCall] = for {
+    procedureNamespace <- _namespace
+    procedureName <- _procedureName
+    declaredArguments <- Gen.option(_smallListOf(_expression))
+    declaredResult <- Gen.option(_procedureResult)
+  } yield UnresolvedCall(procedureNamespace, procedureName, declaredArguments, declaredResult)(?)
+
+  def _foreach: Gen[Foreach] = for {
+    variable <- _variable
+    expression <- _expression
+    updates <- _smallNonemptyListOf(_clause)
+  } yield Foreach(variable, expression, updates)(?)
+
   def _clause: Gen[Clause] = Gen.oneOf(
-    _with,
-    _return,
-    _match,
-    _create,
-    _unwind,
-    _setClause
-    //  UnresolvedCall
-    //  Delete
-    //  Merge
+    Gen.lzy(_with),
+    Gen.lzy(_return),
+    Gen.lzy(_match),
+    Gen.lzy(_create),
+    Gen.lzy(_createUnique),
+    Gen.lzy(_unwind),
+    Gen.lzy(_set),
+    Gen.lzy(_delete),
+    Gen.lzy(_merge),
+    Gen.lzy(_call),
+    Gen.lzy(_foreach)
+
+
     //  LoadCSV
     //  Foreach
     //  Start
