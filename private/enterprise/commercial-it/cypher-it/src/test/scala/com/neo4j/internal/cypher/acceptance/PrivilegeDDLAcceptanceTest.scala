@@ -1001,20 +1001,20 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-//    the[InvalidArgumentsException] thrownBy {
+    //    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
-//    } should have message "Role 'dragon' does not exist."
+    //    } should have message "Role 'dragon' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-    // and an invalid (non-existing) one
-//    the[InvalidArgumentsException] thrownBy {
+  // and an invalid (non-existing) one
+    //    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE `` TO Bar")
-//    } should have message "Role '' does not exist."
+    //    } should have message "Role '' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
@@ -1031,20 +1031,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
-//    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE dragon TO Bar")
-//    } should have message "User 'Bar' does not exist."
+    //    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+    //    } should have message "User 'Bar' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
-    // and an invalid (non-existing) one
-//    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE dragon TO ``")
-//    } should have message "User '' does not exist."
+  // and an invalid (non-existing) one
+
+    //    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO ``")
+    //    } should have message "User '' does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -1059,19 +1060,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
-//    the[InvalidArgumentsException] thrownBy {
-    // WHEN
-    execute("GRANT ROLE dragon TO Bar")
-//    } should have message "Role 'dragon' does not exist."
+    //    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+    //    } should have message "Role 'dragon' does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) ones
-//    the[InvalidArgumentsException] thrownBy {
+    //    the[InvalidArgumentsException] thrownBy {
     // WHEN
     execute("GRANT ROLE `` TO ``")
-//    } should have message "Role '' does not exist."
+    //    } should have message "Role '' does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers

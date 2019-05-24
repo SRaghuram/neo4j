@@ -262,14 +262,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when starting a non-existing database") {
     setup( defaultConfig )
 
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("START DATABASE ``")
       // THEN
@@ -284,7 +284,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -365,14 +365,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when stopping a non-existing database") {
     setup( defaultConfig )
 
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE ``")
       // THEN
@@ -387,7 +387,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseNotFoundException] thrownBy {
+    the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN

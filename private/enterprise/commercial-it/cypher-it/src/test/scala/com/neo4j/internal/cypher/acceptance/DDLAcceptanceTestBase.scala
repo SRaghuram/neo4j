@@ -15,7 +15,6 @@ import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
