@@ -603,6 +603,32 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     updates <- oneOrMore(_clause)
   } yield Foreach(variable, expression, updates)(?)
 
+  def _loadCsv: Gen[LoadCSV] = for {
+    withHeaders <- boolean
+    urlString <- _expression
+    variable <- _variable
+    fieldTerminator <- option(_stringLit)
+  } yield LoadCSV(withHeaders, urlString, variable, fieldTerminator)(?)
+
+  def _startItem: Gen[StartItem] = for {
+    variable <- _variable
+    parameter <- _parameter
+    ids <- oneOrMore(_unsignedIntLit)
+    item <- oneOf(
+      NodeByParameter(variable, parameter)(?),
+      AllNodes(variable)(?),
+      NodeByIds(variable, ids)(?),
+      RelationshipByIds(variable, ids)(?),
+      RelationshipByParameter(variable, parameter)(?),
+      AllRelationships(variable)(?)
+    )
+  } yield item
+
+  def _start: Gen[Start] = for {
+    items <- oneOrMore(_startItem)
+    where <- option(_where)
+  } yield Start(items, where)(?)
+
   // Hints
   // ----------------------------------
 
@@ -636,13 +662,9 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     lzy(_delete),
     lzy(_merge),
     lzy(_call),
-    lzy(_foreach)
-
-
-    //  LoadCSV
-    //  Foreach
-    //  Start
-    //  CreateUnique
+    lzy(_foreach),
+    lzy(_loadCsv),
+    lzy(_start)
   )
 
   def _query: Gen[Query] = for {
