@@ -21,12 +21,8 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
-import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
-import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.kernel.impl.query.QueryExecution
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.server.security.systemgraph.SystemGraphCredential
@@ -339,53 +335,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query,
-        VirtualValues.map(Array("grantee"), Array(grantee)),
-        (q: QueryExecution) => new SystemCommandExecutionResult(q.asInstanceOf[InternalExecutionResult]) {
-          override def fieldNames(): Array[String] = {
-            val fields = inner.fieldNames()
-            fields.slice(0, 3) ++ fields.slice(4, fields.length)
-          }
-
-          lazy val innerIterator: ResourceIterator[util.Map[String, AnyRef]] = inner.javaIterator
-
-          override def asIterator: ResourceIterator[util.Map[String, AnyRef]] = new ResourceIterator[util.Map[String, AnyRef]] {
-            override def close(): Unit = innerIterator.close()
-
-            override def hasNext: Boolean = innerIterator.hasNext
-
-            override def next(): util.Map[String, AnyRef] = {
-              import scala.collection.JavaConverters._
-              val row = innerIterator.next()
-              val mapped = fieldNames().foldLeft(Map.empty[String, AnyRef]) { (a, k) =>
-                if (k == "resourceArg1") a
-                else if (k == "resource" && row.get(k) == "property") a + (k -> s"property(${row.get("resourceArg1")})")
-                else a + (k -> row.get(k))
-              }
-              mapped.asJava
-            }
-          }
-
-          override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
-            inner.accept(new QueryResultVisitor[EX] {
-              override def visit(row: QueryResult.Record): Boolean = {
-                val mappedRow = new QueryResult.Record() {
-                  override def fields(): Array[AnyValue] = {
-                    val fields = row.fields()
-                    if (fields(2).equals(Values.stringValue("property"))) {
-                      val property = fields(3).asInstanceOf[StringValue].stringValue()
-                      fields.slice(0, 2) ++ Array(Values.stringValue(s"property($property)")) ++ fields.slice(4, fields.length)
-                    } else {
-                      fields.slice(0, 3) ++ fields.slice(4, fields.length)
-                    }
-                  }
-                }
-                visitor.visit(mappedRow)
-              }
-            })
-          }
-
-        },
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
+        (ctx, q) => new ColumnMappingSystemCommandExecutionResult(ctx, q.asInstanceOf[InternalExecutionResult], Seq("arg1"), (k, row) => {
+          if (k == "resource" && row.get(k) == "property") s"property(${row.get("arg1")})"
+          else row.get(k)
+        }),
         e => throw new InvalidArgumentsException(s"The specified grantee '${grantee.asObject()}' does not exist.", e)
       )
 
