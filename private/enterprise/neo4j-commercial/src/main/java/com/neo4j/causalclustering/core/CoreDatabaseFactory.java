@@ -231,7 +231,7 @@ class CoreDatabaseFactory
         StartupCoreStateCheck startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, storageFactory.layout(), databaseId );
 
         // TODO: Remove this when ID-files are transactional.
-        life.add( new IdFilesSanitationModule( startupCoreStateCheck, databaseManager, fileSystem, debugLog ) );
+        life.add( new IdFilesSanitationModule( startupCoreStateCheck, databaseId, databaseManager, fileSystem, debugLog ) );
 
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( databaseId, NO_INITIALIZATION );
         RaftBinder raftBinder = createRaftBinder(

@@ -5,10 +5,12 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -25,34 +27,38 @@ import static java.lang.String.format;
  */
 public class IdFilesSanitationModule extends LifecycleAdapter
 {
+    private final DatabaseId databaseId;
     private final ClusteredDatabaseManager databaseManager;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
     private final StartupCoreStateCheck startupCoreStateCheck;
 
-    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, ClusteredDatabaseManager databaseManager,
+    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, DatabaseId databaseId, ClusteredDatabaseManager databaseManager,
             FileSystemAbstraction fileSystem, LogProvider logProvider )
     {
         this.startupCoreStateCheck = startupCoreStateCheck;
+        this.databaseId = databaseId;
         this.databaseManager = databaseManager;
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
         if ( !startupCoreStateCheck.wasUnboundOnStartup() )
         {
             return;
         }
 
-        for ( var dbEntry : databaseManager.registeredDatabases().entrySet() )
+        databaseManager.getDatabaseContext( databaseId ).ifPresent( this::deleteIdFiles );
+    }
+
+    private void deleteIdFiles( ClusteredDatabaseContext databaseContext )
+    {
+        if ( IdFilesDeleter.deleteIdFiles( databaseContext.databaseLayout(), fileSystem ) )
         {
-            if ( IdFilesDeleter.deleteIdFiles( dbEntry.getValue().databaseLayout(), fileSystem ) )
-            {
-                log.info( format( "ID-files deleted for %s", dbEntry.getKey().name() ) );
-            }
+            log.info( format( "ID-files deleted for %s", databaseContext.databaseId().name() ) );
         }
     }
 }
