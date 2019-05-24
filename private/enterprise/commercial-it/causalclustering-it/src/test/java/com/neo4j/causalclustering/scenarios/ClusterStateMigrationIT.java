@@ -14,8 +14,9 @@ import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
@@ -35,9 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 
 @SkipThreadLeakageGuard
 @ClusterExtension
+@TestInstance( PER_METHOD )
 @ExtendWith( SuppressOutputExtension.class )
 class ClusterStateMigrationIT
 {
@@ -46,7 +49,7 @@ class ClusterStateMigrationIT
 
     private Cluster cluster;
 
-    @BeforeAll
+    @BeforeEach
     void setup() throws Exception
     {
         var clusterConfig = clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 0 );
@@ -120,13 +123,6 @@ class ClusterStateMigrationIT
 
         // cluster should not be able to start
         assertThrows( Exception.class, cluster::start );
-
-        // write the correct version and restart the cluster
-        for ( var storage : clusterStateVersionStorages )
-        {
-            storage.writeState( new ClusterStateVersion( 1, 0 ) );
-        }
-        cluster.start();
     }
 
     private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )
