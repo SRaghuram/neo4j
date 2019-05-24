@@ -22,7 +22,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class ExpressionEngineConfigurationTest
 {
-    private final AssertableLogProvider logProvider = new AssertableLogProvider();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private DatabaseManagementService managementService;
 
     @AfterEach

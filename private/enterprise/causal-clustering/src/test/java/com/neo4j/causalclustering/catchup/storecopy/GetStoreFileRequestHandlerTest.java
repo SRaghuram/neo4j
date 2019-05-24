@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 //TODO: Update tests with database name related cases.
 class GetStoreFileRequestHandlerTest
@@ -60,14 +61,16 @@ class GetStoreFileRequestHandlerTest
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
-        GetStoreFileRequestHandler getStoreFileRequestHandler = new NiceGetStoreFileRequestHandler( catchupServerProtocol, database,
-                new StoreFileStreamingProtocol(), fileSystemAbstraction );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
         when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
         when( database.getScheduler() ).thenReturn( jobScheduler );
+        when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
+
+        GetStoreFileRequestHandler getStoreFileRequestHandler = new NiceGetStoreFileRequestHandler( catchupServerProtocol, database,
+                new StoreFileStreamingProtocol(), fileSystemAbstraction );
         embeddedChannel = new EmbeddedChannel( getStoreFileRequestHandler );
     }
 
