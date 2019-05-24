@@ -6,7 +6,7 @@
 package com.neo4j.fabric.utils
 
 import com.neo4j.fabric.AstHelp
-import org.neo4j.cypher.internal.v4_0.ast._
+import org.neo4j.cypher.internal.v4_0.ast.{SetItem, _}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.symbols.AnyType
@@ -521,14 +521,40 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
     where <- Gen.option(_where)
   } yield Match(optional, pattern, hints, where)(?)
 
+  def _create: Gen[Create] = for {
+    pattern <- _pattern
+  } yield Create(pattern)(?)
+
+  def _unwind: Gen[Unwind] = for {
+    expression <- _expression
+    variable <- _variable
+  } yield Unwind(expression, variable)(?)
+
+  def _setItem: Gen[SetItem] = for {
+    variable <- _variable
+    labels <- _smallNonemptyListOf(_labelName)
+    property <- _property
+    expression <- _expression
+    item <- Gen.oneOf(
+      SetLabelItem(variable, labels)(?),
+      SetPropertyItem(property, expression)(?),
+      SetExactPropertiesFromMapItem(variable, expression)(?),
+      SetIncludingPropertiesFromMapItem(variable, expression)(?)
+    )
+  } yield item
+
+  def _setClause: Gen[SetClause] = for {
+    items <- _smallNonemptyListOf(_setItem)
+  } yield SetClause(items)(?)
+
   def _clause: Gen[Clause] = Gen.oneOf(
     _with,
     _return,
-    _match
-    //  Create
-    //  Unwind
+    _match,
+    _create,
+    _unwind,
+    _setClause
     //  UnresolvedCall
-    //  SetClause
     //  Delete
     //  Merge
     //  LoadCSV
@@ -586,6 +612,7 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
       Stream.iterate(shrinkOnce(q))(i => i.flatMap(shrinkOnce))
         .takeWhile(_.isDefined)
         .map(_.get)
+        .take(100)
     }
   }
 
