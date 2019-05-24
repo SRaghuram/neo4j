@@ -25,8 +25,8 @@ import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.micro.config.Annotations;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.JmhOptionsUtil;
@@ -166,9 +166,10 @@ class BenchmarksRunner
                                      ? Neo4jConfig.withDefaults()
                                      : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
 
-        neo4jConfigDef
-            .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-            .withSetting( new HttpConnector( "http" ).enabled, "false" );
+        neo4jConfigDef = neo4jConfigDef
+                .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                .withSetting( new HttpConnector( "https" ).enabled, "false" );
 
         String[] defaultJvmArgs = (null == neo4jPackageForJvmArgs)
                                   ? new String[0]
