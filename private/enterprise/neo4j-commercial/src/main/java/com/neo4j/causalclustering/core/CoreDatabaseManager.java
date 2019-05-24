@@ -15,9 +15,6 @@ import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.api.DatabaseExistsException;
-import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -35,8 +32,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
-
-import static java.lang.String.format;
 
 public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
@@ -69,7 +64,6 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         CoreEditionKernelComponents kernelContext = edition.coreDatabaseFactory().createKernelComponents(
                 databaseId, coreDatabaseLife, raftContext, kernelResolvers, coreDatabaseLogService );
 
-        log.info( "Creating '%s' database.", databaseId.name() );
         DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, kernelContext, coreDatabaseDependencies,
                 coreDatabaseMonitors, coreDatabaseLogService );
         Database kernelDatabase = new Database( databaseCreationContext );
@@ -94,102 +88,5 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         CoreDatabaseComponents coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         GlobalProcedures globalProcedures = edition.getGlobalProcedures();
         return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents, globalProcedures );
-    }
-
-    @Override
-    public ClusteredDatabaseContext createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
-    {
-        return databaseMap.compute( databaseId, ( key, currentContext ) ->
-        {
-            if ( currentContext != null )
-            {
-                throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
-            }
-            ClusteredDatabaseContext databaseContext = createDatabaseContext( databaseId );
-            if ( started )
-            {
-                databaseContext.clusterDatabaseLife().start();
-            }
-            return databaseContext;
-        } );
-    }
-
-    @Override
-    public void startDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
-    {
-        databaseMap.compute( databaseId, ( key, currentContext ) ->
-        {
-            if ( currentContext == null )
-            {
-                throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
-            }
-            startDatabase( databaseId, currentContext );
-            currentContext.clusterDatabaseLife().start();
-            return currentContext;
-        } );
-    }
-
-    @Override
-    public void stopDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
-    {
-        databaseMap.compute( databaseId, ( key, currentContext ) ->
-        {
-            if ( currentContext == null )
-            {
-                throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
-            }
-            currentContext.clusterDatabaseLife().stop();
-            stopDatabase( databaseId, currentContext );
-            return currentContext;
-        } );
-    }
-
-    @Override
-    public void dropDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
-    {
-        throw new UnsupportedOperationException( "Not implemented" );
-//        databaseMap.compute( databaseId, ( key, currentContext ) ->
-//        {
-//            if ( currentContext == null )
-//            {
-//                throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
-//            }
-//            dropDatabase( databaseId, currentContext );
-//            return null;
-//        } );
-    }
-
-    @Override
-    protected void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
-    {
-        try
-        {
-            log.info( "Starting '%s' database.", databaseId.name() );
-            context.clusterDatabaseLife().start();
-        }
-        catch ( Throwable t )
-        {
-            throw new DatabaseManagementException( format( "Unable to start database %s", databaseId ), t );
-        }
-    }
-
-    @Override
-    protected void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
-    {
-        try
-        {
-            log.info( "Stopping '%s' database.", databaseId.name() );
-            context.clusterDatabaseLife().stop();
-        }
-        catch ( Throwable t )
-        {
-            throw new DatabaseManagementException( format( "Unable to stop database %s", databaseId ), t );
-        }
-    }
-
-    @Override
-    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
-    {
-        throw new UnsupportedOperationException();
     }
 }

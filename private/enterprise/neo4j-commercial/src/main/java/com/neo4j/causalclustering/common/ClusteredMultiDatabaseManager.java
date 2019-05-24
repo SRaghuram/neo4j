@@ -10,14 +10,11 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -58,50 +55,32 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     }
 
     @Override
-    public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
-    {
-        return Optional.ofNullable( databaseMap.get( databaseId ) );
-    }
-
-    protected LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
-    {
-        try
-        {
-            return LogFilesBuilder.activeFilesBuilder( dbLayout, fs, pageCache ).withConfig( config ).build();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
-
-    @Override
     public Health getAllHealthServices()
     {
         return globalHealths;
     }
 
     @Override
-    public <EXCEPTION extends Throwable> void assertHealthy( DatabaseId databaseId, Class<EXCEPTION> cause ) throws EXCEPTION
-    {
-        getDatabaseHealth( databaseId ).orElseThrow( () ->
-                Exceptions.disguiseException( cause,
-                        format( "Database %s not found!", databaseId.name() ),
-                        new DatabaseNotFoundException( databaseId.name() ) ) )
-                .assertHealthy( cause );
-    }
-
-    private Optional<Health> getDatabaseHealth( DatabaseId databaseId )
-    {
-        return Optional.ofNullable( databaseMap.get( databaseId ) ).map( db -> db.database().getDatabaseHealth() );
-    }
-
-    @Override
-    protected void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
-            super.stopDatabase( databaseId, context );
+            log.info( "Starting '%s' database.", databaseId.name() );
+            context.clusterDatabaseLife().start();
+        }
+        catch ( Throwable t )
+        {
+            throw new DatabaseManagementException( format( "Unable to start database %s", databaseId ), t );
+        }
+    }
+
+    @Override
+    protected final void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    {
+        try
+        {
+            log.info( "Stopping '%s' database.", databaseId.name() );
+            context.clusterDatabaseLife().stop();
         }
         catch ( Throwable t )
         {
@@ -112,14 +91,19 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     @Override
     protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
+        // TODO: Should clean up cluster state here for core members.
+        throw new UnsupportedOperationException();
+    }
+
+    protected final LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
+    {
         try
         {
-            // TODO: Should clean up cluster state here for core members.
-            super.dropDatabase( databaseId, context );
+            return LogFilesBuilder.activeFilesBuilder( dbLayout, fs, pageCache ).withConfig( config ).build();
         }
-        catch ( Throwable t )
+        catch ( IOException e )
         {
-            throw new DatabaseManagementException( format( "Unable to drop database %s", databaseId ), t );
+            throw new RuntimeException( e );
         }
     }
 }

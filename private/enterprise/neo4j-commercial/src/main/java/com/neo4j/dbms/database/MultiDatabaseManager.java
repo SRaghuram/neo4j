@@ -20,25 +20,26 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.maxNumberOfDatabases;
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
 {
     protected volatile boolean started;
-    private final long maximumNumerOfDatabases;
+    private final long maximumNumberOfDatabases;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
     {
         super( globalModule, edition, log );
-        maximumNumerOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
+        maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
     }
 
-    public DB createStoppedDatabase( DatabaseId databaseId ) throws DatabaseExistsException
+    public final DB createStoppedDatabase( DatabaseId databaseId ) throws DatabaseExistsException
     {
         return createDatabase( databaseId, false );
     }
 
     @Override
-    public DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
+    public final DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
     {
         return createDatabase( databaseId, true );
     }
@@ -51,23 +52,29 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             {
                 throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
             }
-            if ( databaseMap.size() >= maximumNumerOfDatabases )
+            if ( databaseMap.size() >= maximumNumberOfDatabases )
             {
                 throw new DatabaseManagementException(
                         format( "Reached maximum number of active databases. Fail to create new database `%s`.", databaseId.name() ) );
             }
+            log.info( "Creating '%s' database.", databaseId.name() );
             DB databaseContext = createDatabaseContext( databaseId );
             if ( autostart && started )
             {
-                databaseContext.database().start();
+                startDatabase( databaseId, databaseContext );
             }
             return databaseContext;
         } );
     }
 
     @Override
-    public void dropDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
+    public final void dropDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
     {
+        if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
+        {
+            throw new DatabaseManagementException( "System database can't be dropped." );
+        }
+
         databaseMap.compute( databaseId, ( key, currentContext ) ->
         {
             if ( currentContext == null )
@@ -80,14 +87,19 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     }
 
     @Override
-    public Optional<DB> getDatabaseContext( DatabaseId databaseId )
+    public final Optional<DB> getDatabaseContext( DatabaseId databaseId )
     {
         return Optional.ofNullable( databaseMap.get( databaseId ) );
     }
 
     @Override
-    public void stopDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
+    public final void stopDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
     {
+        if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
+        {
+            throw new DatabaseManagementException( "System database can't be stopped." );
+        }
+
         databaseMap.compute( databaseId, ( key, currentContext ) ->
         {
             if ( currentContext == null )
@@ -100,7 +112,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     }
 
     @Override
-    public void startDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
+    public final void startDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
     {
         databaseMap.compute( databaseId, ( key, currentContext ) ->
         {
@@ -114,21 +126,26 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     }
 
     @Override
-    public void start() throws Exception
+    public final void init()
+    {
+    }
+
+    @Override
+    public final void start() throws Exception
     {
         started = true;
         super.start();
     }
 
     @Override
-    public void stop() throws Exception
+    public final void stop() throws Exception
     {
         started = false;
         super.stop();
     }
 
     @Override
-    public void shutdown()
+    public final void shutdown()
     {
         databaseMap.clear();
     }

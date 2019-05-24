@@ -72,11 +72,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
     }
 
     @Override
-    public <E extends Throwable> void assertHealthy( DatabaseId databaseId, Class<E> cause ) throws E
-    { //no-op
-    }
-
-    @Override
     public Health getAllHealthServices()
     {
         return globalDatabaseHealth;

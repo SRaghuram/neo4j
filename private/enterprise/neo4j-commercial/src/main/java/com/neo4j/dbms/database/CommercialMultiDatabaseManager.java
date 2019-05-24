@@ -6,8 +6,6 @@
 package com.neo4j.dbms.database;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
@@ -20,8 +18,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-
 public class CommercialMultiDatabaseManager extends MultiDatabaseManager<StandaloneDatabaseContext>
 {
     public CommercialMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
@@ -30,29 +26,8 @@ public class CommercialMultiDatabaseManager extends MultiDatabaseManager<Standal
     }
 
     @Override
-    public void dropDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
-    {
-        if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
-        {
-            throw new DatabaseManagementException( "System database can't be dropped." );
-        }
-        super.dropDatabase( databaseId );
-    }
-
-    @Override
-    public void stopDatabase( DatabaseId databaseId ) throws DatabaseNotFoundException
-    {
-        if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
-        {
-            throw new DatabaseManagementException( "System database can't be stopped." );
-        }
-        super.stopDatabase( databaseId );
-    }
-
-    @Override
     protected StandaloneDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
-        log.info( "Creating '%s' database.", databaseId.name() );
         DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, globalModule.getGlobalDependencies(),
                 globalModule.getGlobalMonitors() );
         Database kernelDatabase = new Database( databaseCreationContext );

@@ -23,13 +23,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -184,12 +181,13 @@ public class RaftReplicator implements Replicator, LeaderListener
 
     private void assertDatabaseAvailable( DatabaseId databaseId ) throws UnavailableException
     {
-        Optional<DatabaseAvailabilityGuard> databaseAvailabilityGuard = databaseManager.getDatabaseContext( databaseId )
+        var database = databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
-                .map( Database::getDatabaseAvailabilityGuard );
+                .orElseThrow( IllegalStateException::new );
 
-        databaseAvailabilityGuard.orElseThrow( IllegalStateException::new ).await( availabilityTimeoutMillis );
-        databaseManager.assertHealthy( databaseId, IllegalStateException.class );
+        database.getDatabaseAvailabilityGuard().await( availabilityTimeoutMillis );
+
+        database.getDatabaseHealth().assertHealthy( IllegalStateException.class );
     }
 
     private void assertAllDatabasesAvailable() throws UnavailableException

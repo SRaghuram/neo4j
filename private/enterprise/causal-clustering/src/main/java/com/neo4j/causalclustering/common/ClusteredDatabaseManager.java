@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.common;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Health;
 
 /**
@@ -14,14 +13,5 @@ import org.neo4j.monitoring.Health;
  */
 public interface ClusteredDatabaseManager extends DatabaseManager<ClusteredDatabaseContext>
 {
-    /**
-     * This method asserts that a given database is healthy, and if it is not, attempts to throw an exception of type `E`
-     *
-     * @param cause The class tag for the exception we wish to be thrown if the database service is unhealthy.
-     * @param <E> The type of exception we wish to be thrown if the database is unhealthy
-     * @throws E if the database is unhealthy
-     */
-    <E extends Throwable> void assertHealthy( DatabaseId databaseId, Class<E> cause ) throws E;
-
     Health getAllHealthServices();
 }
