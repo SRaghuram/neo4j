@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
