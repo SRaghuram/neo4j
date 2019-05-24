@@ -24,7 +24,7 @@ InModuleScope Neo4j-Management {
     Mock Get-ItemProperty { $null } -ParameterFilter {
       $Path -like 'Registry::*\JavaSoft\Java Runtime Environment*'
     }
-    Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava8' = $true } }
+    Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava11' = $true } }
 
     # Java Detection Tests
     Context "Valid Java install in JAVA_HOME environment variable" {
@@ -40,7 +40,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Legacy Java install in JAVA_HOME environment variable" {
-      Mock Get-JavaVersion -Verifiable { @{ 'isValid' = $false; 'isJava8' = $false } }
+      Mock Get-JavaVersion -Verifiable { @{ 'isValid' = $false; 'isJava11' = $false } }
 
       It "should throw if java is not supported" {
         { Get-Java -ErrorAction Stop } | Should Throw
@@ -153,8 +153,8 @@ InModuleScope Neo4j-Management {
     }
 
     # ForServer tests
-    Context "Server Invoke - Community v3.0" {
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community'
+    Context "Server Invoke - Community v4.0" {
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
       $resultArgs = ($result.args -join ' ')
@@ -164,8 +164,8 @@ InModuleScope Neo4j-Management {
       }
     }
 
-    Context "Server Invoke - Enterprise v3.0" {
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Enterprise'
+    Context "Server Invoke - Enterprise v4.0" {
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Enterprise'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
       $resultArgs = ($result.args -join ' ')
@@ -176,7 +176,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Should set heap size" {
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.memory.heap.initial_size=123k','dbms.memory.heap.max_size=234g'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
@@ -192,7 +192,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Should default heap size unit to megabytes" {
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.memory.heap.initial_size=123','dbms.memory.heap.max_size=234'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
@@ -208,9 +208,9 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Enable Default GC Logs" {
-      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava8' = $false } }
+      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava11' = $false } }
 
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.logs.gc.enabled=true'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
@@ -234,9 +234,9 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Enable Specific GC Logs" {
-      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava8' = $false } }
+      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava11' = $false } }
 
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.logs.gc.enabled=true','dbms.logs.gc.options=key1=value1 key2=value2'
 
       $result = Get-Java -ForServer -Neo4jServer $serverObject
@@ -325,7 +325,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Should handle paths with spaces" {
-      $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
+      $serverObject = global:New-MockNeo4jInstall -ServerVersion '4.0' -ServerType 'Community' `
          -RootDir 'TestDrive:\Neo4j Home' `
          -NeoConfSettings 'dbms.logs.gc.enabled=true'
 
