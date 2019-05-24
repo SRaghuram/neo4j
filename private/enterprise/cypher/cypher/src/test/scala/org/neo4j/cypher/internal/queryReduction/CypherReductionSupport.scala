@@ -181,14 +181,15 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
     val runtime = CommunityRuntimeFactory.getRuntime(CypherRuntimeOption.default, planningContext.config.useErrorsOverWarnings)
 
     val runtimeConfig = CypherConfiguration.fromConfig(Config.defaults()).toCypherRuntimeConfiguration
-    val runtimeContextCreator = if (enterprise)
-      EnterpriseRuntimeContextCreator(
-        GeneratedQueryStructure,
-        NullLog.getInstance(),
-        runtimeConfig,
-        morselRuntimeState = null)
-     else
-      CommunityRuntimeContextCreator(NullLog.getInstance(), runtimeConfig)
+    val runtimeContextCreator =
+      if (enterprise)
+        EnterpriseRuntimeContextManager(
+          GeneratedQueryStructure,
+          NullLog.getInstance(),
+          runtimeConfig,
+          runtimeEnvironment = null)
+       else
+        CommunityRuntimeContextManager(NullLog.getInstance(), runtimeConfig)
 
     val runtimeContext = runtimeContextCreator.create(planContext,
                                                       txContextWrapper.kernelTransaction.schemaRead(),

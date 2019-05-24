@@ -14,9 +14,13 @@ import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 
 /**
-  * Executor of queries. It's currently a merge of a dispatcher, a scheduler and a spatula.
+  * Executor of queries. A spatula.
   */
 trait QueryExecutor {
+
+  /**
+    * Execute a query using this executor.
+    */
   def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                               executionGraphDefinition: ExecutionGraphDefinition,
                               inputDataStream: InputDataStream,
@@ -27,4 +31,10 @@ trait QueryExecutor {
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber): QuerySubscription
+
+  /**
+    * Assert that all resources that have been acquired for query execution by any query have also been released
+    * back to the query manager.
+    */
+  def assertAllReleased(): Unit
 }

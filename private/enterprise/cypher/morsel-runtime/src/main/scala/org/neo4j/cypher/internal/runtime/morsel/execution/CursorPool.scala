@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
 
@@ -22,15 +23,51 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     () => cursorFactory.allocateNodeLabelIndexCursor())
 
   override def close(): Unit = {
-    IOUtils.closeAll(nodeCursorPool, relationshipGroupCursorPool, relationshipTraversalCursorPool, nodeValueIndexCursorPool, nodeLabelIndexCursorPool)
+    IOUtils.closeAll(nodeCursorPool,
+                     relationshipGroupCursorPool,
+                     relationshipTraversalCursorPool,
+                     nodeValueIndexCursorPool,
+                     nodeLabelIndexCursorPool)
+  }
+
+  def collectLiveCounts(liveCounts: LiveCounts): Unit = {
+    liveCounts.nodeCursorPool += nodeCursorPool.getLiveCount
+    liveCounts.relationshipGroupCursorPool += relationshipGroupCursorPool.getLiveCount
+    liveCounts.relationshipTraversalCursorPool += relationshipTraversalCursorPool.getLiveCount
+    liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
+    liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
+  }
+}
+
+class LiveCounts(var nodeCursorPool: Long = 0,
+                 var relationshipGroupCursorPool: Long = 0,
+                 var relationshipTraversalCursorPool: Long = 0,
+                 var nodeValueIndexCursorPool: Long = 0,
+                 var nodeLabelIndexCursorPool: Long = 0) {
+
+  def assertAllReleased(): Unit = {
+    def assertReleased(liveCount: Long, poolName: String): Unit = {
+      if (liveCount != 0) {
+        throw new RuntimeResourceLeakException(s"${poolName}s had a total live count of $liveCount, " +
+                                                "even though all cursors should be released.")
+      }
+    }
+
+    assertReleased(nodeCursorPool, "nodeCursorPool")
+    assertReleased(relationshipGroupCursorPool, "relationshipGroupCursorPool")
+    assertReleased(relationshipTraversalCursorPool, "relationshipTraversalCursorPool")
+    assertReleased(nodeValueIndexCursorPool, "nodeValueIndexCursorPool")
+    assertReleased(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")
   }
 }
 
 class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
 
+  @volatile private var liveCount: Long = 0L
   private var cached: CURSOR = _
 
   def allocate(): CURSOR = {
+    liveCount += 1
     if (cached != null) {
       val temp = cached
       cached = null.asInstanceOf[CURSOR]
@@ -41,6 +78,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   def free(cursor: CURSOR): Unit = {
+    liveCount -= 1
     if (cached != null)
       cached.close()
     cached = cursor
@@ -50,4 +88,6 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     if (cached != null)
       cached.close()
   }
+
+  def getLiveCount: Long = liveCount
 }

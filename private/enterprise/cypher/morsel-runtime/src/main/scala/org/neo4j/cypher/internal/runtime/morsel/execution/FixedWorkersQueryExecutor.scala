@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Worker}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManager}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
@@ -25,18 +25,13 @@ import org.neo4j.values.AnyValue
   */
 class FixedWorkersQueryExecutor(morselSize: Int,
                                 threadFactory: ThreadFactory,
-                                val numberOfWorkers: Int,
+                                numberOfWorkers: Int,
                                 transactionBinder: TransactionBinder,
                                 queryResourceFactory: () => QueryResources)
-  extends QueryExecutor
+  extends WorkerManager(numberOfWorkers, new QueryManager, queryResourceFactory)
+    with QueryExecutor
     with WorkerWaker
     with Lifecycle {
-
-  private val queryManager = new QueryManager
-  private val workers =
-    (for (workerId <- 0 until numberOfWorkers) yield {
-      new Worker(workerId, queryManager, LazyScheduling, queryResourceFactory())
-    }).toArray
 
   // ========== LIFECYCLE ===========
 
@@ -66,7 +61,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   override def wakeOne(): Unit = {
     var i = 0
     while (i < workers.length) {
-      if (workers(i).isSleepy) {
+      if (workers(i).isSleeping) {
         LockSupport.unpark(workerThreads(i))
         return
       }

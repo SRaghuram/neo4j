@@ -12,17 +12,17 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeContextCreator, RuntimeEnvironment}
+import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeContextManager, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.logging.Log
 
-case class TracingRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQuery],
+case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
                                         log: Log,
                                         config: CypherRuntimeConfiguration,
                                         queryExecutor: QueryExecutor,
                                         cursors: CursorFactory,
                                         newTracer: () => SchedulerTracer)
-  extends RuntimeContextCreator[EnterpriseRuntimeContext] {
+  extends RuntimeContextManager[EnterpriseRuntimeContext] {
 
   override def create(tokenContext: TokenContext,
                       schemaRead: SchemaRead,
@@ -39,5 +39,9 @@ case class TracingRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQu
                              config,
                              new RuntimeEnvironment(config, queryExecutor, newTracer(), cursors),
                              compileExpressions)
+  }
+
+  override def assertAllReleased(): Unit = {
+    queryExecutor.assertAllReleased()
   }
 }

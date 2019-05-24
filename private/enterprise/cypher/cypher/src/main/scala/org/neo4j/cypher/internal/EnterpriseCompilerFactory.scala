@@ -76,7 +76,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
     CypherCurrentCompiler(
       planner,
       runtime,
-      EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
+      EnterpriseRuntimeContextManager(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
       spi.monitors())
   }
 }
@@ -96,13 +96,13 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     compileExpressions: Boolean) extends RuntimeContext
 
 /**
-  * Creator of EnterpriseRuntimeContext
+  * Manager of EnterpriseRuntimeContexts.
   */
-case class EnterpriseRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQuery],
+case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
                                            log: Log,
                                            config: CypherRuntimeConfiguration,
-                                           morselRuntimeState: RuntimeEnvironment)
-  extends RuntimeContextCreator[EnterpriseRuntimeContext] {
+                                           runtimeEnvironment: RuntimeEnvironment)
+  extends RuntimeContextManager[EnterpriseRuntimeContext] {
 
   override def create(tokenContext: TokenContext,
                       schemaRead: SchemaRead,
@@ -116,6 +116,10 @@ case class EnterpriseRuntimeContextCreator(codeStructure: CodeStructure[Generate
                              clock,
                              debugOptions,
                              config,
-                             morselRuntimeState,
+                             runtimeEnvironment,
                              compileExpressions)
+
+  override def assertAllReleased(): Unit = {
+    runtimeEnvironment.getQueryExecutor(Set.empty).assertAllReleased()
+  }
 }

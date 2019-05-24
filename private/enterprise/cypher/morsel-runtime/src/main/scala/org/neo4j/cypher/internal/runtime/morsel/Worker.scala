@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutingQuery, QueryManager, QueryResources, SchedulingPolicy}
+import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
 import scala.concurrent.duration.Duration
@@ -26,13 +26,13 @@ import scala.concurrent.duration.Duration
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
-             resources: QueryResources,
+             val resources: QueryResources,
              var sleeper: Sleeper = null) extends Runnable {
 
   if (sleeper == null)
     sleeper = new Sleeper(workerId)
 
-  def isSleepy: Boolean = sleeper.isSleepy
+  def isSleeping: Boolean = sleeper.isSleeping
 
   override def run(): Unit = {
     DebugSupport.logWorker(s"Worker($workerId) started")
@@ -105,8 +105,12 @@ class Worker(val workerId: Int,
     }
   }
 
-  def close() :Unit = {
+  def close(): Unit = {
     resources.close()
+  }
+
+  def collectCursorLiveCounts(acc: LiveCounts): Unit = {
+    resources.cursorPools.collectLiveCounts(acc)
   }
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
@@ -119,25 +123,38 @@ object Worker {
   val NO_WORK: Seq[WorkUnitEvent] = Array.empty[WorkUnitEvent]
 }
 
+object Sleeper {
+  sealed trait Status
+  case object ACTIVE extends Status
+  case object SLEEPING extends Status
+  case object SLEEPY extends Status
+}
+
 class Sleeper(val workerId: Int,
               private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
 
+  import Sleeper._
+
   private val sleepNs = sleepDuration.toNanos
   private var workStreak = 0
-  @volatile private var sleepy: Boolean = false
+  @volatile private var status: Status = SLEEPY
 
   def reportWork(): Unit = {
+    if (workStreak == 0) {
+      status = ACTIVE
+    }
     workStreak += 1
   }
 
   def reportIdle(): Unit = {
     DebugSupport.logWorker(s"Worker($workerId) parked after working $workStreak times")
     workStreak = 0
-    sleepy = true
+    status = SLEEPING
     LockSupport.parkNanos(sleepNs)
     DebugSupport.logWorker(s"Worker($workerId) unparked")
-    sleepy = false
+    status = SLEEPY
   }
 
-  def isSleepy: Boolean = sleepy
+  def isSleeping: Boolean = status == SLEEPING
+  def isActive: Boolean = status == ACTIVE
 }

@@ -23,7 +23,7 @@ object ENTERPRISE {
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
 
-      TracingRuntimeContextCreator(
+      TracingRuntimeContextManager(
         GeneratedQueryStructure,
         NullLog.getInstance(),
         runtimeConfig,

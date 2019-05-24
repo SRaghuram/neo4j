@@ -24,6 +24,10 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
 
   override def wakeOne(): Unit = ()
 
+  // The calling thread handles it's own resources, so there is
+  // no way to assert centrally.
+  override def assertAllReleased(): Unit = ()
+
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        executionGraphDefinition: ExecutionGraphDefinition,
                                        inputDataStream: InputDataStream,
