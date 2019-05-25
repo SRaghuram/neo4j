@@ -11,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.Optional;
+
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -187,8 +189,10 @@ class MultiDatabaseManagerIT
         for ( int i = 0; i < 10; i++ )
         {
             databaseManager.stopDatabase( startStopDatabase );
-            assertTrue( databaseManager.getDatabaseContext( startStopDatabase ).isPresent() );
+            Optional<? extends DatabaseContext> databaseContext = databaseManager.getDatabaseContext( startStopDatabase );
+            assertFalse( databaseContext.get().database().isStarted() );
             databaseManager.startDatabase( startStopDatabase );
+            assertTrue( databaseContext.get().database().isStarted() );
         }
     }
 
