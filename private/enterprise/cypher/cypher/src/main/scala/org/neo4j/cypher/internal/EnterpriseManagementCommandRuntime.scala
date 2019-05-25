@@ -302,9 +302,16 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |    (s)-[:QUALIFIED]->(q)
           |
         """.stripMargin
-      val returnColumns =
+      val resourceColumn =
         """
-          |RETURN type(g) AS grant, a.action AS action, res.type AS resource, res.arg1 AS arg1,
+          |CASE res.type
+          |  WHEN 'property' THEN 'property('+res.arg1+')'
+          |  ELSE res.type
+          |END
+        """.stripMargin
+      val returnColumns =
+        s"""
+          |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
           |coalesce(d.name, '*') AS database, q.label AS label, r.name AS role
         """.stripMargin
 
@@ -335,13 +342,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
-        (ctx, q) => new ColumnMappingSystemCommandExecutionResult(ctx, q.asInstanceOf[InternalExecutionResult], Seq("arg1"), (k, row) => {
-          if (k == "resource" && row.get(k) == "property") s"property(${row.get("arg1")})"
-          else row.get(k)
-        }),
-        e => throw new InvalidArgumentsException(s"The specified grantee '${grantee.asObject()}' does not exist.", e)
-      )
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)))
 
     // CREATE DATABASE foo
     case CreateDatabase(dbName) => (_, _, _) =>
