@@ -165,7 +165,7 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
         predicates.True()
       )()
     )
-    pipe.asInstanceOf[FilterPipe].predicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[FilterPipe].predicate.owningPipe.get should equal(pipe)
   }
 
   test("single node with expand") {
@@ -331,7 +331,7 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
         "r" -> LongSlot(1, nullable = true, CTRelationship),
         "z" -> LongSlot(2, nullable = true, CTNode)), numberOfLongs = 3, numberOfReferences = 0)
     )())
-    pipe.asInstanceOf[OptionalExpandAllSlottedPipe].predicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[OptionalExpandAllSlottedPipe].predicate.owningPipe.get should equal(pipe)
   }
 
   test("single node with optionalExpand ExpandInto") {
@@ -350,7 +350,7 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
         "x" -> LongSlot(0, nullable = false, CTNode),
         "r" -> LongSlot(1, nullable = true, CTRelationship)), numberOfLongs = 2, numberOfReferences = 0)
     )())
-    pipe.asInstanceOf[OptionalExpandIntoSlottedPipe].predicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[OptionalExpandIntoSlottedPipe].predicate.owningPipe.get should equal(pipe)
   }
 
   test("single node with varlength expand") {
@@ -389,8 +389,8 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
       tempNodeSlot.offset, tempRelSlot.offset,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
     )())
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe.get should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe.get should equal(pipe)
   }
 
   test("single node with varlength expand into") {
@@ -449,8 +449,8 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
         tempNodeSlot.offset, tempRelSlot.offset,
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe.get should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe.get should equal(pipe)
   }
 
   test("single node with varlength expand and a predicate") {
@@ -496,8 +496,8 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
       ),
       Size(1, 0)
     )())
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
-    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe.get should equal(pipe)
+    pipe.asInstanceOf[VarLengthExpandSlottedPipe].edgePredicate.owningPipe.get should equal(pipe)
   }
 
   test("let's skip this one") {
@@ -685,7 +685,7 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
       lhsSlots("z"),
       commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2)))()
     )
-    pipe.asInstanceOf[ForeachSlottedPipe].expression.owningPipe should equal(pipe)
+    pipe.asInstanceOf[ForeachSlottedPipe].expression.owningPipe.get should equal(pipe)
   }
 
   test("that argument does not apply here") {
