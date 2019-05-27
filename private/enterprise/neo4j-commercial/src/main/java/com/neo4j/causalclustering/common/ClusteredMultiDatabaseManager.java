@@ -25,8 +25,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Health;
 
-import static java.lang.String.format;
-
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext> implements ClusteredDatabaseManager
 {
     protected final ClusteredDatabaseContextFactory contextFactory;
@@ -70,7 +68,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( format( "Unable to start database %s", databaseId ), t );
+            throw new DatabaseManagementException( "Unable to start database " + databaseId.name(), t );
         }
     }
 
@@ -84,7 +82,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( format( "Unable to stop database %s", databaseId ), t );
+            throw new DatabaseManagementException( "Unable to stop database " + databaseId.name(), t );
         }
     }
 
