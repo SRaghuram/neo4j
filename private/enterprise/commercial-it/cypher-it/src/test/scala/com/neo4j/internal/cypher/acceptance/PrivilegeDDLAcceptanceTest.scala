@@ -1654,25 +1654,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
-  private def executeOnDefault(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    val login = authManager.login(SecurityTestUtils.authToken(username, password))
-    val tx = graph.beginTransaction(Transaction.Type.explicit, login)
-    try {
-      var count = 0
-      val result: Result = new RichGraphDatabaseQueryService(graph).execute(query)
-      result.accept(row => {
-        resultHandler(row, count)
-        count = count + 1
-        true
-      })
-      tx.success()
-      count
-    } finally {
-      tx.close()
-    }
-  }
-
   private def setupMultilabelData = {
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {foo:1, bar:2})")

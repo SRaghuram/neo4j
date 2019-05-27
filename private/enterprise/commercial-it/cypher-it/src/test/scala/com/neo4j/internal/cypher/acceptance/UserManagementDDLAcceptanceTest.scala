@@ -7,10 +7,14 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
+import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
 import org.parboiled.errors.ParserRuntimeException
+
+import scala.collection.Map
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val neo4jUser = user("neo4j", Seq("admin"))
@@ -288,22 +292,20 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo")))
   }
 
-  // TODO currently succeeds in removing 'neo4j'
-  //  due to the current test setup not having a current user
-  ignore("should fail when dropping current user") {
+  test("should fail when dropping current user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-    // TODO: Make sure that neo4j is the current user
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
 
-    the[InvalidArgumentsException] thrownBy { // TODO update to correct Exception class
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("DROP USER neo4j")
+      executeOnSystem("neo4j", "neo", "DROP USER neo4j")
       // THEN
     } should have message "Deleting yourself (user 'neo4j') is not allowed."
 
     // THEN
-    execute("SHOW USERS").toSet should be(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
   }
 
   test("should fail when dropping non-existing user") {
@@ -722,6 +724,149 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
       // THEN
     } should have message "User 'foo' does not exist."
+  }
+
+  ignore("should allow create user for user with only admin privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED")
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE customAdmin")
+    execute("GRANT ROLE customAdmin TO alice")
+    // TODO currently only way to grant admin privilege, should be replaced by proper DDL command when available
+    executeOnDefault("neo4j", "neo4j", "CALL dbms.security.grantPrivilegeToRole('customAdmin', 'write', 'system')")
+
+    // WHEN
+    executeOnSystem("alice", "abc", "CREATE USER bob SET PASSWORD 'builder'")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("customAdmin"), passwordChangeRequired = false), user("bob")))
+  }
+
+  test("should fail create user for when password change required") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("neo4j", "neo4j", "CREATE USER bob SET PASSWORD 'builder' CHANGE NOT REQUIRED")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+  }
+
+  test("should fail create user for user with editor role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "CREATE USER bob SET PASSWORD 'builder' CHANGE NOT REQUIRED")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+  }
+
+  test("should fail drop user for user with editor role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("CREATE USER bob SET PASSWORD 'builder'")
+    execute("GRANT ROLE editor TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "DROP USER bob")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+  }
+
+  test("should fail alter other user for user with editor role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("CREATE USER bob SET PASSWORD 'builder'")
+    execute("GRANT ROLE editor TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "ALTER USER bob SET STATUS SUSPENDED")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+  }
+
+  ignore("should allow alter own user password without admin") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc'")
+    execute("GRANT ROLE editor TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
+
+    // WHEN
+    executeOnSystem("alice", "abc", "ALTER USER alice SET PASSWORD 'xyz' CHANGE NOT REQUIRED")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+  }
+
+  test("should fail alter own user status without admin") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "ALTER USER alice SET STATUS SUSPENDED")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+  }
+
+  test("should fail alter own user status when suspended") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+    execute("GRANT ROLE admin TO alice")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("admin"), suspended = true, passwordChangeRequired = false)))
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "ALTER USER alice SET STATUS ACTIVE")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("admin"), suspended = true, passwordChangeRequired = false)))
+  }
+
+  test("should allow show database for non admin user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO alice")
+
+    // WHEN / THEN
+    executeOnSystem("alice", "abc", "SHOW DATABASE neo4j", (row, _) => row.get("name").equals("neo4j"))
   }
 
   // helper methods

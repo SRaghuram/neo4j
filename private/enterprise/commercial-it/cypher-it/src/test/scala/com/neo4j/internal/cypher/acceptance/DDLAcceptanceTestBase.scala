@@ -13,8 +13,11 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
@@ -91,4 +94,32 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema"))
   def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token"))
   def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system"))
+
+  def executeOnDefault(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
+    executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, resultHandler)
+  }
+
+  def executeOnSystem(username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
+    executeOn(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, username, password, query, resultHandler)
+  }
+
+  private def executeOn(database: String, username: String, password: String, query: String, resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
+    selectDatabase(database)
+    val login = authManager.login(SecurityTestUtils.authToken(username, password))
+    val tx = graph.beginTransaction(Transaction.Type.explicit, login)
+    try {
+      var count = 0
+      val result: Result = new RichGraphDatabaseQueryService(graph).execute(query)
+      result.accept(row => {
+        resultHandler(row, count)
+        count = count + 1
+        true
+      })
+      tx.success()
+      count
+    } finally {
+      tx.close()
+    }
+  }
+
 }
