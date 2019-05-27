@@ -13,11 +13,11 @@ import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
 import org.neo4j.cypher.internal.ir.VarPatternLength
-import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.expressions.{RelTypeName, SemanticDirection, True}
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.v4_0.expressions.{RelTypeName, SemanticDirection}
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.{Label, RelationshipType}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -114,9 +114,11 @@ class VarExpand extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: VarExpandThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
-    visitor.count
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    subscriber.count
   }
 }
 

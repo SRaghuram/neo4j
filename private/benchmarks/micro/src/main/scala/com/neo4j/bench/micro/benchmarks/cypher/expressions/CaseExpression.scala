@@ -12,10 +12,10 @@ import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Parameter
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
@@ -65,11 +65,12 @@ class CaseExpression extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: CaseExpressionThreadState, bh: Blackhole, rngState: RNGState): Long = {
-    val visitor = new CountVisitor(bh)
     threadState.paramBuilder.add("x", doubleValue(rngState.rng.nextInt(CaseExpression_size + 1)))
-    val result = threadState.executablePlan.execute(params = threadState.paramBuilder.build(), tx = threadState.tx)
-    result.accept(visitor)
-    assertExpectedRowCount(CaseExpression.ROWS, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params = threadState.paramBuilder.build(), tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(CaseExpression.ROWS, subscriber)
   }
 }
 

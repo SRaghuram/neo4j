@@ -11,9 +11,9 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
 import com.neo4j.bench.micro.data._
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -130,9 +130,11 @@ class Distinct extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: DistinctThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, subscriber)
   }
 }
 

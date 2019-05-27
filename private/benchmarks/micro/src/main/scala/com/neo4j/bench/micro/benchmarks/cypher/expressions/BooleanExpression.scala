@@ -12,10 +12,10 @@ import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Parameter
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
@@ -64,9 +64,11 @@ class BooleanExpression extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: BooleanExpressionThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params = threadState.params, tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(BooleanExpression.ROWS, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params = threadState.params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(BooleanExpression.ROWS, subscriber)
   }
 }
 

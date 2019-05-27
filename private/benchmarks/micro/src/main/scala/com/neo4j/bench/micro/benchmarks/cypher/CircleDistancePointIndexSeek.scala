@@ -13,11 +13,11 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.PointGenerator.{ClusterGridDefinition, circleGrid}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.micro.data._
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.LessThanOrEqual
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -235,9 +235,11 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     import scala.collection.JavaConverters._
     val point = threadState.randomPoint(rngState)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(threadState.expectedRowCount, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(threadState.expectedRowCount, subscriber)
   }
 }
 

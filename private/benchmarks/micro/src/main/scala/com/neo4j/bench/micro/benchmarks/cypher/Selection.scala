@@ -12,9 +12,9 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -77,9 +77,11 @@ class Selection extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: SelectionThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, subscriber)
   }
 }
 

@@ -14,10 +14,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{ascGeneratorFor, randGeneratorFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -80,13 +80,15 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: UniqueIndexSeekThreadState, rngState: RNGState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
     val paramsMap = new util.HashMap[String, Object]()
     // we need instance of to box primitive java types from values
     val value = values.next(rngState.rng).asInstanceOf[AnyRef]
     paramsMap.put(PARAM, value)
-    threadState.executablePlan.execute(ValueUtils.asMapValue(paramsMap), threadState.tx).accept(visitor)
-    assertExpectedRowCount(EXPECTED_VALUE_COUNT, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(ValueUtils.asMapValue(paramsMap), tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(EXPECTED_VALUE_COUNT, subscriber)
   }
 }
 

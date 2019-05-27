@@ -9,10 +9,10 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
@@ -56,9 +56,11 @@ class Unwind extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: UnwindThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
-    assertExpectedRowCount(VALUE_COUNT, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(VALUE_COUNT, subscriber)
   }
 }
 

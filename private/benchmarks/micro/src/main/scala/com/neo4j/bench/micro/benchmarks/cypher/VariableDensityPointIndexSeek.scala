@@ -5,18 +5,18 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.client.model.Neo4jConfig
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.client.model.Neo4jConfig
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.PointGenerator.{grid, random}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -199,9 +199,11 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     import scala.collection.JavaConverters._
     val point = threadState.points.next(rngState.rng)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(threadState.expectedRowCountMin, threadState.expectedRowCountMax, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(threadState.expectedRowCountMin, threadState.expectedRowCountMax, subscriber)
   }
 }
 

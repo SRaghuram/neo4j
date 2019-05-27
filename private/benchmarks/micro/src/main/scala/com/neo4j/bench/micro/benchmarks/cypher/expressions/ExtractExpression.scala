@@ -10,10 +10,10 @@ import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Parameter
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
@@ -55,10 +55,11 @@ class ExtractExpression extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: ExtractExpressionThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    val result = threadState.executablePlan.execute(params = threadState.params, tx = threadState.tx)
-    result.accept(visitor)
-    assertExpectedRowCount(ExtractExpression.ROWS, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params = threadState.params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(ExtractExpression.ROWS, subscriber)
   }
 }
 

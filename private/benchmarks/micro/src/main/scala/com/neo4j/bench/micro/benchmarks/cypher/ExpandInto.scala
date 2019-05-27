@@ -9,10 +9,10 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, RelationshipDefinition}
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{INCOMING, OUTGOING}
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -57,9 +57,11 @@ class ExpandInto extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: ExpandIntoThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
-    visitor.count
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    subscriber.count
   }
 }
 

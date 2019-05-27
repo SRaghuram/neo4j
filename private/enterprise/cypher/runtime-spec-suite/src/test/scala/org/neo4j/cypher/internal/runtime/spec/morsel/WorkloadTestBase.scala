@@ -32,8 +32,8 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
 
     val futureResultSets =
       (0 until 8).map(_ =>
-        executor.submit(new Callable[Seq[ArrayBuffer[Array[AnyValue]]]] {
-          override def call(): Seq[ArrayBuffer[Array[AnyValue]]] = {
+        executor.submit(new Callable[Seq[IndexedSeq[Array[AnyValue]]]] {
+          override def call(): Seq[IndexedSeq[Array[AnyValue]]] = {
             for (_ <- 0 until QUERIES_PER_THREAD)
               yield consume(execute(logicalQuery, runtime))
           }

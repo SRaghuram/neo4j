@@ -11,14 +11,14 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{DBL, LNG, STR_SML, _}
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.v4_0.util.symbols
-import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -73,9 +73,11 @@ class Top extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: TopThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
-    assertExpectedRowCount(Top_limit.toInt, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
+    result.request(Long.MaxValue)
+    result.await()
+    assertExpectedRowCount(Top_limit.toInt, subscriber)
   }
 }
 

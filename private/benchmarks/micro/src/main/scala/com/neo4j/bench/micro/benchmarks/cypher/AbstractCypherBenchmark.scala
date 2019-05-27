@@ -26,7 +26,6 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{Cardinality, LabelId, RelTypeId, Selectivity}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFactory, ExecutionPlan, LogicalQuery}
-import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
 import org.neo4j.internal.kernel.api.security.SecurityContext
@@ -37,8 +36,7 @@ import org.neo4j.kernel.api.query.ExecutingQuery
 import org.neo4j.kernel.database.{Database, TestDatabaseIdRepository}
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, TransactionalContext}
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.kernel.lifecycle.LifeSupport
@@ -46,6 +44,7 @@ import org.neo4j.monitoring.Monitors
 import org.neo4j.resources.{CpuClock, HeapAllocation}
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.time.Clocks
+import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -55,13 +54,15 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val cardinalities = new Cardinalities
   private val databaseIdRepository = new TestDatabaseIdRepository()
 
-  class CountVisitor(bh: Blackhole) extends QueryResultVisitor[Exception] {
+  class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
     var count: Int = 0
 
-    override def visit(row: Record): Boolean = {
+    override def onRecord(): Unit = {
       count += 1
-      bh.consume(row)
-      true
+    }
+
+    override def onField(offset: Int, value: AnyValue): Unit = {
+      bh.consume(value)
     }
   }
 
@@ -71,13 +72,13 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   def getLogicalPlanAndSemanticTable(planContext: PlanContext): (LogicalPlan, SemanticTable, List[String])
 
-  def assertExpectedRowCount(expectedRowCount: Int, visitor: CountVisitor): Int =
+  def assertExpectedRowCount(expectedRowCount: Int, visitor: CountSubscriber): Int =
     if (visitor.count != expectedRowCount) {
       val actualCount = visitor.count
       throw new RuntimeException(s"Expected $expectedRowCount results but found $actualCount")
     } else visitor.count
 
-  def assertExpectedRowCount(minRowCount: Int, maxRowCount: Int, visitor: CountVisitor): Int =
+  def assertExpectedRowCount(minRowCount: Int, maxRowCount: Int, visitor: CountSubscriber): Int =
     if (minRowCount > visitor.count || visitor.count > maxRowCount) {
       val actualCount = visitor.count
       throw new RuntimeException(s"Expected result count in range ($minRowCount,$maxRowCount) but found $actualCount")
@@ -219,10 +220,10 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 }
 
 case class ExecutablePlan(executionPlan: ExecutionPlan, newQueryContext: InternalTransaction => QueryContext) {
-  def execute(params: MapValue = VirtualValues.EMPTY_MAP, tx: InternalTransaction): RuntimeResult = {
+  def execute(params: MapValue = VirtualValues.EMPTY_MAP, tx: InternalTransaction, subscriber: QuerySubscriber): RuntimeResult = {
     val queryContext = newQueryContext(tx)
 
-    executionPlan.run(queryContext, doProfile = false, params, prePopulateResults = false, input = NoInput, NOT_A_SUBSCRIBER)
+    executionPlan.run(queryContext, doProfile = false, params, prePopulateResults = false, input = NoInput, subscriber)
   }
 }
 
