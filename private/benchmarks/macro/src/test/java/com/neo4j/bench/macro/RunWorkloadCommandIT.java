@@ -98,6 +98,7 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
+    @Disabled
     @Test
     void executeReadWorkloadForkedWithServer() throws Exception
     {
@@ -175,6 +176,7 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
+    @Disabled
     @Test
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
