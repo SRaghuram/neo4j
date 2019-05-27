@@ -16,11 +16,11 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChecks {
 
-  val gen = AstGenerator()
+  val gen = AstGenerator(simpleStrings = false)
 
   import gen.Shrinker.shrinkQuery
 
-  val pr = Prettifier(ExpressionStringifier(alwaysParens = true))
+  val pr = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
 
   def pretty(c: Clause): String =
     pr.asString(Query(None, SingleQuery(Seq(c))(?))(?))
@@ -70,6 +70,7 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
       Pipeline.parseOnly.process(qs).statement()
     } catch {
       case e: Exception =>
+        println("-- failure --------------------------------------")
         println(qs)
         sidebyside(q, None)
         throw e
@@ -79,6 +80,7 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
       q shouldEqual qf
     } catch {
       case e: Exception =>
+        println("-- failure --------------------------------------")
         println(qs)
         sidebyside(q, Some(qf))
         throw e
@@ -101,7 +103,7 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
   }
 
   "show" in {
-    show("RETURN x ORDER BY foo SKIP 1 LIMIT 3")
+    show("CALL `x``y`")
   }
 
   implicit val propCfg: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 300)

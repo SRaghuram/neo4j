@@ -9,21 +9,36 @@ import com.neo4j.fabric.AstHelp
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.symbols.AnyType
+import org.parboiled.support.Chars
 import org.scalacheck.Gen._
 import org.scalacheck.util.Buildable
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 
-case class AstGenerator(debug: Boolean = true) extends AstHelp {
+case class AstGenerator(simpleStrings: Boolean = true) extends AstHelp {
 
   // HELPERS
   // ==========================================================================
 
   def boolean: Gen[Boolean] =
-    oneOf(true, false)
+    Arbitrary.arbBool.arbitrary
+
+  def char: Gen[Char] =
+    Arbitrary.arbChar.arbitrary.suchThat(acceptedByParboiled)
+
+  def acceptedByParboiled(c: Char): Boolean = c match {
+    case Chars.DEL_ERROR    => false
+    case Chars.INS_ERROR    => false
+    case Chars.RESYNC       => false
+    case Chars.RESYNC_START => false
+    case Chars.RESYNC_END   => false
+    case Chars.RESYNC_EOI   => false
+    case Chars.EOI          => false
+    case _                  => true
+  }
 
   def string: Gen[String] =
-    if (debug) alphaLowerChar.map(_.toString)
-    else listOf(asciiChar).map(_.mkString)
+    if (simpleStrings) alphaLowerChar.map(_.toString)
+    else listOf(char).map(_.mkString)
 
   def zeroOrMore[T](gen: Gen[T]): Gen[List[T]] =
     choose(0, 3).flatMap(listOfN(_, gen))
@@ -40,8 +55,8 @@ case class AstGenerator(debug: Boolean = true) extends AstHelp {
   // ==========================================================================
 
   def _identifier: Gen[String] =
-    if (debug) string
-    else identifier
+    if (simpleStrings) alphaLowerChar.map(_.toString)
+    else nonEmptyListOf(char).map(_.mkString)
 
   def _labelName: Gen[LabelName] =
     _identifier.map(LabelName(_)(?))
