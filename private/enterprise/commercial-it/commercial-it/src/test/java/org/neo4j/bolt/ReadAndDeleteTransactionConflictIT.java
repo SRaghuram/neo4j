@@ -25,9 +25,9 @@ import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.oneOf;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -119,7 +119,7 @@ public class ReadAndDeleteTransactionConflictIT
                     Record record = readResult.next();
                     Value value = record.get( "r" );
                     relCounter++;
-                    assertThat( value.asRelationship().asMap().get( "a" ), isOneOf( 1L, null ) );
+                    assertThat( value.asRelationship().asMap().get( "a" ), is( oneOf(  1L, null ) ) );
                 }
             }
             assertThat( relCounter, is( lessThanOrEqualTo( 1000 ) ) );
@@ -201,7 +201,7 @@ public class ReadAndDeleteTransactionConflictIT
                     Record record = readResult.next();
                     Value value = record.get( "n" );
                     nodeCounter++;
-                    assertThat( value.asNode().asMap().get( "a" ), isOneOf( 1L, null ) );
+                    assertThat( value.asNode().asMap().get( "a" ), is( oneOf( 1L, null ) ) );
                 }
             }
             assertThat( nodeCounter, is( lessThanOrEqualTo( 1000 ) ) );

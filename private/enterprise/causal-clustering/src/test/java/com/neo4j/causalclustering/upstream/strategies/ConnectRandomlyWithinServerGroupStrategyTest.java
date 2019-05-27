@@ -21,7 +21,8 @@ import org.neo4j.logging.NullLogProvider;
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.memberIDs;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.isIn;
+import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,7 +48,7 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
-        assertThat( result, contains( isIn( myGroupMemberIds ) ) );
+        assertThat( result, contains( is( in( myGroupMemberIds ) ) ) );
     }
 
     @Test

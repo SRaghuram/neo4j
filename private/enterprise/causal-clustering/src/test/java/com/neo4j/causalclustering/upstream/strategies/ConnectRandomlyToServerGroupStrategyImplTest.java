@@ -29,7 +29,8 @@ import static co.unruly.matchers.OptionalMatchers.contains;
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.isIn;
+import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.is;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {
@@ -50,7 +51,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
+        assertThat( memberId, contains( is( in( myGroupMemberIds ) ) ) );
     }
 
     @Test
@@ -68,7 +69,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, contains( isIn( myGroupMemberIds ) ) );
+        assertThat( memberId, contains( is( in( myGroupMemberIds ) ) ) );
     }
 
     @Test

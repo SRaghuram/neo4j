@@ -37,7 +37,8 @@ import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Sche
 import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isIn;
+import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.is;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
@@ -89,7 +90,7 @@ class UserDefinedConfigurationStrategyTest
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, contains( isIn( readReplicaIds ) ) );
+        assertThat( memberId, contains( is( in( readReplicaIds ) ) ) );
         assertThat( memberId.map( this::noEastGroupGenerator ), contains( equalTo( asSet( wantedGroup ) ) ) );
     }
 

@@ -17,7 +17,8 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isOneOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.oneOf;
 import static org.junit.Assume.assumeThat;
 import static org.junit.Assume.assumeTrue;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
@@ -43,7 +44,7 @@ public class SslPlatformTest
         // depends on the statically linked uber-jar with boring ssl: http://netty.io/wiki/forked-tomcat-native.html
         assumeTrue( SystemUtils.IS_OS_WINDOWS || SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX );
         assumeThat( System.getProperty( "os.arch" ), equalTo( "x86_64" ) );
-        assumeThat( SystemUtils.JAVA_VENDOR, isOneOf( "Oracle Corporation", "Sun Microsystems Inc." ) );
+        assumeThat( SystemUtils.JAVA_VENDOR, is( oneOf( "Oracle Corporation", "Sun Microsystems Inc." ) ) );
 
         // given
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
