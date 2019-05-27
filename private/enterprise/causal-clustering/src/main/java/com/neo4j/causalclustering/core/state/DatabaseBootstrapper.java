@@ -87,9 +87,7 @@ public class DatabaseBootstrapper
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
 
-    private final Set<MemberId> members;
-    private final RaftCoreState raftCoreState;
-    private final GlobalSessionTrackerState sessionTrackerState;
+    private final BootstrapContext bootstrapContext;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
     private final DatabaseInitializer databaseInitializer;
     private final PageCache pageCache;
@@ -98,18 +96,10 @@ public class DatabaseBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    DatabaseBootstrapper( Set<MemberId> members, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer, PageCache pageCache,
-            FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config )
+    public DatabaseBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
+            PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config )
     {
-        // member IDs are a field temporarily because all databases live in a single Raft group;
-        // set of member IDs will become a parameter to #bootstrap() once we move to multiple Raft groups
-        this.members = members;
-
-        // same RaftCoreState and GlobalSessionTrackerState are used for every bootstrapped database temporarily
-        // because all databases live in a single Raft group; this will change when we have multiple Raft groups
-        this.raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
-        this.sessionTrackerState = new GlobalSessionTrackerState();
-
+        this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
         this.databaseInitializer = databaseInitializer;
         this.pageCache = pageCache;
@@ -119,13 +109,7 @@ public class DatabaseBootstrapper
         this.config = config;
     }
 
-    /**
-     * Bootstrap the database described by the given context.
-     *
-     * @param bootstrapContext the context of a database to bootstrap.
-     * @return a snapshot which represents the initial state.
-     */
-    public CoreSnapshot bootstrap( BootstrapContext bootstrapContext )
+    public CoreSnapshot bootstrap( Set<MemberId> members )
     {
         try
         {
@@ -133,7 +117,7 @@ public class DatabaseBootstrapper
             ensureRecoveredOrThrow( bootstrapContext, config );
             initializeStoreIfNeeded( bootstrapContext );
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext );
-            CoreSnapshot snapshot = buildCoreSnapshot( bootstrapContext );
+            CoreSnapshot snapshot = buildCoreSnapshot( members, bootstrapContext );
             log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
         }
@@ -191,14 +175,19 @@ public class DatabaseBootstrapper
         }
     }
 
-    private CoreSnapshot buildCoreSnapshot( BootstrapContext bootstrapContext )
+    private CoreSnapshot buildCoreSnapshot( Set<MemberId> members, BootstrapContext bootstrapContext )
     {
-        CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
+        var raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
+        var sessionTrackerState = new GlobalSessionTrackerState();
+
+        var coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTrackerState );
-        IdAllocationState idAllocation = deriveIdAllocationState( bootstrapContext.databaseLayout() );
+
+        var idAllocation = deriveIdAllocationState( bootstrapContext.databaseLayout() );
         coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocation );
         coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
+
         return coreSnapshot;
     }
 

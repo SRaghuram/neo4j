@@ -71,7 +71,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension
-class CoreBootstrapperIT
+class DatabaseBootstrapperIT
 {
     @Inject
     private TestDirectory testDirectory;
@@ -119,8 +119,8 @@ class CoreBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -139,8 +139,8 @@ class CoreBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -164,8 +164,8 @@ class CoreBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -195,8 +195,8 @@ class CoreBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, config, logProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, config );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -222,8 +222,8 @@ class CoreBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
@@ -250,8 +250,8 @@ class CoreBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, fileSystem,
-                defaultConfig, assertableLogProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache,
+                fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -285,8 +285,8 @@ class CoreBootstrapperIT
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                fileSystem, config, assertableLogProvider, pageCache, storageEngineFactory );
+        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
