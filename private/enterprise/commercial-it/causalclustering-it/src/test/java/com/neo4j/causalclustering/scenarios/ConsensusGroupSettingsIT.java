@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,6 +16,7 @@ import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ConsensusGroupSettingsIT
 {
@@ -49,6 +51,8 @@ public class ConsensusGroupSettingsIT
         }
 
         // then
-        assertEquals(3, cluster.coreMembers().iterator().next().raft().replicationMembers().size());
+        CoreClusterMember core = cluster.coreMembers().iterator().next();
+        RaftMachine raft = core.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
+        assertEquals( 3, raft.replicationMembers().size() );
     }
 }

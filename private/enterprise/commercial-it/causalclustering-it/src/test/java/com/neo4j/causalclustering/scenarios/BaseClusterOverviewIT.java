@@ -265,7 +265,7 @@ abstract class BaseClusterOverviewIT
 
             List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.defaultDatabase() );
 
-            CausalClusteringTestHelpers.forceReelection( cluster );
+            CausalClusteringTestHelpers.forceReelection( cluster, DEFAULT_DATABASE_NAME );
 
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),

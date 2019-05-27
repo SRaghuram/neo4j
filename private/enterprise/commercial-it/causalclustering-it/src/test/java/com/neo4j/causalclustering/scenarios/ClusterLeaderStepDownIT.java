@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.hamcrest.Matchers;
@@ -21,6 +22,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class ClusterLeaderStepDownIT
@@ -44,7 +46,7 @@ public class ClusterLeaderStepDownIT
         } );
 
         ThrowingSupplier<List<CoreClusterMember>,Exception> followers = () -> cluster.coreMembers().stream().filter(
-                m -> m.raft().currentRole() != Role.LEADER ).collect( toList() );
+                m -> m.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).currentRole() != Role.LEADER ).collect( toList() );
         assertEventually( "All followers visible", followers, Matchers.hasSize( 7 ), 2, TimeUnit.MINUTES );
 
         //when
@@ -52,7 +54,7 @@ public class ClusterLeaderStepDownIT
         followers.get().subList( 0, 4 ).forEach( CoreClusterMember::shutdown );
 
         //then
-        assertEventually( "Leader should have stepped down.", () -> leader.raft().isLeader(), Matchers.is( false ), 2,
-                TimeUnit.MINUTES );
+        RaftMachine raft = leader.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
+        assertEventually( "Leader should have stepped down.", raft::isLeader, Matchers.is( false ), 2, TimeUnit.MINUTES );
     }
 }

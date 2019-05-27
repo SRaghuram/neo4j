@@ -9,8 +9,10 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -45,6 +47,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
@@ -143,7 +146,7 @@ public class ClusterBindingIT
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
-            db.raftLogPruner().prune();
+            db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
         // WHEN
@@ -174,7 +177,7 @@ public class ClusterBindingIT
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
-            db.raftLogPruner().prune();
+            db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
         // WHEN
@@ -197,7 +200,7 @@ public class ClusterBindingIT
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
-            db.raftLogPruner().prune();
+            db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
         // WHEN

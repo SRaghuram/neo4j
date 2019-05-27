@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,6 +34,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class CoreToCoreCopySnapshotIT
@@ -81,7 +83,7 @@ public class CoreToCoreCopySnapshotIT
         // when
         for ( CoreClusterMember coreDb : cluster.coreMembers() )
         {
-            coreDb.raftLogPruner().prune();
+            coreDb.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
         cluster.removeCoreMember( leader ); // to force a change of leader

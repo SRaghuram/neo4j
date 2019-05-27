@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.hamcrest.Matchers;
 
 import java.io.File;
@@ -90,7 +91,8 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         for ( String databaseName : databaseNames )
         {
             log.info( String.format( "Waiting for membership of '%s'", databaseName ) );
-            awaitForever( () -> core.raft( databaseName ).votingMembers().contains( core.id() ), 100, MILLISECONDS );
+            RaftMachine raft = core.resolveDependency( databaseName, RaftMachine.class );
+            awaitForever( () -> raft.votingMembers().contains( core.id() ), 100, MILLISECONDS );
         }
     }
 

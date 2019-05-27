@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
@@ -20,6 +21,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PreElectionIT
 {
@@ -54,7 +56,7 @@ public class PreElectionIT
         CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, TimeUnit.MINUTES );
 
         // when
-        follower.raft().triggerElection();
+        follower.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).triggerElection();
 
         // then
         try

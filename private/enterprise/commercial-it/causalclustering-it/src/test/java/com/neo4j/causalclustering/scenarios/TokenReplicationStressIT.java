@@ -49,6 +49,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ClusterExtension
 class TokenReplicationStressIT
@@ -168,7 +169,7 @@ class TokenReplicationStressIT
             try
             {
                 SECONDS.sleep( 5 );
-                CausalClusteringTestHelpers.forceReelection( cluster );
+                CausalClusteringTestHelpers.forceReelection( cluster, DEFAULT_DATABASE_NAME );
             }
             catch ( Throwable t )
             {

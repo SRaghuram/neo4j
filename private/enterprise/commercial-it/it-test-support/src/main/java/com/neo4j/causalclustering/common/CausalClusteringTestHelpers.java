@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -46,6 +47,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public final class CausalClusteringTestHelpers
@@ -118,7 +120,7 @@ public final class CausalClusteringTestHelpers
                 .toString();
     }
 
-    public static void forceReelection( Cluster cluster ) throws Exception
+    public static void forceReelection( Cluster cluster, String databaseName ) throws Exception
     {
         CoreClusterMember leader = cluster.awaitLeader();
         CoreClusterMember follower = randomClusterMember( cluster, leader );
@@ -128,7 +130,7 @@ public final class CausalClusteringTestHelpers
         raftServer.stop();
 
         // trigger an election and await until a new leader is elected
-        follower.raft().triggerElection();
+        follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
         assertEventually( "Leader re-election did not happen", cluster::awaitLeader, not( equalTo( leader ) ), 2, MINUTES );
 
         // make the previous leader responsive again

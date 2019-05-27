@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
@@ -60,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.v1.Values.parameters;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -799,7 +801,8 @@ class BoltCausalClusteringIT
         {
             if ( !coreClusterMember.equals( initialLeader ) )
             {
-                coreClusterMember.raft().triggerElection();
+                RaftMachine raft = coreClusterMember.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
+                raft.triggerElection();
                 cluster.awaitLeader();
             }
         }

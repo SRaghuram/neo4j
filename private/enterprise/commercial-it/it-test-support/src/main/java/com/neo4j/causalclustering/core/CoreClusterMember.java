@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
@@ -247,21 +246,9 @@ public class CoreClusterMember implements ClusterMember
         return defaultDatabaseLayout;
     }
 
-    public RaftLogPruner raftLogPruner()
+    public <T> T resolveDependency( String databaseName, Class<T> type )
     {
-        return defaultDatabase.getDependencyResolver().resolveDependency( RaftLogPruner.class );
-    }
-
-    public RaftMachine raft()
-    {
-        return defaultDatabase.getDependencyResolver().resolveDependency( RaftMachine.class );
-    }
-
-    public RaftMachine raft( String databaseName )
-    {
-        return ((GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName ))
-                .getDependencyResolver()
-                .resolveDependency( RaftMachine.class );
+        return ((GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName )).getDependencyResolver().resolveDependency( type );
     }
 
     public SortedMap<Long, File> getLogFileNames() throws IOException
