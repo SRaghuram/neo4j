@@ -23,7 +23,6 @@ import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.graphdb
-import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
@@ -143,29 +142,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     private var querySubscription: QuerySubscription = _
 
-    override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      val executionHandle = queryExecutor.execute(executablePipelines,
-                                                  executionGraphDefinition,
-                                                  inputDataStream,
-                                                  queryContext,
-                                                  params,
-                                                  schedulerTracer,
-                                                  queryIndexes,
-                                                  nExpressionSlots,
-                                                  prePopulateResults,
-                                                  new VisitSubscriber(visitor, fieldNames.length))
-
-      executionHandle.request(Long.MaxValue)
-      resultRequested = true
-      executionHandle.await()
-    }
-
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
-
-    override def isIterable: Boolean = false
-
-    override def asIterator(): ResourceIterator[java.util.Map[String, AnyRef]] =
-      throw new UnsupportedOperationException("The Morsel runtime is not iterable")
 
     override def consumptionState: RuntimeResult.ConsumptionState =
       if (!resultRequested) ConsumptionState.NOT_STARTED

@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.codegen.QueryExecutionTracer
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSupport
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.{InstrumentedGraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
@@ -23,7 +24,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryConte
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -31,8 +31,8 @@ import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.security.AnonymousContext
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
-import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
+import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, RecordingQuerySubscriber}
 import org.neo4j.time.Clocks
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -60,7 +60,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
-                                                        prePopulateResults = false, NOT_A_SUBSCRIBER)
+                                                        prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
       result.accept(new QueryResultVisitor[Exception] {
         override def visit(row: QueryResult.Record): Boolean = true
       })
@@ -102,9 +102,10 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
                                   tracer.getOrElse(QueryExecutionTracer.NONE),
                                   params)
 
+    val subscriber = new RecordingQuerySubscriber
     val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE),
-                                                    prePopulateResults = false, subscriber = NOT_A_SUBSCRIBER)
-    RewindableExecutionResult(runtimeResult, queryContext)
+                                                    prePopulateResults = false, subscriber = subscriber)
+    RewindableExecutionResult(runtimeResult, queryContext, subscriber)
   }
 
   def insertStatic(clazz: Class[GeneratedQueryExecution], mappings: (String, Id)*) = mappings.foreach {

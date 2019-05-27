@@ -90,9 +90,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
-            .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create user '$userName'.")))
-            .handleError(e => new InvalidArgumentsException(s"The specified user '$userName' already exists.", e))
-            .handleResult(_ => clearCacheForUser(userName))
+            .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create user '$userName'."))
+            .handleError(e => throw new InvalidArgumentsException(s"The specified user '$userName' already exists.", e))
+            .handleResult((_, _) => clearCacheForUser(userName))
         )
       } finally {
         // Clear password
@@ -115,9 +115,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN user""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
-          .handleResult(_ => clearCacheForUser(userName))
+          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
+          .handleResult((_, _) => clearCacheForUser(userName))
       )
 
     // ALTER USER foo
@@ -143,20 +143,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         s"$query RETURN oldCredentials",
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
-          .handleResult(row => {
-            val maybeThrowable = initialStringPassword match {
-              case Some(password) =>
-                val oldCredentials = SystemGraphCredential.deserialize(row.get("oldCredentials").asInstanceOf[String], secureHasher)
-                if (oldCredentials.matchesPassword(UTF8.encode(password)))
-                  Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
-                else
-                  None
-              case None => None
-            }
+          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
+          .handleResult((_, value) => {
+            initialStringPassword.foreach(password => {
+              val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
+              if (oldCredentials.matchesPassword(UTF8.encode(password))) throw new InvalidArgumentsException("Old password and new password cannot be the same.")
+            })
             clearCacheForUser(userName)
-            maybeThrowable
           })
       )
 
@@ -202,8 +196,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN new.name""".stripMargin,
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create '$roleName'.")))
-          .handleError(e => new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e)),
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create '$roleName'."))
+          .handleError(e => throw new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -213,7 +207,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         """MATCH (role:Role {name: $name})
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
-        QueryHandler.handleNoResult(() => Some( new InvalidArgumentsException(s"Role '$roleName' does not exist."))),
+        QueryHandler.handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist.")),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -226,7 +220,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
            |MERGE (to)-[g:$grantDeny]->(a)
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
-        QueryHandler.handleError(e => new InvalidArgumentsException(s"Failed to copy privileges from '$from' to '$to'.", e)),
+        QueryHandler.handleError(e => throw new InvalidArgumentsException(s"Failed to copy privileges from '$from' to '$to'.", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -238,8 +232,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Role '$roleName' does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist."))
+          .handleError(e => throw new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
       )
 
     // GRANT ROLE foo TO user
@@ -252,9 +246,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
-          .handleResult(row => clearCacheForUser(row.get("user").toString))
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Cannot grant non-existent role '$roleName' to user '$userName'")))
-          .handleError(e => new InvalidArgumentsException(s"Cannot grant role '$roleName' to non-existent user '$userName'", e)),
+          .handleResult((_,value) => clearCacheForUser(value.asInstanceOf[TextValue].stringValue()))
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot grant non-existent role '$roleName' to user '$userName'"))
+          .handleError(e => throw new InvalidArgumentsException(s"Cannot grant role '$roleName' to non-existent user '$userName'", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -269,12 +263,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
-          .handleResult(row => {
-            val u = row.get("user")
-            if (u != null) clearCacheForUser(u.toString)
-            else Some(new InvalidArgumentsException(s"Cannot revoke role '$roleName' from non-existent user '$userName'"))
+          .handleResult((_, u) => {
+            if (u != Values.NO_VALUE) clearCacheForUser(u.asInstanceOf[TextValue].stringValue())
+            else new InvalidArgumentsException(s"Cannot revoke role '$roleName' from non-existent user '$userName'")
           })
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Cannot revoke non-existent role '$roleName' from user '$userName'"))),
+          .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot revoke non-existent role '$roleName' from user '$userName'")),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -391,9 +384,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             DatabaseStatus.Online
           )
         ),
-        QueryHandler.handleResult(record => {
-          if (record.get("db") == null) Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
-          else None
+        QueryHandler.handleResult((offset, value) => {
+          if (offset == 2 && value == Values.NO_VALUE) throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")
         })
       )
 
@@ -429,31 +421,30 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           Array(Values.stringValue(dbName))
         ),
         QueryHandler
-          .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")))
-          .handleResult(record => {
-            if (record.get("default").toString.equals("true")) {
-              Some(new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'."))
-            } else if (dbName.equals(SYSTEM_DATABASE_NAME)) {
-              Some(new DatabaseManagementException("Not allowed to " + action + " system database."))
-            } else None
+          .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+          .handleResult((_, value) => {
+            if (value == Values.TRUE) {
+              throw new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'.")
+            }
+            else if (dbName.equals(SYSTEM_DATABASE_NAME)) {
+              throw new DatabaseManagementException("Not allowed to " + action + " system database.")
+            }
           })
       )
   }
 
-  protected def clearCacheForUser(username: String): Option[Throwable] = {
+  protected def clearCacheForUser(username: String): Unit = {
     // TODO: Get handle on BasicSystemGraphRealm to clear the cache
     //See: BasicSystemGraphRealm.clearCacheForUser(username)
     authManager.clearAuthCache()
 
     // Ultimately this should go to the trigger handling done in the reconciler
-    None
   }
 
-  protected def clearCacheForRole(role: String): Option[Throwable] = {
+  protected def clearCacheForRole(role: String): Unit = {
     // TODO: Get handle on BasicSystemGraphRealm to clear the cache
     //See: BasicSystemGraphRealm.clearCacheForRole(rolename)
     // Ultimately this should go to the trigger handling done in the reconciler
-    None
   }
 
   private def validatePassword(password: Array[Byte]): Array[Byte] = {
@@ -485,7 +476,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
     }
-    UpdatingSystemCommandExecutionPlan("GrantPrivilege", normalExecutionEngine,
+    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
       s"""
          |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
          |$qualifierMerge
@@ -511,9 +502,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleResult(_ => clearCacheForRole(roleName))
-        .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + db + "' does not exist.")))
-        .handleError(t => new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)),
+        .handleResult((offset, _) => if (offset == 0) clearCacheForRole(roleName))
+        .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
+        .handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)),
       source
     )
   }
@@ -537,7 +528,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
     }
-    UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
+    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
       s"""
          |// Find the segment scope qualifier (eg. label qualifier, or all labels)
          |$qualifierMatch
@@ -556,15 +547,15 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |
          |// Remove the assignment
          |DELETE g
-         |RETURN r.name AS role, g AS grant""".stripMargin,
+         |RETURN g AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleResult(row => {
-          if (row.get("role") == null) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
-          if (row.get("grant") == null) Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
-          else clearCacheForRole(roleName)
+        .handleResult((offset, value) => {
+          if (offset == 4 && value == Values.NO_VALUE) throw new InvalidArgumentsException(s"The role '$roleName' does not exist.")
+          if (offset == 0 && value != Values.NO_VALUE) clearCacheForRole(roleName)
+          if (offset == 0 && value == Values.NO_VALUE) throw new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}.")
         })
-        .handleNoResult(() => Some(new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))),
+        .handleNoResult(() => throw new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist.")),
       source
     )
   }
