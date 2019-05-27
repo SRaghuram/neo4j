@@ -14,6 +14,12 @@
 	<formats>
 		<format>dir</format>
 	</formats>
+	
+	<files>
+		<file>
+			<source>target/ldbc.jar</source>
+		</file>
+	</files>
 
 	<moduleSets>
 		<moduleSet>
@@ -55,15 +61,6 @@
 			</sources>
 		</moduleSet>
 	</moduleSets>
-
-	<dependencySets>
-		<dependencySet>
-			<outputFileNameMapping>ldbc.jar</outputFileNameMapping>
-			<includes>
-				<include>com.neo4j.bench:neo4j-connectors</include>
-			</includes>
-		</dependencySet>
-	</dependencySets>
 
 	<fileSets>
 		<fileSet>

@@ -19,6 +19,9 @@
 		<file>
 			<source>run-report-benchmarks.sh</source>
 		</file>
+		<file>
+			<source>target/macro.jar</source>
+		</file>
 	</files>
 	
 	<moduleSets>	
@@ -42,15 +45,5 @@
 			</sources>
 		</moduleSet>
 	</moduleSets>
-	
-	<dependencySets>
-		<dependencySet>
-			<outputDirectory>.</outputDirectory>
-			<outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
-			<includes>
-				<include>com.neo4j.bench:macro</include>
-			</includes>
-		</dependencySet>
-	</dependencySets>
 
 </assembly>
