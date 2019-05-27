@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.database.DatabaseId;
 
-import static org.neo4j.function.Predicates.not;
+import static java.util.function.Predicate.not;
 
 @ServiceProvider
 public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabaseSelectionStrategy
