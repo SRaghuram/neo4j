@@ -66,7 +66,7 @@ import static org.neo4j.internal.id.IdType.SCHEMA;
 import static org.neo4j.internal.id.IdType.STRING_BLOCK;
 
 /**
- * Bootstraps a core database. A single instance is chosen as the bootstrapper, by the discovery service.
+ * Bootstraps a raft group for a core database. A single instance is chosen as the bootstrapper, by the discovery service.
  * <p>
  * To bootstrap, in this context, means to set the initial state of the cluster, e.g.
  * the initial state of the database, the initial members in the raft group, etc.
@@ -82,7 +82,7 @@ import static org.neo4j.internal.id.IdType.STRING_BLOCK;
  * the unbind tool to rid every member of the cluster state, then bootstrapping will happen
  * yet again.
  */
-public class DatabaseBootstrapper
+public class RaftBootstrapper
 {
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
@@ -96,7 +96,7 @@ public class DatabaseBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    public DatabaseBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
+    public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config )
     {
         this.bootstrapContext = bootstrapContext;

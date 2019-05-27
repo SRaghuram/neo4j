@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.state.DatabaseBootstrapper;
+import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -45,7 +45,7 @@ import static org.mockito.Mockito.when;
 
 class RaftBinderTest
 {
-    private final DatabaseBootstrapper databaseBootstrapper = mock( DatabaseBootstrapper.class );
+    private final RaftBootstrapper raftBootstrapper = mock( RaftBootstrapper.class );
     private final FakeClock clock = Clocks.fakeClock();
 
     private final Config config = Config.defaults();
@@ -55,7 +55,7 @@ class RaftBinderTest
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService )
     {
         return new RaftBinder( databaseId, raftIdStorage, topologyService, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), databaseBootstrapper, minCoreHosts, new Monitors() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors() );
     }
 
     @Test
@@ -171,7 +171,7 @@ class RaftBinderTest
         when( topologyService.setRaftId( any(), eq( databaseId ) ) ).thenReturn( true );
         when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
-        when( databaseBootstrapper.bootstrap( any() ) ).thenReturn( snapshot );
+        when( raftBootstrapper.bootstrap( any() ) ).thenReturn( snapshot );
 
         RaftBinder binder = raftBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -179,7 +179,7 @@ class RaftBinderTest
         BoundState boundState = binder.bindToRaft();
 
         // then
-        verify( databaseBootstrapper ).bootstrap( any() );
+        verify( raftBootstrapper ).bootstrap( any() );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         verify( topologyService ).setRaftId( raftId.get(), databaseId );

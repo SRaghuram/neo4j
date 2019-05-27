@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.state.DatabaseBootstrapper;
+import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -41,7 +41,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final DatabaseId databaseId;
     private final SimpleStorage<RaftId> raftIdStorage;
     private final CoreTopologyService topologyService;
-    private final DatabaseBootstrapper databaseBootstrapper;
+    private final RaftBootstrapper raftBootstrapper;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -52,13 +52,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     public RaftBinder( DatabaseId databaseId, SimpleStorage<RaftId> raftIdStorage,
             CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, DatabaseBootstrapper databaseBootstrapper, int minCoreHosts, Monitors monitors )
+            Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors )
     {
         this.databaseId = databaseId;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.raftIdStorage = raftIdStorage;
         this.topologyService = topologyService;
-        this.databaseBootstrapper = databaseBootstrapper;
+        this.raftBootstrapper = raftBootstrapper;
         this.clock = clock;
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
@@ -128,7 +128,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             else if ( hostShouldBootstrapRaft( topology ) )
             {
                 raftId = new RaftId( UUID.randomUUID() );
-                snapshot = databaseBootstrapper.bootstrap( topology.members().keySet() );
+                snapshot = raftBootstrapper.bootstrap( topology.members().keySet() );
                 monitor.bootstrapped( snapshot, databaseId, raftId );
                 publishRaftId( raftId );
             }

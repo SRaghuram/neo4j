@@ -71,7 +71,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension
-class DatabaseBootstrapperIT
+class RaftBootstrapperIT
 {
     @Inject
     private TestDirectory testDirectory;
@@ -119,7 +119,7 @@ class DatabaseBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
@@ -139,7 +139,7 @@ class DatabaseBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
@@ -164,7 +164,7 @@ class DatabaseBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
@@ -195,7 +195,7 @@ class DatabaseBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, logProvider, storageEngineFactory, config );
 
         // when
@@ -222,7 +222,7 @@ class DatabaseBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
@@ -250,14 +250,14 @@ class DatabaseBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache,
                 fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
-        assertableLogProvider.assertAtLeastOnce( inLog( DatabaseBootstrapper.class ).error( exception.getCause().getMessage() ) );
+        assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 
     @Test
@@ -285,13 +285,13 @@ class DatabaseBootstrapperIT
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        DatabaseBootstrapper bootstrapper = new DatabaseBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
                 pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
-        assertableLogProvider.assertAtLeastOnce( inLog( DatabaseBootstrapper.class ).error( exception.getCause().getMessage() ) );
+        assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig, int nodeCount ) throws IOException
