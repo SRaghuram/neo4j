@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
@@ -46,6 +47,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   // downstream buffers that they have to reference count for, and to the argument state maps
   // of any reducing operators.
 
+  private val queryStatus = new QueryStatus
   private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
   private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
                                              tracker,
@@ -89,14 +91,18 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def getSink[T <: AnyRef](fromPipeline: PipelineId,
                                     bufferId: BufferId): Sink[T] = {
-    new AlarmSink(buffers.sink[T](fromPipeline, bufferId), workerWaker)
+    new AlarmSink(buffers.sink[T](fromPipeline, bufferId), workerWaker, queryStatus)
   }
 
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
-    buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
-    workerWaker.wakeOne()
+    if (!queryStatus.failed) {
+      buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
+      workerWaker.wakeOne()
+    } else {
+      DebugSupport.logErrorHandling(s"Droped morsel $output because of query failure")
+    }
   }
 
   override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
@@ -152,8 +158,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
-                                                                  inputMorsel: MorselExecutionContext,
-                                                                  accumulator: MorselAccumulator[_]): Boolean = {
+                                        inputMorsel: MorselExecutionContext,
+                                        accumulator: MorselAccumulator[_]): Boolean = {
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
     val isCancelled = buffer.filterCancelledArguments(accumulator, inputMorsel)
     if (isCancelled)
@@ -161,13 +167,20 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     isCancelled
   }
 
-  override def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit = {
-    continuations(task.pipelineState.pipeline.id.x).put(task)
-    if (wakeUp && !task.pipelineState.pipeline.serial) {
-      // We only wake up other Threads if this pipeline is not serial.
-      // Otherwise they will all race to get this continuation while
-      // this Thread can just as well continue on its own.
-      workerWaker.wakeOne()
+  override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
+    if (queryStatus.failed) {
+      DebugSupport.logErrorHandling(s"[putContinuation] Closing $task because of query failure")
+      task.close(resources)
+    } else {
+      DebugSupport.logErrorHandling(s"[putContinuation] put $task")
+      continuations(task.pipelineState.pipeline.id.x).put(task)
+      if (wakeUp && !task.pipelineState.pipeline.serial) {
+        // We only wake up other Threads if this pipeline is not serial.
+        // Otherwise they will all race to get this continuation while
+        // this Thread can just as well continue on its own.
+        workerWaker.wakeOne()
+      }
+      closeWorkUnit(task.pipelineState.pipeline)
     }
   }
 
@@ -199,7 +212,36 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     asm
   }
 
-  override def failQuery(throwable: Throwable): Unit = {
+  /**
+    * Mark this query as failed, and close any outstanding work.
+    *
+    * To achieve a clean shut-down in the even of a failure, we
+    *
+    *  - close any new continuations being put into the execution state
+    *  - drop any new data being put into the execution state
+    *  - take and close all continuations and data we find in the execution state
+    *
+    * @param throwable the observed exception
+    * @param resources resources where to hand-back any open cursors
+    */
+  override def failQuery(throwable: Throwable, resources: QueryResources): Unit = {
+    queryStatus.failed = true
+
+    DebugSupport.logErrorHandling("Starting ExecutionState.failQuery")
+    buffers.clearAll()
+
+    for (pipeline <- pipelines) {
+      val continuationBuffer = continuations(pipeline.id.x)
+      DebugSupport.logErrorHandling(s"${if (pipeline.serial) "Ignoring" else "Clearing"} continuation buffer $continuationBuffer")
+      if (!pipeline.serial) {
+        var c = continuationBuffer.take()
+        while (c != null) {
+          c.close(resources)
+          c = continuationBuffer.take()
+        }
+      }
+    }
+
     tracker.error(throwable)
   }
 
@@ -213,4 +255,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   // used by join operator, to create thread-safe argument states in its RHS ASM
   override def newBuffer[T <: AnyRef](): Buffer[T] =
     stateFactory.newBuffer()
+}
+
+class QueryStatus {
+  @volatile var failed = false
 }

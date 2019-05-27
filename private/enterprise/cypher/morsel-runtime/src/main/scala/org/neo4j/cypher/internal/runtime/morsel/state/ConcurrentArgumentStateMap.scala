@@ -40,6 +40,16 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
     onState(controllers.get(argumentRowId).state)
   }
 
+  override def clearAll(f: STATE => Unit): Unit = {
+    controllers.forEach((_, controller) => {
+      if (controller.take) {
+        // We do not remove the controller from controllers here in case there
+        // is some outstanding work unit that wants to update count of accumulator
+        f(controller.state)
+      }
+    })
+  }
+
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {

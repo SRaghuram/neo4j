@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
-import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, Sink}
@@ -157,8 +157,12 @@ trait ExecutionState extends ArgumentStateMapCreator {
 
   /**
     * Put `task` to the continuation queue for its pipeline, so we can continue executing it later.
+    *
+    * @param task the task that can be executed (again)
+    * @param wakeUp `true` if a worker should be woken because of this put
+    * @param resources resources used for closing this task if the query is failed
     */
-  def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit
+  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit
 
   /**
     * Try to lock execution of the given pipeline.
@@ -186,8 +190,11 @@ trait ExecutionState extends ArgumentStateMapCreator {
 
   /**
     * Fail the query.
+    *
+    * @param throwable the observed exception
+    * @param resources resources where to hand-back any open cursors
     */
-  def failQuery(throwable: Throwable): Unit
+  def failQuery(throwable: Throwable, resources: QueryResources): Unit
 
   /**
     * Check whether this query has completed. A query is completed if it has

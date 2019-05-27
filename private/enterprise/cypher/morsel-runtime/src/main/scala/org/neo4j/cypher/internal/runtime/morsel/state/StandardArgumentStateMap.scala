@@ -37,6 +37,13 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     onState(controllers(argumentRowId).state)
   }
 
+  override def clearAll(f: STATE => Unit): Unit = {
+    controllers.foreach {
+      case (argumentRowId, controller) =>
+        f(controller.state)
+    }
+  }
+
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {

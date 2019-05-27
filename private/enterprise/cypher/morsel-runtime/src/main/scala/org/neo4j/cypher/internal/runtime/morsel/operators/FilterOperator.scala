@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation.{condition, equal, trueValue}
+import org.neo4j.codegen.api.IntermediateRepresentation.{condition, equal, trueValue, block}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
@@ -56,7 +56,7 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate:
     inner.genInit
   }
 
-  private var predicate: IntermediateExpression =_
+  private var predicate: IntermediateExpression = _
 
   override def genOperate: IntermediateRepresentation = {
     if (predicate != null) {
@@ -76,5 +76,8 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate:
   override def genFields: Seq[Field] = {
     predicate.fields ++ inner.genFields
   }
+
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = block()
 }

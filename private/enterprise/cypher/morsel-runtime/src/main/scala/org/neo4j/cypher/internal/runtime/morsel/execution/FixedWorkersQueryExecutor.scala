@@ -9,7 +9,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.debug.DebugLog
+import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManager}

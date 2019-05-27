@@ -87,7 +87,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = ()
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {}
   }
 
 }

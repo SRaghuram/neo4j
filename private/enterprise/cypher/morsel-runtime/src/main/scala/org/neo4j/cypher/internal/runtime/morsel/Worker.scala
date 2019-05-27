@@ -8,7 +8,8 @@ package org.neo4j.cypher.internal.runtime.morsel
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
-import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
@@ -64,53 +65,86 @@ class Worker(val workerId: Int,
     * Try to obtain a task for a given query and work on it.
     *
     * @param executingQuery the query
-    * @return if some work was performed
+    * @return `true` if some work was performed, otherwise `false`
     */
   def workOnQuery(executingQuery: ExecutingQuery): Boolean = {
-    try {
-      val task = schedulingPolicy.nextTask(executingQuery, resources)
-      if (task != null) {
+    val task = scheduleNextTask(executingQuery)
+    if (task == null) {
+      false
+    } else {
+      try {
         val state = task.pipelineState
 
-        try {
-          executingQuery.bindTransactionToThread()
-
-          val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-          val preparedOutput = task.executeWorkUnit(resources, workUnitEvent)
-          workUnitEvent.stop()
-          preparedOutput.produce()
-        } finally {
-          executingQuery.unbindTransaction()
-        }
+        executeTask(executingQuery, task)
 
         if (task.canContinue) {
           // Put the continuation before unlocking (closeWorkUnit)
           // so that in serial pipelines we can guarantee that the continuation
           // is the next thing which is picked up
-          state.putContinuation(task, false)
-          state.closeWorkUnit()
+          state.putContinuation(task, wakeUp = false, resources)
         } else {
-          task.close()
+          task.close(resources)
         }
         true
-      } else {
-        false
+      } catch {
+        // Failure while executing `task`
+        case throwable: Throwable =>
+          executingQuery.executionState.failQuery(throwable, resources)
+          throwable.printStackTrace()
+          task.close(resources)
+          true
       }
-    } catch {
+    }
+  }
 
-      // Failure in scheduling or execution of the query
+  private def executeTask(executingQuery: ExecutingQuery,
+                          task: PipelineTask): Unit = {
+    try {
+      executingQuery.bindTransactionToThread()
+
+      DebugLog.log("[WORKER%2d] working on %s".format(workerId, task))
+
+      val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task,
+                                                                               upstreamWorkUnitEvents(task)).start()
+      val preparedOutput = task.executeWorkUnit(resources, workUnitEvent)
+      workUnitEvent.stop()
+      preparedOutput.produce()
+    } finally {
+      executingQuery.unbindTransaction()
+    }
+  }
+
+  private def scheduleNextTask(executingQuery: ExecutingQuery): PipelineTask = {
+    try {
+      schedulingPolicy.nextTask(executingQuery, resources)
+    } catch {
+      // Failure in scheduling query
       case throwable: Throwable =>
-        executingQuery.executionState.failQuery(throwable)
-        false
+        executingQuery.executionState.failQuery(throwable, resources)
+        null
     }
   }
 
   def close(): Unit = {
-    resources.close()
+    try {
+      assertAllReleased()
+    } finally {
+      resources.close()
+    }
   }
 
   def collectCursorLiveCounts(acc: LiveCounts): Unit = {
     resources.cursorPools.collectLiveCounts(acc)
+  }
+
+  private def assertAllReleased(): Unit = {
+    val liveCounts = new LiveCounts()
+    collectCursorLiveCounts(liveCounts)
+    liveCounts.assertAllReleased()
+
+    if (sleeper.isActive) {
+      throw new RuntimeResourceLeakException("Worker $w is ACTIVE even though all resources should be released!")
+    }
   }
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {

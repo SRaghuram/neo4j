@@ -87,6 +87,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
       pools.nodeCursorPool.free(nodeCursor)
       pools.relationshipGroupCursorPool.free(groupCursor)
       pools.relationshipTraversalCursorPool.free(traversalCursor)
+      nodeCursor = null
+      groupCursor = null
+      traversalCursor = null
       relationships = null
     }
 

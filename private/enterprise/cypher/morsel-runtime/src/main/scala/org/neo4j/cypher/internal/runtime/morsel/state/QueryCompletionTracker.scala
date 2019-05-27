@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.debug
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
@@ -144,16 +145,20 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
-    debug(s"Incremented ${getClass.getSimpleName}. New count: $newCount")
+    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName}. New count: $newCount")
     newCount
   }
 
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
-    debug(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
+    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
       try {
-        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        if (errors.isEmpty) {
+          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        } else {
+          subscriber.onError(allErrors())
+        }
       } finally {
         completeQuery()
       }
@@ -164,14 +169,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def error(throwable: Throwable): Unit = {
-    try {
-      errors.add(throwable)
-      synchronized {
-        subscriber.onError(throwable)
-      }
-    } finally {
-      completeQuery()
-    }
+    errors.add(throwable)
   }
 
   private def completeQuery(): Unit = {
@@ -228,9 +226,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   override def await(): Boolean = {
     latch.await()
     if (!errors.isEmpty) {
-      val firstException = errors.poll()
-      errors.forEach(t => firstException.addSuppressed(t))
-      throw firstException
+      throw allErrors()
     }
     !isCompleted
   }
@@ -243,5 +239,11 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (latch.getCount == 0) {
       latch = new CountDownLatch(1)
     }
+  }
+
+  private def allErrors(): Throwable = {
+    val first = errors.peek()
+    errors.forEach(t => if (t != first) first.addSuppressed(t))
+    first
   }
 }

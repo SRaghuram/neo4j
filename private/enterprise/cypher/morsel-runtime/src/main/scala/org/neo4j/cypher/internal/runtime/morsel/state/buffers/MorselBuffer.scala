@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, MorselParallelizer, QueryCompletionTracker}
 
 /**
@@ -26,7 +26,8 @@ class MorselBuffer(tracker: QueryCompletionTracker,
                   ) extends ArgumentCountUpdater
                     with Sink[MorselExecutionContext]
                     with Source[MorselParallelizer]
-                    with SinkByOrigin {
+                    with SinkByOrigin
+                    with DataHolder {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
@@ -64,6 +65,14 @@ class MorselBuffer(tracker: QueryCompletionTracker,
       new Parallelizer(morsel)
   }
 
+  override def clearAll(): Unit = {
+    var morsel = inner.take()
+    while (morsel != null) {
+      close(morsel)
+      morsel = inner.take()
+    }
+  }
+
   /**
     * Remove all rows related to cancelled argumentRowIds from `morsel`.
     *
@@ -94,6 +103,8 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     decrementArgumentCounts(downstreamArgumentReducers, morsel)
     tracker.decrement()
   }
+
+  override def toString: String = s"MorselBuffer($inner)"
 
   /**
     * Implementation of [[MorselParallelizer]] that ensures correct reference counting.

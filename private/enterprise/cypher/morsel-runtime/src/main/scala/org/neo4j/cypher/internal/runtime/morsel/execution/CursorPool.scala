@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
+import org.neo4j.util.Preconditions
 
 class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
 

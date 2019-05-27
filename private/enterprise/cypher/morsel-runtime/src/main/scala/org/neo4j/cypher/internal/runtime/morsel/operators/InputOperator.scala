@@ -65,6 +65,8 @@ class InputOperator(val workIdentity: WorkIdentity,
     }
 
     override def canContinue: Boolean = input.canContinue
+
+    override protected def closeCursors(resources: QueryResources): Unit = input.close()
   }
 }
 
@@ -100,6 +102,12 @@ class MutatingInputCursor(input: InputDataStream) {
 
     throw new IllegalStateException("Unreachable code")
   }
+
+  def close(): Unit =
+    if (cursor != null) {
+      cursor.close()
+      cursor = null
+    }
 }
 
 class InputOperatorTemplate(inner: OperatorTaskTemplate,
@@ -115,6 +123,9 @@ class InputOperatorTemplate(inner: OperatorTaskTemplate,
 
   override def genCanContinue: Option[IntermediateRepresentation] =
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+
+  override def genCloseCursors: IntermediateRepresentation =
+    invoke(loadField(inputCursorField), method[MutatingInputCursor, Unit]("close"))
 
   /**
     * {{{

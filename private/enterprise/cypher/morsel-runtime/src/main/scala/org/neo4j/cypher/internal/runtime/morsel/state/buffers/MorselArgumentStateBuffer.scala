@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
 
 /**
@@ -29,7 +29,8 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
                                     with AccumulatingBuffer
                                     with Sink[IndexedSeq[PerArgument[DATA]]]
                                     with Source[ACC]
-                                    with SinkByOrigin {
+                                    with SinkByOrigin
+                                    with DataHolder {
 
   private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
 
@@ -66,6 +67,10 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
 
   override def decrement(argumentRowId: Long): Unit = {
     argumentStateMap.decrement(argumentRowId)
+  }
+
+  override def clearAll(): Unit = {
+    argumentStateMap.clearAll(acc => close(acc))
   }
 
   /**

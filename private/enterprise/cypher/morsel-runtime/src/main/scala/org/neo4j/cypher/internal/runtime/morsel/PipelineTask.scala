@@ -65,8 +65,8 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   /**
     * Close resources related to this task and update relevant counts.
     */
-  def close(): Unit = {
-    startTask.close(pipelineState)
+  def close(resources: QueryResources): Unit = {
+    startTask.close(pipelineState, resources)
   }
 
   override def workId: Int = pipelineState.pipeline.workId

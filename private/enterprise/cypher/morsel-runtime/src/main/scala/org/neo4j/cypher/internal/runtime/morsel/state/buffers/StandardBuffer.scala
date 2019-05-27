@@ -29,4 +29,15 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   override def foreach(f: T => Unit): Unit = {
     data.foreach(f)
   }
+
+  override def toString: String = {
+    val sb = new StringBuilder()
+    sb ++= "StandardBuffer("
+    data.foreach(t => {
+      sb ++= t.toString
+      sb += ','
+    })
+    sb += ')'
+    sb.result()
+  }
 }

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.debug
 
 /**
@@ -69,7 +70,7 @@ class ConcurrentLock(val id: String) extends Lock {
 
   override def tryLock(): Boolean = {
     val success = isLocked.compareAndSet(false, true)
-    debug(s"${Thread.currentThread().getId} tried locking $name. Success: $success")
+    DebugSupport.logLocks(s"${Thread.currentThread().getId} tried locking $name. Success: $success")
     success
   }
 
@@ -80,7 +81,7 @@ class ConcurrentLock(val id: String) extends Lock {
     if (!isLocked.compareAndSet(true, false)) {
       throw new IllegalStateException(s"${Thread.currentThread().getId} tried to release $name that was not acquired.")
     } else {
-      debug(s"${Thread.currentThread().getId} unlocked $name.")
+      DebugSupport.logLocks(s"${Thread.currentThread().getId} unlocked $name.")
     }
   }
 

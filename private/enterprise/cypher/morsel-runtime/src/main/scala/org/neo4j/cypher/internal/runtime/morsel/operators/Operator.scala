@@ -202,7 +202,12 @@ trait OperatorTask {
   */
 trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
-  def close(operatorCloser: OperatorCloser): Unit
+  def close(operatorCloser: OperatorCloser, resources: QueryResources): Unit = {
+    closeInput(operatorCloser)
+    closeCursors(resources)
+  }
+  protected def closeInput(operatorCloser: OperatorCloser): Unit
+  protected def closeCursors(resources: QueryResources): Unit
   def producingWorkUnitEvent: WorkUnitEvent
 
   /**
@@ -216,7 +221,7 @@ trait ContinuableOperatorTask extends OperatorTask {
 trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
   val inputMorsel: MorselExecutionContext
 
-  override def close(operatorCloser: OperatorCloser): Unit = {
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorsel(inputMorsel)
   }
 
@@ -230,7 +235,7 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
 trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends ContinuableOperatorTask {
   val accumulator: ACC
 
-  override def close(operatorCloser: OperatorCloser): Unit = {
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeAccumulator(accumulator)
   }
 
@@ -245,7 +250,7 @@ trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: Mor
   extends ContinuableOperatorTaskWithMorsel
   with ContinuableOperatorTaskWithAccumulator[DATA, ACC] {
 
-  override def close(operatorCloser: OperatorCloser): Unit = {
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorselAndAccumulatorTask(inputMorsel, accumulator)
   }
 

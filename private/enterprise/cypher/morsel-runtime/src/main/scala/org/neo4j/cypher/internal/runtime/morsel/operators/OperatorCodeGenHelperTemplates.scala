@@ -29,6 +29,7 @@ object OperatorCodeGenHelperTemplates {
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
+  val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")
 
   // Fields
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))

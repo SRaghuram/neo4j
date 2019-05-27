@@ -125,8 +125,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
                                                             context,
                                                             state,
                                                             this))
-      for (task <- tasks.tail)
-        putContinuation(task, true)
+      var i = 1
+      while (i < tasks.length) {
+        putContinuation(tasks(i), wakeUp = true, resources)
+        i += 1
+      }
       tasks.head
     } else {
       null
@@ -136,10 +139,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
   /**
     * If a task can continue, or multiple parallel tasks for a pipeline are obtained at once,
     * this method it will be placed in the continuation queue for this pipeline.
-    * @param task the task that can be executed (again),
+    *
+    * @param task the task that can be executed (again)
+    * @param wakeUp `true` if a worker should be woken because of this put
+    * @param resources resources used for closing this task if the query is failed
     */
-  def putContinuation(task: PipelineTask, wakeUp: Boolean): Unit = {
-    executionState.putContinuation(task, wakeUp)
+  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
+    executionState.putContinuation(task, wakeUp, resources)
   }
 
   /**

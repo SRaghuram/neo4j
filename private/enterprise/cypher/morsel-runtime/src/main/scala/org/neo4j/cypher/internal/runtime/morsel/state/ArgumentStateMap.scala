@@ -16,6 +16,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 trait ArgumentStateMap[S <: ArgumentState] {
 
+  def clearAll(f: S => Unit): Unit
+
   /**
     * Update the [[ArgumentState]] related to `argument` and decrement
     * the argument counter.

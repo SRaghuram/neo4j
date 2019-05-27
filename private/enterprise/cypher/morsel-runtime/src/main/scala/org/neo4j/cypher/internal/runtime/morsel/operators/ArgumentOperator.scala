@@ -42,5 +42,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
     }
 
     override def canContinue: Boolean = false
+
+    override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 }

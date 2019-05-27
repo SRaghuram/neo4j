@@ -80,6 +80,12 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
   override def canContinue: Boolean =
     inputMorsel.isValidRow || innerLoop
+
+  override protected def closeCursors(resources: QueryResources): Unit = {
+    if (innerLoop) {
+      closeInnerLoop(resources)
+    }
+  }
 }
 
 abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
@@ -93,6 +99,12 @@ abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+  }
+
+  override def genCloseCursors: IntermediateRepresentation = {
+    condition(loadField(INNER_LOOP))(
+      genCloseInnerLoop
+    )
   }
 
   override def genInit: IntermediateRepresentation = {

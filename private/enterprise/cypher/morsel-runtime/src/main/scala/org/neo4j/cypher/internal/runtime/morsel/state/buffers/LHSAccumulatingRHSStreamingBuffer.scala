@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker, StateFactory}
 
 /**
@@ -67,7 +67,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
                                          stateFactory: StateFactory
                                        ) extends ArgumentCountUpdater
                                             with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
-                                            with SinkByOrigin {
+                                            with SinkByOrigin
+                                            with DataHolder {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
@@ -116,6 +117,20 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
   def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Boolean = {
     // TODO
     false
+  }
+
+  override def clearAll(): Unit = {
+    // Since the RHS controls downstream execution, it is enough to empty the RHS to stop
+    // further work from happening. The LHS will be cleared shortly as the query is stopped
+    // and left to be garbage collected.
+    rhsArgumentStateMap.clearAll(buffer => {
+      var morsel = buffer.take()
+      while (morsel != null) {
+        decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(buffer.argumentRowId))
+        tracker.decrement()
+        morsel = buffer.take()
+      }
+    })
   }
 
   def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Unit = {

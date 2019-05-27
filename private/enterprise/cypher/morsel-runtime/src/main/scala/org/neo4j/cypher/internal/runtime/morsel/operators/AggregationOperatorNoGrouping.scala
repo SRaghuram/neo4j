@@ -142,6 +142,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       // This operator will never continue since it will always write a single row
       override def canContinue: Boolean = false
+
+      override protected def closeCursors(resources: QueryResources): Unit = {}
     }
   }
 }

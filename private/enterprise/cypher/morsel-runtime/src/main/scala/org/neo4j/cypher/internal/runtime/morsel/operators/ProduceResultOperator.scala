@@ -57,6 +57,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
       produceOutput(inputMorsel, context, state, resources)
     }
+
+    override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 
   //==========================================================================
@@ -215,6 +217,8 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
     inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = block()
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record

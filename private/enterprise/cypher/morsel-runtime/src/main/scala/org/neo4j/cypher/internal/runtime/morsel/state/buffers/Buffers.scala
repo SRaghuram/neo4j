@@ -6,9 +6,10 @@
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, QueryCompletionTracker, StateFactory}
 
 /**
@@ -148,6 +149,21 @@ class Buffers(numBuffers: Int,
     */
   def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingBuffer[_, _] =
     buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingBuffer[_, _]]
+
+  /**
+    * Clear all data from all buffers.
+    */
+  def clearAll(): Unit = {
+    for (buffer <- buffers) {
+      buffer match {
+        case dataHolder: DataHolder =>
+          DebugSupport.logErrorHandling(s"Clearing $dataHolder")
+          dataHolder.clearAll()
+        case x => // nothing to do here
+          DebugSupport.logErrorHandling(s"Not clearing $x")
+      }
+    }
+  }
 }
 
 /**
@@ -169,6 +185,19 @@ object Buffers {
       * @return the Sink.
       */
     def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T]
+  }
+
+  /**
+    * Since some buffers merely augment and pass on data (e.g. [[MorselApplyBuffer]]), this trait
+    * distinguishes the buffers that actually hold onto data.
+    */
+  trait DataHolder {
+
+    /**
+      * Clear all data from this data holder. This includes decrementing the [[QueryCompletionTracker]]
+      * to make sure that the query execution in cleanly closed.
+      */
+    def clearAll(): Unit
   }
 
   /**

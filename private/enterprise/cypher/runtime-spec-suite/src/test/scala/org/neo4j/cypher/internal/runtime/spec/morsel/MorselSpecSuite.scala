@@ -118,6 +118,7 @@ class MorselReactiveParallelNoFusingStressTest
 class MorselSingleThreadedTest extends MorselTestSuite(ENTERPRISE.SINGLE_THREADED)
 class MorselSingleThreadedNoFusingTest extends MorselTestSuite(ENTERPRISE.SINGLE_THREADED_NO_FUSING)
 class MorselParallelTest extends MorselTestSuite(ENTERPRISE.PARALLEL)
+class MorselParallelNoFusingTest extends MorselTestSuite(ENTERPRISE.PARALLEL_NO_FUSING)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
 
 abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, MorselRuntime) {
@@ -375,9 +376,28 @@ abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     }
   }
 
-  //NOTE: this could maybe be removed once morsel and morsel are merged since then
-  //      we get test coverage also from PrePopulateAcceptanceTests. However this might
-  //      be nice to have since it will test both with fusing enabled and disabled.
+  test("should complete query with error and close cursors") {
+    nodePropertyGraph(SIZE_HINT, {
+      case i => Map("prop" -> (i - (SIZE_HINT / 2)))
+    })
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("n")
+      .filter("100/n.prop = 1") // will explode!
+      .allNodeScan("n")
+      .build()
+
+    // when
+    import scala.concurrent.ExecutionContext.global
+    val futureResult = Future(consume(execute(logicalQuery, runtime)))(global)
+
+    // then
+    intercept[org.neo4j.cypher.internal.v4_0.util.ArithmeticException] {
+      Await.result(futureResult, 30.seconds)
+    }
+  }
+
   test("should prepopulate results") {
     // given
     circleGraph(11)

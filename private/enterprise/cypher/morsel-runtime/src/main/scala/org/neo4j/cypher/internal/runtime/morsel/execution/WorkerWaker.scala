@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.state.QueryStatus
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
 
 trait WorkerWaker {
@@ -15,14 +17,18 @@ trait WorkerWaker {
   def wakeOne(): Unit
 }
 
-class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker) extends Sink[T] {
+class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker, queryStatus: QueryStatus) extends Sink[T] {
 
   /**
     * Put an element in this sink
     */
   override def put(t: T): Unit = {
-    inner.put(t)
-    waker.wakeOne()
+    if (!queryStatus.failed) {
+      inner.put(t)
+      waker.wakeOne()
+    } else {
+      DebugSupport.logErrorHandling(s"Droped data $t because of query failure")
+    }
   }
 
   override def canPut: Boolean = inner.canPut

@@ -89,5 +89,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     }
 
     override def canContinue: Boolean = !sortedInputPerArgument.isEmpty
+
+    override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 }

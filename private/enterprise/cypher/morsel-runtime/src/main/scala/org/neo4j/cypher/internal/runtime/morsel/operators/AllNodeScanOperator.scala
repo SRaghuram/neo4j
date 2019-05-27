@@ -136,6 +136,8 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     }
 
     override def canContinue: Boolean = _canContinue
+
+    override protected def closeCursors(resources: QueryResources): Unit = resources.cursorPools.nodeCursorPool.free(cursor)
   }
 
 }

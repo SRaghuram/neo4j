@@ -228,6 +228,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       }
 
       override def canContinue: Boolean = resultIterator.hasNext
+
+      override protected def closeCursors(resources: QueryResources): Unit = {}
     }
   }
 }
