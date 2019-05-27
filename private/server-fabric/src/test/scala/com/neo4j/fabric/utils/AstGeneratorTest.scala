@@ -10,6 +10,7 @@ import com.neo4j.fabric.utils.Rewritten._
 import com.neo4j.fabric.{AstHelp, Test}
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.generator.AstGenerator
+import org.neo4j.cypher.internal.v4_0.ast.generator.AstShrinker.shrinkQuery
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.util.ASTNode
 import org.scalatest.Assertion
@@ -18,8 +19,6 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChecks {
 
   val gen = AstGenerator(simpleStrings = false)
-
-  import gen.Shrinker.shrinkQuery
 
   val pr = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
 
