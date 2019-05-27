@@ -22,17 +22,18 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    if (state.singeThreaded) {
+    if (parallelism == 1) {
       // Single threaded scan
       IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
     } else {
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
-      val tasks = new Array[ContinuableOperatorTaskWithMorsel](state.numberOfWorkers)
+      val tasks = new Array[ContinuableOperatorTaskWithMorsel](parallelism)
       var i = 0
-      while (i < state.numberOfWorkers) {
+      while (i < parallelism) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
         val rowForTask = inputMorsel.nextCopy

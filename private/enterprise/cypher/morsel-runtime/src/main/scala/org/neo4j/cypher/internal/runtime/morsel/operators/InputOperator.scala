@@ -28,12 +28,13 @@ class InputOperator(val workIdentity: WorkIdentity,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    if (state.singeThreaded)
+    if (parallelism == 1)
       IndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
     else
-      new Array[InputTask](state.numberOfWorkers).map(_ => new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
+      new Array[InputTask](parallelism).map(_ => new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
   }
 
   /**

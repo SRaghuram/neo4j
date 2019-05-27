@@ -28,6 +28,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     val indexSession = state.queryIndexes(queryIndexId)

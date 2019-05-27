@@ -22,7 +22,4 @@ case class QueryState(params: Array[AnyValue],
                       numberOfWorkers: Int,
                       nExpressionSlots: Int,
                       prepopulateResults: Boolean,
-                      input: InputDataStream) {
-
-  def singeThreaded: Boolean = numberOfWorkers == 1
-}
+                      input: InputDataStream)

@@ -20,6 +20,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
   */
 trait StateFactory {
   def newBuffer[T <: AnyRef](): Buffer[T]
+  def newSingletonBuffer[T <: AnyRef](): Buffer[T]
   def newTracker(subscriber: QuerySubscriber,
                  queryContext: QueryContext,
                  tracer: QueryExecutionTracer): QueryCompletionTracker

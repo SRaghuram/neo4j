@@ -114,7 +114,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
       return task
     }
 
-    val streamTasks = startState.nextTasks(context, state, this, resources)
+    val parallelism = if (pipeline.serial) 1 else state.numberOfWorkers
+    val streamTasks = startState.nextTasks(context, state, this, parallelism, resources)
     if (streamTasks != null) {
       Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
       val tasks = streamTasks.map(startTask => PipelineTask(startTask,

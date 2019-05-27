@@ -45,6 +45,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
   override def nextTasks(context: QueryContext,
                          state: QueryState,
                          operatorInput: OperatorInput,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {

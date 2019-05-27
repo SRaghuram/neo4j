@@ -41,6 +41,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   override def nextTasks(context: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 

@@ -23,6 +23,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     // Single threaded scan

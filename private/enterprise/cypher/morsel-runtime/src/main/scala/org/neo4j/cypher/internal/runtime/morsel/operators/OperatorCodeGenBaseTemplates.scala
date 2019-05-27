@@ -31,6 +31,7 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
   override protected def nextTasks(context: QueryContext,
                                    state: QueryState,
                                    inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
                                    resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     taskFactory(context.transactionalContext.dataRead, inputMorsel)
   }

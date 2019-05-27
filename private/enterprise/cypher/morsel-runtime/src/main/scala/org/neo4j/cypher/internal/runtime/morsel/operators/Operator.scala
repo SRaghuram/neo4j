@@ -109,6 +109,7 @@ trait OperatorState {
   def nextTasks(context: QueryContext,
                 state: QueryState,
                 operatorInput: OperatorInput,
+                parallelism: Int,
                 resources: QueryResources): IndexedSeq[ContinuableOperatorTask]
 }
 
@@ -120,6 +121,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
   final override def nextTasks(context: QueryContext,
                                state: QueryState,
                                operatorInput: OperatorInput,
+                               parallelism: Int,
                                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
     val input = operatorInput.takeAccumulator[DATA, ACC]()
     if (input != null) {
@@ -146,10 +148,11 @@ trait StreamingOperator extends Operator with OperatorState {
   final override def nextTasks(context: QueryContext,
                                state: QueryState,
                                operatorInput: OperatorInput,
+                               parallelism: Int,
                                resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val input = operatorInput.takeMorsel()
     if (input != null) {
-      nextTasks(context, state, input, resources)
+      nextTasks(context, state, input, parallelism, resources)
     } else {
       null
     }
@@ -162,6 +165,7 @@ trait StreamingOperator extends Operator with OperatorState {
   protected def nextTasks(context: QueryContext,
                           state: QueryState,
                           inputMorsel: MorselParallelizer,
+                          parallelism: Int,
                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
   override final def createState(argumentStateCreator: ArgumentStateMapCreator): OperatorState = this

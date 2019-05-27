@@ -75,7 +75,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
 
   private val continuations: Array[Buffer[PipelineTask]] =
-    pipelines.map(_ => stateFactory.newBuffer[PipelineTask]()).toArray
+    pipelines.map(p =>
+                    if (p.serial) stateFactory.newSingletonBuffer[PipelineTask]()
+                    else stateFactory.newBuffer[PipelineTask]()
+    ).toArray
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer

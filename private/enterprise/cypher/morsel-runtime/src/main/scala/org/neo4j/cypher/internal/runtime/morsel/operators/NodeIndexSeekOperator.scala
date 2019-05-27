@@ -36,6 +36,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new OTask(inputMorsel.nextCopy))

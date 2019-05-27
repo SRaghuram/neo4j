@@ -23,6 +23,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
   override def nextTasks(context: QueryContext,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
+                         parallelism: Int,
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
