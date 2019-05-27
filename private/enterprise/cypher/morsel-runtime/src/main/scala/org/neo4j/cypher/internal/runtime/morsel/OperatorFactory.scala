@@ -9,17 +9,17 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
+import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.internal.kernel
 
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
@@ -65,7 +65,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                   label,
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
                                   queryIndexes.registerQueryIndex(label, properties),
-                                  indexOrder,
+                                  asKernelIndexOrder(indexOrder),
                                   argumentSize,
                                   valueExpr.map(converters.toCommandExpression(id, _)),
                                   indexSeekMode)
@@ -78,7 +78,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                   label,
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
                                   queryIndexes.registerQueryIndex(label, properties),
-                                  indexOrder,
+                                  asKernelIndexOrder(indexOrder),
                                   argumentSize,
                                   valueExpr.map(converters.toCommandExpression(id, _)),
                                   indexSeekMode)
@@ -246,13 +246,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               slots,
                               runtimeColumns)
   }
-
-  private def asKernelIndexOrder(indexOrder: plans.IndexOrder): kernel.api.IndexOrder =
-    indexOrder match {
-      case plans.IndexOrderAscending => kernel.api.IndexOrder.ASCENDING
-      case plans.IndexOrderDescending => kernel.api.IndexOrder.DESCENDING
-      case plans.IndexOrderNone => kernel.api.IndexOrder.NONE
-    }
 
   def createOutput(outputDefinition: OutputDefinition): OutputOperator = {
 
