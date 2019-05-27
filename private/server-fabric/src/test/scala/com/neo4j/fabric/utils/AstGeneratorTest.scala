@@ -9,6 +9,7 @@ import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.utils.Rewritten._
 import com.neo4j.fabric.{AstHelp, Test}
 import org.neo4j.cypher.internal.v4_0.ast._
+import org.neo4j.cypher.internal.v4_0.ast.generator.AstGenerator
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.util.ASTNode
 import org.scalatest.Assertion
@@ -37,8 +38,6 @@ class AstGeneratorTest extends Test with AstHelp with GeneratorDrivenPropertyChe
   def sidebyside(a: Any, b: Any, width: Int, height: Int): Unit = {
     val as = pprint.apply(a, width = width, height = height).render.linesIterator
     val bs = pprint.apply(b, width = width, height = height).render.linesIterator
-
-    fansi.Str.apply("dada").length
     for {
       (l, r) <- as.zipAll(bs, "", "")
       printedWidth = fansi.Str.ansiRegex.matcher(l).replaceAll("").length

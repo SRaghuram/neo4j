@@ -3,21 +3,22 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.utils
+package org.neo4j.cypher.internal.v4_0.ast.generator
 
-import com.neo4j.fabric.AstHelp
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.symbols.AnyType
-import org.parboiled.support.Chars
+import org.neo4j.cypher.internal.v4_0.util.{ASTNode, InputPosition, Rewriter, bottomUp}
 import org.scalacheck.Gen._
 import org.scalacheck.util.Buildable
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 
-case class AstGenerator(simpleStrings: Boolean = true) extends AstHelp {
+case class AstGenerator(simpleStrings: Boolean = true) {
 
   // HELPERS
   // ==========================================================================
+
+  val ? : InputPosition = InputPosition.NONE
 
   def boolean: Gen[Boolean] =
     Arbitrary.arbBool.arbitrary
@@ -25,15 +26,25 @@ case class AstGenerator(simpleStrings: Boolean = true) extends AstHelp {
   def char: Gen[Char] =
     Arbitrary.arbChar.arbitrary.suchThat(acceptedByParboiled)
 
-  def acceptedByParboiled(c: Char): Boolean = c match {
-    case Chars.DEL_ERROR    => false
-    case Chars.INS_ERROR    => false
-    case Chars.RESYNC       => false
-    case Chars.RESYNC_START => false
-    case Chars.RESYNC_END   => false
-    case Chars.RESYNC_EOI   => false
-    case Chars.EOI          => false
-    case _                  => true
+  def acceptedByParboiled(c: Char): Boolean = {
+    val DEL_ERROR = '\ufdea'
+    val INS_ERROR = '\ufdeb'
+    val RESYNC = '\ufdec'
+    val RESYNC_START = '\ufded'
+    val RESYNC_END = '\ufdee'
+    val RESYNC_EOI = '\ufdef'
+    val EOI = '\uffff'
+
+    c match {
+      case DEL_ERROR    => false
+      case INS_ERROR    => false
+      case RESYNC       => false
+      case RESYNC_START => false
+      case RESYNC_END   => false
+      case RESYNC_EOI   => false
+      case EOI          => false
+      case _            => true
+    }
   }
 
   def string: Gen[String] =
@@ -721,9 +732,6 @@ case class AstGenerator(simpleStrings: Boolean = true) extends AstHelp {
   )
 
   object Shrinker {
-
-    import com.neo4j.fabric.utils.Monoid._
-    import com.neo4j.fabric.utils.Rewritten._
 
     import scala.util.Random
 
