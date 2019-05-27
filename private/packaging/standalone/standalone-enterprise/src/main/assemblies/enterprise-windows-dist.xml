@@ -71,6 +71,18 @@
         <include>**/*.jar</include>
       </includes>
     </fileSet>
+    <!-- TODO: temporary workaround for browser dependency -->
+    <fileSet>
+      <directory>${project.parent.basedir}/src/main/distribution/neo4j-browser-flat</directory>
+      <outputDirectory>/lib</outputDirectory>
+      <includes>
+        <include>**/*.jar</include>
+      </includes>
+      <excludes>
+        <exclude>**/*-sources.jar</exclude>
+        <exclude>**/*-tests.jar</exclude>
+      </excludes>
+    </fileSet>
   </fileSets>
 
   <dependencySets>
@@ -112,6 +124,7 @@
         <exclude>org.apache.commons:commons-lang3</exclude>
         <exclude>io.dropwizard.metrics:*</exclude>
         <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>org.neo4j.client:neo4j-browser</exclude> <!-- TODO: temporary workaround for browser dependency -->
       </excludes>
     </dependencySet>
   </dependencySets>
