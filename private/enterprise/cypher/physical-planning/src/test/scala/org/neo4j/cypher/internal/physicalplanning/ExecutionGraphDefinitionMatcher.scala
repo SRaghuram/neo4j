@@ -52,8 +52,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                        plans: Seq[Class[_ <: LogicalPlan]],
                                        inputBuffer: BufferId,
                                        outputDefinition: MatchableOutputDefinition,
-                                       serial: Boolean,
-                                       checkHasDemand: Boolean)
+                                       serial: Boolean)
 
   private sealed trait MatchableOutputDefinition
 
@@ -135,8 +134,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   }
 
   abstract class BufferBeforePipelineSequence(bufferDefinition: BufferDefinition) extends BufferSequence(bufferDefinition) {
-    def pipeline(id: Int, plans: Seq[Class[_ <: LogicalPlan]] = Seq.empty, serial: Boolean = false, checkHasDemand: Boolean = false): PipelineSequence = {
-      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, bufferDefinition.id, null, serial, checkHasDemand))
+    def pipeline(id: Int, plans: Seq[Class[_ <: LogicalPlan]] = Seq.empty, serial: Boolean = false): PipelineSequence = {
+      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, bufferDefinition.id, null, serial))
       new PipelineSequence(mp)
     }
 
@@ -208,8 +207,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
         (Seq(got.headPlan) ++ got.middlePlans ++ produceResult(got.outputDefinition)).map(_.getClass),
         got.inputBuffer.id,
         out(got.outputDefinition),
-        got.serial,
-        got.checkHasDemand)
+        got.serial)
 
     }
     if (gotPipelines != expectedPipelines) {

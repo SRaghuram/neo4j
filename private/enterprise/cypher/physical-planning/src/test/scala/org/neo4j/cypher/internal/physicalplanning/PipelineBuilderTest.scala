@@ -19,7 +19,7 @@ class PipelineBuilderTest extends CypherFunSuite {
       start(newGraph)
         .applyBuffer(0, 0)
         .delegateToMorselBuffer(1)
-        .pipeline(0, Seq(classOf[AllNodesScan], classOf[ProduceResult]), serial = true, checkHasDemand = true)
+        .pipeline(0, Seq(classOf[AllNodesScan], classOf[ProduceResult]), serial = true)
         .end
     }
   }
@@ -36,7 +36,7 @@ class PipelineBuilderTest extends CypherFunSuite {
         .delegateToMorselBuffer(1)
         .pipeline(0, Seq(classOf[AllNodesScan]))
         .argumentStateBuffer(2, 0)
-        .pipeline(1, Seq(classOf[Sort], classOf[ProduceResult]), serial = true, checkHasDemand = true)
+        .pipeline(1, Seq(classOf[Sort], classOf[ProduceResult]), serial = true)
         .end
 
       start(graph).applyBuffer(0).reducerOnRHS(0, 1, 0)
@@ -54,7 +54,7 @@ class PipelineBuilderTest extends CypherFunSuite {
       start(graph)
         .applyBuffer(0, 0)
         .delegateToMorselBuffer(1)
-        .pipeline(0, Seq(classOf[AllNodesScan], classOf[Limit], classOf[ProduceResult]), serial = true, checkHasDemand = true)
+        .pipeline(0, Seq(classOf[AllNodesScan], classOf[Limit], classOf[ProduceResult]), serial = true)
         .end
 
       start(graph).applyBuffer(0).canceller(0, 1, 0)
@@ -75,7 +75,7 @@ class PipelineBuilderTest extends CypherFunSuite {
         .delegateToMorselBuffer(1)
         .pipeline(0, Seq(classOf[AllNodesScan]))
         .leftOfJoinBuffer(3, 0, 0, 1)
-        .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true, checkHasDemand = true)
+        .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
         .end
 
       start(graph)
@@ -105,7 +105,7 @@ class PipelineBuilderTest extends CypherFunSuite {
         .pipeline(0, Seq(classOf[AllNodesScan]))
         .applyBuffer(2, 2)
         .delegateToMorselBuffer(3)
-        .pipeline(1, Seq(classOf[NodeByLabelScan], classOf[ProduceResult]), serial = true, checkHasDemand = true)
+        .pipeline(1, Seq(classOf[NodeByLabelScan], classOf[ProduceResult]), serial = true)
         .end
     }
   }
