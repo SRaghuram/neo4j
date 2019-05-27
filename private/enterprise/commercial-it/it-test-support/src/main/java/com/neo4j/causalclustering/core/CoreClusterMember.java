@@ -257,6 +257,13 @@ public class CoreClusterMember implements ClusterMember
         return defaultDatabase.getDependencyResolver().resolveDependency( RaftMachine.class );
     }
 
+    public RaftMachine raft( String databaseName )
+    {
+        return ((GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName ))
+                .getDependencyResolver()
+                .resolveDependency( RaftMachine.class );
+    }
+
     public SortedMap<Long, File> getLogFileNames() throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )

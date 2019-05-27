@@ -19,7 +19,9 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.function.Predicates.awaitForever;
 
 class ReplaceRandomMember extends RepeatOnRandomMember
 {
@@ -60,9 +62,8 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         log.info( "Stopping: " + oldMember );
         oldMember.shutdown();
 
-        ClusterMember newMember = (oldMember instanceof CoreClusterMember) ?
-                cluster.newCoreMember() :
-                cluster.newReadReplica();
+        boolean replacingCore = oldMember instanceof CoreClusterMember;
+        ClusterMember newMember = replacingCore ? cluster.newCoreMember() : cluster.newReadReplica();
 
         if ( replaceFromBackup )
         {
@@ -74,7 +75,23 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         log.info( "Starting: " + newMember );
         newMember.start();
 
+        if ( replacingCore )
+        {
+            awaitRaftMembership( (CoreClusterMember) newMember );
+        }
+
         successfulReplacements++;
+    }
+
+    private void awaitRaftMembership( CoreClusterMember core )
+    {
+        var databaseNames = core.managementService().listDatabases();
+
+        for ( String databaseName : databaseNames )
+        {
+            log.info( String.format( "Waiting for membership of '%s'", databaseName ) );
+            awaitForever( () -> core.raft( databaseName ).votingMembers().contains( core.id() ), 100, MILLISECONDS );
+        }
     }
 
     private File createBackupWithRetries( ClusterMember member ) throws Exception
