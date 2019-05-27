@@ -23,7 +23,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Health;
 
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext> implements ClusteredDatabaseManager
 {
@@ -31,14 +30,13 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
-    private final Health globalHealths;
     protected final Log log;
     private final Config config;
     protected final StoreFiles storeFiles;
     protected final CatchupComponentsFactory catchupComponentsFactory;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
-            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths )
+            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
         super( globalModule, edition, log );
         this.contextFactory = DefaultClusteredDatabaseContext::new;
@@ -47,15 +45,8 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.log = logProvider.getLog( this.getClass() );
         this.config = config;
         this.pageCache = pageCache;
-        this.globalHealths = globalHealths;
         this.catchupComponentsFactory = catchupComponentsFactory;
         this.storeFiles = new StoreFiles( fs, pageCache );
-    }
-
-    @Override
-    public Health getAllHealthServices()
-    {
-        return globalHealths;
     }
 
     @Override

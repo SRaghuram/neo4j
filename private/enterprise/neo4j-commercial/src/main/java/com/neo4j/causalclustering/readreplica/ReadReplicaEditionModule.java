@@ -174,7 +174,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
     {
         var databaseManager = new ReadReplicaDatabaseManager( platform, this, log, catchupComponentsProvider::createDatabaseComponents,
-                platform.getFileSystem(), platform.getPageCache(), logProvider, globalConfig, globalHealth );
+                platform.getFileSystem(), platform.getPageCache(), logProvider, globalConfig );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }

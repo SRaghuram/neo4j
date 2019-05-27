@@ -25,7 +25,6 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
@@ -36,12 +35,6 @@ import static org.mockito.Mockito.when;
 public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
-    private CompositeDatabaseHealth globalDatabaseHealth;
-
-    public StubClusteredDatabaseManager()
-    {
-        this.globalDatabaseHealth = new CompositeDatabaseHealth();
-    }
 
     @Override
     public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
@@ -69,17 +62,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
     public SortedMap<DatabaseId,ClusteredDatabaseContext> registeredDatabases()
     {
         return Collections.unmodifiableSortedMap( databases );
-    }
-
-    @Override
-    public Health getAllHealthServices()
-    {
-        return globalDatabaseHealth;
-    }
-
-    public void setAllHealthServices( CompositeDatabaseHealth globalDatabaseHealth )
-    {
-        this.globalDatabaseHealth = globalDatabaseHealth;
     }
 
     //TODO: change lifecycle management to be per database
@@ -125,6 +107,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         when( db.getDatabaseId() ).thenReturn( config.databaseId );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
+        when( db.getDatabaseHealth() ).thenReturn( config.health );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
                 config.logProvider, config.catchupComponentsFactory, null );
@@ -153,6 +136,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         private StoreFiles storeFiles = mock( StoreFiles.class );
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        private Health health;
 
         private DatabaseContextConfig()
         {
@@ -162,15 +146,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         {
             this.databaseId = databaseId;
             return this;
-        }
-
-        /**
-         * TODO remove
-         */
-        @Deprecated
-        public DatabaseContextConfig withDatabaseName( String databaseName )
-        {
-            return withDatabaseId( new DatabaseId( databaseName ) );
         }
 
         public DatabaseContextConfig withStoreId( StoreId storeId )
@@ -224,6 +199,12 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         public DatabaseContextConfig withDatabaseAvailabilityGuard( DatabaseAvailabilityGuard availabilityGuard )
         {
             this.availabilityGuard = availabilityGuard;
+            return this;
+        }
+
+        public DatabaseContextConfig withDatabaseHealth( Health health )
+        {
+            this.health = health;
             return this;
         }
 

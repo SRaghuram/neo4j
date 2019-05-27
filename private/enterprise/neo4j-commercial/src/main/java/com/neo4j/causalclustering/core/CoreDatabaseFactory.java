@@ -252,7 +252,7 @@ class CoreDatabaseFactory
         LocalSessionPool sessionPool = new LocalSessionPool( myGlobalSession );
 
         ProgressTracker progressTracker = new ProgressTrackerImpl( myGlobalSession );
-        RaftReplicator replicator = createReplicator( raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog );
+        RaftReplicator replicator = createReplicator( databaseId, raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog );
 
         return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder );
     }
@@ -413,8 +413,8 @@ class CoreDatabaseFactory
         return new SessionTracker( sessionTrackerStorage );
     }
 
-    private RaftReplicator createReplicator( LeaderLocator leaderLocator, LocalSessionPool sessionPool, ProgressTracker progressTracker, Monitors monitors,
-            Outbound<MemberId,RaftMessage> raftOutbound, DatabaseLogProvider debugLog )
+    private RaftReplicator createReplicator( DatabaseId databaseId, LeaderLocator leaderLocator, LocalSessionPool sessionPool,
+            ProgressTracker progressTracker, Monitors monitors, Outbound<MemberId,RaftMessage> raftOutbound, DatabaseLogProvider debugLog )
     {
         Duration initialBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_base );
         Duration upperBoundBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_limit );
@@ -424,8 +424,9 @@ class CoreDatabaseFactory
 
         Duration leaderAwaitDuration = config.get( CausalClusteringSettings.replication_leader_await_timeout );
 
-        return new RaftReplicator( leaderLocator, myIdentity, raftOutbound, sessionPool, progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
-                availabilityGuard, debugLog, databaseManager, monitors, leaderAwaitDuration );
+        return new RaftReplicator( databaseId, leaderLocator, myIdentity, raftOutbound, sessionPool, progressTracker, progressRetryStrategy,
+                availabilityTimeoutMillis,
+                debugLog, databaseManager, monitors, leaderAwaitDuration );
     }
 
     private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicService, JobScheduler jobScheduler,

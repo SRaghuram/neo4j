@@ -24,7 +24,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 
 public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
@@ -32,10 +31,9 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     protected final ReadReplicaEditionModule edition;
 
     ReadReplicaDatabaseManager( GlobalModule globalModule, ReadReplicaEditionModule edition, Log log,
-            CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config,
-            Health globalHealths )
+            CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
-        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config, globalHealths );
+        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config );
         this.edition = edition;
     }
 

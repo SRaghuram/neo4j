@@ -30,7 +30,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
-import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 
 public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
@@ -38,9 +37,9 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     protected final CoreEditionModule edition;
 
     CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
-            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, Health globalHealths )
+            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
-        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config, globalHealths );
+        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config );
         this.edition = edition;
     }
 

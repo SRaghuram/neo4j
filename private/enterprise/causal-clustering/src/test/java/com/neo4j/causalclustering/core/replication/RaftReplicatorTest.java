@@ -35,13 +35,14 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -50,12 +51,9 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -65,15 +63,17 @@ class RaftReplicatorTest
 {
     private static final int DEFAULT_TIMEOUT_MS = 15_000;
 
+    private final DatabaseId databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final LeaderInfo leaderInfo = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
     private final GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
     private final LocalSessionPool sessionPool = new LocalSessionPool( session );
     private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
+    private final Duration leaderAwaitDuration = Duration.ofMillis( 500 );
+    private final Health health = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), NullLog.getInstance() );
     private DatabaseAvailabilityGuard availabilityGuard;
     private StubClusteredDatabaseManager clusteredDatabaseManager;
-    private Duration leaderAwaitDuration = Duration.of( 500, MILLIS );
 
     @Inject
     private LifeSupport lifeSupport;
@@ -81,9 +81,16 @@ class RaftReplicatorTest
     @BeforeEach
     void setUp()
     {
-        availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(), 0,
+        availabilityGuard = new DatabaseAvailabilityGuard( databaseId, Clocks.systemClock(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
-        clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
+
+        clusteredDatabaseManager = new StubClusteredDatabaseManager();
+        clusteredDatabaseManager.givenDatabaseWithConfig()
+                .withDatabaseId( databaseId )
+                .withDatabaseAvailabilityGuard( availabilityGuard )
+                .withDatabaseHealth( health )
+                .register();
+
         lifeSupport.add( availabilityGuard );
     }
 
@@ -234,11 +241,10 @@ class RaftReplicatorTest
     @Test
     void stopReplicationWhenUnHealthy() throws InterruptedException
     {
+        health.panic( new ReplicationFailureException( "" ) );
+
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
-        CompositeDatabaseHealth mockHealth = mock( CompositeDatabaseHealth.class );
-        doThrow( new ReplicationFailureException( "" ) ).when( mockHealth ).assertHealthy( eq( IllegalStateException.class ) );
-        clusteredDatabaseManager.setAllHealthServices( mockHealth );
 
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );
@@ -318,7 +324,7 @@ class RaftReplicatorTest
 
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
-        return new RaftReplicator( leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10, availabilityGuard,
+        return new RaftReplicator( databaseId, leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10,
                 NullLogProvider.getInstance(), clusteredDatabaseManager, monitors, leaderAwaitDuration );
     }
 

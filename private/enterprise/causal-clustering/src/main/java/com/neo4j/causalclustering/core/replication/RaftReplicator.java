@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.replication.session.OperationContext;
 import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy.Timeout;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -25,7 +24,6 @@ import com.neo4j.causalclustering.messaging.Outbound;
 import java.time.Duration;
 
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
@@ -37,12 +35,12 @@ import org.neo4j.monitoring.Monitors;
  */
 public class RaftReplicator implements Replicator, LeaderListener
 {
+    private final DatabaseId databaseId;
     private final MemberId me;
     private final Outbound<MemberId,RaftMessage> outbound;
     private final ProgressTracker progressTracker;
     private final LocalSessionPool sessionPool;
     private final TimeoutStrategy progressTimeoutStrategy;
-    private final AvailabilityGuard globalAvailabilityGuard;
     private final Log log;
     private final ClusteredDatabaseManager databaseManager;
     private final ReplicationMonitor replicationMonitor;
@@ -50,17 +48,17 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final LeaderProvider leaderProvider;
 
     // TODO: Get rid of dependency on database manager!
-    public RaftReplicator( LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound, LocalSessionPool sessionPool,
-            ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis, AvailabilityGuard globalAvailabilityGuard,
+    public RaftReplicator( DatabaseId databaseId, LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound,
+            LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis,
             LogProvider logProvider, ClusteredDatabaseManager databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
+        this.databaseId = databaseId;
         this.me = me;
         this.outbound = outbound;
         this.progressTracker = progressTracker;
         this.sessionPool = sessionPool;
         this.progressTimeoutStrategy = progressTimeoutStrategy;
         this.availabilityTimeoutMillis = availabilityTimeoutMillis;
-        this.globalAvailabilityGuard = globalAvailabilityGuard;
         this.log = logProvider.getLog( getClass() );
         this.databaseManager = databaseManager;
         this.replicationMonitor = monitors.newMonitor( ReplicationMonitor.class );
@@ -143,17 +141,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     {
         replicationMonitor.replicationAttempt();
 
-        // TODO: There probably isn't any non-db-specific content anymore.
-        if ( command instanceof CoreReplicatedContent )
-        {
-            DatabaseId databaseId = ((CoreReplicatedContent) command).databaseId();
-            assertDatabaseAvailable( databaseId );
-        }
-        else
-        {
-            // TODO: We should no longer need to assert on all databases being available.
-            assertAllDatabasesAvailable();
-        }
+        assertDatabaseAvailable();
 
         // blocking at least until the send has succeeded or failed before retrying
         outbound.send( leader, new RaftMessages.NewEntry.Request( me, operation ), true );
@@ -179,7 +167,7 @@ public class RaftReplicator implements Replicator, LeaderListener
         leaderProvider.setLeader( newLeader );
     }
 
-    private void assertDatabaseAvailable( DatabaseId databaseId ) throws UnavailableException
+    private void assertDatabaseAvailable() throws UnavailableException
     {
         var database = databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
@@ -188,11 +176,5 @@ public class RaftReplicator implements Replicator, LeaderListener
         database.getDatabaseAvailabilityGuard().await( availabilityTimeoutMillis );
 
         database.getDatabaseHealth().assertHealthy( IllegalStateException.class );
-    }
-
-    private void assertAllDatabasesAvailable() throws UnavailableException
-    {
-        globalAvailabilityGuard.await( availabilityTimeoutMillis );
-        databaseManager.getAllHealthServices().assertHealthy( IllegalStateException.class );
     }
 }

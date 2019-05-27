@@ -6,12 +6,10 @@
 package com.neo4j.causalclustering.common;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.monitoring.Health;
 
 /**
- * A ClusteredDatabaseManager allows for the creation and retrieval of new clustered Neo4j databases, as well as some limited lifecycle management.
+ * A ClusteredDatabaseManager allows for the creation and retrieval of new clustered Neo4j databases.
  */
 public interface ClusteredDatabaseManager extends DatabaseManager<ClusteredDatabaseContext>
 {
-    Health getAllHealthServices();
 }

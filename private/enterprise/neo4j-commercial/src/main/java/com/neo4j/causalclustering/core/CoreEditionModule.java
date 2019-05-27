@@ -344,7 +344,7 @@ public class CoreEditionModule extends ClusteringEditionModule
     public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
     {
         var databaseManager = new CoreDatabaseManager( platform, this, log, catchupComponentsProvider::createDatabaseComponents,
-                platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig(), globalHealth );
+                platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig() );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
